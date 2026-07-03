@@ -2,9 +2,9 @@
 
 > 中文见 [demos.zh-CN.md](demos.zh-CN.md)
 
-The public gallery ships six load-bearing demos under
-`examples_klink/public/demos/`. **All six run out of the box** — none needs
-confidential geometry from you. Two run fully offline; four need a live KLayout
+The public gallery ships seven load-bearing demos under
+`examples_klink/public/demos/`. **All seven run out of the box** — none needs
+confidential geometry from you. Two run fully offline; five need a live KLayout
 session (but still no external GDS). This page is honest about each.
 
 Everything device- and process-specific lives in the example itself; `klink`
@@ -95,6 +95,30 @@ the multilayer routing engine. Measured output: routed 405/405 nets, **LVS
 `match=True`**, 766 devices, all 20 ports extraction-verified CONNECTED, in
 about 17 seconds end to end. Copy this file and edit `PUBLIC_MULTILAYER` for
 your own layer stack — the flow does not change.
+
+### Probe-card-first place & route
+
+```bash
+python -m examples_klink.public.demos.padframe_pnr_lvs --port <session-port>   # [--no-card]
+```
+
+The reversed-order hardware flow: the probe card / pad ring **exists first**
+(positions frozen long ago) and the circuit must meet it — even when the card
+interior is too small for the whole block. The same synthetic 4-bit adder
+and fitted devices as the fit-a-device demo are linted, then a stand-in 20-pad
+probe card is fabricated and **harvested back** with `pads_from_gds` (in real
+life you skip the fabricate step and harvest your own card file). A plain
+net→pad table assigns all 14 primary ports + VDD + GND (4 redundant pads stay
+unused); because the card interior fits only half the rows, `place_grid(
+forbid_y_bands=…)` splits the block **half inside / half below** the card's
+bottom pad row, and `pdn_split_bands` threads one power grid per region bridged
+by a spine strap. Measured output: routed 94/94, **LVS `match=True`**, 173
+devices, half-in/half-out 85 inside / 80 below, all 16 assigned pads
+extraction-verified CONNECTED and all 4 redundant pads isolated. `--no-card`
+drops the card entirely: every port leaves as a bare labelled wire-end trace at
+the periphery (inputs west, outputs east, snapped to routing-channel centres),
+power on the auto-labelled PDN tie rails — routed 94/94, **LVS `match=True`**,
+all 14 stubs CONNECTED. Copy this file and edit the pad table for your own card.
 
 > A KLayout "port" is just a session — any port works; none has a special role.
 > Use a session that is empty or test-owned, not your manual working tab.
