@@ -1,0 +1,270 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<klayout-macro>
+ <description>klink RPC server</description>
+ <version>0.1.0</version>
+ <category>pymacros</category>
+ <prolog/>
+ <epilog/>
+ <doc/>
+ <autorun>true</autorun>
+ <autorun-early>false</autorun-early>
+ <priority>0</priority>
+ <shortcut/>
+ <show-in-menu>false</show-in-menu>
+ <group-name/>
+ <menu-path/>
+ <interpreter>python</interpreter>
+ <dsl-interpreter-name/>
+ <text>
+import sys
+from pathlib import Path
+
+_here = Path(__file__).parent.parent / "python"
+if str(_here) not in sys.path:
+    sys.path.insert(0, str(_here))
+
+
+# Force-reload every klink_server.* module from disk. The Macro IDE's
+# Stop/Run does not clear sys.modules, so Python keeps handing back
+# the cached copies and changes to method modules never show up.
+# Clearing the cache here makes each Stop/Run a true reload.
+for _mod_name in [m for m in list(sys.modules) if m == "klink_server" or m.startswith("klink_server.")]:
+    try:
+        del sys.modules[_mod_name]
+    except KeyError:
+        pass
+
+import pya
+import klink_server
+klink_server.start()
+
+# --- toolbar button: send selection to AI context --------------------
+
+def _restore_action_later(action, icon_text, tool_tip, delay_ms):
+    try:
+        timer = pya.QTimer()
+        timer.setSingleShot(True)
+
+        def _restore(*args):
+            try:
+                action.icon_text = icon_text
+                action.tool_tip = tool_tip
+                action.enabled = True
+            except Exception:
+                pass
+            try:
+                _klink_timers.remove(timer)
+            except Exception:
+                pass
+
+        timer.timeout += _restore
+        _klink_timers.append(timer)
+        timer.start(int(delay_ms))
+    except Exception:
+        try:
+            action.icon_text = icon_text
+            action.tool_tip = tool_tip
+            action.enabled = True
+        except Exception:
+            pass
+
+def _set_action_feedback(action, icon_text, tool_tip, delay_ms):
+    default_text = getattr(action, "_klink_default_icon_text", "SEND")
+    default_tip = getattr(action, "_klink_default_tool_tip", "Send Selection to AI Context")
+    try:
+        action.icon_text = icon_text
+        action.tool_tip = tool_tip
+        action.enabled = False
+    except Exception:
+        pass
+    _restore_action_later(action, default_text, default_tip, delay_ms)
+
+def _on_send_selection(action):
+    try:
+        from klink_server.context_capture import send_current_selection
+        result = send_current_selection(source="toolbar", max_items=50)
+        status = result.get("status")
+        if status == "sent":
+            _set_action_feedback(action, "Sent", result.get("message", "Selection sent"), 1000)
+            print("[klink] selection sent to AI context:", result)
+        elif status == "empty":
+            _set_action_feedback(action, "NoSel", "No Selection", 1000)
+            print("[klink] Send Selection: no selection")
+        elif status == "no_listener":
+            _set_action_feedback(action, "NoMCP", result.get("message", "No MCP listener"), 2000)
+            print("[klink] Send Selection: no MCP listener:", result)
+        else:
+            _set_action_feedback(action, "Fail", result.get("message", "Send Selection failed"), 2000)
+            print("[klink] Send Selection failed:", result)
+    except Exception as e:
+        _set_action_feedback(action, "Fail", str(e), 2000)
+        print("[klink] Send Selection failed:", e)
+
+def _on_set_gdsfactory_target(action):
+    try:
+        result = klink_server.mark_klive_target()
+        if result.get("ok"):
+            _set_action_feedback(
+                action,
+                "GFTgt",
+                "This KLayout window is the gdsfactory/klive target",
+                1000,
+            )
+            print("[klink] gdsfactory target set:", result)
+        else:
+            _set_action_feedback(action, "Fail", result.get("error", "Failed"), 2000)
+            print("[klink] set gdsfactory target failed:", result)
+    except Exception as e:
+        _set_action_feedback(action, "Fail", str(e), 2000)
+        print("[klink] set gdsfactory target failed:", e)
+
+# --- toolbar button: klink recorder ---------------------------------
+# A single toggle button. Click = start recording. Click again = stop
+# and prompt for a save location (defaults to
+# ~/Documents/klink_recordings/...). Uses pya.Action + icon_text so we
+# don't need PNG assets.
+#
+# Kept as a module-global so repeated Stop/Run of the macro doesn't
+# accumulate duplicate buttons in the toolbar.
+
+from klink_server.recorder import instance as _rec
+
+def _update_button_label(action):
+    if _rec().is_recording():
+        action.icon_text = "REC"  # filled circle glyph reads as "live"
+        action.tool_tip = "klink recorder: recording. Click to stop and save."
+    else:
+        action.icon_text = "REC"
+        action.tool_tip = "klink recorder: click to start a new recording."
+
+def _on_click(action):
+    rec = _rec()
+    if rec.is_recording():
+        # Prompt for save path. Cancel = auto path.
+        default_path = rec.status().get("output_path") or rec._default_path()
+        try:
+            chosen = pya.FileDialog.ask_save_file_name(
+                "Save klink recording",
+                default_path,
+                "Python files (*.py)",
+            )
+        except Exception:
+            chosen = None
+        info = rec.stop(output_path=chosen if chosen else None)
+        _update_button_label(action)
+        msg = (f"klink: stopped. {info['action_count']} action(s) "
+               f"over {info['elapsed']:.1f}s -&gt; {info['output_path']}")
+        print(msg)
+        try:
+            pya.MessageBox.info("klink recorder", msg, pya.MessageBox.Ok)
+        except Exception:
+            pass
+    else:
+        rec.start()
+        _update_button_label(action)
+        print("klink: recording started. Click REC again to stop.")
+
+mw = pya.Application.instance().main_window()
+if mw is not None:
+    menu = mw.menu()
+    _klink_timers = getattr(klink_server, "_klink_timers", [])
+    klink_server._klink_timers = _klink_timers
+
+    _session_badge_id = "klink_session_badge"
+    try:
+        menu.delete_item(f"@toolbar.end.{_session_badge_id}")
+    except Exception:
+        pass
+    session_action = pya.Action()
+    try:
+        _srv = klink_server.instance()
+        _sid = getattr(_srv, "session_id", None) or "klink"
+        _port = getattr(_srv, "port", None)
+        session_action.icon_text = f"K{_port}" if _port else "KLINK"
+        session_action.title = f"klink session {_sid}"
+        session_action.tool_tip = (
+            f"klink session {_sid} on 127.0.0.1:{_port}"
+            if _port else "klink session"
+        )
+    except Exception:
+        session_action.icon_text = "KLINK"
+        session_action.title = "klink session"
+        session_action.tool_tip = "klink session"
+    try:
+        session_action.enabled = False
+    except Exception:
+        pass
+    menu.insert_item("@toolbar.end", _session_badge_id, session_action)
+    klink_server._session_badge_action = session_action
+    print("[klink] session badge installed on toolbar")
+
+    _send_btn_id = "klink_send_selection"
+    try:
+        menu.delete_item(f"@toolbar.end.{_send_btn_id}")
+    except Exception:
+        pass
+    send_action = pya.Action()
+    send_action.title = "Send Selection to AI Context"
+    send_action.icon_text = "SEND"
+    send_action.tool_tip = "Send current KLayout selection to AI context"
+    send_action._klink_default_icon_text = "SEND"
+    send_action._klink_default_tool_tip = send_action.tool_tip
+    send_action.on_triggered = lambda a=send_action: _on_send_selection(a)
+    menu.insert_item("@toolbar.end", _send_btn_id, send_action)
+    klink_server._send_selection_action = send_action
+    print("[klink] Send Selection button installed on toolbar")
+
+    _gf_target_btn_id = "klink_gdsfactory_target"
+    try:
+        menu.delete_item(f"@toolbar.end.{_gf_target_btn_id}")
+    except Exception:
+        pass
+    gf_target_action = pya.Action()
+    gf_target_action.title = "Use as gdsfactory Target"
+    gf_target_action.icon_text = "GFTGT"
+    gf_target_action.tool_tip = "Use this KLayout window as the gdsfactory/klive target"
+    gf_target_action._klink_default_icon_text = "GFTGT"
+    gf_target_action._klink_default_tool_tip = gf_target_action.tool_tip
+    gf_target_action.on_triggered = lambda a=gf_target_action: _on_set_gdsfactory_target(a)
+    menu.insert_item("@toolbar.end", _gf_target_btn_id, gf_target_action)
+    klink_server._gdsfactory_target_action = gf_target_action
+    print("[klink] gdsfactory target button installed on toolbar")
+
+    # Transfer is now controlled by MCP/frontend review+commit, not toolbar
+    # clipboard buttons. Remove old buttons if they exist from previous runs.
+    _paste_btn_id = "klink_paste_transfer"
+    try:
+        menu.delete_item(f"@toolbar.end.{_paste_btn_id}")
+    except Exception:
+        pass
+    try:
+        klink_server._paste_transfer_action = None
+    except Exception:
+        pass
+
+    _clear_transfer_btn_id = "klink_clear_transfer"
+    try:
+        menu.delete_item(f"@toolbar.end.{_clear_transfer_btn_id}")
+    except Exception:
+        pass
+    try:
+        klink_server._clear_transfer_action = None
+    except Exception:
+        pass
+
+    _btn_id = "klink_recorder"
+    # Remove any leftover from a previous Stop/Run before re-inserting.
+    try:
+        menu.delete_item(f"@toolbar.end.{_btn_id}")
+    except Exception:
+        pass
+    action = pya.Action()
+    action.title = "klink REC"
+    _update_button_label(action)
+    action.on_triggered = lambda a=action: _on_click(a)
+    menu.insert_item("@toolbar.end", _btn_id, action)
+    # Keep a reference alive so the Action isn't garbage-collected.
+    klink_server._recorder_button_action = action
+    print("[klink] recorder button installed on toolbar")
+ </text>
+</klayout-macro>

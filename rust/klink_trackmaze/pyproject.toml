@@ -1,0 +1,13 @@
+[build-system]
+requires = ["maturin>=1.14,<2"]
+build-backend = "maturin"
+
+[project]
+name = "klink-trackmaze-rs"
+version = "0.1.0"
+requires-python = ">=3.10"
+description = "Rust TrackGrid maze kernel for klink Track 2 (separate from Track-1 klink_boxmaze)"
+
+[tool.maturin]
+module-name = "klink_trackmaze_rs"
+features = ["pyo3/extension-module"]

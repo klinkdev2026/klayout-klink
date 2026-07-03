@@ -1,0 +1,60 @@
+# Blacklist style: everything is tracked unless ignored here.
+# (Replaced the old whitelist style — it silently ignored every
+# new root file, which is how pyproject.toml went untracked.)
+
+# Generated / caches
+__pycache__/
+_generated/
+*.py[cod]
+.pytest_cache/
+.codegraph/
+test_outputs/
+build/
+dist/
+*.egg-info/
+
+# Local environment / session state
+venv/
+.klink/
+.claude/settings.local.json
+.mcp.json
+
+# Codex research clones (reference only, ~650MB, mixed licenses;
+# reports/index/schemas in research_refs/ ARE tracked, the clones are not)
+research_refs/external/
+
+# Layout-derived census output (user layout content never enters the repo;
+# the census SCRIPT is tracked, its output is not)
+research_refs/census/output/
+
+# PCell fit output (the coefficient table fully encodes user layout
+# geometry; script and counts-only report are tracked, the table is not)
+research_refs/pcellfit/output/
+
+# Vendored third-party repos (reference only, NOT part of this project;
+# KQCircuits is GPL — must never be mixed into this Apache-2.0 repo)
+KQCircuits-main/
+klayout-mcp-main/
+Klayout-Router-master/
+KlayoutClaw-main/
+virtuoso-bridge-lite-main/
+klive/
+
+# Stale local examples / scratch (deliberately untracked)
+examples/
+examples_gdsfactory/
+klive_client.py
+orig_recorder.py
+test_pyexec_direct.py
+gf_skill_ref.md
+
+# Binary artifacts / duplicates / shortcuts (root only)
+/*.zip
+/*.png
+/*.lnk
+/*.gds
+/ARCHITECTURE - 副本.md
+
+# examples_klink holds only real example code now; screenshots are
+# throwaway artifacts and must not be committed there.
+examples_klink/*.png

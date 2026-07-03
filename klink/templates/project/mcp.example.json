@@ -1,0 +1,19 @@
+{
+  "_comment": "Copy into your agent's MCP config and edit the paths. 'command' must be the SAME Python that has klink (and gdsfactory, if you use the photonics recipe) installed.",
+  "mcpServers": {
+    "klayout": {
+      "command": "/path/to/your/python",
+      "args": [
+        "-m",
+        "klink.mcp",
+        "--profile",
+        "read,write,verify,escape",
+        "--session-id",
+        "my-klink-project"
+      ],
+      "env": {
+        "KLINK_CONTEXT_ROOT": "/path/to/this/project/.klink/sessions"
+      }
+    }
+  }
+}

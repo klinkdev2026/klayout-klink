@@ -1,0 +1,119 @@
+name: Release
+
+# Tag-triggered publish. Push a tag like `v0.1.0` to build + upload, or run
+# manually (workflow_dispatch) to build artifacts without publishing.
+#
+# Publishes THREE PyPI projects from one tag:
+#   - klayout-klink        (one universal py3-none-any wheel; depends on the core kernel)
+#   - klink-boxmaze-rs     (single-stack P&R kernel; platform wheels; runtime dep)
+#   - klink-trackmaze-rs   (multilayer P&R kernel; platform wheels; OPTIONAL
+#                           `[fast]` extra — the engine has a pure-Python fallback)
+# klayout-klink declares klink-boxmaze-rs as a runtime dependency, so
+# `pip install klayout-klink` pulls klink + that kernel together. Both kernels
+# are speed-only accelerators with pure-Python fallbacks; use
+# `pip install klayout-klink --no-deps` to install the core alone when you cannot
+# fetch/build a kernel, or `pip install "klayout-klink[fast]"` to add the
+# multilayer kernel.
+#
+# BEFORE THE FIRST REAL PUBLISH (maintainer setup, one-time):
+#   Publishing uses PyPI Trusted Publishing (OIDC) — no API token needed.
+#   On pypi.org: Your account -> Publishing -> "Add a new pending publisher"
+#   (GitHub), once per project name (klayout-klink, klink-boxmaze-rs,
+#   klink-trackmaze-rs) — with owner/repo = klinkdev2026/klayout-klink and
+#   workflow = release.yml (environment blank). Pending publishers also
+#   reserve the project names.
+# Only tag from a green `main` (the rust-build CI gates the kernel build per OS).
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  build-main:
+    name: build pure-Python core (sdist + universal wheel)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: python -m pip install --upgrade pip build
+      - run: python -m build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-core
+          path: dist/*
+
+  build-accel:
+    name: build ${{ matrix.crate }} (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-13, macos-14]
+        crate: [klink_boxmaze, klink_trackmaze]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build wheels (py3.10-3.13) with maturin
+        uses: PyO3/maturin-action@v1
+        with:
+          command: build
+          args: --release --out dist -m rust/${{ matrix.crate }}/Cargo.toml --interpreter 3.10 3.11 3.12 3.13
+          manylinux: auto
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.crate }}-${{ matrix.os }}
+          path: dist/*
+
+  install-smoke:
+    # Prove the WHOLE vision before publishing: a clean env `pip install
+    # klayout-klink` off the just-built wheels pulls klink + the Rust kernel in
+    # one shot, imports, and `klink init` scaffolds a usable agent project --
+    # across every OS x Python we ship.
+    name: pip-install one-shot (${{ matrix.os }}, py${{ matrix.python }})
+    needs: [build-main, build-accel]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-13, macos-14]
+        python: ["3.10", "3.11", "3.12", "3.13"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: pip install klayout-klink[fast] (core + both Rust kernels) from the built wheels
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --no-index --find-links dist "klayout-klink[fast]"
+      - name: one-shot import (klink + both kernels) then klink init a project
+        run: |
+          python -c "import klink, klink.mcp, klink_boxmaze_rs, klink_trackmaze_rs; print('one-shot install ok:', klink.__version__)"
+          klink init smoke_proj
+          python -c "import os,sys; sys.exit(0 if os.path.isdir(os.path.join('smoke_proj','example_template')) else 1)"
+
+  publish:
+    name: publish to PyPI
+    needs: [build-main, build-accel, install-smoke]
+    runs-on: ubuntu-latest
+    # Only on a real version tag; manual runs build artifacts but do not publish.
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      # PyPI Trusted Publishing (OIDC): all three project names must list this
+      # repo + workflow as a (pending) publisher on pypi.org.
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Publish all wheels + sdist to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
+          skip-existing: true

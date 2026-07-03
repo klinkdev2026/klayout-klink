@@ -1,0 +1,17 @@
+# Never commit layout geometry — neither generated output nor (open or
+# proprietary) PDK/GDS content. Point recipe code at such files at run time.
+*.gds
+*.gds.gz
+*.oas
+*.oas.gz
+
+# Generated artifacts
+out/*
+!out/.gitkeep
+
+# klink session/interaction state
+.klink/
+
+# Python
+__pycache__/
+*.pyc

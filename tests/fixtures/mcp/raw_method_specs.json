@@ -1,0 +1,4010 @@
+[
+  {
+    "name": "hello",
+    "description": "Introduce the client and receive server info + capability list. Recommended as the first call on every new connection. Not required (the server works without it), but useful for version-gating features.",
+    "params": {
+      "type": "object",
+      "properties": {
+        "client": {
+          "type": "string",
+          "description": "Client identifier string, e.g. 'klayout-klink/0.1.0'"
+        },
+        "protocol": {
+          "type": "integer",
+          "description": "Protocol version the client speaks"
+        }
+      },
+      "additionalProperties": true
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "server": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "protocol": {
+          "type": "integer"
+        },
+        "klayout_version": {
+          "type": "string"
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "tags": [
+      "meta"
+    ]
+  },
+  {
+    "name": "meta.ping",
+    "description": "Liveness probe. Echoes the supplied params back and includes the server-side trace id. Use this to measure round-trip time or check a connection is healthy.",
+    "params": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "echo": {
+          "type": "object"
+        },
+        "trace_id": {
+          "type": "string"
+        }
+      }
+    },
+    "tags": [
+      "meta"
+    ]
+  },
+  {
+    "name": "meta.methods",
+    "description": "Return the full RPC method catalogue with descriptions and JSON schemas. Designed to be directly consumable by LLM function-calling layers (tool definitions, MCP, OpenAI/Anthropic tools, etc.).",
+    "params": {
+      "type": "object"
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "methods": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "params": {
+                "type": "object"
+              },
+              "returns": {
+                "type": "object"
+              },
+              "mutates": {
+                "type": "boolean"
+              },
+              "long_running": {
+                "type": "boolean"
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "tags": [
+      "meta"
+    ]
+  },
+  {
+    "name": "meta.debug_signals",
+    "description": "Return SignalHub diagnostic log and optionally fire a synthetic event on a channel to verify the subscribe->emit->deliver path. Pass {'fire': 'selection_changed'} to test event delivery.",
+    "params": {
+      "type": "object",
+      "properties": {
+        "fire": {
+          "type": "string",
+          "description": "Channel to synthesise an event on"
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "diagnostic": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "bound_views": {
+          "type": "integer"
+        },
+        "current_view_is_tracked": {
+          "type": "boolean"
+        },
+        "subscribers_per_channel": {
+          "type": "object"
+        },
+        "fired": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "tags": [
+      "meta"
+    ]
+  },
+  {
+    "name": "layout.info",
+    "description": "Snapshot of the currently active layout view: number of open views, active cellview index, top cell name, source file path, database unit, the full top-cell list and the registered layer/datatype pairs. Safe to call often - this is the method an LLM agent should use to refresh its world view.",
+    "params": {
+      "type": "object",
+      "properties": {
+        "verbosity": {
+          "type": "string",
+          "enum": [
+            "summary",
+            "normal",
+            "full"
+          ],
+          "default": "normal",
+          "description": "'summary' omits layer list; 'full' adds hierarchy counts"
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "has_view": {
+          "type": "boolean"
+        },
+        "views": {
+          "type": "integer"
+        },
+        "active_cellview": {
+          "type": "integer"
+        },
+        "cell": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cell_index": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "dbu": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "top_cells": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "layers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "layer": {
+                "type": "integer"
+              },
+              "datatype": {
+                "type": "integer"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        },
+        "auto_created_layout": {
+          "type": "boolean",
+          "description": "True when layout.info created a default blank TOP layout because none was open."
+        }
+      }
+    },
+    "tags": [
+      "layout",
+      "read"
+    ]
+  },
+  {
+    "name": "layout.show_file",
+    "description": "Load a GDS/OAS file into KLayout. If the file is already open in a tab, reload it. Otherwise open it in the current view (mode='replace') or a new tab (mode='new'). When recording is active, all shape/cell events triggered by the file load are merged into a single `layout_show_file()` line.",
+    "params": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Absolute path to the GDS/OAS file to load"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "replace",
+            "new"
+          ],
+          "default": "replace",
+          "description": "'replace' loads into the current view; 'new' opens a new tab"
+        },
+        "keep_position": {
+          "type": "boolean",
+          "default": true,
+          "description": "Restore viewport after loading"
+        },
+        "technology": {
+          "type": "string",
+          "description": "KLayout technology name to apply to the loaded layout"
+        }
+      },
+      "required": [
+        "path"
+      ]
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "loaded": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "open",
+            "reload"
+          ]
+        },
+        "cells": {
+          "type": "integer"
+        }
+      }
+    },
+    "mutates": true,
+    "long_running": true,
+    "tags": [
+      "layout",
+      "write"
+    ]
+  },
+  {
+    "name": "layout.save_file",
+    "description": "Save the active layout to a GDS or OASIS file on disk. Extension determines format: .gds/.gds2 for GDSII, .oas/.oasis for OASIS.",
+    "params": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Absolute file path to write. Extension determines format."
+        },
+        "cellview_index": {
+          "type": "integer",
+          "default": 0,
+          "description": "Which cellview to save (0 = active)."
+        }
+      },
+      "required": [
+        "path"
+      ]
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "format": {
+          "type": "string"
+        },
+        "file_size": {
+          "type": "integer"
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "layout",
+      "write"
+    ]
+  },
+  {
+    "name": "layout.clear",
+    "description": "Clear the entire layout: removes all cells, shapes, and hierarchy in one operation. Leaves an empty layout ready for new content. Useful before restoring a version-control snapshot.",
+    "params": {
+      "type": "object",
+      "properties": {
+        "cellview_index": {
+          "type": "integer",
+          "default": 0,
+          "description": "Which cellview to clear (0 = active)."
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "layout",
+      "write"
+    ]
+  },
+  {
+    "name": "cell.list",
+    "description": "Flat, paginated list of cells in the active layout. Use this to discover what cells exist. For hierarchy use cell.tree instead. Filtering: 'name_prefix' is a case-sensitive prefix match; 'top_only' restricts to top cells. Pagination: 'offset' + 'limit'.",
+    "params": {
+      "type": "object",
+      "properties": {
+        "name_prefix": {
+          "type": "string",
+          "description": "Case-sensitive prefix filter on cell name"
+        },
+        "top_only": {
+          "type": "boolean",
+          "default": false
+        },
+        "with_bbox": {
+          "type": "boolean",
+          "default": false,
+          "description": "Include bounding box in dbu"
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5000,
+          "default": 500
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "total": {
+          "type": "integer"
+        },
+        "offset": {
+          "type": "integer"
+        },
+        "returned": {
+          "type": "integer"
+        },
+        "cells": {
+          "type": "array"
+        }
+      }
+    },
+    "tags": [
+      "cell",
+      "read"
+    ]
+  },
+  {
+    "name": "cell.tree",
+    "description": "Hierarchical cell tree rooted at a given cell (default: first top cell). Bounded by max_depth and max_nodes. Use this to understand how a layout is composed; the 'instances' count on each node tells you how many times its parent instances it.",
+    "params": {
+      "type": "object",
+      "properties": {
+        "root": {
+          "description": "Cell name (str) or cell_index (int). Default: first top cell."
+        },
+        "max_depth": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 8
+        },
+        "max_nodes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20000,
+          "default": 2000
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "root": {
+          "type": "string"
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "nodes": {
+          "type": "integer"
+        },
+        "tree": {
+          "type": "object"
+        }
+      }
+    },
+    "tags": [
+      "cell",
+      "read"
+    ]
+  },
+  {
+    "name": "cell.create",
+    "description": "Create a new cell in the active layout. If `name` is given and already taken, KLayout appends '$1', '$2', ... to keep names unique (the effective name is returned). If omitted, an anonymous auto-named cell ('$N') is created. Idempotent is NOT guaranteed - each call creates a fresh cell.",
+    "params": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Desired cell name."
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "cell_index": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "requested_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "renamed": {
+          "type": "boolean"
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "cell",
+      "write"
+    ]
+  },
+  {
+    "name": "cell.delete",
+    "description": "Delete a cell from the active layout. Use `recursive=true` to also delete child cells that become orphaned (no longer referenced by any other cell). Default is to delete only this cell; remaining instances are turned into 'ghost' references.",
+    "params": {
+      "type": "object",
+      "required": [
+        "cell"
+      ],
+      "properties": {
+        "cell": {
+          "description": "Cell name (str) or cell_index (int)."
+        },
+        "recursive": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true, also delete cells that become orphaned."
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "deleted_name": {
+          "type": "string"
+        },
+        "deleted_index": {
+          "type": "integer"
+        },
+        "recursive": {
+          "type": "boolean"
+        },
+        "view_switched_from": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "If non-null, the view was showing this cell_index and was moved away before deletion to prevent a KLayout crash."
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "cell",
+      "write"
+    ]
+  },
+  {
+    "name": "cell.rename",
+    "description": "Rename a cell. Fails if `new_name` is already taken (KLayout would otherwise silently append '$1'; we surface that as an error so callers can decide). Pass `allow_suffix=true` to opt into KLayout's auto-suffix behaviour.",
+    "params": {
+      "type": "object",
+      "required": [
+        "cell",
+        "new_name"
+      ],
+      "properties": {
+        "cell": {
+          "description": "Cell name (str) or cell_index (int)."
+        },
+        "new_name": {
+          "type": "string"
+        },
+        "allow_suffix": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "cell_index": {
+          "type": "integer"
+        },
+        "old_name": {
+          "type": "string"
+        },
+        "new_name": {
+          "type": "string"
+        },
+        "renamed": {
+          "type": "boolean"
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "cell",
+      "write"
+    ]
+  },
+  {
+    "name": "layer.list",
+    "description": "List all layers currently defined in the active layout. Each entry has `layer_index` (the runtime handle used by other RPCs), `layer`/`datatype` (GDS numbers), and optional `name`. Also returns `dbu_um` so the client can convert between microns and database units.",
+    "params": {
+      "type": "object"
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "count": {
+          "type": "integer"
+        },
+        "dbu_um": {
+          "type": "number"
+        },
+        "layers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "layer_index": {
+                "type": "integer"
+              },
+              "layer": {
+                "type": "integer"
+              },
+              "datatype": {
+                "type": "integer"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "tags": [
+      "layer",
+      "read"
+    ]
+  },
+  {
+    "name": "layer.ensure",
+    "description": "Ensure a GDS layer (layer/datatype) exists in the active layout. If missing, it is created inside an undo-able transaction. Returns the `layer_index` handle and whether the layer was just created. Safe to call repeatedly - it's a pure upsert.",
+    "params": {
+      "type": "object",
+      "required": [
+        "layer"
+      ],
+      "properties": {
+        "layer": {
+          "type": "integer",
+          "description": "GDS layer number, e.g. 101"
+        },
+        "datatype": {
+          "type": "integer",
+          "default": 0,
+          "description": "GDS datatype (default 0)"
+        },
+        "name": {
+          "type": "string",
+          "description": "Optional display name shown in the layer panel."
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "layer_index": {
+          "type": "integer"
+        },
+        "layer": {
+          "type": "integer"
+        },
+        "datatype": {
+          "type": "integer"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "created": {
+          "type": "boolean"
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "layer",
+      "write"
+    ]
+  },
+  {
+    "name": "shape.query",
+    "description": "Read shapes from ONE cell (no recursion) as JSON. Strongly recommended: narrow with 'layers' and 'bbox_dbu', and respect pagination via 'limit' (default 500, max 5000). Coordinates are in database units (dbu); multiply by layout dbu (from layout.info) to get microns. The 'truncated' flag means more shapes matched than 'limit' - call again with a tighter bbox.",
+    "params": {
+      "type": "object",
+      "required": [
+        "cell"
+      ],
+      "properties": {
+        "cell": {
+          "description": "Cell name (str) or cell_index (int)"
+        },
+        "layers": {
+          "type": "array",
+          "description": "Layer indexes, 'L/D' strings or {layer, datatype} objects. None = all layers."
+        },
+        "bbox_dbu": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "description": "[x1, y1, x2, y2] in dbu. Shapes overlapping this region are returned."
+        },
+        "kinds": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "polygons",
+              "boxes",
+              "paths",
+              "texts"
+            ]
+          },
+          "description": "Subset of shape kinds to return. Default: all."
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5000,
+          "default": 500
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "cell": {
+          "type": "string"
+        },
+        "returned": {
+          "type": "integer"
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "shapes": {
+          "type": "array"
+        }
+      }
+    },
+    "tags": [
+      "shape",
+      "read"
+    ]
+  },
+  {
+    "name": "shape.insert_box",
+    "description": "Insert an axis-aligned rectangle into `cell` on the given layer. Provide the box as `bbox_um=[x1,y1,x2,y2]` (microns, most natural) or `bbox_dbu` (integer database units). The edit is wrapped in a single-step transaction so Ctrl+Z undoes it.",
+    "params": {
+      "type": "object",
+      "required": [
+        "cell"
+      ],
+      "properties": {
+        "cell": {
+          "description": "Cell name (str) or cell_index (int)"
+        },
+        "layer_index": {
+          "type": "integer",
+          "description": "Runtime layer handle from layer.list/layer.ensure (preferred)."
+        },
+        "layer": {
+          "type": "integer",
+          "description": "GDS layer number (alternative, must already exist)."
+        },
+        "datatype": {
+          "type": "integer",
+          "description": "GDS datatype when `layer` is given. Default 0."
+        },
+        "bbox_um": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "bbox_dbu": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "cell": {
+          "type": "string"
+        },
+        "layer_index": {
+          "type": "integer"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "bbox_dbu": {
+          "type": "array"
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "shape",
+      "write"
+    ]
+  },
+  {
+    "name": "shape.insert_boxes",
+    "description": "Insert many axis-aligned rectangles into one cell/layer in a single RPC and one undo transaction. Provide `boxes_um` or `boxes_dbu` as a list of [x1,y1,x2,y2] boxes. Use this instead of many `shape.insert_box` calls for large generated layouts.",
+    "params": {
+      "type": "object",
+      "required": [
+        "cell"
+      ],
+      "properties": {
+        "cell": {
+          "description": "Cell name (str) or cell_index (int)"
+        },
+        "layer_index": {
+          "type": "integer",
+          "description": "Runtime layer handle from layer.list/layer.ensure (preferred)."
+        },
+        "layer": {
+          "type": "integer",
+          "description": "GDS layer number (alternative, must already exist)."
+        },
+        "datatype": {
+          "type": "integer",
+          "description": "GDS datatype when `layer` is given. Default 0."
+        },
+        "boxes_um": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4
+          }
+        },
+        "boxes_dbu": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4
+          }
+        },
+        "dry_run": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "cell": {
+          "type": "string"
+        },
+        "layer_index": {
+          "type": "integer"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "requested": {
+          "type": "integer"
+        },
+        "inserted": {
+          "type": "integer"
+        },
+        "bbox_dbu": {
+          "type": "array"
+        },
+        "dry_run": {
+          "type": "boolean"
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "shape",
+      "write",
+      "batch"
+    ]
+  },
+  {
+    "name": "shape.insert_many",
+    "description": "Insert a mixed list of shapes into one cell in a single RPC and one undo transaction. Each item has kind/type = box, polygon, path, or text, its own layer selector, and the same geometry fields used by the corresponding single-shape RPC.",
+    "params": {
+      "type": "object",
+      "required": [
+        "cell",
+        "items"
+      ],
+      "properties": {
+        "cell": {
+          "description": "Cell name (str) or cell_index (int)"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "dry_run": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "cell": {
+          "type": "string"
+        },
+        "requested": {
+          "type": "integer"
+        },
+        "inserted": {
+          "type": "integer"
+        },
+        "bbox_dbu": {
+          "type": "array"
+        },
+        "by_kind": {
+          "type": "object"
+        },
+        "by_layer": {
+          "type": "object"
+        },
+        "dry_run": {
+          "type": "boolean"
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "shape",
+      "write",
+      "batch"
+    ]
+  },
+  {
+    "name": "shape.insert_polygon",
+    "description": "Insert a polygon (hull only; no holes yet) into `cell`. Points are given as `points_um=[[x,y],...]` (microns) or `points_dbu` (dbu). At least 3 points required. The polygon is closed automatically.",
+    "params": {
+      "type": "object",
+      "required": [
+        "cell"
+      ],
+      "properties": {
+        "cell": {
+          "description": "Cell name (str) or cell_index (int)"
+        },
+        "layer_index": {
+          "type": "integer",
+          "description": "Runtime layer handle from layer.list/layer.ensure (preferred)."
+        },
+        "layer": {
+          "type": "integer",
+          "description": "GDS layer number (alternative, must already exist)."
+        },
+        "datatype": {
+          "type": "integer",
+          "description": "GDS datatype when `layer` is given. Default 0."
+        },
+        "points_um": {
+          "type": "array"
+        },
+        "points_dbu": {
+          "type": "array"
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "cell": {
+          "type": "string"
+        },
+        "layer_index": {
+          "type": "integer"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "bbox_dbu": {
+          "type": "array"
+        },
+        "point_count": {
+          "type": "integer"
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "shape",
+      "write"
+    ]
+  },
+  {
+    "name": "shape.insert_path",
+    "description": "Insert a path (center line with width) into `cell`. Points via `points_um`/`points_dbu`, width via `width_um`/`width_dbu`. Optional `begin_ext`/`end_ext` extensions (defaults to width/2 - flush) and `round_ends` for rounded caps.",
+    "params": {
+      "type": "object",
+      "required": [
+        "cell"
+      ],
+      "properties": {
+        "cell": {
+          "description": "Cell name (str) or cell_index (int)"
+        },
+        "layer_index": {
+          "type": "integer",
+          "description": "Runtime layer handle from layer.list/layer.ensure (preferred)."
+        },
+        "layer": {
+          "type": "integer",
+          "description": "GDS layer number (alternative, must already exist)."
+        },
+        "datatype": {
+          "type": "integer",
+          "description": "GDS datatype when `layer` is given. Default 0."
+        },
+        "points_um": {
+          "type": "array"
+        },
+        "points_dbu": {
+          "type": "array"
+        },
+        "width_um": {
+          "type": "number"
+        },
+        "width_dbu": {
+          "type": "integer"
+        },
+        "begin_ext_um": {
+          "type": "number"
+        },
+        "begin_ext_dbu": {
+          "type": "integer"
+        },
+        "end_ext_um": {
+          "type": "number"
+        },
+        "end_ext_dbu": {
+          "type": "integer"
+        },
+        "round_ends": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "cell": {
+          "type": "string"
+        },
+        "layer_index": {
+          "type": "integer"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "bbox_dbu": {
+          "type": "array"
+        },
+        "width_dbu": {
+          "type": "integer"
+        },
+        "point_count": {
+          "type": "integer"
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "shape",
+      "write"
+    ]
+  },
+  {
+    "name": "shape.insert_text",
+    "description": "Insert a text label into `cell`. Position via `position_um`/`position_dbu`. Optional `size_um` maps to KLayout text size (pya.Text.size). Labels are non-geometric annotations - they snap to integer coordinates but do not produce mask geometry.",
+    "params": {
+      "type": "object",
+      "required": [
+        "cell",
+        "string"
+      ],
+      "properties": {
+        "cell": {
+          "description": "Cell name (str) or cell_index (int)"
+        },
+        "layer_index": {
+          "type": "integer",
+          "description": "Runtime layer handle from layer.list/layer.ensure (preferred)."
+        },
+        "layer": {
+          "type": "integer",
+          "description": "GDS layer number (alternative, must already exist)."
+        },
+        "datatype": {
+          "type": "integer",
+          "description": "GDS datatype when `layer` is given. Default 0."
+        },
+        "string": {
+          "type": "string"
+        },
+        "position_um": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "position_dbu": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "size_um": {
+          "type": "number"
+        },
+        "size_dbu": {
+          "type": "integer"
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "cell": {
+          "type": "string"
+        },
+        "layer_index": {
+          "type": "integer"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "bbox_dbu": {
+          "type": "array"
+        },
+        "position_dbu": {
+          "type": "array"
+        },
+        "string": {
+          "type": "string"
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "shape",
+      "write"
+    ]
+  },
+  {
+    "name": "shape.delete",
+    "description": "Delete shapes from ONE cell that match a declarative selector. Select by layer (layer_index / layer+datatype / layers=[...] / all_layers=true), optional bbox_dbu|bbox_um (touching), and optional kinds=['boxes','polygons','paths','texts']. Use `dry_run=true` to preview the count before actually deleting. The whole erase runs inside a single transaction so Ctrl+Z / edit.undo rolls it all back at once. Returns `{deleted, per_layer, truncated}`. If nothing matches, `deleted=0` and the call succeeds without error.",
+    "params": {
+      "type": "object",
+      "required": [
+        "cell"
+      ],
+      "properties": {
+        "cell": {
+          "description": "Cell name (str) or cell_index (int)"
+        },
+        "layer_index": {
+          "type": "integer"
+        },
+        "layer": {
+          "type": "integer"
+        },
+        "datatype": {
+          "type": "integer"
+        },
+        "layers": {
+          "type": "array",
+          "description": "Multi-layer form (same entries shape.query accepts)."
+        },
+        "all_layers": {
+          "type": "boolean",
+          "default": false,
+          "description": "Must be true if NO layer selector is given - guards against accidental nukes."
+        },
+        "bbox_dbu": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "bbox_um": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "kinds": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "polygons",
+              "boxes",
+              "paths",
+              "texts"
+            ]
+          },
+          "description": "Kind filter; defaults to all shape kinds."
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100000,
+          "default": 10000
+        },
+        "dry_run": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "cell": {
+          "type": "string"
+        },
+        "matched": {
+          "type": "integer"
+        },
+        "deleted": {
+          "type": "integer"
+        },
+        "per_layer": {
+          "type": "object"
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "dry_run": {
+          "type": "boolean"
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "shape",
+      "write",
+      "delete"
+    ]
+  },
+  {
+    "name": "instance.insert",
+    "description": "Place `child` inside `parent`. Position is in microns (position_um) or dbu (position_dbu); rotation is degrees (0/90/180/270 stay as integer transforms, else promoted to a complex transform with magnification). Optional `array` creates a grid. Two array shapes are accepted: orthogonal {rows, cols, pitch_x_um/dbu, pitch_y_um/dbu} and general {na, nb, a_dbu|a_um:[x,y], b_dbu|b_um:[x,y]} (the general form survives rotated/sheared arrays). Without an array you get a single instance. Cyclic hierarchy (child already contains parent) is rejected.",
+    "params": {
+      "type": "object",
+      "required": [
+        "parent",
+        "child"
+      ],
+      "properties": {
+        "parent": {
+          "description": "parent cell (name or index)"
+        },
+        "child": {
+          "description": "cell to instantiate (name or index)"
+        },
+        "position_um": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "position_dbu": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "rotation": {
+          "type": "number",
+          "default": 0,
+          "description": "degrees CCW"
+        },
+        "mirror": {
+          "type": "boolean",
+          "default": false,
+          "description": "mirror across x-axis before rotation"
+        },
+        "magnification": {
+          "type": "number",
+          "default": 1.0
+        },
+        "array": {
+          "type": "object",
+          "properties": {
+            "rows": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "cols": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "pitch_x_um": {
+              "type": "number"
+            },
+            "pitch_x_dbu": {
+              "type": "integer"
+            },
+            "pitch_y_um": {
+              "type": "number"
+            },
+            "pitch_y_dbu": {
+              "type": "integer"
+            },
+            "na": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "nb": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "a_dbu": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "a_um": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "b_dbu": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "b_um": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2
+            }
+          }
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "parent": {
+          "type": "string"
+        },
+        "child": {
+          "type": "string"
+        },
+        "trans": {
+          "type": "object"
+        },
+        "bbox_dbu": {
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "array": {
+          "type": [
+            "object",
+            "null"
+          ]
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "instance",
+      "write"
+    ]
+  },
+  {
+    "name": "instance.insert_many",
+    "description": "Insert many existing child-cell instances into one parent cell in a single RPC and one undo transaction. Each item has `child` plus the same transform/array fields accepted by instance.insert.",
+    "params": {
+      "type": "object",
+      "required": [
+        "parent",
+        "items"
+      ],
+      "properties": {
+        "parent": {
+          "description": "parent cell (name or index)"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "child"
+            ],
+            "properties": {
+              "child": {
+                "description": "cell to instantiate (name or index)"
+              },
+              "position_um": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "position_dbu": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "rotation": {
+                "type": "number",
+                "default": 0
+              },
+              "mirror": {
+                "type": "boolean",
+                "default": false
+              },
+              "magnification": {
+                "type": "number",
+                "default": 1.0
+              },
+              "array": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "dry_run": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "parent": {
+          "type": "string"
+        },
+        "requested": {
+          "type": "integer"
+        },
+        "inserted": {
+          "type": "integer"
+        },
+        "by_child": {
+          "type": "object"
+        },
+        "bbox_dbu": {
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "dry_run": {
+          "type": "boolean"
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "instance",
+      "write",
+      "batch"
+    ]
+  },
+  {
+    "name": "instance.insert_pcell",
+    "description": "Build a PCell variant cell from a library (e.g. Basic.CIRCLE, Basic.TEXT) using the supplied `params` dict, then insert one instance of it in `parent`. Call pcell.info(library, pcell) first to discover the exact parameter names and types. Layer parameters accept {'layer': int, 'datatype': int} or 'L/D'. Identical params reuse the same variant cell (KLayout merges on value-identity).",
+    "params": {
+      "type": "object",
+      "required": [
+        "parent",
+        "pcell"
+      ],
+      "properties": {
+        "parent": {
+          "description": "parent cell (name or index)"
+        },
+        "library": {
+          "type": "string",
+          "default": "Basic"
+        },
+        "pcell": {
+          "type": "string",
+          "description": "PCell name, e.g. CIRCLE"
+        },
+        "params": {
+          "type": "object",
+          "description": "PCell parameter dict (see pcell.info)"
+        },
+        "position_um": {
+          "type": "array"
+        },
+        "position_dbu": {
+          "type": "array"
+        },
+        "rotation": {
+          "type": "number"
+        },
+        "mirror": {
+          "type": "boolean"
+        },
+        "magnification": {
+          "type": "number"
+        },
+        "array": {
+          "type": "object",
+          "description": "Optional PCell array. Same shape as instance.insert: either {rows, cols, pitch_x_um/dbu, pitch_y_um/dbu} or {na, nb, a_dbu|a_um, b_dbu|b_um}.",
+          "properties": {
+            "rows": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "cols": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "pitch_x_um": {
+              "type": "number"
+            },
+            "pitch_x_dbu": {
+              "type": "integer"
+            },
+            "pitch_y_um": {
+              "type": "number"
+            },
+            "pitch_y_dbu": {
+              "type": "integer"
+            },
+            "na": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "nb": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "a_dbu": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "a_um": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "b_dbu": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "b_um": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2
+            }
+          }
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "parent": {
+          "type": "string"
+        },
+        "library": {
+          "type": "string"
+        },
+        "pcell": {
+          "type": "string"
+        },
+        "variant_cell": {
+          "type": "string"
+        },
+        "variant_cell_index": {
+          "type": "integer"
+        },
+        "trans": {
+          "type": "object"
+        },
+        "variant_bbox_dbu": {
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "adapted_params": {
+          "type": "object"
+        },
+        "variant_shape_count": {
+          "type": "integer"
+        },
+        "variant_shapes_by_layer": {
+          "type": "object"
+        },
+        "array": {
+          "type": [
+            "object",
+            "null"
+          ]
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "instance",
+      "pcell",
+      "write"
+    ]
+  },
+  {
+    "name": "instance.insert_pcell_many",
+    "description": "Insert many PCell instances into one parent cell in a single RPC and one undo transaction. Each item accepts library, pcell, params, transform fields, and optional array, matching instance.insert_pcell.",
+    "params": {
+      "type": "object",
+      "required": [
+        "parent",
+        "items"
+      ],
+      "properties": {
+        "parent": {
+          "description": "parent cell (name or index)"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "pcell"
+            ],
+            "properties": {
+              "library": {
+                "type": "string",
+                "default": "Basic"
+              },
+              "pcell": {
+                "type": "string"
+              },
+              "params": {
+                "type": "object"
+              },
+              "position_um": {
+                "type": "array"
+              },
+              "position_dbu": {
+                "type": "array"
+              },
+              "rotation": {
+                "type": "number"
+              },
+              "mirror": {
+                "type": "boolean"
+              },
+              "magnification": {
+                "type": "number"
+              },
+              "array": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "dry_run": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "parent": {
+          "type": "string"
+        },
+        "requested": {
+          "type": "integer"
+        },
+        "inserted": {
+          "type": "integer"
+        },
+        "by_pcell": {
+          "type": "object"
+        },
+        "variant_cells": {
+          "type": "array"
+        },
+        "bbox_dbu": {
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "dry_run": {
+          "type": "boolean"
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "instance",
+      "pcell",
+      "write",
+      "batch"
+    ]
+  },
+  {
+    "name": "instance.query",
+    "description": "List direct child instances in a parent cell. Returns child name, bbox, transform, optional array, PCell metadata, and the child cell's direct shape counts by layer. This is a read primitive for clients that need to inspect or clean up instance/PCell geometry without using exec.python.",
+    "params": {
+      "type": "object",
+      "required": [
+        "parent"
+      ],
+      "properties": {
+        "parent": {
+          "description": "parent cell (name or index)"
+        },
+        "child": {
+          "description": "optional child cell filter (name or index)"
+        },
+        "bbox_dbu": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "bbox_um": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100000,
+          "default": 10000
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "parent": {
+          "type": "string"
+        },
+        "returned": {
+          "type": "integer"
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "instances": {
+          "type": "array"
+        }
+      }
+    },
+    "tags": [
+      "instance",
+      "read"
+    ]
+  },
+  {
+    "name": "instance.delete",
+    "description": "Delete instances from `parent` that match a declarative selector. Optional filters: `child` (cell name or cell_index), `bbox_dbu`/`bbox_um` (touching). Removing an instance is NON-destructive to the child cell itself - only the reference in this parent goes away. Wrapped in one transaction so undo rolls the whole batch back. With `dry_run=true` only the count is reported. With no filters you must pass `all=true` to confirm deleting every instance in the parent.",
+    "params": {
+      "type": "object",
+      "required": [
+        "parent"
+      ],
+      "properties": {
+        "parent": {
+          "description": "parent cell (name or index)"
+        },
+        "child": {
+          "description": "filter by child cell (name or index); omit to match all children"
+        },
+        "bbox_dbu": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "bbox_um": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "all": {
+          "type": "boolean",
+          "default": false,
+          "description": "Must be true if NEITHER child nor bbox filter is given."
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100000,
+          "default": 10000
+        },
+        "dry_run": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "parent": {
+          "type": "string"
+        },
+        "matched": {
+          "type": "integer"
+        },
+        "deleted": {
+          "type": "integer"
+        },
+        "per_child": {
+          "type": "object"
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "dry_run": {
+          "type": "boolean"
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "instance",
+      "write",
+      "delete"
+    ]
+  },
+  {
+    "name": "pcell.libraries",
+    "description": "List available KLayout PCell libraries (Basic is always there; PDKs register their own). Use `pcell.list` next to enumerate PCells in a specific library.",
+    "params": {
+      "type": "object"
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "count": {
+          "type": "integer"
+        },
+        "libraries": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "tags": [
+      "pcell",
+      "read"
+    ]
+  },
+  {
+    "name": "pcell.list",
+    "description": "List all PCells in `library` (default 'Basic'). Returned entries are just names - call `pcell.info` for parameter details on a specific one.",
+    "params": {
+      "type": "object",
+      "properties": {
+        "library": {
+          "type": "string",
+          "default": "Basic"
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "library": {
+          "type": "string"
+        },
+        "count": {
+          "type": "integer"
+        },
+        "pcells": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "tags": [
+      "pcell",
+      "read"
+    ]
+  },
+  {
+    "name": "pcell.info",
+    "description": "Describe the parameters of one PCell so the caller can build a valid `params` dict for `instance.insert_pcell`. Each entry reports {name, type, default, description, choices?}. 'type' is one of: int, double, string, boolean, layer, list, shape, none.",
+    "params": {
+      "type": "object",
+      "required": [
+        "pcell"
+      ],
+      "properties": {
+        "library": {
+          "type": "string",
+          "default": "Basic"
+        },
+        "pcell": {
+          "type": "string"
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "library": {
+          "type": "string"
+        },
+        "pcell": {
+          "type": "string"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "params": {
+          "type": "array"
+        }
+      }
+    },
+    "tags": [
+      "pcell",
+      "read"
+    ]
+  },
+  {
+    "name": "pcell.register_fitted",
+    "description": "Register a fitted-device PCell at runtime from a fit table (format klink_transistor_pcell_fit_v1, produced by the klink fitter from a user exemplar family). The plugin ships only the generic machinery; device definitions come from outside via this call - a new device family needs zero plugin changes and zero reloads. The PCell lands in library 'klink_structdevice' and is immediately instantiable via instance.insert_pcell.",
+    "params": {
+      "type": "object",
+      "required": [
+        "name",
+        "fit_table"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "PCell name (simple identifier, unique per session)."
+        },
+        "fit_table": {
+          "type": "string",
+          "description": "Absolute path to the fit table JSON."
+        }
+      }
+    },
+    "returns": {
+      "type": "object"
+    },
+    "tags": [
+      "pcell",
+      "write"
+    ]
+  },
+  {
+    "name": "selection.get",
+    "description": "Return the current object selection in the active view. Each entry is either a shape (with layer + bbox) or an instance (with target cell + bbox). Empty selection returns an empty list - not an error.",
+    "params": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5000,
+          "default": 500
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "count": {
+          "type": "integer"
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "objects": {
+          "type": "array"
+        }
+      }
+    },
+    "tags": [
+      "selection",
+      "read"
+    ]
+  },
+  {
+    "name": "selection.clear",
+    "description": "Clear the current object selection in the active view.",
+    "params": {
+      "type": "object"
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "selection"
+    ]
+  },
+  {
+    "name": "selection.set_box",
+    "description": "Select every shape in 'cell' whose bbox intersects 'bbox_dbu' on any of the given 'layers' (default: all layers). Replaces the current selection. Returns the number of objects selected.",
+    "params": {
+      "type": "object",
+      "required": [
+        "cell",
+        "bbox_dbu"
+      ],
+      "properties": {
+        "cell": {
+          "description": "Cell name (str) or cell_index (int)"
+        },
+        "bbox_dbu": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "description": "[x1, y1, x2, y2] in dbu"
+        },
+        "layers": {
+          "type": "array",
+          "description": "Layer indexes / 'L/D' / {layer, datatype}. None = all."
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20000,
+          "default": 5000
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "selected": {
+          "type": "integer"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "selection"
+    ]
+  },
+  {
+    "name": "selection.send_context",
+    "description": "Explicitly send the current non-empty KLayout selection as a selection_sent event for external AI interaction context. This does not store memory in the plugin.",
+    "params": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string",
+          "default": "rpc"
+        },
+        "max_items": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 500,
+          "default": 50
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "status": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "count": {
+          "type": "integer"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      }
+    },
+    "tags": [
+      "selection",
+      "events"
+    ]
+  },
+  {
+    "name": "edit.undo",
+    "description": "Undo the most recent undoable operation (a klink mutating RPC, a Macro IDE edit, or a GUI edit). This is the programmatic equivalent of Edit > Undo. Returns before/after stack snapshots so callers can detect no-op undos. Non-undoable things (e.g. view zoom) are skipped automatically by KLayout.",
+    "params": {
+      "type": "object"
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "before": {
+          "type": "object"
+        },
+        "after": {
+          "type": "object"
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "edit",
+      "undo"
+    ]
+  },
+  {
+    "name": "edit.redo",
+    "description": "Redo the most recently undone operation. Pair with edit.undo. Returns before/after stack snapshots so callers can verify the stack actually advanced.",
+    "params": {
+      "type": "object"
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "before": {
+          "type": "object"
+        },
+        "after": {
+          "type": "object"
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "edit",
+      "undo"
+    ]
+  },
+  {
+    "name": "edit.status",
+    "description": "Report current undo/redo availability. Use this to decide whether an edit.undo / edit.redo call would actually do anything. Pass debug=true to surface KLayout Manager introspection fields (useful when diagnosing a build where has_undo / has_redo come back absent).",
+    "params": {
+      "type": "object",
+      "properties": {
+        "debug": {
+          "type": "boolean",
+          "description": "Include Manager-introspection fields in the reply."
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "has_undo": {
+          "type": "boolean"
+        },
+        "has_redo": {
+          "type": "boolean"
+        },
+        "undo_label": {
+          "type": "string"
+        },
+        "redo_label": {
+          "type": "string"
+        }
+      }
+    },
+    "tags": [
+      "edit",
+      "read"
+    ]
+  },
+  {
+    "name": "view.list_tabs",
+    "description": "List all layout tabs (views) in this KLayout window: index, title, file path, active cell, and which tab is current. Use together with view.activate_tab to inspect non-active layouts through the ordinary single-layout RPCs.",
+    "params": {
+      "type": "object",
+      "properties": {}
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "current_index": {
+          "type": "integer"
+        },
+        "tabs": {
+          "type": "array"
+        }
+      }
+    },
+    "tags": [
+      "view",
+      "read"
+    ]
+  },
+  {
+    "name": "view.activate_tab",
+    "description": "Switch the current KLayout tab (view) by index from view.list_tabs. After switching, all single-layout RPCs (layout.info, cell.list, shape.query, ...) operate on that tab's layout.",
+    "params": {
+      "type": "object",
+      "required": [
+        "index"
+      ],
+      "properties": {
+        "index": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "current_index": {
+          "type": "integer"
+        },
+        "title": {
+          "type": "string"
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "view",
+      "write"
+    ]
+  },
+  {
+    "name": "view.screenshot",
+    "description": "Render a PNG screenshot of the active layout view. Two modes: 'base64' embeds the PNG in the response as a data URL (great for LLMs with vision support); 'path' saves to disk and returns the absolute path (use for large images). Width/height are in pixels; defaults match what the user sees on screen. You can also clip to a bbox_dbu region.",
+    "params": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "base64",
+            "path"
+          ],
+          "default": "base64"
+        },
+        "width_px": {
+          "type": "integer",
+          "minimum": 16,
+          "maximum": 8192
+        },
+        "height_px": {
+          "type": "integer",
+          "minimum": 16,
+          "maximum": 8192
+        },
+        "bbox_dbu": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "description": "Optional clipping rectangle in dbu. Default: current viewport."
+        },
+        "path": {
+          "type": "string",
+          "description": "Destination path (only used when mode='path'). Default: temp file."
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string"
+        },
+        "width_px": {
+          "type": "integer"
+        },
+        "height_px": {
+          "type": "integer"
+        },
+        "data_url": {
+          "type": "string",
+          "description": "Present when mode='base64'"
+        },
+        "path": {
+          "type": "string",
+          "description": "Present when mode='path'"
+        },
+        "bytes": {
+          "type": "integer"
+        }
+      }
+    },
+    "tags": [
+      "view",
+      "read"
+    ]
+  },
+  {
+    "name": "view.zoom_fit",
+    "description": "Fit the entire layout into the viewport (equivalent to GUI's 'Zoom Fit').",
+    "params": {
+      "type": "object"
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "view"
+    ]
+  },
+  {
+    "name": "view.zoom_box",
+    "description": "Zoom the viewport to show exactly the given bbox (dbu).",
+    "params": {
+      "type": "object",
+      "required": [
+        "bbox_dbu"
+      ],
+      "properties": {
+        "bbox_dbu": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "view"
+    ]
+  },
+  {
+    "name": "view.viewport",
+    "description": "Report the current viewport: visible bbox in dbu, pixel size of the view widget, and cellview index. Call this to align an external coordinate with what the user sees.",
+    "params": {
+      "type": "object"
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "bbox_dbu": {
+          "type": "array"
+        },
+        "width_px": {
+          "type": "integer"
+        },
+        "height_px": {
+          "type": "integer"
+        },
+        "active_cellview": {
+          "type": "integer"
+        }
+      }
+    },
+    "tags": [
+      "view",
+      "read"
+    ]
+  },
+  {
+    "name": "view.show_cell",
+    "description": "Set the active cellview's displayed (top) cell. KLayout shows a single cell at a time per view; if you just created a cell with cell.create and want to actually see its contents, you must call this (or insert an instance of it into the current top). Also zoom-fits by default. Returns the cell that is now being shown.",
+    "params": {
+      "type": "object",
+      "required": [
+        "cell"
+      ],
+      "properties": {
+        "cell": {
+          "description": "Cell name (str) or cell_index (int)."
+        },
+        "zoom_fit": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "cell": {
+          "type": "string"
+        },
+        "cell_index": {
+          "type": "integer"
+        }
+      }
+    },
+    "tags": [
+      "view",
+      "navigate"
+    ]
+  },
+  {
+    "name": "view.close_tab",
+    "description": "Close a layout view tab by index. Closes the active tab if no index is specified.",
+    "params": {
+      "type": "object",
+      "properties": {
+        "view_index": {
+          "type": "integer",
+          "description": "0-based index of the view to close. Default: active view."
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "closed": {
+          "type": "boolean"
+        },
+        "remaining_views": {
+          "type": "integer"
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "view",
+      "write"
+    ]
+  },
+  {
+    "name": "view.show_lvsdb",
+    "description": "Load a saved KLayout LVS/netlist database from disk into the current view's Netlist Browser and SHOW it, so you can cross-probe layout<->netlist interactively (click a net/device -> highlight in layout). Like DRC's marker browser, but for LVS/connectivity. kind='lvs' (default) reads a .lvsdb (LayoutVsSchematic, with the matched/unmatched cross-reference); kind='l2n' reads a .l2n (extraction only). Pair with structdevice.lvs_check mode='lvsdb', which writes the .lvsdb and returns its path. Read-only (loads a file; does not modify the layout).",
+    "params": {
+      "type": "object",
+      "required": [
+        "path"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "absolute path to a .lvsdb or .l2n file"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "lvs",
+            "l2n"
+          ],
+          "default": "lvs"
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "shown": {
+          "type": "boolean"
+        },
+        "path": {
+          "type": "string"
+        },
+        "db_index": {
+          "type": "integer"
+        }
+      }
+    },
+    "tags": [
+      "view",
+      "read"
+    ]
+  },
+  {
+    "name": "events.channels",
+    "description": "List event channels the server can push. Subscribe to a subset via events.subscribe. Events are delivered as NDJSON frames with {\"event\": \"<name>\", \"data\": {...}}.",
+    "params": {
+      "type": "object"
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "channels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "tags": [
+      "events",
+      "meta"
+    ]
+  },
+  {
+    "name": "events.status",
+    "description": "Return event subscription and SignalHub diagnostics for the calling connection. Use this to debug whether selection_changed and other interaction events are bound and subscribed.",
+    "params": {
+      "type": "object"
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "channels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "active": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "subscribers_per_channel": {
+          "type": "object"
+        },
+        "event_emit_counts": {
+          "type": "object"
+        },
+        "event_delivered_counts": {
+          "type": "object"
+        },
+        "signal_diagnostic": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "signal_fire_counts": {
+          "type": "object"
+        }
+      }
+    },
+    "tags": [
+      "events",
+      "read"
+    ]
+  },
+  {
+    "name": "events.subscribe",
+    "description": "Subscribe the calling connection to one or more event channels. Unknown channels are silently ignored (check 'accepted' in the response). Call events.channels for the full list.",
+    "params": {
+      "type": "object",
+      "required": [
+        "channels"
+      ],
+      "properties": {
+        "channels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "accepted": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "active": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "tags": [
+      "events"
+    ]
+  },
+  {
+    "name": "events.unsubscribe",
+    "description": "Unsubscribe the calling connection from one or more channels. Pass an empty list or omit to keep state unchanged; pass '*' to drop all subscriptions.",
+    "params": {
+      "type": "object",
+      "properties": {
+        "channels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "active": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "tags": [
+      "events"
+    ]
+  },
+  {
+    "name": "exec.python",
+    "description": "Escape hatch: run arbitrary Python code in KLayout's Qt main thread. Full pya access, full filesystem access - equivalent to running a macro from the IDE. Pre-bound globals: pya, mw (main window), view (current LayoutView), layout (active Layout).\n\nState persists across calls ON THE SAME CONNECTION. Pass `reset=true` to wipe the namespace first. stdout/stderr are captured and returned as strings. If the last top-level statement is an expression, its value comes back as `return_value` (Jupyter-style); otherwise had_result=false.\n\nExceptions in user code do NOT fail the RPC - they come back inside result.exception along with any stdout/stderr captured before the raise. Only malformed requests (missing `code`, oversized, syntax error) return ok=false. Callers writing LLM feedback loops should branch on result.exception.",
+    "params": {
+      "type": "object",
+      "required": [
+        "code"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "description": "Python source to exec. Multi-statement OK; if the last line is an expression its value is returned."
+        },
+        "reset": {
+          "type": "boolean",
+          "description": "Clear this connection's namespace before running. Default false."
+        },
+        "stdout_limit": {
+          "type": "integer",
+          "description": "Max bytes of stdout to return (truncated if exceeded). Default 65536."
+        },
+        "stderr_limit": {
+          "type": "integer",
+          "description": "Max bytes of stderr to return. Default 65536."
+        },
+        "result_mode": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "repr",
+            "none"
+          ],
+          "description": "`auto` (default) tries JSON-safe, falls back to repr; `repr` always forces repr; `none` discards the last expression's value."
+        },
+        "protect_cellview": {
+          "type": "boolean",
+          "description": "When true (default), snippets containing high-risk layout ownership operations detach the active cellview before execution and repair it afterward."
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "stdout": {
+          "type": "string"
+        },
+        "stderr": {
+          "type": "string"
+        },
+        "stdout_truncated": {
+          "type": "boolean"
+        },
+        "stderr_truncated": {
+          "type": "boolean"
+        },
+        "return_value": {},
+        "return_value_repr": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "return_value_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "had_result": {
+          "type": "boolean"
+        },
+        "exception": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "type": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "traceback": {
+              "type": "string"
+            }
+          }
+        },
+        "wall_ms": {
+          "type": "number"
+        },
+        "namespace_size": {
+          "type": "integer"
+        },
+        "post_exec_repair": {
+          "type": "array",
+          "description": "Any active cellview repair actions applied after arbitrary pya execution."
+        },
+        "pre_exec_protection": {
+          "type": "array",
+          "description": "Any active cellview protection actions applied before arbitrary pya execution."
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "exec"
+    ]
+  },
+  {
+    "name": "exec.reset",
+    "description": "Clear the per-connection Python namespace used by exec.python. Equivalent to calling exec.python with reset=true and no code. Useful when a client wants a fresh sandbox without running anything else.",
+    "params": {
+      "type": "object"
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "cleared": {
+          "type": "boolean"
+        },
+        "previous_size": {
+          "type": "integer"
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "exec"
+    ]
+  },
+  {
+    "name": "drc.run",
+    "description": "Escape hatch: run arbitrary DRC DSL script code in KLayout's integrated Ruby DRC engine. Accepts DRC DSL source (Ruby-like syntax with source()/input()/report()/etc.) and executes it.\n\nIf the script includes source() it runs in standalone mode (against the specified file). If source() is omitted it runs in interactive mode against the currently loaded layout.\n\nOptional variables ($input_layout, $output_rdb, $topcell) are injected into the Ruby interpreter so the script can reference them without hardcoding paths.\n\nstdout/stderr are captured and returned as strings. If output_rdb is specified and the script generates it, the RDB is parsed and a violation summary is returned.\n\nExceptions in DRC scripts do NOT fail the RPC - they come back inside result.exception with any stdout/stderr captured before the error. Only malformed requests (missing code, oversized) return ok=false.",
+    "params": {
+      "type": "object",
+      "required": [
+        "code"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "description": "DRC DSL source code to execute. Full DRC script with source()/input()/report() etc. Supports the complete KLayout DRC DSL (Ruby-based)."
+        },
+        "input_layout": {
+          "type": "string",
+          "description": "Optional path to input GDS/OASIS file. Injected as Ruby variable $input_layout. The script can use source($input_layout) to reference it."
+        },
+        "output_rdb": {
+          "type": "string",
+          "description": "Optional path for the output report database (.lyrdb) file. Injected as Ruby variable $output_rdb. After execution, if this file exists it is read back and returned as rdb_summary."
+        },
+        "top_cell": {
+          "type": "string",
+          "description": "Optional top cell name override. Injected as Ruby variable $topcell. The script can use source($input_layout, $topcell) to reference it."
+        },
+        "result_mode": {
+          "type": "string",
+          "enum": [
+            "summary",
+            "full",
+            "rdb_path_only"
+          ],
+          "default": "summary",
+          "description": "'summary' returns violation counts by category; 'full' also returns individual item details (up to 200 items); 'rdb_path_only' skips RDB parsing."
+        },
+        "stdout_limit": {
+          "type": "integer",
+          "description": "Max bytes of stdout. Default 65536."
+        },
+        "stderr_limit": {
+          "type": "integer",
+          "description": "Max bytes of stderr. Default 65536."
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "stdout": {
+          "type": "string"
+        },
+        "stderr": {
+          "type": "string"
+        },
+        "stdout_truncated": {
+          "type": "boolean"
+        },
+        "stderr_truncated": {
+          "type": "boolean"
+        },
+        "rdb_file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "rdb_summary": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "total_items": {
+              "type": "integer"
+            },
+            "categories": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "count": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "exception": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "type": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "traceback": {
+              "type": "string"
+            }
+          }
+        },
+        "wall_ms": {
+          "type": "number"
+        }
+      }
+    },
+    "mutates": true,
+    "long_running": true,
+    "tags": [
+      "drc"
+    ]
+  },
+  {
+    "name": "lvs.run",
+    "description": "General LVS (like the DRC escape hatch, for connectivity): extract the live layout into a device netlist (per-cell device extractors from the 'devices' config) and compare against a REFERENCE netlist you pull in -- an external SPICE file (reference.spice) OR a structured netlist (reference.netlist). Writes a native .lvsdb and (show=true, default) opens it in the Netlist/LVS browser for layout<->netlist cross-probe. Pure pya; domain-agnostic; terminal names/layers are all parameters. Read-only (adds temp marker layers to the in-memory layout; does not alter saved geometry).",
+    "params": {
+      "type": "object",
+      "required": [
+        "cell",
+        "conductors",
+        "devices",
+        "reference"
+      ],
+      "properties": {
+        "cell": {
+          "type": "string"
+        },
+        "conductors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "conductor layers 'L/D'"
+        },
+        "vias": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 3,
+            "maxItems": 3
+          }
+        },
+        "devices": {
+          "type": "object",
+          "description": "cell -> {terminals:[names], terminal_layer:{term:'L/D'}, terminal_points_um:{term:[[x,y],...]}} (points separate same-layer terminals)"
+        },
+        "reference": {
+          "type": "object",
+          "description": "{spice: path} OR {netlist: {instances, nets}}"
+        },
+        "out_lvsdb": {
+          "type": "string"
+        },
+        "show": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "match": {
+          "type": "boolean"
+        },
+        "device_count": {
+          "type": "integer"
+        },
+        "lvsdb_path": {
+          "type": "string"
+        },
+        "shown": {
+          "type": "boolean"
+        }
+      }
+    },
+    "tags": [
+      "lvs",
+      "read"
+    ]
+  },
+  {
+    "name": "recorder.start",
+    "description": "Start recording all layout-mutating events and translating them into a replayable Python script. Idempotent: calling while already recording returns the current status without starting a new session. Pass `output_path` to override the default location (~/Documents/klink_recordings/klink_record_YYYYMMDD_HHMMSS.py).",
+    "params": {
+      "type": "object",
+      "properties": {
+        "output_path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "recording": {
+          "type": "boolean"
+        },
+        "started_at": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "elapsed": {
+          "type": "number"
+        },
+        "event_count": {
+          "type": "integer"
+        },
+        "action_count": {
+          "type": "integer"
+        },
+        "output_path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "tags": [
+      "recorder"
+    ]
+  },
+  {
+    "name": "recorder.stop",
+    "description": "Stop the active recording and write the replayable script to disk. Returns the final stats plus `wrote` (bool) indicating whether the file was successfully written. Idempotent: calling when not recording returns `wrote=false` with the last known status.",
+    "params": {
+      "type": "object",
+      "properties": {
+        "output_path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "recording": {
+          "type": "boolean"
+        },
+        "wrote": {
+          "type": "boolean"
+        },
+        "output_path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "action_count": {
+          "type": "integer"
+        },
+        "event_count": {
+          "type": "integer"
+        },
+        "elapsed": {
+          "type": "number"
+        }
+      }
+    },
+    "tags": [
+      "recorder"
+    ]
+  },
+  {
+    "name": "recorder.status",
+    "description": "Return current recorder state (is it recording, how many events and translated actions so far, configured output path). Safe to call at any time.",
+    "params": {
+      "type": "object"
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "recording": {
+          "type": "boolean"
+        },
+        "started_at": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "elapsed": {
+          "type": "number"
+        },
+        "event_count": {
+          "type": "integer"
+        },
+        "action_count": {
+          "type": "integer"
+        },
+        "output_path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "tags": [
+      "recorder"
+    ]
+  },
+  {
+    "name": "port.set_layer",
+    "description": "Configure the default Port PCell marker layer for this layout.",
+    "params": {
+      "type": "object",
+      "required": [
+        "layer"
+      ],
+      "properties": {
+        "layer": {
+          "type": "string",
+          "description": "'L/D', e.g. '999/99'"
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "port_layer": {
+          "type": "string"
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "port",
+      "write"
+    ]
+  },
+  {
+    "name": "port.mark",
+    "description": "Create one klink_Port PCell instance in a cell.",
+    "params": {
+      "type": "object",
+      "required": [
+        "cell"
+      ],
+      "properties": {
+        "cell": {
+          "description": "Target cell name or cell_index"
+        },
+        "layer": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "center_um": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "center_dbu": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "orientation": {
+          "type": "number",
+          "default": 0
+        },
+        "width_um": {
+          "type": "number",
+          "default": 5.0
+        },
+        "port_type": {
+          "type": "string",
+          "default": "electrical"
+        },
+        "net": {
+          "type": "string"
+        },
+        "target_layer": {
+          "type": "string",
+          "default": "1/0"
+        },
+        "show_label": {
+          "type": "boolean",
+          "default": true
+        },
+        "access_mode": {
+          "type": "string",
+          "enum": [
+            "point",
+            "edge"
+          ],
+          "default": "point"
+        },
+        "slide_allowed": {
+          "type": "boolean",
+          "default": false
+        },
+        "slide_edge": {
+          "type": "string"
+        }
+      }
+    },
+    "returns": {
+      "type": "object"
+    },
+    "mutates": true,
+    "tags": [
+      "port",
+      "write"
+    ]
+  },
+  {
+    "name": "port.list",
+    "description": "List klink_Port PCell instances in a cell. When `layer` is given, only ports whose marker layer matches it are returned (it also selects the repair layer); without it all ports are returned.",
+    "params": {
+      "type": "object",
+      "required": [
+        "cell"
+      ],
+      "properties": {
+        "cell": {
+          "description": "Cell name or cell_index"
+        },
+        "layer": {
+          "type": "string",
+          "description": "Marker layer filter in L/D format, e.g. '999/99'."
+        },
+        "sort": {
+          "type": "string",
+          "enum": [
+            "none",
+            "clockwise",
+            "name"
+          ],
+          "default": "none"
+        }
+      }
+    },
+    "returns": {
+      "type": "object"
+    },
+    "tags": [
+      "port",
+      "read"
+    ]
+  },
+  {
+    "name": "port.repair_names",
+    "description": "Repair duplicate or empty Port names in a cell. This is primarily for ports inserted manually through the KLayout PCell GUI, which bypasses port.mark's uniqueness check.",
+    "params": {
+      "type": "object",
+      "required": [
+        "cell"
+      ],
+      "properties": {
+        "cell": {
+          "description": "Cell name or cell_index"
+        },
+        "layer": {
+          "type": "string"
+        },
+        "prefix": {
+          "type": "string",
+          "default": "P"
+        }
+      }
+    },
+    "returns": {
+      "type": "object"
+    },
+    "mutates": true,
+    "tags": [
+      "port",
+      "write"
+    ]
+  },
+  {
+    "name": "port.update",
+    "description": "Update a single Port PCell instance by immutable name.",
+    "params": {
+      "type": "object",
+      "required": [
+        "cell",
+        "name"
+      ],
+      "properties": {
+        "cell": {
+          "description": "Cell name or cell_index"
+        },
+        "name": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "orientation": {
+          "type": "number"
+        },
+        "width_um": {
+          "type": "number"
+        },
+        "port_type": {
+          "type": "string"
+        },
+        "net": {
+          "type": "string"
+        },
+        "target_layer": {
+          "type": "string"
+        },
+        "show_label": {
+          "type": "boolean"
+        },
+        "access_mode": {
+          "type": "string",
+          "enum": [
+            "point",
+            "edge"
+          ]
+        },
+        "slide_allowed": {
+          "type": "boolean"
+        },
+        "slide_edge": {
+          "type": "string"
+        },
+        "layer": {
+          "type": "string"
+        }
+      }
+    },
+    "returns": {
+      "type": "object"
+    },
+    "mutates": true,
+    "tags": [
+      "port",
+      "write"
+    ]
+  },
+  {
+    "name": "port.transform",
+    "description": "Batch-update Port PCell parameters by names or GUI selection.",
+    "params": {
+      "type": "object",
+      "required": [
+        "cell"
+      ],
+      "properties": {
+        "cell": {
+          "description": "Cell name or cell_index"
+        },
+        "names": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "selection": {
+          "type": "boolean",
+          "default": false
+        },
+        "label": {
+          "type": "string"
+        },
+        "orientation": {
+          "type": "number"
+        },
+        "rotate_delta": {
+          "type": "number"
+        },
+        "width_um": {
+          "type": "number"
+        },
+        "port_type": {
+          "type": "string"
+        },
+        "net": {
+          "type": "string"
+        },
+        "target_layer": {
+          "type": "string"
+        },
+        "show_label": {
+          "type": "boolean"
+        },
+        "access_mode": {
+          "type": "string",
+          "enum": [
+            "point",
+            "edge"
+          ]
+        },
+        "slide_allowed": {
+          "type": "boolean"
+        },
+        "slide_edge": {
+          "type": "string"
+        },
+        "layer": {
+          "type": "string"
+        }
+      }
+    },
+    "returns": {
+      "type": "object"
+    },
+    "mutates": true,
+    "tags": [
+      "port",
+      "write"
+    ]
+  },
+  {
+    "name": "port.unmark",
+    "description": "Delete one Port PCell instance by name.",
+    "params": {
+      "type": "object",
+      "required": [
+        "cell",
+        "name"
+      ],
+      "properties": {
+        "cell": {
+          "description": "Cell name or cell_index"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "returns": {
+      "type": "object"
+    },
+    "mutates": true,
+    "tags": [
+      "port",
+      "write",
+      "delete"
+    ]
+  },
+  {
+    "name": "port.delete_all",
+    "description": "Delete all Port PCell instances in a cell.",
+    "params": {
+      "type": "object",
+      "required": [
+        "cell"
+      ],
+      "properties": {
+        "cell": {
+          "description": "Cell name or cell_index"
+        },
+        "layer": {
+          "type": "string"
+        }
+      }
+    },
+    "returns": {
+      "type": "object"
+    },
+    "mutates": true,
+    "tags": [
+      "port",
+      "write",
+      "delete"
+    ]
+  },
+  {
+    "name": "anchor.set_layer",
+    "description": "Configure the default Anchor PCell marker layer for this layout.",
+    "params": {
+      "type": "object",
+      "required": [
+        "layer"
+      ],
+      "properties": {
+        "layer": {
+          "type": "string",
+          "description": "'L/D', e.g. '999/1'"
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "anchor_layer": {
+          "type": "string"
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "anchor",
+      "write"
+    ]
+  },
+  {
+    "name": "anchor.mark",
+    "description": "Create one klink_Anchor PCell instance in a cell.",
+    "params": {
+      "type": "object",
+      "required": [
+        "cell"
+      ],
+      "properties": {
+        "cell": {
+          "description": "Target cell name or cell_index"
+        },
+        "layer": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "center_um": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "center_dbu": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "kind": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string"
+        },
+        "net": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "show_label": {
+          "type": "boolean"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "priority": {
+          "type": "integer"
+        },
+        "radius_um": {
+          "type": "number"
+        },
+        "width_um": {
+          "type": "number"
+        },
+        "height_um": {
+          "type": "number"
+        },
+        "orientation": {
+          "type": "number"
+        },
+        "path_points": {
+          "type": "string"
+        }
+      }
+    },
+    "returns": {
+      "type": "object"
+    },
+    "mutates": true,
+    "tags": [
+      "anchor",
+      "write"
+    ]
+  },
+  {
+    "name": "anchor.list",
+    "description": "List klink_Anchor PCell instances in a cell. When `layer` is given, only anchors whose marker layer matches it are returned (it also selects the repair layer); without it all anchors are returned.",
+    "params": {
+      "type": "object",
+      "required": [
+        "cell"
+      ],
+      "properties": {
+        "cell": {
+          "description": "Cell name or cell_index"
+        },
+        "layer": {
+          "type": "string",
+          "description": "Marker layer filter in L/D format, e.g. '999/1'."
+        },
+        "sort": {
+          "type": "string",
+          "enum": [
+            "none",
+            "id"
+          ],
+          "default": "none"
+        }
+      }
+    },
+    "returns": {
+      "type": "object"
+    },
+    "tags": [
+      "anchor",
+      "read"
+    ]
+  },
+  {
+    "name": "anchor.repair_ids",
+    "description": "Repair duplicate or empty Anchor IDs in a cell. This is primarily for anchors inserted manually through the KLayout PCell GUI, which bypasses anchor.mark's uniqueness check.",
+    "params": {
+      "type": "object",
+      "required": [
+        "cell"
+      ],
+      "properties": {
+        "cell": {
+          "description": "Cell name or cell_index"
+        },
+        "layer": {
+          "type": "string"
+        },
+        "prefix": {
+          "type": "string",
+          "default": "A"
+        }
+      }
+    },
+    "returns": {
+      "type": "object"
+    },
+    "mutates": true,
+    "tags": [
+      "anchor",
+      "write"
+    ]
+  },
+  {
+    "name": "anchor.update",
+    "description": "Update a single Anchor PCell instance by immutable id.",
+    "params": {
+      "type": "object",
+      "required": [
+        "cell",
+        "id"
+      ],
+      "properties": {
+        "cell": {
+          "description": "Cell name or cell_index"
+        },
+        "id": {
+          "type": "string"
+        },
+        "new_id": {
+          "type": "string"
+        },
+        "layer": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string"
+        },
+        "net": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "show_label": {
+          "type": "boolean"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "priority": {
+          "type": "integer"
+        },
+        "radius_um": {
+          "type": "number"
+        },
+        "width_um": {
+          "type": "number"
+        },
+        "height_um": {
+          "type": "number"
+        },
+        "orientation": {
+          "type": "number"
+        },
+        "path_points": {
+          "type": "string"
+        }
+      }
+    },
+    "returns": {
+      "type": "object"
+    },
+    "mutates": true,
+    "tags": [
+      "anchor",
+      "write"
+    ]
+  },
+  {
+    "name": "anchor.transform",
+    "description": "Batch-update Anchor PCell parameters by ids or GUI selection.",
+    "params": {
+      "type": "object",
+      "required": [
+        "cell"
+      ],
+      "properties": {
+        "cell": {
+          "description": "Cell name or cell_index"
+        },
+        "ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "names": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "selection": {
+          "type": "boolean",
+          "default": false
+        },
+        "layer": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string"
+        },
+        "net": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "show_label": {
+          "type": "boolean"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "priority": {
+          "type": "integer"
+        },
+        "radius_um": {
+          "type": "number"
+        },
+        "width_um": {
+          "type": "number"
+        },
+        "height_um": {
+          "type": "number"
+        },
+        "orientation": {
+          "type": "number"
+        },
+        "path_points": {
+          "type": "string"
+        }
+      }
+    },
+    "returns": {
+      "type": "object"
+    },
+    "mutates": true,
+    "tags": [
+      "anchor",
+      "write"
+    ]
+  },
+  {
+    "name": "anchor.unmark",
+    "description": "Delete one Anchor PCell instance by id.",
+    "params": {
+      "type": "object",
+      "required": [
+        "cell",
+        "id"
+      ],
+      "properties": {
+        "cell": {
+          "description": "Cell name or cell_index"
+        },
+        "id": {
+          "type": "string"
+        }
+      }
+    },
+    "returns": {
+      "type": "object"
+    },
+    "mutates": true,
+    "tags": [
+      "anchor",
+      "write",
+      "delete"
+    ]
+  },
+  {
+    "name": "anchor.delete_all",
+    "description": "Delete all Anchor PCell instances in a cell.",
+    "params": {
+      "type": "object",
+      "required": [
+        "cell"
+      ],
+      "properties": {
+        "cell": {
+          "description": "Cell name or cell_index"
+        },
+        "layer": {
+          "type": "string"
+        }
+      }
+    },
+    "returns": {
+      "type": "object"
+    },
+    "mutates": true,
+    "tags": [
+      "anchor",
+      "write",
+      "delete"
+    ]
+  },
+  {
+    "name": "transfer.pending_set",
+    "description": "Store an already-reviewed flat-selection transfer package in this KLayout window.",
+    "params": {
+      "type": "object",
+      "required": [
+        "package"
+      ],
+      "properties": {
+        "package": {
+          "type": "object"
+        }
+      }
+    },
+    "returns": {
+      "type": "object"
+    },
+    "tags": [
+      "transfer"
+    ]
+  },
+  {
+    "name": "transfer.pending_status",
+    "description": "Return the pending transfer package status for this KLayout window.",
+    "params": {
+      "type": "object"
+    },
+    "returns": {
+      "type": "object"
+    },
+    "tags": [
+      "transfer"
+    ]
+  },
+  {
+    "name": "transfer.pending_clear",
+    "description": "Clear this KLayout window's pending transfer package without writing layout geometry.",
+    "params": {
+      "type": "object"
+    },
+    "returns": {
+      "type": "object"
+    },
+    "tags": [
+      "transfer"
+    ]
+  },
+  {
+    "name": "transfer.paste_pending",
+    "description": "Paste the currently pending flat-selection transfer package into this KLayout window. The package must already contain final target layers and coordinates.",
+    "params": {
+      "type": "object",
+      "properties": {
+        "dry_run": {
+          "type": "boolean",
+          "default": false
+        },
+        "clear_after": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "returns": {
+      "type": "object"
+    },
+    "mutates": true,
+    "tags": [
+      "transfer",
+      "write"
+    ]
+  },
+  {
+    "name": "transfer.import_cell_tree_package",
+    "description": "Import one cell tree from a GDS/OAS package into this KLayout window using KLayout's native Cell.copy_tree behavior. Name conflicts are resolved by KLayout with '$N' suffixes.",
+    "params": {
+      "type": "object",
+      "required": [
+        "path",
+        "source_cell"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "source_cell": {
+          "type": "string"
+        },
+        "dry_run": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "returns": {
+      "type": "object"
+    },
+    "mutates": true,
+    "long_running": true,
+    "tags": [
+      "transfer",
+      "write"
+    ]
+  },
+  {
+    "name": "session.mark_klive_target",
+    "description": "Mark this KLayout window as the klive/gdsfactory-compatible 8082 target.",
+    "params": {
+      "type": "object",
+      "additionalProperties": false
+    },
+    "returns": {
+      "type": "object"
+    },
+    "tags": [
+      "session"
+    ]
+  },
+  {
+    "name": "session.label_set",
+    "description": "Set a human label and aliases for a registered KLayout session in the shared registry.",
+    "params": {
+      "type": "object",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "aliases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "label"
+      ],
+      "additionalProperties": false
+    },
+    "returns": {
+      "type": "object"
+    },
+    "tags": [
+      "session"
+    ]
+  }
+]

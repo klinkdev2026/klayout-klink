@@ -1,0 +1,84 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "klayout-klink"
+dynamic = ["version"]
+description = "AI-native control plane for KLayout — thin RPC bridge + modular external workers"
+readme = "README.md"
+# >=3.10 because the bundled Rust kernels (dependencies below) target CPython 3.10+.
+requires-python = ">=3.10"
+license = {text = "Apache-2.0"}
+authors = [{name = "klink developers"}]
+keywords = ["klayout", "eda", "gds", "rpc", "ipc"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)",
+]
+# Runtime deps are klink's OWN Rust acceleration kernels (byte-parity vs the
+# pure-Python reference, CI-gated cross-platform). They ship as pre-built wheels
+# for Linux/macOS/Windows on CPython 3.10-3.13, so `pip install klayout-klink`
+# gets them. THIRD-PARTY scientific libraries (klayout, gdsfactory, numpy, scipy,
+# opencv, scikit-*) are NOT bundled — klink imports them lazily and, when a
+# feature needs one that is missing, names the exact `pip install`; you install
+# those yourself. On a platform with no pre-built kernel wheel, pip builds them
+# from source (needs a Rust toolchain) — or use `--no-deps` for the pure-Python
+# core only (everything still runs, just slower on large P&R).
+# Version bound: core and kernel are released together and the byte-parity
+# promise only holds within a minor series — an old core must not pick up a
+# newer kernel line.
+dependencies = [
+    "klink-boxmaze-rs>=0.1,<0.2",
+]
+
+[project.optional-dependencies]
+# Acceleration kernel for the multilayer routing engine. OPTIONAL: without it
+# the engine runs a pure-Python path with identical results, just slower on
+# large designs. `pip install "klayout-klink[fast]"` once its wheels are on
+# PyPI (built by the same release workflow as the core kernel).
+fast = [
+    "klink-trackmaze-rs>=0.1,<0.2",
+]
+
+[project.scripts]
+klink = "klink.cli:main"
+klink-mcp = "klink.mcp.__main__:main"
+
+[tool.setuptools.package-data]
+# Ship the project scaffold so `klink init` works for pure-pip users, plus the
+# non-.py data files the runtime and `klink-mcp --setup` need (MCP skills/agents,
+# packaged CLAUDE/README, nanodevice detector priors).
+klink = [
+    "templates/project/*",
+    "templates/project/custom_devices/*",
+    "templates/project/example_template/*",
+    "templates/project/recipes/*",
+    "mcp/skills/klayout/*",
+    "mcp/skills/klayout-gdsfactory/*",
+    "mcp/agents/*",
+    "mcp/CLAUDE.md",
+    "mcp/README.md",
+    "domains/nanodevice/flake/priors/*.json",
+]
+
+[project.urls]
+Homepage = "https://github.com/klinkdev2026/klayout-klink"
+Repository = "https://github.com/klinkdev2026/klayout-klink"
+Issues = "https://github.com/klinkdev2026/klayout-klink/issues"
+
+[tool.pytest.ini_options]
+markers = [
+    "detectors: slow optional nanodevice detector/stage integration tests",
+]
+
+[tool.setuptools.dynamic]
+# Single source of truth for the package version: klink/_meta.py.
+version = {attr = "klink.__version__"}
+
+[tool.setuptools.packages.find]
+include = ["klink*"]
+exclude = ["klink_plugin*", "klink_workbench*", "examples_klink*", "tests*", "examples*", "legacy_klive*"]

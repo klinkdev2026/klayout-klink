@@ -1,0 +1,3776 @@
+{
+  "tools": [
+    {
+      "name": "hello",
+      "description": "Introduce the client and receive server info + capability list. Recommended as the first call on every new connection. Not required (the server works without it), but useful for version-gating features.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "client": {
+            "type": "string",
+            "description": "Client identifier string, e.g. 'klayout-klink/0.1.0'"
+          },
+          "protocol": {
+            "type": "integer",
+            "description": "Protocol version the client speaks"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    {
+      "name": "meta.ping",
+      "description": "Liveness probe. Echoes the supplied params back and includes the server-side trace id. Use this to measure round-trip time or check a connection is healthy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    {
+      "name": "meta.methods",
+      "description": "Return the full RPC method catalogue with descriptions and JSON schemas. Designed to be directly consumable by LLM function-calling layers (tool definitions, MCP, OpenAI/Anthropic tools, etc.).",
+      "inputSchema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "meta.debug_signals",
+      "description": "Return SignalHub diagnostic log and optionally fire a synthetic event on a channel to verify the subscribe->emit->deliver path. Pass {'fire': 'selection_changed'} to test event delivery.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fire": {
+            "type": "string",
+            "description": "Channel to synthesise an event on"
+          }
+        }
+      }
+    },
+    {
+      "name": "layout.info",
+      "description": "Snapshot of the currently active layout view: number of open views, active cellview index, top cell name, source file path, database unit, the full top-cell list and the registered layer/datatype pairs. Safe to call often - this is the method an LLM agent should use to refresh its world view.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "verbosity": {
+            "type": "string",
+            "enum": [
+              "summary",
+              "normal",
+              "full"
+            ],
+            "default": "normal",
+            "description": "'summary' omits layer list; 'full' adds hierarchy counts"
+          }
+        }
+      }
+    },
+    {
+      "name": "layout.show_file",
+      "description": "Load a GDS/OAS file into KLayout. If the file is already open in a tab, reload it. Otherwise open it in the current view (mode='replace') or a new tab (mode='new'). When recording is active, all shape/cell events triggered by the file load are merged into a single `layout_show_file()` line.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Absolute path to the GDS/OAS file to load"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "replace",
+              "new"
+            ],
+            "default": "replace",
+            "description": "'replace' loads into the current view; 'new' opens a new tab"
+          },
+          "keep_position": {
+            "type": "boolean",
+            "default": true,
+            "description": "Restore viewport after loading"
+          },
+          "technology": {
+            "type": "string",
+            "description": "KLayout technology name to apply to the loaded layout"
+          }
+        },
+        "required": [
+          "path"
+        ]
+      }
+    },
+    {
+      "name": "layout.save_file",
+      "description": "Save the active layout to a GDS or OASIS file on disk. Extension determines format: .gds/.gds2 for GDSII, .oas/.oasis for OASIS.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Absolute file path to write. Extension determines format."
+          },
+          "cellview_index": {
+            "type": "integer",
+            "default": 0,
+            "description": "Which cellview to save (0 = active)."
+          }
+        },
+        "required": [
+          "path"
+        ]
+      }
+    },
+    {
+      "name": "layout.clear",
+      "description": "Clear the entire layout: removes all cells, shapes, and hierarchy in one operation. Leaves an empty layout ready for new content. Useful before restoring a version-control snapshot.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cellview_index": {
+            "type": "integer",
+            "default": 0,
+            "description": "Which cellview to clear (0 = active)."
+          }
+        }
+      }
+    },
+    {
+      "name": "cell.list",
+      "description": "Flat, paginated list of cells in the active layout. Use this to discover what cells exist. For hierarchy use cell.tree instead. Filtering: 'name_prefix' is a case-sensitive prefix match; 'top_only' restricts to top cells. Pagination: 'offset' + 'limit'.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name_prefix": {
+            "type": "string",
+            "description": "Case-sensitive prefix filter on cell name"
+          },
+          "top_only": {
+            "type": "boolean",
+            "default": false
+          },
+          "with_bbox": {
+            "type": "boolean",
+            "default": false,
+            "description": "Include bounding box in dbu"
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5000,
+            "default": 500
+          }
+        }
+      }
+    },
+    {
+      "name": "cell.tree",
+      "description": "Hierarchical cell tree rooted at a given cell (default: first top cell). Bounded by max_depth and max_nodes. Use this to understand how a layout is composed; the 'instances' count on each node tells you how many times its parent instances it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "root": {
+            "description": "Cell name (str) or cell_index (int). Default: first top cell."
+          },
+          "max_depth": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 8
+          },
+          "max_nodes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20000,
+            "default": 2000
+          }
+        }
+      }
+    },
+    {
+      "name": "cell.create",
+      "description": "Create a new cell in the active layout. If `name` is given and already taken, KLayout appends '$1', '$2', ... to keep names unique (the effective name is returned). If omitted, an anonymous auto-named cell ('$N') is created. Idempotent is NOT guaranteed - each call creates a fresh cell.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Desired cell name."
+          }
+        }
+      }
+    },
+    {
+      "name": "cell.delete",
+      "description": "Delete a cell from the active layout. Use `recursive=true` to also delete child cells that become orphaned (no longer referenced by any other cell). Default is to delete only this cell; remaining instances are turned into 'ghost' references.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "cell"
+        ],
+        "properties": {
+          "cell": {
+            "description": "Cell name (str) or cell_index (int)."
+          },
+          "recursive": {
+            "type": "boolean",
+            "default": false,
+            "description": "If true, also delete cells that become orphaned."
+          }
+        }
+      }
+    },
+    {
+      "name": "cell.rename",
+      "description": "Rename a cell. Fails if `new_name` is already taken (KLayout would otherwise silently append '$1'; we surface that as an error so callers can decide). Pass `allow_suffix=true` to opt into KLayout's auto-suffix behaviour.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "cell",
+          "new_name"
+        ],
+        "properties": {
+          "cell": {
+            "description": "Cell name (str) or cell_index (int)."
+          },
+          "new_name": {
+            "type": "string"
+          },
+          "allow_suffix": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      }
+    },
+    {
+      "name": "layer.list",
+      "description": "List all layers currently defined in the active layout. Each entry has `layer_index` (the runtime handle used by other RPCs), `layer`/`datatype` (GDS numbers), and optional `name`. Also returns `dbu_um` so the client can convert between microns and database units.",
+      "inputSchema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "layer.ensure",
+      "description": "Ensure a GDS layer (layer/datatype) exists in the active layout. If missing, it is created inside an undo-able transaction. Returns the `layer_index` handle and whether the layer was just created. Safe to call repeatedly - it's a pure upsert.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "layer"
+        ],
+        "properties": {
+          "layer": {
+            "type": "integer",
+            "description": "GDS layer number, e.g. 101"
+          },
+          "datatype": {
+            "type": "integer",
+            "default": 0,
+            "description": "GDS datatype (default 0)"
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional display name shown in the layer panel."
+          }
+        }
+      }
+    },
+    {
+      "name": "shape.query",
+      "description": "Read shapes from ONE cell (no recursion) as JSON. Strongly recommended: narrow with 'layers' and 'bbox_dbu', and respect pagination via 'limit' (default 500, max 5000). Coordinates are in database units (dbu); multiply by layout dbu (from layout.info) to get microns. The 'truncated' flag means more shapes matched than 'limit' - call again with a tighter bbox.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "cell"
+        ],
+        "properties": {
+          "cell": {
+            "description": "Cell name (str) or cell_index (int)"
+          },
+          "layers": {
+            "type": "array",
+            "description": "Layer indexes, 'L/D' strings or {layer, datatype} objects. None = all layers."
+          },
+          "bbox_dbu": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4,
+            "description": "[x1, y1, x2, y2] in dbu. Shapes overlapping this region are returned."
+          },
+          "kinds": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "polygons",
+                "boxes",
+                "paths",
+                "texts"
+              ]
+            },
+            "description": "Subset of shape kinds to return. Default: all."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5000,
+            "default": 500
+          }
+        }
+      }
+    },
+    {
+      "name": "shape.insert_box",
+      "description": "Insert an axis-aligned rectangle into `cell` on the given layer. Provide the box as `bbox_um=[x1,y1,x2,y2]` (microns, most natural) or `bbox_dbu` (integer database units). The edit is wrapped in a single-step transaction so Ctrl+Z undoes it.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "cell"
+        ],
+        "properties": {
+          "cell": {
+            "description": "Cell name (str) or cell_index (int)"
+          },
+          "layer_index": {
+            "type": "integer",
+            "description": "Runtime layer handle from layer.list/layer.ensure (preferred)."
+          },
+          "layer": {
+            "type": "integer",
+            "description": "GDS layer number (alternative, must already exist)."
+          },
+          "datatype": {
+            "type": "integer",
+            "description": "GDS datatype when `layer` is given. Default 0."
+          },
+          "bbox_um": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4
+          },
+          "bbox_dbu": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4
+          }
+        }
+      }
+    },
+    {
+      "name": "shape.insert_boxes",
+      "description": "Insert many axis-aligned rectangles into one cell/layer in a single RPC and one undo transaction. Provide `boxes_um` or `boxes_dbu` as a list of [x1,y1,x2,y2] boxes. Use this instead of many `shape.insert_box` calls for large generated layouts.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "cell"
+        ],
+        "properties": {
+          "cell": {
+            "description": "Cell name (str) or cell_index (int)"
+          },
+          "layer_index": {
+            "type": "integer",
+            "description": "Runtime layer handle from layer.list/layer.ensure (preferred)."
+          },
+          "layer": {
+            "type": "integer",
+            "description": "GDS layer number (alternative, must already exist)."
+          },
+          "datatype": {
+            "type": "integer",
+            "description": "GDS datatype when `layer` is given. Default 0."
+          },
+          "boxes_um": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "minItems": 4,
+              "maxItems": 4
+            }
+          },
+          "boxes_dbu": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "minItems": 4,
+              "maxItems": 4
+            }
+          },
+          "dry_run": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      }
+    },
+    {
+      "name": "shape.insert_many",
+      "description": "Insert a mixed list of shapes into one cell in a single RPC and one undo transaction. Each item has kind/type = box, polygon, path, or text, its own layer selector, and the same geometry fields used by the corresponding single-shape RPC.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "cell",
+          "items"
+        ],
+        "properties": {
+          "cell": {
+            "description": "Cell name (str) or cell_index (int)"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "dry_run": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      }
+    },
+    {
+      "name": "shape.insert_polygon",
+      "description": "Insert a polygon (hull only; no holes yet) into `cell`. Points are given as `points_um=[[x,y],...]` (microns) or `points_dbu` (dbu). At least 3 points required. The polygon is closed automatically.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "cell"
+        ],
+        "properties": {
+          "cell": {
+            "description": "Cell name (str) or cell_index (int)"
+          },
+          "layer_index": {
+            "type": "integer",
+            "description": "Runtime layer handle from layer.list/layer.ensure (preferred)."
+          },
+          "layer": {
+            "type": "integer",
+            "description": "GDS layer number (alternative, must already exist)."
+          },
+          "datatype": {
+            "type": "integer",
+            "description": "GDS datatype when `layer` is given. Default 0."
+          },
+          "points_um": {
+            "type": "array"
+          },
+          "points_dbu": {
+            "type": "array"
+          }
+        }
+      }
+    },
+    {
+      "name": "shape.insert_path",
+      "description": "Insert a path (center line with width) into `cell`. Points via `points_um`/`points_dbu`, width via `width_um`/`width_dbu`. Optional `begin_ext`/`end_ext` extensions (defaults to width/2 - flush) and `round_ends` for rounded caps.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "cell"
+        ],
+        "properties": {
+          "cell": {
+            "description": "Cell name (str) or cell_index (int)"
+          },
+          "layer_index": {
+            "type": "integer",
+            "description": "Runtime layer handle from layer.list/layer.ensure (preferred)."
+          },
+          "layer": {
+            "type": "integer",
+            "description": "GDS layer number (alternative, must already exist)."
+          },
+          "datatype": {
+            "type": "integer",
+            "description": "GDS datatype when `layer` is given. Default 0."
+          },
+          "points_um": {
+            "type": "array"
+          },
+          "points_dbu": {
+            "type": "array"
+          },
+          "width_um": {
+            "type": "number"
+          },
+          "width_dbu": {
+            "type": "integer"
+          },
+          "begin_ext_um": {
+            "type": "number"
+          },
+          "begin_ext_dbu": {
+            "type": "integer"
+          },
+          "end_ext_um": {
+            "type": "number"
+          },
+          "end_ext_dbu": {
+            "type": "integer"
+          },
+          "round_ends": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      }
+    },
+    {
+      "name": "shape.insert_text",
+      "description": "Insert a text label into `cell`. Position via `position_um`/`position_dbu`. Optional `size_um` maps to KLayout text size (pya.Text.size). Labels are non-geometric annotations - they snap to integer coordinates but do not produce mask geometry.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "cell",
+          "string"
+        ],
+        "properties": {
+          "cell": {
+            "description": "Cell name (str) or cell_index (int)"
+          },
+          "layer_index": {
+            "type": "integer",
+            "description": "Runtime layer handle from layer.list/layer.ensure (preferred)."
+          },
+          "layer": {
+            "type": "integer",
+            "description": "GDS layer number (alternative, must already exist)."
+          },
+          "datatype": {
+            "type": "integer",
+            "description": "GDS datatype when `layer` is given. Default 0."
+          },
+          "string": {
+            "type": "string"
+          },
+          "position_um": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "position_dbu": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "size_um": {
+            "type": "number"
+          },
+          "size_dbu": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    {
+      "name": "shape.delete",
+      "description": "Delete shapes from ONE cell that match a declarative selector. Select by layer (layer_index / layer+datatype / layers=[...] / all_layers=true), optional bbox_dbu|bbox_um (touching), and optional kinds=['boxes','polygons','paths','texts']. Use `dry_run=true` to preview the count before actually deleting. The whole erase runs inside a single transaction so Ctrl+Z / edit.undo rolls it all back at once. Returns `{deleted, per_layer, truncated}`. If nothing matches, `deleted=0` and the call succeeds without error.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "cell"
+        ],
+        "properties": {
+          "cell": {
+            "description": "Cell name (str) or cell_index (int)"
+          },
+          "layer_index": {
+            "type": "integer"
+          },
+          "layer": {
+            "type": "integer"
+          },
+          "datatype": {
+            "type": "integer"
+          },
+          "layers": {
+            "type": "array",
+            "description": "Multi-layer form (same entries shape.query accepts)."
+          },
+          "all_layers": {
+            "type": "boolean",
+            "default": false,
+            "description": "Must be true if NO layer selector is given - guards against accidental nukes."
+          },
+          "bbox_dbu": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4
+          },
+          "bbox_um": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4
+          },
+          "kinds": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "polygons",
+                "boxes",
+                "paths",
+                "texts"
+              ]
+            },
+            "description": "Kind filter; defaults to all shape kinds."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000,
+            "default": 10000
+          },
+          "dry_run": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      }
+    },
+    {
+      "name": "instance.insert",
+      "description": "Place `child` inside `parent`. Position is in microns (position_um) or dbu (position_dbu); rotation is degrees (0/90/180/270 stay as integer transforms, else promoted to a complex transform with magnification). Optional `array` creates a grid. Two array shapes are accepted: orthogonal {rows, cols, pitch_x_um/dbu, pitch_y_um/dbu} and general {na, nb, a_dbu|a_um:[x,y], b_dbu|b_um:[x,y]} (the general form survives rotated/sheared arrays). Without an array you get a single instance. Cyclic hierarchy (child already contains parent) is rejected.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "parent",
+          "child"
+        ],
+        "properties": {
+          "parent": {
+            "description": "parent cell (name or index)"
+          },
+          "child": {
+            "description": "cell to instantiate (name or index)"
+          },
+          "position_um": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "position_dbu": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "rotation": {
+            "type": "number",
+            "default": 0,
+            "description": "degrees CCW"
+          },
+          "mirror": {
+            "type": "boolean",
+            "default": false,
+            "description": "mirror across x-axis before rotation"
+          },
+          "magnification": {
+            "type": "number",
+            "default": 1.0
+          },
+          "array": {
+            "type": "object",
+            "properties": {
+              "rows": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "cols": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "pitch_x_um": {
+                "type": "number"
+              },
+              "pitch_x_dbu": {
+                "type": "integer"
+              },
+              "pitch_y_um": {
+                "type": "number"
+              },
+              "pitch_y_dbu": {
+                "type": "integer"
+              },
+              "na": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "nb": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "a_dbu": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "a_um": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "b_dbu": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "b_um": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "instance.insert_many",
+      "description": "Insert many existing child-cell instances into one parent cell in a single RPC and one undo transaction. Each item has `child` plus the same transform/array fields accepted by instance.insert.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "parent",
+          "items"
+        ],
+        "properties": {
+          "parent": {
+            "description": "parent cell (name or index)"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "child"
+              ],
+              "properties": {
+                "child": {
+                  "description": "cell to instantiate (name or index)"
+                },
+                "position_um": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 2
+                },
+                "position_dbu": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 2
+                },
+                "rotation": {
+                  "type": "number",
+                  "default": 0
+                },
+                "mirror": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "magnification": {
+                  "type": "number",
+                  "default": 1.0
+                },
+                "array": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "dry_run": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      }
+    },
+    {
+      "name": "instance.insert_pcell",
+      "description": "Build a PCell variant cell from a library (e.g. Basic.CIRCLE, Basic.TEXT) using the supplied `params` dict, then insert one instance of it in `parent`. Call pcell.info(library, pcell) first to discover the exact parameter names and types. Layer parameters accept {'layer': int, 'datatype': int} or 'L/D'. Identical params reuse the same variant cell (KLayout merges on value-identity).",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "parent",
+          "pcell"
+        ],
+        "properties": {
+          "parent": {
+            "description": "parent cell (name or index)"
+          },
+          "library": {
+            "type": "string",
+            "default": "Basic"
+          },
+          "pcell": {
+            "type": "string",
+            "description": "PCell name, e.g. CIRCLE"
+          },
+          "params": {
+            "type": "object",
+            "description": "PCell parameter dict (see pcell.info)"
+          },
+          "position_um": {
+            "type": "array"
+          },
+          "position_dbu": {
+            "type": "array"
+          },
+          "rotation": {
+            "type": "number"
+          },
+          "mirror": {
+            "type": "boolean"
+          },
+          "magnification": {
+            "type": "number"
+          },
+          "array": {
+            "type": "object",
+            "description": "Optional PCell array. Same shape as instance.insert: either {rows, cols, pitch_x_um/dbu, pitch_y_um/dbu} or {na, nb, a_dbu|a_um, b_dbu|b_um}.",
+            "properties": {
+              "rows": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "cols": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "pitch_x_um": {
+                "type": "number"
+              },
+              "pitch_x_dbu": {
+                "type": "integer"
+              },
+              "pitch_y_um": {
+                "type": "number"
+              },
+              "pitch_y_dbu": {
+                "type": "integer"
+              },
+              "na": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "nb": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "a_dbu": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "a_um": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "b_dbu": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "b_um": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "instance.insert_pcell_many",
+      "description": "Insert many PCell instances into one parent cell in a single RPC and one undo transaction. Each item accepts library, pcell, params, transform fields, and optional array, matching instance.insert_pcell.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "parent",
+          "items"
+        ],
+        "properties": {
+          "parent": {
+            "description": "parent cell (name or index)"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "pcell"
+              ],
+              "properties": {
+                "library": {
+                  "type": "string",
+                  "default": "Basic"
+                },
+                "pcell": {
+                  "type": "string"
+                },
+                "params": {
+                  "type": "object"
+                },
+                "position_um": {
+                  "type": "array"
+                },
+                "position_dbu": {
+                  "type": "array"
+                },
+                "rotation": {
+                  "type": "number"
+                },
+                "mirror": {
+                  "type": "boolean"
+                },
+                "magnification": {
+                  "type": "number"
+                },
+                "array": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "dry_run": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      }
+    },
+    {
+      "name": "instance.query",
+      "description": "List direct child instances in a parent cell. Returns child name, bbox, transform, optional array, PCell metadata, and the child cell's direct shape counts by layer. This is a read primitive for clients that need to inspect or clean up instance/PCell geometry without using exec.python.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "parent"
+        ],
+        "properties": {
+          "parent": {
+            "description": "parent cell (name or index)"
+          },
+          "child": {
+            "description": "optional child cell filter (name or index)"
+          },
+          "bbox_dbu": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4
+          },
+          "bbox_um": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000,
+            "default": 10000
+          }
+        }
+      }
+    },
+    {
+      "name": "instance.delete",
+      "description": "Delete instances from `parent` that match a declarative selector. Optional filters: `child` (cell name or cell_index), `bbox_dbu`/`bbox_um` (touching). Removing an instance is NON-destructive to the child cell itself - only the reference in this parent goes away. Wrapped in one transaction so undo rolls the whole batch back. With `dry_run=true` only the count is reported. With no filters you must pass `all=true` to confirm deleting every instance in the parent.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "parent"
+        ],
+        "properties": {
+          "parent": {
+            "description": "parent cell (name or index)"
+          },
+          "child": {
+            "description": "filter by child cell (name or index); omit to match all children"
+          },
+          "bbox_dbu": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4
+          },
+          "bbox_um": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4
+          },
+          "all": {
+            "type": "boolean",
+            "default": false,
+            "description": "Must be true if NEITHER child nor bbox filter is given."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000,
+            "default": 10000
+          },
+          "dry_run": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      }
+    },
+    {
+      "name": "pcell.libraries",
+      "description": "List available KLayout PCell libraries (Basic is always there; PDKs register their own). Use `pcell.list` next to enumerate PCells in a specific library.",
+      "inputSchema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "pcell.list",
+      "description": "List all PCells in `library` (default 'Basic'). Returned entries are just names - call `pcell.info` for parameter details on a specific one.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "library": {
+            "type": "string",
+            "default": "Basic"
+          }
+        }
+      }
+    },
+    {
+      "name": "pcell.info",
+      "description": "Describe the parameters of one PCell so the caller can build a valid `params` dict for `instance.insert_pcell`. Each entry reports {name, type, default, description, choices?}. 'type' is one of: int, double, string, boolean, layer, list, shape, none.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "pcell"
+        ],
+        "properties": {
+          "library": {
+            "type": "string",
+            "default": "Basic"
+          },
+          "pcell": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "pcell.register_fitted",
+      "description": "Register a fitted-device PCell at runtime from a fit table (format klink_transistor_pcell_fit_v1, produced by the klink fitter from a user exemplar family). The plugin ships only the generic machinery; device definitions come from outside via this call - a new device family needs zero plugin changes and zero reloads. The PCell lands in library 'klink_structdevice' and is immediately instantiable via instance.insert_pcell.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "name",
+          "fit_table"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "PCell name (simple identifier, unique per session)."
+          },
+          "fit_table": {
+            "type": "string",
+            "description": "Absolute path to the fit table JSON."
+          }
+        }
+      }
+    },
+    {
+      "name": "selection.get",
+      "description": "Return the current object selection in the active view. Each entry is either a shape (with layer + bbox) or an instance (with target cell + bbox). Empty selection returns an empty list - not an error.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5000,
+            "default": 500
+          }
+        }
+      }
+    },
+    {
+      "name": "selection.clear",
+      "description": "Clear the current object selection in the active view.",
+      "inputSchema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "selection.set_box",
+      "description": "Select every shape in 'cell' whose bbox intersects 'bbox_dbu' on any of the given 'layers' (default: all layers). Replaces the current selection. Returns the number of objects selected.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "cell",
+          "bbox_dbu"
+        ],
+        "properties": {
+          "cell": {
+            "description": "Cell name (str) or cell_index (int)"
+          },
+          "bbox_dbu": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4,
+            "description": "[x1, y1, x2, y2] in dbu"
+          },
+          "layers": {
+            "type": "array",
+            "description": "Layer indexes / 'L/D' / {layer, datatype}. None = all."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20000,
+            "default": 5000
+          }
+        }
+      }
+    },
+    {
+      "name": "selection.send_context",
+      "description": "Explicitly send the current non-empty KLayout selection as a selection_sent event for external AI interaction context. This does not store memory in the plugin.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "default": "rpc"
+          },
+          "max_items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500,
+            "default": 50
+          }
+        }
+      }
+    },
+    {
+      "name": "edit.undo",
+      "description": "Undo the most recent undoable operation (a klink mutating RPC, a Macro IDE edit, or a GUI edit). This is the programmatic equivalent of Edit > Undo. Returns before/after stack snapshots so callers can detect no-op undos. Non-undoable things (e.g. view zoom) are skipped automatically by KLayout.",
+      "inputSchema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "edit.redo",
+      "description": "Redo the most recently undone operation. Pair with edit.undo. Returns before/after stack snapshots so callers can verify the stack actually advanced.",
+      "inputSchema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "edit.status",
+      "description": "Report current undo/redo availability. Use this to decide whether an edit.undo / edit.redo call would actually do anything. Pass debug=true to surface KLayout Manager introspection fields (useful when diagnosing a build where has_undo / has_redo come back absent).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "debug": {
+            "type": "boolean",
+            "description": "Include Manager-introspection fields in the reply."
+          }
+        }
+      }
+    },
+    {
+      "name": "view.list_tabs",
+      "description": "List all layout tabs (views) in this KLayout window: index, title, file path, active cell, and which tab is current. Use together with view.activate_tab to inspect non-active layouts through the ordinary single-layout RPCs.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "view.activate_tab",
+      "description": "Switch the current KLayout tab (view) by index from view.list_tabs. After switching, all single-layout RPCs (layout.info, cell.list, shape.query, ...) operate on that tab's layout.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "index"
+        ],
+        "properties": {
+          "index": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "view.screenshot",
+      "description": "Render a PNG screenshot of the active layout view. Two modes: 'base64' embeds the PNG in the response as a data URL (great for LLMs with vision support); 'path' saves to disk and returns the absolute path (use for large images). Width/height are in pixels; defaults match what the user sees on screen. You can also clip to a bbox_dbu region.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "base64",
+              "path"
+            ],
+            "default": "base64"
+          },
+          "width_px": {
+            "type": "integer",
+            "minimum": 16,
+            "maximum": 8192
+          },
+          "height_px": {
+            "type": "integer",
+            "minimum": 16,
+            "maximum": 8192
+          },
+          "bbox_dbu": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4,
+            "description": "Optional clipping rectangle in dbu. Default: current viewport."
+          },
+          "path": {
+            "type": "string",
+            "description": "Destination path (only used when mode='path'). Default: temp file."
+          }
+        }
+      }
+    },
+    {
+      "name": "view.zoom_fit",
+      "description": "Fit the entire layout into the viewport (equivalent to GUI's 'Zoom Fit').",
+      "inputSchema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "view.zoom_box",
+      "description": "Zoom the viewport to show exactly the given bbox (dbu).",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "bbox_dbu"
+        ],
+        "properties": {
+          "bbox_dbu": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4
+          }
+        }
+      }
+    },
+    {
+      "name": "view.viewport",
+      "description": "Report the current viewport: visible bbox in dbu, pixel size of the view widget, and cellview index. Call this to align an external coordinate with what the user sees.",
+      "inputSchema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "view.show_cell",
+      "description": "Set the active cellview's displayed (top) cell. KLayout shows a single cell at a time per view; if you just created a cell with cell.create and want to actually see its contents, you must call this (or insert an instance of it into the current top). Also zoom-fits by default. Returns the cell that is now being shown.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "cell"
+        ],
+        "properties": {
+          "cell": {
+            "description": "Cell name (str) or cell_index (int)."
+          },
+          "zoom_fit": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      }
+    },
+    {
+      "name": "view.close_tab",
+      "description": "Close a layout view tab by index. Closes the active tab if no index is specified.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "view_index": {
+            "type": "integer",
+            "description": "0-based index of the view to close. Default: active view."
+          }
+        }
+      }
+    },
+    {
+      "name": "view.show_lvsdb",
+      "description": "Load a saved KLayout LVS/netlist database from disk into the current view's Netlist Browser and SHOW it, so you can cross-probe layout<->netlist interactively (click a net/device -> highlight in layout). Like DRC's marker browser, but for LVS/connectivity. kind='lvs' (default) reads a .lvsdb (LayoutVsSchematic, with the matched/unmatched cross-reference); kind='l2n' reads a .l2n (extraction only). Pair with structdevice.lvs_check mode='lvsdb', which writes the .lvsdb and returns its path. Read-only (loads a file; does not modify the layout).",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "path"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "absolute path to a .lvsdb or .l2n file"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "lvs",
+              "l2n"
+            ],
+            "default": "lvs"
+          }
+        }
+      }
+    },
+    {
+      "name": "events.channels",
+      "description": "List event channels the server can push. Subscribe to a subset via events.subscribe. Events are delivered as NDJSON frames with {\"event\": \"<name>\", \"data\": {...}}.",
+      "inputSchema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "events.status",
+      "description": "Return event subscription and SignalHub diagnostics for the calling connection. Use this to debug whether selection_changed and other interaction events are bound and subscribed.",
+      "inputSchema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "events.subscribe",
+      "description": "Subscribe the calling connection to one or more event channels. Unknown channels are silently ignored (check 'accepted' in the response). Call events.channels for the full list.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "channels"
+        ],
+        "properties": {
+          "channels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "events.unsubscribe",
+      "description": "Unsubscribe the calling connection from one or more channels. Pass an empty list or omit to keep state unchanged; pass '*' to drop all subscriptions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "channels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "exec.python",
+      "description": "Escape hatch: run arbitrary Python code in KLayout's Qt main thread. Full pya access, full filesystem access - equivalent to running a macro from the IDE. Pre-bound globals: pya, mw (main window), view (current LayoutView), layout (active Layout).\n\nState persists across calls ON THE SAME CONNECTION. Pass `reset=true` to wipe the namespace first. stdout/stderr are captured and returned as strings. If the last top-level statement is an expression, its value comes back as `return_value` (Jupyter-style); otherwise had_result=false.\n\nExceptions in user code do NOT fail the RPC - they come back inside result.exception along with any stdout/stderr captured before the raise. Only malformed requests (missing `code`, oversized, syntax error) return ok=false. Callers writing LLM feedback loops should branch on result.exception.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "code"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Python source to exec. Multi-statement OK; if the last line is an expression its value is returned."
+          },
+          "reset": {
+            "type": "boolean",
+            "description": "Clear this connection's namespace before running. Default false."
+          },
+          "stdout_limit": {
+            "type": "integer",
+            "description": "Max bytes of stdout to return (truncated if exceeded). Default 65536."
+          },
+          "stderr_limit": {
+            "type": "integer",
+            "description": "Max bytes of stderr to return. Default 65536."
+          },
+          "result_mode": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "repr",
+              "none"
+            ],
+            "description": "`auto` (default) tries JSON-safe, falls back to repr; `repr` always forces repr; `none` discards the last expression's value."
+          },
+          "protect_cellview": {
+            "type": "boolean",
+            "description": "When true (default), snippets containing high-risk layout ownership operations detach the active cellview before execution and repair it afterward."
+          }
+        }
+      }
+    },
+    {
+      "name": "exec.reset",
+      "description": "Clear the per-connection Python namespace used by exec.python. Equivalent to calling exec.python with reset=true and no code. Useful when a client wants a fresh sandbox without running anything else.",
+      "inputSchema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "drc.run",
+      "description": "Escape hatch: run arbitrary DRC DSL script code in KLayout's integrated Ruby DRC engine. Accepts DRC DSL source (Ruby-like syntax with source()/input()/report()/etc.) and executes it.\n\nIf the script includes source() it runs in standalone mode (against the specified file). If source() is omitted it runs in interactive mode against the currently loaded layout.\n\nOptional variables ($input_layout, $output_rdb, $topcell) are injected into the Ruby interpreter so the script can reference them without hardcoding paths.\n\nstdout/stderr are captured and returned as strings. If output_rdb is specified and the script generates it, the RDB is parsed and a violation summary is returned.\n\nExceptions in DRC scripts do NOT fail the RPC - they come back inside result.exception with any stdout/stderr captured before the error. Only malformed requests (missing code, oversized) return ok=false.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "code"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "DRC DSL source code to execute. Full DRC script with source()/input()/report() etc. Supports the complete KLayout DRC DSL (Ruby-based)."
+          },
+          "input_layout": {
+            "type": "string",
+            "description": "Optional path to input GDS/OASIS file. Injected as Ruby variable $input_layout. The script can use source($input_layout) to reference it."
+          },
+          "output_rdb": {
+            "type": "string",
+            "description": "Optional path for the output report database (.lyrdb) file. Injected as Ruby variable $output_rdb. After execution, if this file exists it is read back and returned as rdb_summary."
+          },
+          "top_cell": {
+            "type": "string",
+            "description": "Optional top cell name override. Injected as Ruby variable $topcell. The script can use source($input_layout, $topcell) to reference it."
+          },
+          "result_mode": {
+            "type": "string",
+            "enum": [
+              "summary",
+              "full",
+              "rdb_path_only"
+            ],
+            "default": "summary",
+            "description": "'summary' returns violation counts by category; 'full' also returns individual item details (up to 200 items); 'rdb_path_only' skips RDB parsing."
+          },
+          "stdout_limit": {
+            "type": "integer",
+            "description": "Max bytes of stdout. Default 65536."
+          },
+          "stderr_limit": {
+            "type": "integer",
+            "description": "Max bytes of stderr. Default 65536."
+          }
+        }
+      }
+    },
+    {
+      "name": "lvs.run",
+      "description": "General LVS (like the DRC escape hatch, for connectivity): extract the live layout into a device netlist (per-cell device extractors from the 'devices' config) and compare against a REFERENCE netlist you pull in -- an external SPICE file (reference.spice) OR a structured netlist (reference.netlist). Writes a native .lvsdb and (show=true, default) opens it in the Netlist/LVS browser for layout<->netlist cross-probe. Pure pya; domain-agnostic; terminal names/layers are all parameters. Read-only (adds temp marker layers to the in-memory layout; does not alter saved geometry).",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "cell",
+          "conductors",
+          "devices",
+          "reference"
+        ],
+        "properties": {
+          "cell": {
+            "type": "string"
+          },
+          "conductors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "conductor layers 'L/D'"
+          },
+          "vias": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 3,
+              "maxItems": 3
+            }
+          },
+          "devices": {
+            "type": "object",
+            "description": "cell -> {terminals:[names], terminal_layer:{term:'L/D'}, terminal_points_um:{term:[[x,y],...]}} (points separate same-layer terminals)"
+          },
+          "reference": {
+            "type": "object",
+            "description": "{spice: path} OR {netlist: {instances, nets}}"
+          },
+          "out_lvsdb": {
+            "type": "string"
+          },
+          "show": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "recorder.start",
+      "description": "Start recording all layout-mutating events and translating them into a replayable Python script. Idempotent: calling while already recording returns the current status without starting a new session. Pass `output_path` to override the default location (~/Documents/klink_recordings/klink_record_YYYYMMDD_HHMMSS.py).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "output_path": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "recorder.stop",
+      "description": "Stop the active recording and write the replayable script to disk. Returns the final stats plus `wrote` (bool) indicating whether the file was successfully written. Idempotent: calling when not recording returns `wrote=false` with the last known status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "output_path": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "recorder.status",
+      "description": "Return current recorder state (is it recording, how many events and translated actions so far, configured output path). Safe to call at any time.",
+      "inputSchema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "port.set_layer",
+      "description": "Configure the default Port PCell marker layer for this layout.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "layer"
+        ],
+        "properties": {
+          "layer": {
+            "type": "string",
+            "description": "'L/D', e.g. '999/99'"
+          }
+        }
+      }
+    },
+    {
+      "name": "port.mark",
+      "description": "Create one klink_Port PCell instance in a cell.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "cell"
+        ],
+        "properties": {
+          "cell": {
+            "description": "Target cell name or cell_index"
+          },
+          "layer": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "center_um": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "center_dbu": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "orientation": {
+            "type": "number",
+            "default": 0
+          },
+          "width_um": {
+            "type": "number",
+            "default": 5.0
+          },
+          "port_type": {
+            "type": "string",
+            "default": "electrical"
+          },
+          "net": {
+            "type": "string"
+          },
+          "target_layer": {
+            "type": "string",
+            "default": "1/0"
+          },
+          "show_label": {
+            "type": "boolean",
+            "default": true
+          },
+          "access_mode": {
+            "type": "string",
+            "enum": [
+              "point",
+              "edge"
+            ],
+            "default": "point"
+          },
+          "slide_allowed": {
+            "type": "boolean",
+            "default": false
+          },
+          "slide_edge": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "port.list",
+      "description": "List klink_Port PCell instances in a cell. When `layer` is given, only ports whose marker layer matches it are returned (it also selects the repair layer); without it all ports are returned.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "cell"
+        ],
+        "properties": {
+          "cell": {
+            "description": "Cell name or cell_index"
+          },
+          "layer": {
+            "type": "string",
+            "description": "Marker layer filter in L/D format, e.g. '999/99'."
+          },
+          "sort": {
+            "type": "string",
+            "enum": [
+              "none",
+              "clockwise",
+              "name"
+            ],
+            "default": "none"
+          }
+        }
+      }
+    },
+    {
+      "name": "port.repair_names",
+      "description": "Repair duplicate or empty Port names in a cell. This is primarily for ports inserted manually through the KLayout PCell GUI, which bypasses port.mark's uniqueness check.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "cell"
+        ],
+        "properties": {
+          "cell": {
+            "description": "Cell name or cell_index"
+          },
+          "layer": {
+            "type": "string"
+          },
+          "prefix": {
+            "type": "string",
+            "default": "P"
+          }
+        }
+      }
+    },
+    {
+      "name": "port.update",
+      "description": "Update a single Port PCell instance by immutable name.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "cell",
+          "name"
+        ],
+        "properties": {
+          "cell": {
+            "description": "Cell name or cell_index"
+          },
+          "name": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "orientation": {
+            "type": "number"
+          },
+          "width_um": {
+            "type": "number"
+          },
+          "port_type": {
+            "type": "string"
+          },
+          "net": {
+            "type": "string"
+          },
+          "target_layer": {
+            "type": "string"
+          },
+          "show_label": {
+            "type": "boolean"
+          },
+          "access_mode": {
+            "type": "string",
+            "enum": [
+              "point",
+              "edge"
+            ]
+          },
+          "slide_allowed": {
+            "type": "boolean"
+          },
+          "slide_edge": {
+            "type": "string"
+          },
+          "layer": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "port.transform",
+      "description": "Batch-update Port PCell parameters by names or GUI selection.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "cell"
+        ],
+        "properties": {
+          "cell": {
+            "description": "Cell name or cell_index"
+          },
+          "names": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "selection": {
+            "type": "boolean",
+            "default": false
+          },
+          "label": {
+            "type": "string"
+          },
+          "orientation": {
+            "type": "number"
+          },
+          "rotate_delta": {
+            "type": "number"
+          },
+          "width_um": {
+            "type": "number"
+          },
+          "port_type": {
+            "type": "string"
+          },
+          "net": {
+            "type": "string"
+          },
+          "target_layer": {
+            "type": "string"
+          },
+          "show_label": {
+            "type": "boolean"
+          },
+          "access_mode": {
+            "type": "string",
+            "enum": [
+              "point",
+              "edge"
+            ]
+          },
+          "slide_allowed": {
+            "type": "boolean"
+          },
+          "slide_edge": {
+            "type": "string"
+          },
+          "layer": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "port.unmark",
+      "description": "Delete one Port PCell instance by name.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "cell",
+          "name"
+        ],
+        "properties": {
+          "cell": {
+            "description": "Cell name or cell_index"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "port.delete_all",
+      "description": "Delete all Port PCell instances in a cell.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "cell"
+        ],
+        "properties": {
+          "cell": {
+            "description": "Cell name or cell_index"
+          },
+          "layer": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "anchor.set_layer",
+      "description": "Configure the default Anchor PCell marker layer for this layout.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "layer"
+        ],
+        "properties": {
+          "layer": {
+            "type": "string",
+            "description": "'L/D', e.g. '999/1'"
+          }
+        }
+      }
+    },
+    {
+      "name": "anchor.mark",
+      "description": "Create one klink_Anchor PCell instance in a cell.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "cell"
+        ],
+        "properties": {
+          "cell": {
+            "description": "Target cell name or cell_index"
+          },
+          "layer": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "center_um": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "center_dbu": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "kind": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "net": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "show_label": {
+            "type": "boolean"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "priority": {
+            "type": "integer"
+          },
+          "radius_um": {
+            "type": "number"
+          },
+          "width_um": {
+            "type": "number"
+          },
+          "height_um": {
+            "type": "number"
+          },
+          "orientation": {
+            "type": "number"
+          },
+          "path_points": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "anchor.list",
+      "description": "List klink_Anchor PCell instances in a cell. When `layer` is given, only anchors whose marker layer matches it are returned (it also selects the repair layer); without it all anchors are returned.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "cell"
+        ],
+        "properties": {
+          "cell": {
+            "description": "Cell name or cell_index"
+          },
+          "layer": {
+            "type": "string",
+            "description": "Marker layer filter in L/D format, e.g. '999/1'."
+          },
+          "sort": {
+            "type": "string",
+            "enum": [
+              "none",
+              "id"
+            ],
+            "default": "none"
+          }
+        }
+      }
+    },
+    {
+      "name": "anchor.repair_ids",
+      "description": "Repair duplicate or empty Anchor IDs in a cell. This is primarily for anchors inserted manually through the KLayout PCell GUI, which bypasses anchor.mark's uniqueness check.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "cell"
+        ],
+        "properties": {
+          "cell": {
+            "description": "Cell name or cell_index"
+          },
+          "layer": {
+            "type": "string"
+          },
+          "prefix": {
+            "type": "string",
+            "default": "A"
+          }
+        }
+      }
+    },
+    {
+      "name": "anchor.update",
+      "description": "Update a single Anchor PCell instance by immutable id.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "cell",
+          "id"
+        ],
+        "properties": {
+          "cell": {
+            "description": "Cell name or cell_index"
+          },
+          "id": {
+            "type": "string"
+          },
+          "new_id": {
+            "type": "string"
+          },
+          "layer": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "net": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "show_label": {
+            "type": "boolean"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "priority": {
+            "type": "integer"
+          },
+          "radius_um": {
+            "type": "number"
+          },
+          "width_um": {
+            "type": "number"
+          },
+          "height_um": {
+            "type": "number"
+          },
+          "orientation": {
+            "type": "number"
+          },
+          "path_points": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "anchor.transform",
+      "description": "Batch-update Anchor PCell parameters by ids or GUI selection.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "cell"
+        ],
+        "properties": {
+          "cell": {
+            "description": "Cell name or cell_index"
+          },
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "names": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "selection": {
+            "type": "boolean",
+            "default": false
+          },
+          "layer": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "net": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "show_label": {
+            "type": "boolean"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "priority": {
+            "type": "integer"
+          },
+          "radius_um": {
+            "type": "number"
+          },
+          "width_um": {
+            "type": "number"
+          },
+          "height_um": {
+            "type": "number"
+          },
+          "orientation": {
+            "type": "number"
+          },
+          "path_points": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "anchor.unmark",
+      "description": "Delete one Anchor PCell instance by id.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "cell",
+          "id"
+        ],
+        "properties": {
+          "cell": {
+            "description": "Cell name or cell_index"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "anchor.delete_all",
+      "description": "Delete all Anchor PCell instances in a cell.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "cell"
+        ],
+        "properties": {
+          "cell": {
+            "description": "Cell name or cell_index"
+          },
+          "layer": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "transfer.pending_set",
+      "description": "Store an already-reviewed flat-selection transfer package in this KLayout window.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "package"
+        ],
+        "properties": {
+          "package": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    {
+      "name": "transfer.pending_status",
+      "description": "Return the pending transfer package status for this KLayout window.",
+      "inputSchema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "transfer.pending_clear",
+      "description": "Clear this KLayout window's pending transfer package without writing layout geometry.",
+      "inputSchema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "transfer.paste_pending",
+      "description": "Paste the currently pending flat-selection transfer package into this KLayout window. The package must already contain final target layers and coordinates.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "dry_run": {
+            "type": "boolean",
+            "default": false
+          },
+          "clear_after": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "transfer.import_cell_tree_package",
+      "description": "Import one cell tree from a GDS/OAS package into this KLayout window using KLayout's native Cell.copy_tree behavior. Name conflicts are resolved by KLayout with '$N' suffixes.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "path",
+          "source_cell"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "source_cell": {
+            "type": "string"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "session.mark_klive_target",
+      "description": "Mark this KLayout window as the klive/gdsfactory-compatible 8082 target.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "session.label_set",
+      "description": "Set a human label and aliases for a registered KLayout session in the shared registry.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "session_id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "label"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "klink.find_tools",
+      "description": "Discover klink tools by domain or keyword. Call with NO args for the domain index; domain=<token> for that domain's tools + detailed usage; query=<keywords> to rank matching tools (optionally within one domain). tools/list already contains every tool and they are all callable — this is for NAVIGATION and on-demand detailed usage, not a gate. Use it whenever you are unsure which tool to use.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Keywords to match against tool name/description/usage."
+          },
+          "domain": {
+            "type": "string",
+            "enum": [
+              "connection_and_view",
+              "multi_session_transfer",
+              "geometry_authoring",
+              "selection_and_send_memory",
+              "ports_and_anchors",
+              "routing_backends",
+              "drc_and_lvs_verification",
+              "device_structdevice",
+              "device_nanodevice",
+              "device_photonics",
+              "escape_hatch"
+            ],
+            "description": "Restrict to one domain (also returns its detailed usage)."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "interaction.selection.latest",
+      "description": "Return the latest explicit sent selection from this MCP session memory.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "interaction.selection.recent",
+      "description": "Return recent explicit sent selections by order, defaulting to the latest five.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "interaction.selection.get",
+      "description": "Return one stored selection by stable selection id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "interaction.selection.label",
+      "description": "Attach or update a label and description for a stored selection.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "interaction.selection.clear_session",
+      "description": "Clear this MCP session's persisted interaction context after explicit confirmation.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "confirm": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirm"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "interaction.context",
+      "description": "Return current KLayout selection plus recent persisted interaction selections.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "include_current_selection": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "nanodevice.hallbar",
+      "description": "Build, route, validate, and commit one Hall bar device in one call: generates geometry + Ports/Anchors from a spec, routes contacts to pads with klink's existing router (overlap validation ON, optional writefield walls), writes into a disposable cell, persists state. On problems it returns instructions (problems/next_action); a failed call changes nothing.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cell": {
+            "type": "string",
+            "description": "Target cell (created/replaced; device-owned)."
+          },
+          "spec": {
+            "type": "object",
+            "description": "HallBarSpec fields. MUST include your process layers (device_layer/metal_layer/label_layer/route_layer 'L/D'); klink ships no process layers. See example_template/hallbar.py."
+          },
+          "writefield": {
+            "type": "object",
+            "description": "Writefield plan kwargs; omit to skip EBL walls."
+          },
+          "route_layer": {
+            "type": "string",
+            "description": "optional override for the routing layer 'L/D'; defaults to the spec's route_layer."
+          },
+          "spacing_um": {
+            "type": "number",
+            "default": 4.0
+          },
+          "dry_run": {
+            "type": "boolean",
+            "default": false
+          },
+          "session": {
+            "type": "string",
+            "description": "KLayout session id/label/alias (default: primary)."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "nanodevice.detect_commit",
+      "description": "Load (or detect) nanodevice flake traces and commit them as polygons into a live KLayout cell, in one call. Pass traces_path for a precomputed traces.json, or image (+pixel_size_um) to run detection (requires scipy + scikit-learn + scikit-image in this interpreter). State persists on disk; failures return instructions and change nothing.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cell": {
+            "type": "string",
+            "description": "Target cell (created/replaced; tool-owned)."
+          },
+          "traces_path": {
+            "type": "string",
+            "description": "Path to a precomputed traces.json."
+          },
+          "image": {
+            "type": "string",
+            "description": "Microscope image path for live detection."
+          },
+          "pixel_size_um": {
+            "type": "number",
+            "description": "your microscope's um/pixel calibration; REQUIRED with image (klink ships no default). Omit for traces_path mode."
+          },
+          "coordinate": {
+            "type": "string",
+            "enum": [
+              "um",
+              "gds"
+            ],
+            "default": "um"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "default": false
+          },
+          "session": {
+            "type": "string",
+            "description": "KLayout session id/label/alias (default: primary)."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "port.harvest_blackbox",
+      "description": "Harvest optical ports from PDK blackbox instances in a cell via the waveguide stub convention (small stub boxes on the waveguide layer) and mark them as klink Ports. Ports are derived from LIVE instance positions: re-run after moving instances in the GUI to refresh them, then route. Net intent keys on identity-stable names {tag}{ordinal}_{stubIndex}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cell": {
+            "type": "string",
+            "description": "Parent cell holding the blackbox instances."
+          },
+          "tags": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Map child cell name -> short tag (children not listed are skipped)."
+          },
+          "nets": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Map harvested port name -> net. Unlisted ports get an empty net."
+          },
+          "wg_layer": {
+            "type": "string",
+            "description": "your PDK waveguide layer 'L/D' (required; klink ships no default)."
+          },
+          "stub_size_um": {
+            "type": "number",
+            "description": "your PDK stub-box size in um (required; e.g. 0.5)."
+          },
+          "port_layer": {
+            "type": "string",
+            "default": "999/99"
+          },
+          "clear": {
+            "type": "boolean",
+            "default": true,
+            "description": "Delete existing Port markers on port_layer in the cell first (idempotent refresh)."
+          }
+        },
+        "required": [
+          "cell",
+          "tags",
+          "wg_layer",
+          "stub_size_um"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "photonics.import_gf",
+      "description": "Take over a FINISHED gdsfactory script into klink's interactive loop in one call: runs the user's .py in this (gdsfactory-capable) interpreter, takes the Component it builds, imports its DEVICE instances as real KLayout cells+instances (batch RPC), collapses its routed/snapped connections to device-level nets, persists per-device port templates + the net table in the spec, and routes the nets with klink (the script's own routes are replaced by klink-owned ones). Afterwards the user can DRAG components in KLayout and photonics.reroute (just the cell name) re-routes from live positions. The script is executed — only run files the user asked you to import.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "script_path": {
+            "type": "string",
+            "description": "Path to the user's gdsfactory .py file."
+          },
+          "component": {
+            "type": "string",
+            "description": "Name of a module-level Component variable OR zero-arg factory function in the script. Default: auto-detect (single Component in module globals, or a main()/build() factory)."
+          },
+          "cell": {
+            "type": "string",
+            "description": "Target KLayout cell name (default: GF_<component name>)."
+          },
+          "route_layer": {
+            "type": "string",
+            "description": "Layer to route on 'L/D'. Default: derived from the component's port layers when unambiguous."
+          },
+          "port_layer": {
+            "type": "string",
+            "default": "999/99"
+          },
+          "route": {
+            "type": "boolean",
+            "default": true,
+            "description": "Route the collapsed nets immediately."
+          },
+          "session": {
+            "type": "string",
+            "description": "KLayout session id/label/alias to import into (default: primary connection)."
+          }
+        },
+        "required": [
+          "script_path"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "photonics.connect",
+      "description": "Connect ports the user just SENT, in one call: reads the latest N explicit SEND selections, turns them into port pairs (one SEND framing two klink Port markers = one pair; single-marker SENDs pair consecutively), auto-names nets, persists the net table, re-harvests ports from live instance positions, and routes with gdsfactory. Workflow: user presses SEND for each pair -> call this with recent_sends. The KLayout session is derived from the SENDs automatically. On problems it returns instructions, never guesses.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "recent_sends": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20,
+            "description": "How many of the latest SEND selections to consume."
+          },
+          "cell": {
+            "type": "string",
+            "description": "Override target cell (default: from the SENDs)."
+          },
+          "width_um": {
+            "type": "number",
+            "description": "Waveguide width override."
+          },
+          "radius_um": {
+            "type": "number",
+            "description": "Bend radius override."
+          },
+          "separation_um": {
+            "type": "number",
+            "default": 3.0
+          },
+          "wg_layer": {
+            "type": "string",
+            "description": "your PDK waveguide/stub-marker layer 'L/D'. Required for stub-convention cells; NOT needed for cells imported via photonics.import_gf (templates persisted)."
+          },
+          "stub_size_um": {
+            "type": "number",
+            "description": "your PDK stub-box size in um (stub convention only; e.g. 0.5)."
+          },
+          "route_layer": {
+            "type": "string",
+            "description": "layer to route on 'L/D'. Required unless the cell was imported via photonics.import_gf (spec carries a default)."
+          }
+        },
+        "required": [
+          "recent_sends"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "photonics.reroute",
+      "description": "Re-route a cell whose connections were made with photonics.connect, after the user moved components. Reads the persisted net table, re-harvests ports from live instance positions, routes, writes back. Needs only the cell name (plus session when not the primary one).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cell": {
+            "type": "string"
+          },
+          "session": {
+            "type": "string",
+            "description": "KLayout session id/label/alias holding the cell (default: primary connection)."
+          },
+          "wg_layer": {
+            "type": "string",
+            "description": "your PDK waveguide/stub-marker layer 'L/D'. Required for stub-convention cells; NOT needed for cells imported via photonics.import_gf (templates persisted)."
+          },
+          "stub_size_um": {
+            "type": "number",
+            "description": "your PDK stub-box size in um (stub convention only; e.g. 0.5)."
+          },
+          "route_layer": {
+            "type": "string",
+            "description": "layer to route on 'L/D'. Required unless the cell was imported via photonics.import_gf (spec carries a default)."
+          }
+        },
+        "required": [
+          "cell"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "routing.tapered_hybrid_cell",
+      "description": "Route one KLayout cell using klink's tapered hybrid cell router. Reads Port/Anchor PCells, plans routes, validates, and writes results. Pass obstacle_layers=[...] with YOUR design's keepout layers (no default).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cell": {
+            "type": "string",
+            "description": "Cell name to route."
+          },
+          "spacing_um": {
+            "type": "number",
+            "default": 20.0
+          },
+          "angle_mode": {
+            "type": "string",
+            "enum": [
+              "any",
+              "manhattan",
+              "fortyfive"
+            ],
+            "default": "any",
+            "description": "Allowed segment directions: any straight segment, Manhattan only, or Manhattan plus 45-degree."
+          },
+          "clear": {
+            "type": "boolean",
+            "default": true
+          },
+          "port_layer": {
+            "type": "string",
+            "default": "999/99"
+          },
+          "anchor_layer": {
+            "type": "string",
+            "default": "999/1"
+          },
+          "obstacle_layers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Keepout layers. Pass [] to disable obstacle handling."
+          }
+        },
+        "required": [
+          "cell"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "routing.tapered_polygon_cell",
+      "description": "Route one KLayout cell using klink's continuous tapered polygon backend. Supports the same Port/Anchor semantics as hybrid routing, but writes continuous taper polygons.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cell": {
+            "type": "string",
+            "description": "Cell name to route."
+          },
+          "spacing_um": {
+            "type": "number",
+            "default": 20.0
+          },
+          "angle_mode": {
+            "type": "string",
+            "enum": [
+              "any",
+              "manhattan",
+              "fortyfive"
+            ],
+            "default": "any",
+            "description": "Allowed segment directions: any straight segment, Manhattan only, or Manhattan plus 45-degree."
+          },
+          "clear": {
+            "type": "boolean",
+            "default": true
+          },
+          "port_layer": {
+            "type": "string",
+            "default": "999/99"
+          },
+          "anchor_layer": {
+            "type": "string",
+            "default": "999/1"
+          },
+          "route_layer": {
+            "type": "string",
+            "description": "Override all output routes to this layer."
+          },
+          "corner_style": {
+            "type": "string",
+            "enum": [
+              "miter",
+              "bevel",
+              "round"
+            ],
+            "default": "miter"
+          },
+          "obstacle_layers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Keepout layers. Pass [] to disable obstacle validation."
+          }
+        },
+        "required": [
+          "cell"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "routing.gdsfactory_ports",
+      "description": "Route KLayout Port markers with a named gdsfactory routing strategy. router: bundle=Manhattan river routing with separation (DEFAULT; also honors waypoints/steps, radius_um, start/end_straight_um, path_length_match, collision_check_layers); electrical=bundle with metal defaults and sharp corners; sbend=smooth S-transitions for offset facing ports; all_angle=non-Manhattan bundle (optional backbone_um spine); single=independent Manhattan route per pair; dubins=arc-based any-heading per pair; astar=EXPERIMENTAL grid A* per pair around obstacle_bboxes_um (+resolution_um/distance_um) — gf's astar is fragile, so klink verifies the result and ERRORS instead of returning a wall-crossing route; for reliable obstacle avoidance prefer klink's own routing.tapered_hybrid_cell / routing.damped_* with obstacle_layers. A parameter the chosen router cannot honor returns an error naming the routers that honor it. Requires gdsfactory in the MCP interpreter.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cell": {
+            "type": "string",
+            "description": "Cell name to route."
+          },
+          "port_layer": {
+            "type": "string",
+            "default": "999/99"
+          },
+          "route_layer": {
+            "type": "string",
+            "description": "layer to route on 'L/D' for YOUR process (required; klink ships no default)."
+          },
+          "output_mode": {
+            "type": "string",
+            "enum": [
+              "batch_polygons",
+              "klink_paths",
+              "dry_run"
+            ],
+            "default": "batch_polygons"
+          },
+          "clear": {
+            "type": "boolean",
+            "default": true
+          },
+          "allow_crossing": {
+            "type": "boolean",
+            "default": false
+          },
+          "gf_route_layer": {
+            "type": "string",
+            "description": "Temporary gdsfactory layer, remapped to route_layer on writeback."
+          },
+          "router": {
+            "type": "string",
+            "enum": [
+              "bundle",
+              "electrical",
+              "sbend",
+              "all_angle",
+              "single",
+              "dubins",
+              "astar"
+            ],
+            "default": "bundle"
+          },
+          "cross_section": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "gdsfactory cross_section spec such as strip or metal_routing. Null uses explicit layer/width."
+          },
+          "route_width_um": {
+            "type": "number",
+            "description": "Route width; default = matched port width."
+          },
+          "separation_um": {
+            "type": "number",
+            "description": "Spacing inside one bundle (bundle/electrical/all_angle)."
+          },
+          "bundle_gather_um": {
+            "type": "number",
+            "description": "bundle family: nets share one bundle only when sources AND targets are mutually within this distance (default 30um); unrelated chain stages route separately."
+          },
+          "radius_um": {
+            "type": "number",
+            "description": "Bend radius (bundle/single) or arc radius (dubins)."
+          },
+          "sort_ports": {
+            "type": "boolean"
+          },
+          "start_straight_um": {
+            "type": "number",
+            "description": "Straight length leaving each start port (bundle/electrical/single)."
+          },
+          "end_straight_um": {
+            "type": "number",
+            "description": "Straight length entering each target port (bundle/electrical/single)."
+          },
+          "auto_taper": {
+            "type": "boolean",
+            "description": "Width transitions at ports (bundle/sbend/single)."
+          },
+          "taper": {
+            "type": "string",
+            "description": "Optional gdsfactory taper component spec (bundle only)."
+          },
+          "min_straight_taper_um": {
+            "type": "number"
+          },
+          "sbend_fallback": {
+            "type": "boolean",
+            "description": "bundle only: allow S-bends where straights do not fit."
+          },
+          "collision_check_layers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "bundle only: gf errors if a route collides with geometry on these 'L/D' layers of the routing component."
+          },
+          "path_length_match": {
+            "type": "object",
+            "description": "bundle only: gf PathLengthConfig kwargs, e.g. {\"extra_length\": 40.0, \"nb_loops\": 1} to length-match the bundle."
+          },
+          "backbone_um": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "description": "all_angle only: shared spine the bundle follows."
+          },
+          "resolution_um": {
+            "type": "number",
+            "description": "astar only: routing grid step."
+          },
+          "distance_um": {
+            "type": "number",
+            "description": "astar only: clearance kept from obstacles."
+          },
+          "obstacle_bboxes_um": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 4,
+              "maxItems": 4
+            },
+            "description": "astar only: obstacle rectangles [x0,y0,x1,y1] um the route must go around (e.g. placed component bboxes from instance.query)."
+          },
+          "waypoints_um": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "number"
+              }
+            }
+          },
+          "source": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "target": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "source_prefix": {
+            "type": "string"
+          },
+          "target_prefix": {
+            "type": "string"
+          },
+          "source_orientation": {
+            "type": "number"
+          },
+          "target_orientation": {
+            "type": "number"
+          },
+          "net": {
+            "type": "string"
+          },
+          "all_two_port_nets": {
+            "type": "boolean",
+            "default": false
+          },
+          "pair_by": {
+            "type": "string",
+            "enum": [
+              "net",
+              "axis",
+              "name"
+            ],
+            "default": "axis"
+          }
+        },
+        "required": [
+          "cell",
+          "route_layer"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "routing.steiner_cell",
+      "description": "Route multi-terminal nets in one KLayout cell using klink's rectilinear Steiner/bus tree router. Use for nets with more than two ports.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cell": {
+            "type": "string",
+            "description": "Cell name to route."
+          },
+          "port_layer": {
+            "type": "string",
+            "default": "999/99"
+          },
+          "anchor_layer": {
+            "type": "string",
+            "default": "999/1"
+          },
+          "route_layer": {
+            "type": "string",
+            "description": "Override all output routes to this layer."
+          },
+          "root_ports": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Optional mapping from net name to root port name."
+          },
+          "clear": {
+            "type": "boolean",
+            "default": true
+          },
+          "obstacle_layers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Keepout layers for validation. This first Steiner backend reports hits rather than rerouting around them."
+          }
+        },
+        "required": [
+          "cell"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "routing.damped_segment_cell",
+      "description": "Route one KLayout cell with the explicit damped segment backend. Uses tapered hybrid output and keeps extra distance from obstacles.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cell": {
+            "type": "string",
+            "description": "Cell name to route."
+          },
+          "port_layer": {
+            "type": "string",
+            "default": "999/99"
+          },
+          "anchor_layer": {
+            "type": "string",
+            "default": "999/1"
+          },
+          "spacing_um": {
+            "type": "number",
+            "default": 20.0
+          },
+          "angle_mode": {
+            "type": "string",
+            "enum": [
+              "any",
+              "manhattan",
+              "fortyfive"
+            ],
+            "default": "manhattan"
+          },
+          "damping_distance_um": {
+            "type": "number",
+            "default": 10.0,
+            "description": "Extra soft-clearance distance from obstacle layers."
+          },
+          "clear": {
+            "type": "boolean",
+            "default": true
+          },
+          "obstacle_layers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "cell"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "routing.damped_polygon_cell",
+      "description": "Route one KLayout cell with the explicit damped polygon backend. Uses continuous taper polygons and keeps extra distance from obstacles.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cell": {
+            "type": "string",
+            "description": "Cell name to route."
+          },
+          "port_layer": {
+            "type": "string",
+            "default": "999/99"
+          },
+          "anchor_layer": {
+            "type": "string",
+            "default": "999/1"
+          },
+          "spacing_um": {
+            "type": "number",
+            "default": 20.0
+          },
+          "angle_mode": {
+            "type": "string",
+            "enum": [
+              "any",
+              "manhattan",
+              "fortyfive"
+            ],
+            "default": "manhattan"
+          },
+          "damping_distance_um": {
+            "type": "number",
+            "default": 10.0,
+            "description": "Extra soft-clearance distance from obstacle layers."
+          },
+          "clear": {
+            "type": "boolean",
+            "default": true
+          },
+          "obstacle_layers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "route_layer": {
+            "type": "string"
+          },
+          "corner_style": {
+            "type": "string",
+            "enum": [
+              "miter",
+              "bevel",
+              "round"
+            ],
+            "default": "miter"
+          }
+        },
+        "required": [
+          "cell"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "routing.damped_steiner_cell",
+      "description": "Route one KLayout cell with the explicit damped Steiner backend. Uses multi-terminal trunk/branch topology and damped obstacle clearance.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cell": {
+            "type": "string",
+            "description": "Cell name to route."
+          },
+          "port_layer": {
+            "type": "string",
+            "default": "999/99"
+          },
+          "anchor_layer": {
+            "type": "string",
+            "default": "999/1"
+          },
+          "spacing_um": {
+            "type": "number",
+            "default": 20.0
+          },
+          "angle_mode": {
+            "type": "string",
+            "enum": [
+              "any",
+              "manhattan",
+              "fortyfive"
+            ],
+            "default": "manhattan"
+          },
+          "damping_distance_um": {
+            "type": "number",
+            "default": 10.0,
+            "description": "Extra soft-clearance distance from obstacle layers."
+          },
+          "clear": {
+            "type": "boolean",
+            "default": true
+          },
+          "obstacle_layers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "route_layer": {
+            "type": "string"
+          },
+          "root_ports": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "cell"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "routing.global_channel_cell",
+      "description": "Route one KLayout cell with the stronger global channel backend. It performs obstacle-aware candidate assignment and capacity-aware corridor assignment before using tapered hybrid geometry.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cell": {
+            "type": "string",
+            "description": "Cell name to route."
+          },
+          "port_layer": {
+            "type": "string",
+            "default": "999/99"
+          },
+          "anchor_layer": {
+            "type": "string",
+            "default": "999/1"
+          },
+          "spacing_um": {
+            "type": "number",
+            "default": 20.0
+          },
+          "angle_mode": {
+            "type": "string",
+            "enum": [
+              "any",
+              "manhattan",
+              "fortyfive"
+            ],
+            "default": "manhattan"
+          },
+          "safe_distance_um": {
+            "type": "number",
+            "default": 0.0,
+            "description": "Extra obstacle clearance used during global cost estimation and final routing."
+          },
+          "clear": {
+            "type": "boolean",
+            "default": true
+          },
+          "obstacle_layers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "cell"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "routing.multilayer_escape_cell",
+      "description": "Route wall-blocked pairwise nets by using a primary route layer, bridge layer, and via boxes.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cell": {
+            "type": "string",
+            "description": "Cell name to route."
+          },
+          "port_layer": {
+            "type": "string",
+            "default": "999/99"
+          },
+          "route_layer": {
+            "type": "string",
+            "description": "primary route layer 'L/D' for YOUR process (required)."
+          },
+          "bridge_layer": {
+            "type": "string",
+            "description": "bridge/crossing layer 'L/D' for YOUR process (required)."
+          },
+          "via_layer": {
+            "type": "string",
+            "description": "via layer 'L/D' for YOUR process (required)."
+          },
+          "spacing_um": {
+            "type": "number",
+            "default": 8.0
+          },
+          "clear": {
+            "type": "boolean",
+            "default": true
+          },
+          "obstacle_layers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "cell",
+          "route_layer",
+          "bridge_layer",
+          "via_layer"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "klink.status",
+      "description": "Return MCP bridge connection status and last klink connection error.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "klink.reconnect",
+      "description": "Close any stale klink client and try to reconnect to KLayout.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "klink.session_list",
+      "description": "List discoverable KLayout/klink sessions from the local session registry.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "include_stale": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "klink.session_label",
+      "description": "Attach a human label and aliases to a registered KLayout session.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "session_id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "label"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "klink.session_resolve",
+      "description": "Resolve a session id, human label, alias, active cell, or top cell to a KLayout session.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "klink.session_status",
+      "description": "Return one registered KLayout session record, defaulting to the active MCP session.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "session_id": {
+            "type": "string"
+          },
+          "include_stale": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "klink.session_use",
+      "description": "Switch this MCP bridge's active KLayout RPC target to a registered session.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "session_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "klink.session_set_klive_target",
+      "description": "Set the registered KLayout session used by the klive-compatible 8082 entrypoint.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "session_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "klink.transfer_prepare",
+      "description": "Prepare a flat-selection transfer package between two registered KLayout sessions and dry-run it on the target.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "source_session": {
+            "type": "string"
+          },
+          "target_session": {
+            "type": "string"
+          },
+          "target_cell": {
+            "type": "string",
+            "default": "TOP"
+          },
+          "copy_mode": {
+            "type": "string",
+            "enum": [
+              "flat_selection",
+              "shallow_instance"
+            ],
+            "default": "flat_selection"
+          },
+          "layer_map": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Optional source 'L/D' to target 'L/D' mapping."
+          },
+          "translate_um": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "default": [
+              0,
+              0
+            ]
+          }
+        },
+        "required": [
+          "source_session",
+          "target_session"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "klink.transfer_commit",
+      "description": "Commit a package previously created by klink.transfer_prepare.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "package_id": {
+            "type": "string"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "package_id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "klink.guide",
+      "description": "START HERE if you do not know this stack: reports what is open, what intent state already exists on disk (declared nets, LVS reports, spec files), the literal call for each available user intention, and a suggested next action. Call it whenever you are unsure what to do next — the workflow lives in tool results, not in your memory.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "structdevice.declare_nets",
+      "description": "Declare electrical nets from the user's SENDs: ONE SEND framing two or more device terminals = ONE declared net; declarations persist to <cell>.elec_nets.json and feed structdevice.lvs_check / spec_write. EXAMPLE-DRIVEN, NOT standalone: reading device terminals needs a recipe injected from your project (klink ships none), so called as-is it returns an instructive error naming the recipe to provide -- never a guess.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "recent_sends": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20,
+            "description": "How many of the latest SEND selections to consume (one net each)."
+          },
+          "cell": {
+            "type": "string",
+            "description": "Parent cell whose device terminals are framed."
+          },
+          "conductors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Conductor layers 'L/D' for YOUR process (required; klink ships no default)."
+          },
+          "vias": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 3,
+              "maxItems": 3
+            }
+          }
+        },
+        "required": [
+          "recent_sends",
+          "cell"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "structdevice.lvs_check",
+      "description": "LVS in one call: derive device terminals (recipe), extract the nets the drawn wiring actually makes (KLayout-native extraction on a saved snapshot), and reconcile against the declared nets persisted by structdevice.declare_nets. mode='net' (default) = net-level LVS-lite; mode='device'/'both' ALSO runs device-level LVS (build reference + extracted netlists, compare with native NetlistComparer) -> result under device_lvs. Findings are instructions with terminal-level evidence; report persists to <cell>.lvs.json. EXAMPLE-DRIVEN, NOT standalone: deriving device terminals needs a recipe from your project (klink ships none), so called as-is it returns an instructive error.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cell": {
+            "type": "string"
+          },
+          "session": {
+            "type": "string",
+            "description": "KLayout session id/label/alias (default: primary)."
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "net",
+              "device",
+              "both",
+              "lvsdb"
+            ],
+            "default": "net",
+            "description": "net = net-level reconcile; device/both = also device-level NetlistComparer (pass/fail); lvsdb = device-level LVS that ALSO writes a geometry-linked native .lvsdb (cross-probe in Netlist Browser), path under device_lvs.lvsdb_path."
+          },
+          "conductors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Conductor layers 'L/D' for YOUR process (required; klink ships no default)."
+          },
+          "vias": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 3,
+              "maxItems": 3
+            },
+            "description": "Via triples [conductor, via_layer, conductor]."
+          }
+        },
+        "required": [
+          "cell"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "structdevice.connect_nets",
+      "description": "Wire every declared-but-unconnected net of a device cell in one call and verify it: recipe-derived attach points, automatic via placement/reuse, automatic keepouts (everything not on the net is an obstacle), damped routing, then LVS — on any mismatch ALL mutations are undone. Call AFTER structdevice.declare_nets and BEFORE structdevice.spec_write. Results carry next_action; relay problems verbatim, never improvise wiring. EXAMPLE-DRIVEN, NOT standalone: attach points need a recipe from your project (klink ships none), so called as-is it returns an instructive error.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cell": {
+            "type": "string"
+          },
+          "session": {
+            "type": "string",
+            "description": "KLayout session id/label/alias (default: primary)."
+          },
+          "route_layer": {
+            "type": "string",
+            "description": "routing layer 'L/D' for YOUR process (required; klink ships no default)."
+          },
+          "route_width_um": {
+            "type": "number",
+            "description": "route trace width in um for YOUR process (required)."
+          },
+          "via_cell": {
+            "type": "string",
+            "description": "via cell name for YOUR process (required)."
+          },
+          "min_spacing_um": {
+            "type": "number",
+            "default": 0.0,
+            "description": "Routing-tier min edge-to-edge spacing (hard floor; litho-tier rules belong in DRC)."
+          },
+          "min_width_um": {
+            "type": "number",
+            "default": 0.0,
+            "description": "Routing-tier min trace width; route_width_um below this is rejected."
+          },
+          "conductors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "vias": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 3,
+              "maxItems": 3
+            }
+          }
+        },
+        "required": [
+          "cell"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "structdevice.build_from_netlist",
+      "description": "Build a circuit cell from a device-level netlist, fully algorithmic and confirmation-gated. TWO calls: (1) call WITHOUT `confirm` -> it returns `needs_confirmation`, a `proposal` (grid rows x cols, derived row pitch, routing layers, device mix) and `next_action`; READ the proposal to the user. (2) If they approve, call again with the SAME arguments plus the `confirm` token from next_action -> it places (derived floorplan), single-pass multilayer routes, draws, and device-LVS-verifies a FRESH cell. Netlist format: {instances: [{instance_id, device_cell}], nets: [{net_id, terminals: ['X1.D', ...]}], groups: [{instances: [...]}]}. NOTHING is hand-tuned: layers/vias/spacing come from the process profile, the floorplan from demand. DO NOT place/route/draw yourself; DO NOT change rows/cols/mode unless the user asks; relay `problems` to the user VERBATIM. Every result carries next_action -- follow it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cell": {
+            "type": "string",
+            "description": "NEW cell name to create (existing names refused)."
+          },
+          "netlist": {
+            "type": "object",
+            "description": "{instances:[{instance_id,device_cell}], nets:[{net_id,terminals}], groups:[{instances}]}."
+          },
+          "confirm": {
+            "type": "string",
+            "description": "The token returned in the first call's next_action; omit on the first call."
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "2L",
+              "3L"
+            ],
+            "default": "3L",
+            "description": "'3L' = 3 routing layers (smaller); '2L' = 2 layers."
+          },
+          "rows": {
+            "type": "integer",
+            "default": 0,
+            "description": "0 = derive from gate count."
+          },
+          "cols": {
+            "type": "integer",
+            "default": 0,
+            "description": "0 = derive from gate count."
+          },
+          "session": {
+            "type": "string",
+            "description": "KLayout session id/label (default: primary)."
+          }
+        },
+        "required": [
+          "cell",
+          "netlist"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "structdevice.register_pcell",
+      "description": "Register a fitted-device PCell at runtime from a fit table (produced by the exemplar fitter). One call, zero plugin changes, zero reloads: the PCell lands in library 'klink_structdevice' and is immediately usable in the GUI and via instance.insert_pcell. Call AFTER the fitter produced the table; the table encodes user geometry and stays local.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "PCell name (unique per KLayout session)."
+          },
+          "fit_table": {
+            "type": "string",
+            "description": "Absolute path to pcell_fit.json."
+          },
+          "session": {
+            "type": "string",
+            "description": "KLayout session id/label/alias (default: primary)."
+          }
+        },
+        "required": [
+          "name",
+          "fit_table"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "structdevice.spec_write",
+      "description": "Project a live cell into a klink.spec.json v1 fact file in one call: devices (recipe terminals), instances, declared nets (from structdevice.declare_nets), derived nets, and their reconciliation. layer_roles maps 'L/D' to a role name and is recorded as user_declared. The spec lands in <cell>.klink.spec.json next to the net table.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cell": {
+            "type": "string"
+          },
+          "layer_roles": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Map 'L/D' -> role, e.g. {'101/0': 'back_gate_metal'}."
+          },
+          "session": {
+            "type": "string"
+          },
+          "device_class": {
+            "type": "string",
+            "default": "device"
+          },
+          "conductors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "vias": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 3,
+              "maxItems": 3
+            }
+          }
+        },
+        "required": [
+          "cell",
+          "layer_roles"
+        ],
+        "additionalProperties": false
+      }
+    }
+  ]
+}
