@@ -88,7 +88,8 @@ def build_multidrop(client: KLinkClient) -> None:
 
 
 def main() -> int:
-    with KLinkClient().connect() as client:
+    port = int(sys.argv[sys.argv.index("--port") + 1]) if "--port" in sys.argv else 8765
+    with KLinkClient(port=port).connect() as client:
         client.layer_ensure(*M1, name="M1")
         client.layer_ensure(997, 99, name="LABEL")
         client.layer_ensure(999, 99, name="KLINK_PORTS")

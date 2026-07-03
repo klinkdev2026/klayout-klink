@@ -49,6 +49,11 @@ def _print_report(report: dict, *, committed: bool) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Route KLayout Port markers with gdsfactory.route_bundle.")
+    # --port MUST exist even though nothing below reads it via abbreviation:
+    # argparse allow_abbrev matches the unique prefix `--port` to `--port-layer`,
+    # so without a real `--port` option, `--port 8766` silently becomes
+    # `--port-layer 8766` and fails deep inside with "layer must be 'L/D'".
+    parser.add_argument("--port", type=int, default=8765, help="KLayout session port.")
     parser.add_argument("--cell", help="Cell to route. Defaults to active KLayout cell.")
     parser.add_argument("--source", action="append", default=[], help="Source port name. Can be repeated for bundles.")
     parser.add_argument("--target", action="append", default=[], help="Target port name. Can be repeated for bundles.")
@@ -100,7 +105,7 @@ def main() -> int:
     else:
         output_mode = "batch_polygons" if args.commit else "dry_run"
 
-    with KLinkClient().connect() as client:
+    with KLinkClient(port=args.port).connect() as client:
         cell = args.cell or _active_cell(client)
         try:
             report = route_gdsfactory_ports(

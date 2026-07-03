@@ -123,7 +123,8 @@ def route_case(client: KLinkClient, cell: str, title: str, ports: list[dict], **
 def main() -> int:
     gf.gpdk.PDK.activate()
     results = []
-    with KLinkClient().connect() as client:
+    port = int(sys.argv[sys.argv.index("--port") + 1]) if "--port" in sys.argv else 8765
+    with KLinkClient(port=port).connect() as client:
         for stale_cell in ("GF_ZOO_02_SINGLE_WAYPOINTS", "GF_ZOO_02_SINGLE_STEPS"):
             try:
                 client.cell_delete(stale_cell, recursive=True)

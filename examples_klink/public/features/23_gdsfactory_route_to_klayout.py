@@ -60,7 +60,8 @@ def main() -> int:
         sort_ports=True,
     )
 
-    with KLinkClient().connect() as client:
+    port = int(sys.argv[sys.argv.index("--port") + 1]) if "--port" in sys.argv else 8765
+    with KLinkClient(port=port).connect() as client:
         try:
             client.cell_delete(CELL, recursive=True)
         except Exception:

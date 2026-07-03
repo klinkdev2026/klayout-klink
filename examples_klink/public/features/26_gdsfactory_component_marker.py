@@ -47,7 +47,8 @@ def mark_external_port(client: KLinkClient, name: str, xy, orientation: float, n
 
 
 def main() -> int:
-    with KLinkClient().connect() as client:
+    port = int(sys.argv[sys.argv.index("--port") + 1]) if "--port" in sys.argv else 8765
+    with KLinkClient(port=port).connect() as client:
         reset_cell(client)
         client.layer_ensure(997, 99, name="LABEL")
         client.shape_insert_text(

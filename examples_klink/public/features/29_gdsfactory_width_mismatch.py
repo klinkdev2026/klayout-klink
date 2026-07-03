@@ -56,7 +56,8 @@ def mark_port(client: KLinkClient, name: str, center_um, orientation: float, wid
 
 
 def main() -> int:
-    with KLinkClient().connect() as client:
+    port = int(sys.argv[sys.argv.index("--port") + 1]) if "--port" in sys.argv else 8765
+    with KLinkClient(port=port).connect() as client:
         reset_cell(client, CELL)
         client.layer_ensure(*DEVICE_LAYER, name="GF_DEMO_DEVICE")
         client.layer_ensure(999, 99, name="KLINK_PORTS")
