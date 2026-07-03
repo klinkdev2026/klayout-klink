@@ -230,8 +230,25 @@ def port_to_gf(port_dict: dict):
     if layer_info is not None:
         kwargs["layer_info"] = layer_info
     else:
+        # kfactory wants an INTEGER layer index, never a (layer, datatype)
+        # tuple -- passing a tuple raises deep inside Layout.get_info.
         kwargs["layer"] = layer[0]
-    return gf.Port(**kwargs)
+    port = gf.Port(**kwargs)
+
+    # Version-proof the POSITION. `gf.Port(center=...)` is interpreted in the
+    # port's ACTIVE unit, and that contract is NOT stable across gdsfactory /
+    # kfactory versions: on some it is um, on others `center` is raw dbu while
+    # `dcenter` is the um value. Passing a um coordinate into a version where
+    # `center` means dbu is the classic 1000x-off bug (routes/ports collapse to
+    # a thousandth of their size while device bodies stay put -- "half tiny,
+    # half huge"). `dcenter` is the um accessor on every kfactory version, so
+    # assign it explicitly. On versions where `center` was already um this is a
+    # no-op (byte-identical), so nothing that currently passes regresses.
+    try:
+        port.dcenter = (float(center[0]), float(center[1]))
+    except Exception:
+        pass
+    return port
 
 
 def ports_to_gf(port_dicts: list) -> list:

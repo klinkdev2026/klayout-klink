@@ -1,7 +1,7 @@
 """Harvest optical ports from PDK blackbox instances by stub convention.
 
 Many foundry PDK blackbox cells mark their optical ports as small waveguide
-stub boxes on the waveguide layer (observed AMF convention: 0.5 x 0.5 um
+stub boxes on the waveguide layer (one common foundry convention: 0.5 x 0.5 um
 boxes on 1/0 at the cell boundary). This module turns that convention into
 klink Ports that are *derived data*: harvested from live instance positions
 at route time, so users can freely drag instances in the GUI and re-route.
@@ -19,7 +19,7 @@ import math
 from typing import Any, Sequence
 
 # No process constants here: the waveguide layer and stub size are PDK-specific
-# (e.g. the observed AMF convention is 0.5 x 0.5 um stubs on 1/0). Callers pass
+# (e.g. one common foundry convention is 0.5 x 0.5 um stubs on 1/0). Callers pass
 # them explicitly from their own pdk.py — klink ships no default.
 _EPS_DBU = 2
 

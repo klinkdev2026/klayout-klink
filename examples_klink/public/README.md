@@ -7,7 +7,7 @@ docs. **Only this folder ships in the open-source repo** (the rest of
 
 Contract for anything in here:
 
-- **open** — no NDA / proprietary-PDK content (e.g. no SITRI/AMF cells), no
+- **open** — no NDA / proprietary-PDK content (no foundry PDK cells), no
   committed private GDS;
 - **open-box runnable** — imports only `klink` (no dev-only PDK module, no
   device-geometry GDS), so it runs against a plain `pip install klayout-klink`
@@ -43,7 +43,7 @@ byte-identity.
 
 ## Excluded (dev-only, NOT public)
 
-NDA / proprietary-PDK (`demos/gf_pdk_loop.py` — SITRI), bring-your-own-GDS P&R
+NDA / proprietary-PDK (`demos/gf_pdk_loop.py` — a foundry PDK), bring-your-own-GDS P&R
 (`build_*` / `halfadder_*` / `harvest_device_geometry` — need a private device
 GDS via a dev-only PDK module), and the low-level dev diagnostic probes in
 `smoke/`.

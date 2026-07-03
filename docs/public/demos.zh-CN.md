@@ -2,9 +2,10 @@
 
 > English: [demos.md](demos.md)
 
-公开画廊在 `examples_klink/public/demos/` 下有七个承重 demo。**七个全部开箱
-即跑**——没有一个需要你的保密几何。两个完全离线;五个需要 live KLayout 会话
-(但同样不需要外部 GDS)。本页对每个都说实话。
+公开画廊在 `examples_klink/public/demos/` 下有八个承重 demo。**八个全部开箱
+即跑**——没有一个需要你的保密几何。两个完全离线;六个需要 live KLayout 会话
+(但同样不需要外部 GDS);其中一个(gdsfactory 接管)还需要同一解释器里有
+gdsfactory。本页对每个都说实话。
 
 所有器件/工艺相关的东西都住在示例自己里;`klink` 发布零工艺常数。抄一个
 demo、把数字改成你自己的工艺——流程完全相同。
@@ -107,12 +108,37 @@ python -m examples_klink.public.demos.padframe_pnr_lvs --port <会话端口>   #
 > KLayout 的"端口"只是一个会话——任意端口都行,没有专用角色。用空的或
 > 测试用的会话,别用你手动工作的标签页。
 
-## 硅光布线(feature 示例)
+## 硅光(gdsfactory 桥)
 
-gdsfactory 桥的示例在 `examples_klink/public/features/` 下(如
+### gdsfactory 接管 → 可编辑的光子模块
+
+```bash
+python -m examples_klink.public.demos.gf_mzi_module --port <会话端口>
+```
+
+一个完整的热光 MZI——倾斜光纤 GC → 1×2 MMI 分束 → 两条热相移臂(下臂镜像)
+→ 2×2 MMI 合束 → 横向偏置输出 GC,外加加热器 pad 排和一对光纤环回——**用一段
+普通 gdsfactory 脚本**写成,然后一句 `import_gf_component` 整体接管。一张持久
+网表随后装下每一种 net:脚本自己的光路(klink 重画)、偏置输出组改成 `sbend`、
+Manhattan 路由器够不到的倾斜 GC(`all_angle`)、环回对(`dubins` 圆弧)、以及
+加热器→pad 的**电学** net(金属层)。一句 `photonics.reroute` 把它们全部重画
+——于是你**在 KLayout GUI 里拖动任意器件后,一次 reroute 就把光路和金属一起
+重新布线**。这个拖动→重布线闭环正是重点:版图始终 live 可编辑,不是一次性冻结。
+实测输出:import ok,6 条光路 net / 13 实例 / 5 器件 cell;reroute ok,12 条
+布线,**0 crossings、0 device-hits**。
+
+这个 demo 需要**跑它的那个解释器里有 gdsfactory**(它在客户端先建好模块再推给
+KLayout)。demo 锁定在已测版本线——`pip install "klayout-klink[photonics]"` 直接
+装到已知良好的 gdsfactory。如果 gdsfactory 已经在别的 venv 里,就把 klink 装进
+**那个** venv(`<那个venv>/python -m pip install klayout-klink`)再从那里跑——
+**别**把仓库 sys.path 插进一个外来解释器(那条路会撞版本不匹配 + 几何差 1000×)。
+完整规则见 demo 自己的 `## Requirements` 头块。
+
+### 更底层的桥示例
+
+gdsfactory 端口布线示例在 `examples_klink/public/features/` 下(如
 `24_gdsfactory_route_ports.py`、`30_gdsfactory_routing_zoo.py`)。它们用开放
-的 `gf.gpdk`,所以需要在同一个解释器里 `pip install gdsfactory`——不需要
-私有 PDK。
+的 `gf.gpdk`——同一解释器规则同上,不需要私有 PDK。
 
 ## 参考
 

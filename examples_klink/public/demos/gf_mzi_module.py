@@ -25,13 +25,42 @@ All of it lives in ONE persisted net table, so a single
 ``photonics.reroute`` re-routes optics, odd-angle feeds, and metal together
 after any drag.
 
-Run with a live KLayout (klink plugin) and gdsfactory in this interpreter:
+Run against a live KLayout (klink plugin) with gdsfactory in this interpreter
+(see Requirements below if that is not your setup):
 
     python -m examples_klink.public.demos.gf_mzi_module [--port 8765]
 
 Layers come from the gdsfactory generic PDK the script itself uses
 (WG=1/0, heater metal M3=49/0) — swap the script/PDK for your process;
 klink ships no process facts.
+
+## Requirements — read this if the demo won't run / draws wrong
+
+This script is a klink RPC *client*: it builds the layout with gdsfactory in
+THIS Python process, then pushes it to a running KLayout over TCP. So there is
+exactly one rule:
+
+    the interpreter that runs THIS script needs BOTH klink and gdsfactory.
+
+KLayout itself (the GUI + the klink plugin) is a SEPARATE process reached on
+--port; it needs neither klink-the-client nor gdsfactory. Two clean ways to get
+one interpreter that has both:
+
+  1. one venv, both libs (simplest):
+         pip install "klayout-klink[photonics]"      # klink + a tested gdsfactory
+     then run this script with that venv's python.
+
+  2. gdsfactory already lives in another venv (a tool venv, a PDK venv, ...):
+         <that-venv>/python -m pip install klayout-klink   # klink is pure-Python
+         <that-venv>/python -m examples_klink.public.demos.gf_mzi_module
+     i.e. add klink INTO the gdsfactory venv and run from there.
+
+Do NOT sys.path-hack the klink repo into a random interpreter and monkey-patch
+klink internals to paper over a gdsfactory API gap — that is exactly how you
+get 1000x-off geometry (gf.Port's `center` unit contract varies by version).
+The demos are pinned to gdsfactory 9.40.x for this reason; [photonics] installs
+a tested one. If you must use a different gdsfactory, expect to adjust the
+script, not klink.
 """
 
 from __future__ import annotations

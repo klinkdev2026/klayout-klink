@@ -2,7 +2,7 @@
 footprint), with a port-entry NOTCH for a net's OWN endpoint device instead
 of the old blanket own-device exemption.
 
-Locks the bug this fixes: an AMF module's arm_in net ran a horizontal
+Locks the bug this fixes: a photonic module's arm_in net ran a horizontal
 approach segment that half-cut into a vertically-placed phase shifter's
 FULL (all-layer) footprint before turning into its own south port. The old
 checker missed this two ways: (1) it only compared a route against device
@@ -110,7 +110,7 @@ def test_own_device_notch_approach_is_not_a_hit():
 
 
 def test_own_device_parallel_run_along_true_edge_outside_notch_is_a_hit():
-    """The exact AMF bug shape: a route approaches level with its own
+    """The exact bug shape: a route approaches level with its own
     port's y-coordinate, which is ALSO the device's true bbox edge, and
     runs along that edge for a long stretch OUTSIDE the notch mouth before
     turning in. The old blanket own-device exemption missed this; the flat

@@ -2,10 +2,11 @@
 
 > 中文见 [demos.zh-CN.md](demos.zh-CN.md)
 
-The public gallery ships seven load-bearing demos under
-`examples_klink/public/demos/`. **All seven run out of the box** — none needs
-confidential geometry from you. Two run fully offline; five need a live KLayout
-session (but still no external GDS). This page is honest about each.
+The public gallery ships eight load-bearing demos under
+`examples_klink/public/demos/`. **All eight run out of the box** — none needs
+confidential geometry from you. Two run fully offline; six need a live KLayout
+session (but still no external GDS); one of those (the gdsfactory takeover)
+also needs gdsfactory in the same interpreter. This page is honest about each.
 
 Everything device- and process-specific lives in the example itself; `klink`
 ships zero process constants. Copy a demo and edit its numbers for your own
@@ -123,12 +124,42 @@ all 14 stubs CONNECTED. Copy this file and edit the pad table for your own card.
 > A KLayout "port" is just a session — any port works; none has a special role.
 > Use a session that is empty or test-owned, not your manual working tab.
 
-## Silicon-photonics routing (feature examples)
+## Silicon-photonics (gdsfactory bridge)
 
-The gdsfactory bridge examples live under `examples_klink/public/features/`
+### gdsfactory takeover → editable photonic module
+
+```bash
+python -m examples_klink.public.demos.gf_mzi_module --port <session-port>
+```
+
+A complete thermo-optic MZI — tilted fiber GC → 1×2 MMI splitter → two thermal
+phase-shifter arms (bottom mirrored) → 2×2 MMI combiner → offset output GCs,
+plus heater pad rows and a fiber-loopback pair — written as an **ordinary
+gdsfactory script**, then taken over by a single `import_gf_component` call. One
+persisted net table then holds every kind of net: the script's own optics
+(re-drawn by klink), the offset output bank restyled to `sbend`, the tilted GC
+that a Manhattan router can't reach (`all_angle`), the loopback pair (`dubins`
+arcs), and the heater→pad **electrical** nets on the metal layer. A single
+`photonics.reroute` redraws all of them — so after you **drag any component in
+the KLayout GUI, one reroute call re-routes optics and metal together**. That
+drag → reroute loop is the point: the layout stays live and editable, not a
+frozen one-shot. Measured output: import ok, 6 optical nets / 13 instances / 5
+device cells; reroute ok, 12 routes, **0 crossings, 0 device-hits**.
+
+This demo needs **gdsfactory in the same interpreter** that runs it (it builds
+the module client-side before pushing to KLayout). The demos are pinned to the
+tested line — `pip install "klayout-klink[photonics]"` gets a known-good
+gdsfactory. If gdsfactory already lives in another venv, add klink into *that*
+venv (`<that-venv>/python -m pip install klayout-klink`) and run from there —
+do not sys.path-hack the repo into a foreign interpreter (that path leads to
+version-mismatch and 1000×-off geometry). See the demo's own `## Requirements`
+header for the full rule.
+
+### Lower-level bridge examples
+
+The gdsfactory-port routing examples live under `examples_klink/public/features/`
 (e.g. `24_gdsfactory_route_ports.py`, `30_gdsfactory_routing_zoo.py`). They use
-the open `gf.gpdk`, so they need `pip install gdsfactory` in the same
-interpreter — no proprietary PDK required.
+the open `gf.gpdk` — same interpreter rule as above, no proprietary PDK.
 
 ## Reference
 
