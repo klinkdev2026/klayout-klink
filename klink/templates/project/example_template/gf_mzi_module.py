@@ -25,13 +25,53 @@ All of it lives in ONE persisted net table, so a single
 ``photonics.reroute`` re-routes optics, odd-angle feeds, and metal together
 after any drag.
 
-Run with a live KLayout (klink plugin) and gdsfactory in this interpreter:
+Run against a live KLayout (klink plugin) with gdsfactory in this interpreter
+(see Requirements below if that is not your setup):
 
     python -m examples_klink.public.demos.gf_mzi_module [--port 8765]
+
+Then EDIT and re-route -- the layout stays live, that is the whole point:
+
+    ... drag any component in the KLayout GUI ...
+    python -m examples_klink.public.demos.gf_mzi_module --port 8765 --reroute
+
+`--reroute` re-routes from the dragged positions WITHOUT rebuilding, so it keeps
+your edit. Re-running with NO flag rebuilds the module from the gdsfactory script
+and snaps every component back to its original spot -- undoing the drag. (An
+agent with the MCP tools can instead call `photonics.reroute cell=GF_MZI_MODULE`
+directly, no script re-run needed.)
 
 Layers come from the gdsfactory generic PDK the script itself uses
 (WG=1/0, heater metal M3=49/0) — swap the script/PDK for your process;
 klink ships no process facts.
+
+## Requirements — read this if the demo won't run / draws wrong
+
+This script is a klink RPC *client*: it builds the layout with gdsfactory in
+THIS Python process, then pushes it to a running KLayout over TCP. So there is
+exactly one rule:
+
+    the interpreter that runs THIS script needs BOTH klink and gdsfactory.
+
+KLayout itself (the GUI + the klink plugin) is a SEPARATE process reached on
+--port; it needs neither klink-the-client nor gdsfactory. Two clean ways to get
+one interpreter that has both:
+
+  1. one venv, both libs (simplest):
+         pip install "klayout-klink[photonics]"      # klink + a tested gdsfactory
+     then run this script with that venv's python.
+
+  2. gdsfactory already lives in another venv (a tool venv, a PDK venv, ...):
+         <that-venv>/python -m pip install klayout-klink   # klink is pure-Python
+         <that-venv>/python -m examples_klink.public.demos.gf_mzi_module
+     i.e. add klink INTO the gdsfactory venv and run from there.
+
+Do NOT sys.path-hack the klink repo into a random interpreter and monkey-patch
+klink internals to paper over a gdsfactory API gap — that is exactly how you
+get 1000x-off geometry (gf.Port's `center` unit contract varies by version).
+The demos are pinned to gdsfactory 9.40.x for this reason; [photonics] installs
+a tested one. If you must use a different gdsfactory, expect to adjust the
+script, not klink.
 """
 
 from __future__ import annotations
@@ -104,14 +144,42 @@ def build_user_module():
     return c
 
 
+def _print_reroute(report) -> None:
+    print("reroute ok:", report["ok"],
+          "| routes:", report.get("routes"),
+          "| abutted:", report.get("abutted"),
+          "| crossings:", report.get("crossings"),
+          "| device_hits:", report.get("device_hits"))
+    for problem in report.get("problems", []):
+        print("  problem:", problem)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument(
+        "--reroute", action="store_true",
+        help="Re-route the module ALREADY in KLayout from its current (dragged) "
+             "instance positions. Does NOT rebuild -- so it keeps your edit "
+             "instead of snapping everything back to the script's layout. Run "
+             "this after you drag a component; run the script with no flag first "
+             "to build the module.")
     args = parser.parse_args()
 
     from klink import KLinkClient
     from klink.domains.photonics.gf_import import import_gf_component
     from klink.domains.photonics.net_intent import NetTable, RouteStyle, reroute
+
+    # DRAG -> REROUTE. The build run below places every device at the script's
+    # positions; if you re-run the WHOLE script after dragging, it rebuilds and
+    # snaps them all back -- undoing your edit. `--reroute` instead re-routes the
+    # cell that is already in KLayout from its live positions: the persisted net
+    # table keys intent on instance identity (drag does not change it), so the
+    # same nets re-route along new paths, and nothing is rebuilt.
+    if args.reroute:
+        with KLinkClient(port=args.port).connect() as client:
+            _print_reroute(reroute(client, cell=CELL))
+        return
 
     component = build_user_module()
     with KLinkClient(port=args.port).connect() as client:
@@ -187,18 +255,15 @@ def main() -> None:
 
         # 5) ONE reroute draws everything: Manhattan optics, S-bends, the
         # all-angle feed, the dubins loopback, and the metal.
-        report = reroute(client, cell=CELL)
-        print("reroute ok:", report["ok"],
-              "| routes:", report.get("routes"),
-              "| abutted:", report.get("abutted"),
-              "| crossings:", report.get("crossings"),
-              "| device_hits:", report.get("device_hits"))
-        for problem in report.get("problems", []):
-            print("  problem:", problem)
+        _print_reroute(reroute(client, cell=CELL))
 
-    print("\nNow drag any component in KLayout, then re-run just:")
-    print("  photonics.reroute cell=%s   (or reroute(client, cell=%r))"
-          % (CELL, CELL))
+    print("\nNow drag any component in the KLayout GUI, then re-route from the new")
+    print("positions -- WITHOUT rebuilding -- by re-running this script with --reroute:")
+    print("  python -m examples_klink.public.demos.gf_mzi_module --port %d --reroute"
+          % args.port)
+    print("(Re-running with NO flag rebuilds the module from the gdsfactory script and")
+    print(" snaps every component back to its original spot, undoing your drag. An agent")
+    print(" with the MCP tools can instead call photonics.reroute cell=%s directly.)" % CELL)
 
 
 if __name__ == "__main__":
