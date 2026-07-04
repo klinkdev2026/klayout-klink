@@ -2,10 +2,18 @@
 
 > English: [demos.md](demos.md)
 
-公开画廊在 `examples_klink/public/demos/` 下有八个承重 demo。**八个全部开箱
-即跑**——没有一个需要你的保密几何。两个完全离线;六个需要 live KLayout 会话
-(但同样不需要外部 GDS);其中一个(gdsfactory 接管)还需要同一解释器里有
-gdsfactory。本页对每个都说实话。
+公开画廊在 `examples_klink/public/demos/` 下有八个承重 demo。没有一个需要你的
+保密几何。两个完全离线;六个需要 live KLayout 会话(但同样不需要外部 GDS);
+其中一个(gdsfactory 接管)还需要同一解释器里有 gdsfactory。本页对每个都说实话。
+
+> **怎么跑取决于你怎么装的 klink。** 其中四个是**starter**、随 wheel 打包:
+> `klink init <proj>` 会把它们铺进 `<proj>/example_template/`,`pip install` 用户
+> 直接 `python example_template/<name>.py` 跑——**ebl_wraparound、hallbar、
+> neural_electrode、gf_mzi_module**。另外四个(**fit_device_pnr_lvs、
+> chat_to_netlist_pnr、multilayer_pnr_lvs、padframe_pnr_lvs**)是 **repo-only**:
+> 它们要读源码树 / 内置网表,只能从仓库克隆里跑,不是 pip 装能跑的。下面每个 demo
+> 的命令是 repo 的 `python -m …` 形式;你若是 starter 用户,改跑
+> `python example_template/<name>.py`。
 
 所有器件/工艺相关的东西都住在示例自己里;`klink` 发布零工艺常数。抄一个
 demo、把数字改成你自己的工艺——流程完全相同。

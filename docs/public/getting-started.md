@@ -99,9 +99,11 @@ matching recipe. See
 
 ## What runs out of the box
 
-All eight public demos run with no geometry from you — two fully offline
-(EBL wraparound, Hall bar) and six against a live KLayout session (neural
-electrode, fit-device → P&R → LVS, hand-written netlist → P&R, multilayer P&R,
-probe-card padframe, and the gdsfactory-takeover MZI, which also needs
-gdsfactory). See [demos](demos.md) for each demo's exact command and measured
-output — none needs MCP to run.
+Eight public demos run with no geometry from you — two fully offline (EBL
+wraparound, Hall bar) and six against a live KLayout session. Four are
+**starters** bundled in the wheel, so a `pip install` user runs them straight
+from the scaffolded `example_template/` (`python example_template/<name>.py`):
+**ebl_wraparound, hallbar, neural_electrode, gf_mzi_module**. The other four
+(fit-device → P&R → LVS, hand-written netlist → P&R, multilayer P&R, probe-card
+padframe) read the source tree, so they run from a clone of the repository. See
+[demos](demos.md) for each command and measured output — none needs MCP to run.

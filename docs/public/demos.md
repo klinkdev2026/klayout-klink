@@ -2,15 +2,26 @@
 
 > 中文见 [demos.zh-CN.md](demos.zh-CN.md)
 
-The public gallery ships eight load-bearing demos under
-`examples_klink/public/demos/`. **All eight run out of the box** — none needs
-confidential geometry from you. Two run fully offline; six need a live KLayout
-session (but still no external GDS); one of those (the gdsfactory takeover)
-also needs gdsfactory in the same interpreter. This page is honest about each.
+The public gallery has eight load-bearing demos under
+`examples_klink/public/demos/`. None needs confidential geometry from you. Two
+run fully offline; six need a live KLayout session (but still no external GDS);
+one of those (the gdsfactory takeover) also needs gdsfactory in the same
+interpreter. This page is honest about each.
 
 Everything device- and process-specific lives in the example itself; `klink`
 ships zero process constants. Copy a demo and edit its numbers for your own
 process — the flow is identical.
+
+> **How you run these depends on how you installed klink.** Four demos are
+> **starters** bundled in the wheel: `klink init <proj>` scaffolds them into
+> `<proj>/example_template/`, and a `pip install` user runs them as
+> `python example_template/<name>.py` — **ebl_wraparound, hallbar,
+> neural_electrode, gf_mzi_module**. The other four (**fit_device_pnr_lvs,
+> chat_to_netlist_pnr, multilayer_pnr_lvs, padframe_pnr_lvs**) are **repo-only**:
+> they read the source tree / a bundled netlist, so they run from a clone of the
+> repository, not from a pip install. The command shown under each demo below is
+> the repo `python -m …` form; if you are a starter user, run
+> `python example_template/<name>.py` instead.
 
 ## Runs offline (no KLayout, no GDS)
 

@@ -28,12 +28,12 @@ after any drag.
 Run against a live KLayout (klink plugin) with gdsfactory in this interpreter
 (see Requirements below if that is not your setup):
 
-    python -m examples_klink.public.demos.gf_mzi_module [--port 8765]
+    python example_template/gf_mzi_module.py [--port 8765]
 
 Then EDIT and re-route -- the layout stays live, that is the whole point:
 
     ... drag any component in the KLayout GUI ...
-    python -m examples_klink.public.demos.gf_mzi_module --port 8765 --reroute
+    python example_template/gf_mzi_module.py --port 8765 --reroute
 
 `--reroute` re-routes from the dragged positions WITHOUT rebuilding, so it keeps
 your edit. Re-running with NO flag rebuilds the module from the gdsfactory script
@@ -63,7 +63,7 @@ one interpreter that has both:
 
   2. gdsfactory already lives in another venv (a tool venv, a PDK venv, ...):
          <that-venv>/python -m pip install klayout-klink   # klink is pure-Python
-         <that-venv>/python -m examples_klink.public.demos.gf_mzi_module
+         <that-venv>/python example_template/gf_mzi_module.py
      i.e. add klink INTO the gdsfactory venv and run from there.
 
 Do NOT sys.path-hack the klink repo into a random interpreter and monkey-patch
@@ -77,6 +77,7 @@ script, not klink.
 from __future__ import annotations
 
 import argparse
+import sys
 
 CELL = "GF_MZI_MODULE"
 OPTICAL_LAYER = "1/0"     # gpdk WG        (from the user's own PDK)
@@ -258,9 +259,8 @@ def main() -> None:
         _print_reroute(reroute(client, cell=CELL))
 
     print("\nNow drag any component in the KLayout GUI, then re-route from the new")
-    print("positions -- WITHOUT rebuilding -- by re-running this script with --reroute:")
-    print("  python -m examples_klink.public.demos.gf_mzi_module --port %d --reroute"
-          % args.port)
+    print("positions -- WITHOUT rebuilding -- by re-running THIS script with --reroute:")
+    print("  python %s --port %d --reroute" % (sys.argv[0], args.port))
     print("(Re-running with NO flag rebuilds the module from the gdsfactory script and")
     print(" snaps every component back to its original spot, undoing your drag. An agent")
     print(" with the MCP tools can instead call photonics.reroute cell=%s directly.)" % CELL)
