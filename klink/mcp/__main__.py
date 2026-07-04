@@ -70,6 +70,82 @@ def _install_claude_md(target_dir: str) -> None:
     print(f"CLAUDE.md installed to {dest}")
 
 
+def _register_snippets(profile: str, session_id: str | None) -> str:
+    """Build copy-paste MCP-registration commands/snippets for common agents,
+    with THIS interpreter's path filled in (the #1 thing agents get wrong is
+    which Python has klink). ``sys.executable`` is that interpreter.
+
+    JSON/TOML strings go through ``json.dumps`` so a Windows path's backslashes
+    are escaped correctly (a raw ``D:\\...`` is invalid JSON); the CLI lines use
+    the raw path, which is what a shell wants. Output is ASCII-only to survive
+    non-UTF-8 consoles.
+    """
+    import json
+
+    py = sys.executable
+    sess = session_id or "project-klink"
+    mcp_args = ["-m", "klink.mcp", "--profile", profile, "--session-id", sess]
+    cli_tail = "%s %s" % (py, " ".join(mcp_args))     # raw path: shell wants it
+    cmd_j = json.dumps(py)                             # escaped: JSON/TOML want it
+    args_j = json.dumps(mcp_args)
+    json_block = (
+        '{\n'
+        '  "mcpServers": {\n'
+        '    "klayout": {\n'
+        '      "command": %s,\n'
+        '      "args": %s\n'
+        '    }\n'
+        '  }\n'
+        '}' % (cmd_j, args_j))
+    vscode_block = (
+        '{\n'
+        '  "servers": {\n'
+        '    "klayout": { "command": %s, "args": %s }\n'
+        '  }\n'
+        '}' % (cmd_j, args_j))
+    zed_block = (
+        '"context_servers": {\n'
+        '  "klayout": { "command": %s, "args": %s, "env": {} }\n'
+        '}' % (cmd_j, args_j))
+    toml_block = (
+        '[mcp_servers.klayout]\n'
+        'command = %s\n'
+        'args = %s' % (cmd_j, args_j))
+    return "\n".join([
+        "# klink MCP registration -- launches klink-mcp from THIS Python (has klink):",
+        "#   %s" % py,
+        "# After adding, RESTART your agent so it loads the new MCP server.",
+        "# (KLayout must be running with the klink plugin; port 8765.)",
+        "",
+        "## Claude Code (CLI)",
+        "claude mcp add klayout -- %s" % cli_tail,
+        "",
+        "## Codex (CLI)",
+        "codex mcp add klayout -- %s" % cli_tail,
+        "",
+        "## Cursor / Windsurf / Claude Desktop (standard mcpServers JSON)",
+        "## -- paste this block into the tool's MCP config file:",
+        "#   Cursor:         ~/.cursor/mcp.json   (or project .cursor/mcp.json)",
+        "#   Windsurf:       ~/.codeium/windsurf/mcp_config.json",
+        "#   Claude Desktop: claude_desktop_config.json",
+        "#   Other MCP agents (Trae, Cline, ...): same block -- see the agent's",
+        "#   own docs for where its MCP config lives / how to add manually.",
+        json_block,
+        "",
+        '## VS Code (.vscode/mcp.json -- note the "servers" key, not "mcpServers")',
+        vscode_block,
+        "",
+        '## Zed (settings.json -- "context_servers")',
+        zed_block,
+        "",
+        "## Codex config-file alternative (~/.codex/config.toml)",
+        toml_block,
+        "",
+        "# Add gdsfactory to the SAME Python for photonics: "
+        'pip install "klayout-klink[photonics]"',
+    ])
+
+
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(
         prog="klink-mcp",
@@ -137,7 +213,19 @@ def main(argv: list[str] | None = None) -> None:
         default=None,
         help="install skills + CLAUDE.md into a project DIR and exit",
     )
+    ap.add_argument(
+        "--register",
+        action="store_true",
+        help="print exact MCP-registration commands/snippets for common agents "
+             "(Claude Code, Codex, Cursor, Windsurf, Trae, VS Code, Zed, ...) "
+             "with THIS interpreter's path filled in, then exit. Copy the line "
+             "for your agent, run it, and restart the agent.",
+    )
     args = ap.parse_args(argv)
+
+    if args.register:
+        print(_register_snippets(args.profile, args.session_id))
+        return
 
     if args.setup:
         _install_skills(os.path.join(args.setup, ".claude", "skills"))

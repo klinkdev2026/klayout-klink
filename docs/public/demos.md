@@ -141,10 +141,22 @@ persisted net table then holds every kind of net: the script's own optics
 that a Manhattan router can't reach (`all_angle`), the loopback pair (`dubins`
 arcs), and the heater→pad **electrical** nets on the metal layer. A single
 `photonics.reroute` redraws all of them — so after you **drag any component in
-the KLayout GUI, one reroute call re-routes optics and metal together**. That
-drag → reroute loop is the point: the layout stays live and editable, not a
-frozen one-shot. Measured output: import ok, 6 optical nets / 13 instances / 5
-device cells; reroute ok, 12 routes, **0 crossings, 0 device-hits**.
+the KLayout GUI, one reroute re-routes optics and metal together**. That drag →
+reroute loop is the point: the layout stays live and editable, not a frozen
+one-shot. From a plain shell you re-route with the `--reroute` flag:
+
+```bash
+# ... drag a component in KLayout ...
+python -m examples_klink.public.demos.gf_mzi_module --port <session-port> --reroute
+```
+
+`--reroute` re-routes from the dragged positions **without rebuilding**, so it
+keeps your edit. Re-running the script with **no** flag rebuilds the module from
+the gdsfactory source and snaps every component back to its original spot,
+undoing the drag — a common first-time surprise, so the flag is the fix. (An
+agent with the MCP tools calls `photonics.reroute` directly instead.) Measured
+output: import ok, 6 optical nets / 13 instances / 5 device cells; reroute ok,
+12 routes, **0 crossings, 0 device-hits**.
 
 This demo needs **gdsfactory in the same interpreter** that runs it (it builds
 the module client-side before pushing to KLayout). The demos are pinned to the

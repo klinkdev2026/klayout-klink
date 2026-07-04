@@ -30,6 +30,17 @@ Run against a live KLayout (klink plugin) with gdsfactory in this interpreter
 
     python -m examples_klink.public.demos.gf_mzi_module [--port 8765]
 
+Then EDIT and re-route -- the layout stays live, that is the whole point:
+
+    ... drag any component in the KLayout GUI ...
+    python -m examples_klink.public.demos.gf_mzi_module --port 8765 --reroute
+
+`--reroute` re-routes from the dragged positions WITHOUT rebuilding, so it keeps
+your edit. Re-running with NO flag rebuilds the module from the gdsfactory script
+and snaps every component back to its original spot -- undoing the drag. (An
+agent with the MCP tools can instead call `photonics.reroute cell=GF_MZI_MODULE`
+directly, no script re-run needed.)
+
 Layers come from the gdsfactory generic PDK the script itself uses
 (WG=1/0, heater metal M3=49/0) — swap the script/PDK for your process;
 klink ships no process facts.
@@ -133,14 +144,42 @@ def build_user_module():
     return c
 
 
+def _print_reroute(report) -> None:
+    print("reroute ok:", report["ok"],
+          "| routes:", report.get("routes"),
+          "| abutted:", report.get("abutted"),
+          "| crossings:", report.get("crossings"),
+          "| device_hits:", report.get("device_hits"))
+    for problem in report.get("problems", []):
+        print("  problem:", problem)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument(
+        "--reroute", action="store_true",
+        help="Re-route the module ALREADY in KLayout from its current (dragged) "
+             "instance positions. Does NOT rebuild -- so it keeps your edit "
+             "instead of snapping everything back to the script's layout. Run "
+             "this after you drag a component; run the script with no flag first "
+             "to build the module.")
     args = parser.parse_args()
 
     from klink import KLinkClient
     from klink.domains.photonics.gf_import import import_gf_component
     from klink.domains.photonics.net_intent import NetTable, RouteStyle, reroute
+
+    # DRAG -> REROUTE. The build run below places every device at the script's
+    # positions; if you re-run the WHOLE script after dragging, it rebuilds and
+    # snaps them all back -- undoing your edit. `--reroute` instead re-routes the
+    # cell that is already in KLayout from its live positions: the persisted net
+    # table keys intent on instance identity (drag does not change it), so the
+    # same nets re-route along new paths, and nothing is rebuilt.
+    if args.reroute:
+        with KLinkClient(port=args.port).connect() as client:
+            _print_reroute(reroute(client, cell=CELL))
+        return
 
     component = build_user_module()
     with KLinkClient(port=args.port).connect() as client:
@@ -216,18 +255,15 @@ def main() -> None:
 
         # 5) ONE reroute draws everything: Manhattan optics, S-bends, the
         # all-angle feed, the dubins loopback, and the metal.
-        report = reroute(client, cell=CELL)
-        print("reroute ok:", report["ok"],
-              "| routes:", report.get("routes"),
-              "| abutted:", report.get("abutted"),
-              "| crossings:", report.get("crossings"),
-              "| device_hits:", report.get("device_hits"))
-        for problem in report.get("problems", []):
-            print("  problem:", problem)
+        _print_reroute(reroute(client, cell=CELL))
 
-    print("\nNow drag any component in KLayout, then re-run just:")
-    print("  photonics.reroute cell=%s   (or reroute(client, cell=%r))"
-          % (CELL, CELL))
+    print("\nNow drag any component in the KLayout GUI, then re-route from the new")
+    print("positions -- WITHOUT rebuilding -- by re-running this script with --reroute:")
+    print("  python -m examples_klink.public.demos.gf_mzi_module --port %d --reroute"
+          % args.port)
+    print("(Re-running with NO flag rebuilds the module from the gdsfactory script and")
+    print(" snaps every component back to its original spot, undoing your drag. An agent")
+    print(" with the MCP tools can instead call photonics.reroute cell=%s directly.)" % CELL)
 
 
 if __name__ == "__main__":

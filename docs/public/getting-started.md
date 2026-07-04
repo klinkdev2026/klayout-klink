@@ -13,17 +13,50 @@ agent.
    repo's `klink_plugin/` folder into KLayout's `salt/` directory (exact
    commands are in the README's *Install KLayout Plugin* section) and start
    KLayout. The plugin runs an in-process RPC server.
-2. **`pip install klayout-klink`** into the Python that will run the MCP server.
-   This brings klink + its own Rust kernels (prebuilt wheels for Linux/macOS/
-   Windows on CPython 3.10–3.13); no third-party libs are bundled. The
-   silicon-photonics recipe additionally needs `gdsfactory` in that **same**
-   Python — install it yourself.
-3. **Configure your agent's MCP server** to launch `python -m klink.mcp` (a
-   sample config, `mcp.example.json`, is written by `klink init` — see below).
+2. **Install klink** into one Python (call it the *klink interpreter*).
 
-The `command` Python in the MCP config must be the one that has klink (and
-gdsfactory, if you use photonics). `klink.status` reports the interpreter and
-capabilities so you can verify.
+   > **Not on PyPI yet** (publishing is imminent). Until it lands, install from a
+   > clone of the repo: `pip install -e .` (or `pip install -e ".[photonics]"`
+   > for the silicon-photonics recipe). The commands on this page show the
+   > eventual `pip install klayout-klink` form.
+
+   klink ships its Rust kernels as prebuilt wheels (Linux/macOS/Windows, CPython
+   3.10–3.13): the core routing kernel installs with the package, and the
+   multilayer routing engine's kernel is an optional `[fast]` extra with a
+   pure-Python fallback (it runs either way, just slower on large designs). No
+   third-party libs are bundled — the silicon-photonics recipe additionally needs
+   `gdsfactory` in that **same** Python (`klayout-klink[photonics]` gets a tested
+   one).
+3. **Register the klink MCP server into your agent, then restart the agent.**
+   klink ships the server; the one thing that varies is how your agent records
+   it. Let klink write the exact command for you:
+
+   ```bash
+   klink-mcp --register
+   ```
+
+   It prints the copy-paste registration for **Claude Code, Codex, Cursor,
+   Windsurf, VS Code, Zed** — plus the standard `mcpServers` JSON block that
+   Claude Desktop, Trae, Cline and most other MCP agents accept (check your
+   agent's docs for where its config lives) — with your klink interpreter's path
+   already filled in (the thing agents most often get wrong). For example,
+   Claude Code and Codex are one line each:
+
+   ```bash
+   claude mcp add klayout -- <klink-python> -m klink.mcp --profile read,write,verify,escape --session-id project-klink
+   codex  mcp add klayout -- <klink-python> -m klink.mcp --profile read,write,verify,escape --session-id project-klink
+   ```
+
+   **Then restart your agent** — an MCP server is loaded at agent startup, so a
+   running session won't see it until you restart. `klink.status` then reports
+   the interpreter and capabilities so you can verify.
+
+> **You do not need MCP to RUN the examples.** Every example is a plain
+> `python -m ...` script (the exact commands are throughout this page) that
+> talks to KLayout directly over the plugin's port — install klink and run it,
+> no MCP required. MCP is the layer that lets your *agent* call klink as resident
+> tools (faster and smoother than re-running scripts). Both paths use the same
+> `pip install klayout-klink`.
 
 ## Your first runnable result (no GDS needed)
 
@@ -66,8 +99,9 @@ matching recipe. See
 
 ## What runs out of the box
 
-All four public demos run with no geometry from you — two fully offline
-(EBL wraparound, Hall bar) and two against a live KLayout session
-(neural-electrode harness, fit-device → P&R → LVS, which uses synthetic
-exemplars). See [demos](demos.md) for each demo's exact command and measured
-output.
+All eight public demos run with no geometry from you — two fully offline
+(EBL wraparound, Hall bar) and six against a live KLayout session (neural
+electrode, fit-device → P&R → LVS, hand-written netlist → P&R, multilayer P&R,
+probe-card padframe, and the gdsfactory-takeover MZI, which also needs
+gdsfactory). See [demos](demos.md) for each demo's exact command and measured
+output — none needs MCP to run.

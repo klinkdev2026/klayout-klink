@@ -11,14 +11,40 @@ PCell、布线、跑 LVS——用你的工艺,通过你的 agent。
    <https://www.klayout.de/build.html>),再把仓库的 `klink_plugin/` 文件夹拷进
    KLayout 的 `salt/` 目录(具体命令见 README 的"安装 KLayout 插件"一节),启动
    KLayout。插件跑一个进程内 RPC server。
-2. **`pip install klayout-klink`**:装进将运行 MCP server 的那个 Python。这会带上
-   klink + 它自己的 Rust 内核(Linux/macOS/Windows、CPython 3.10–3.13 预编译轮);
-   不打包任何第三方库。硅光 recipe 额外需要**同一个** Python 里有 `gdsfactory`,自己装。
-3. **配置 agent 的 MCP server** 启动 `python -m klink.mcp`(`klink init` 会写一份
-   样例配置 `mcp.example.json`——见下)。
+2. **装 klink**:装进一个 Python(称它*klink 解释器*)。
 
-MCP 配置里的 `command` Python 必须是装了 klink(用硅光则还要 gdsfactory)的那
-个。`klink.status` 会报解释器和能力供你核对。
+   > **尚未上 PyPI**(很快就发)。在那之前,从仓库克隆里装:`pip install -e .`
+   > (硅光 recipe 用 `pip install -e ".[photonics]"`)。本页命令写的是将来上了
+   > PyPI 后的 `pip install klayout-klink` 形式。
+
+   klink 的 Rust 内核以预编译轮发布(Linux/macOS/Windows、CPython 3.10–3.13):核心
+   布线内核随包安装,多层布线引擎的内核是可选的 `[fast]` extra、带纯 Python 兜底
+   (装不装都能跑,大设计上不装会慢些)。不打包任何第三方库——硅光 recipe 额外需要
+   **同一个** Python 里有 `gdsfactory`(`klayout-klink[photonics]` 会装一个已测版本)。
+3. **把 klink MCP server 注册进你的 agent,然后重启 agent。** klink 自带这个 server;
+   唯一因 agent 而异的是**怎么登记**。让 klink 替你把精确命令写好:
+
+   ```bash
+   klink-mcp --register
+   ```
+
+   它会打印 **Claude Code、Codex、Cursor、Windsurf、VS Code、Zed** 的可复制注册方式
+   ——外加 Claude Desktop、Trae、Cline 等多数 MCP agent 都吃的标准 `mcpServers` JSON
+   块(具体配置文件位置见你 agent 自己的文档)——而且**你的 klink 解释器路径已自动
+   填好**(这正是 agent 最容易填错的地方)。比如 Claude Code 和 Codex 各一行:
+
+   ```bash
+   claude mcp add klayout -- <klink-python> -m klink.mcp --profile read,write,verify,escape --session-id project-klink
+   codex  mcp add klayout -- <klink-python> -m klink.mcp --profile read,write,verify,escape --session-id project-klink
+   ```
+
+   **然后重启你的 agent**——MCP server 是 agent 启动时加载的,运行中的会话不重启就
+   看不到它。之后 `klink.status` 会报解释器和能力供你核对。
+
+> **跑例子不需要 MCP。** 每个例子都是普通 `python -m ...` 脚本(本页各处都有确切命令),
+> 直接通过插件端口和 KLayout 对话——装好 klink 跑就行,不需要 MCP。MCP 是让你的
+> *agent* 把 klink 当**常驻工具**调用的那一层(比反复重跑脚本更快更顺)。两条路都用
+> 同一个 `pip install klayout-klink`。
 
 ## 你的第一个可跑结果(无需 GDS)
 
@@ -59,7 +85,8 @@ MCP 配置。描述你要做什么,agent 识别领域并从对应 recipe 起 `pd
 
 ## 什么能开箱跑
 
-四个公开 demo 全部不需要你提供几何——两个完全离线(EBL wraparound、Hall
-bar),两个对 live KLayout 会话跑(神经电极 harness、fit-device → P&R →
-LVS,用合成 exemplar)。每个 demo 的确切命令和实测输出见
-[demos.zh-CN](demos.zh-CN.md)。
+八个公开 demo 全部不需要你提供几何——两个完全离线(EBL wraparound、Hall
+bar),六个对 live KLayout 会话跑(神经电极、fit-device → P&R → LVS、手写网表
+→ P&R、多层 P&R、针卡 padframe,以及 gdsfactory 接管的 MZI——它还需要
+gdsfactory)。每个 demo 的确切命令和实测输出见
+[demos.zh-CN](demos.zh-CN.md)——**跑起来都不需要 MCP**。
