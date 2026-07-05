@@ -1,7 +1,8 @@
 name: Release
 
-# Tag-triggered publish. Push a tag like `v0.1.0` to build + upload, or run
-# manually (workflow_dispatch) to build artifacts without publishing.
+# Tag-triggered publish. Push a tag like `v0.1.0` to build + upload to PyPI, or
+# run manually (workflow_dispatch): `target: none` builds + smoke-tests without
+# uploading; `target: testpypi` also uploads to TestPyPI for a dry run.
 #
 # Publishes THREE PyPI projects from one tag:
 #   - klayout-klink        (one universal py3-none-any wheel; depends on BOTH kernels)
@@ -13,19 +14,28 @@ name: Release
 # `pip install klayout-klink --no-deps` to install the pure-Python core alone
 # when you cannot fetch/build a kernel wheel.
 #
-# BEFORE THE FIRST REAL PUBLISH (maintainer setup, one-time):
+# BEFORE THE FIRST PUBLISH (maintainer setup, one-time):
 #   Publishing uses PyPI Trusted Publishing (OIDC) — no API token needed.
-#   On pypi.org: Your account -> Publishing -> "Add a new pending publisher"
-#   (GitHub), once per project name (klayout-klink, klink-boxmaze-rs,
-#   klink-trackmaze-rs) — with owner/repo = klinkdev2026/klayout-klink and
-#   workflow = release.yml (environment blank). Pending publishers also
-#   reserve the project names.
+#   Add a "pending publisher" (GitHub) once per project name (klayout-klink,
+#   klink-boxmaze-rs, klink-trackmaze-rs), owner/repo = klinkdev2026/klayout-klink,
+#   workflow = release.yml, environment blank. Pending publishers also reserve
+#   the names. Do it on BOTH indexes:
+#     - test.pypi.org  -> for the `target: testpypi` dry run below
+#     - pypi.org       -> for the real tag-triggered publish
+#   Recommended flow: run `target: testpypi` once, verify with
+#   `pip install -i https://test.pypi.org/simple/ klayout-klink`, THEN tag v0.1.0.
 # Only tag from a green `main` (the rust-build CI gates the kernel build per OS).
 
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      target:
+        description: "Manual run target: 'none' = build + smoke only; 'testpypi' = also upload to TestPyPI."
+        type: choice
+        options: [none, testpypi]
+        default: none
 
 jobs:
   build-main:
@@ -95,11 +105,33 @@ jobs:
           klink init smoke_proj
           python -c "import os,sys; sys.exit(0 if os.path.isdir(os.path.join('smoke_proj','example_template')) else 1)"
 
+  publish-testpypi:
+    name: publish to TestPyPI (dry run)
+    needs: [build-main, build-accel, install-smoke]
+    runs-on: ubuntu-latest
+    # Manual dry run only: Actions -> Release -> Run workflow -> target: testpypi.
+    # Needs the 3 pending publishers on test.pypi.org (see header).
+    if: github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi'
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Publish all wheels + sdist to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
+          skip-existing: true
+          repository-url: https://test.pypi.org/legacy/
+
   publish:
     name: publish to PyPI
     needs: [build-main, build-accel, install-smoke]
     runs-on: ubuntu-latest
-    # Only on a real version tag; manual runs build artifacts but do not publish.
+    # Only on a real version tag; manual runs build (and optionally hit TestPyPI)
+    # but never publish to real PyPI.
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
       # PyPI Trusted Publishing (OIDC): all three project names must list this
