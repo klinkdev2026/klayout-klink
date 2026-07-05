@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Interactive Workflows - klink</title>
+  <meta name="description" content="klink's interaction capabilities: SEND selection memory, one agent driving many KLayout sessions, cross-session transfer, the 8082 klive-compatible display, and the replay recorder.">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body data-page="workflows">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="index.html" data-nav="home">Home</a>
+        <a href="quickstart.html" data-nav="quickstart">Quickstart</a>
+        <a href="tutorials.html" data-nav="tutorials">Tutorials</a>
+        <a href="workflows.html" data-nav="workflows">Workflows</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP Reference</a>
+        <a href="examples.html" data-nav="examples">Examples</a>
+        <a href="architecture.html" data-nav="architecture">Architecture</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="Language switch">
+          <a href="../workflows.html">CN</a>
+          <a class="active" href="workflows.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Interactive workflows</div>
+        <h1>Human, agent, and live KLayout in one loop</h1>
+        <p>A set of interaction capabilities that let a human and an agent collaborate on one live KLayout: <strong>SEND selection memory</strong>, <strong>one agent driving many KLayout windows</strong>, <strong>cross-session transfer</strong>, an <strong>8082 klive-compatible display</strong>, and <strong>recording a whole session into a replayable script</strong>. Each is an ordinary tool — nothing here needs setup beyond the plugin.</p>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#surface">One catalogue, two faces</a>
+          <a href="#send">SEND selection memory</a>
+          <a href="#multi">One agent, many KLayouts</a>
+          <a href="#transfer">Cross-session transfer</a>
+          <a href="#klive">8082 klive-compatible display</a>
+          <a href="#recorder">Record → replay script</a>
+          <a href="#profiles">Profiles &amp; discovery</a>
+          <a href="#escape">Escape hatch</a>
+        </nav>
+      </aside>
+
+      <article class="content">
+        <h2 id="surface" class="anchor-h">One catalogue, two faces</h2>
+        <p>klink's control surface has two faces: the Python client <code>KLinkClient</code> and the same tools exposed over MCP. Both come from the live plugin's method registry — <strong>no hand-maintained list that can drift</strong>. Every tool's function, parameters and examples are in the <a href="mcp-reference.html">MCP Tool Reference</a>; this page is about the <strong>interactive loop</strong> that ties them together.</p>
+        <pre><code>from klink import KLinkClient
+with KLinkClient() as c:
+    print([m["name"] for m in c.methods()["methods"]])</code></pre>
+
+        <h2 id="send" class="anchor-h">SEND selection memory — what "this area" means</h2>
+        <p>The biggest friction in human + agent collaboration is "which area do you mean?". klink solves it with <strong>SEND</strong>: you select geometry in KLayout and click the plugin's <strong>SEND</strong> toolbar action (or an agent calls <code>selection.send_context</code>), and the selection is recorded as a stable id such as <code>sel_0006</code> in session-scoped memory (<code>.klink/sessions/&lt;id&gt;/interaction_context.jsonl</code>). From then on "just sent", "this area", "that one" resolve to <strong>exact geometry, not a screenshot</strong>.</p>
+        <table class="data-table">
+          <thead><tr><th>Tool</th><th>Use</th></tr></thead>
+          <tbody>
+            <tr><td><code>interaction.selection.recent</code></td><td>Recent SENDs (default latest 5, <strong>by order, not age</strong>).</td></tr>
+            <tr><td><code>interaction.selection.latest</code></td><td>The latest SEND.</td></tr>
+            <tr><td><code>interaction.selection.get</code></td><td>Read an exact record by id.</td></tr>
+            <tr><td><code>interaction.selection.label</code></td><td>Name/describe an important selection.</td></tr>
+            <tr><td><code>interaction.context</code></td><td>Live selection + recent SEND memory together.</td></tr>
+          </tbody>
+        </table>
+        <p><code>selection.get</code> is the <strong>live current selection</strong>; <code>interaction.*</code> is the <strong>durable memory of what was explicitly SENT</strong>. Because minutes of layout work can pass between a SEND and the message referring to it, memory is resolved <strong>by order/count, not age</strong>. <code>interaction.context</code> returns the current selection and recent SENDs together so the agent can tell which one the user means.</p>
+        <p>Two deliberate design choices: (1) <strong>explicit SEND rather than passively watching every click</strong> — only a selection the user actively sends becomes a <code>sel_000N</code>, filtering out exploratory-click and mis-select noise; (2) <strong>memory lives outside the plugin (on the bridge)</strong> — the plugin holds only "right-now" zero-layer facts (<code>selection.get</code> + the event stream), while session-scoped memory, id assignment and language resolution live in the MCP bridge's <code>interaction.*</code>, persisted per session to disk JSONL.</p>
+        <div class="note"><strong>SENDs are durable and never lost.</strong> The plugin journals every SEND with a monotonic sequence number <em>before</em> broadcasting it, so a SEND made while no agent is listening is not lost — the bridge catches up from the journal and deduplicates when it next connects.</div>
+        <pre><code># user: select A → SEND, select B → SEND
+interaction.selection.recent limit=2      # → [sel_0007(B), sel_0006(A)]
+interaction.selection.label id="sel_0006" label="probe pad"</code></pre>
+
+        <h2 id="multi" class="anchor-h">One agent, many KLayouts</h2>
+        <p>Each KLayout window binds a port (the first free one in <code>8765</code>–<code>8799</code>) and registers as a session. <strong>One MCP bridge can drive all of them at once</strong> — they are <strong>equal peers</strong>, no port has a "working" or "LVS" role; you always say which session you mean.</p>
+        <div class="flow">
+          <div class="flow-item"><strong>klayout-8765</strong><span class="muted">real working layout</span></div>
+          <div class="flow-item"><strong>klayout-8766</strong><span class="muted">scratch / test</span></div>
+          <div class="flow-item"><strong>klayout-8767</strong><span class="muted">reference / diff</span></div>
+          <div class="flow-item"><strong>one MCP bridge</strong><span class="muted">switches target on demand</span></div>
+        </div>
+        <pre><code>klink.session_list
+klink.session_label session_id="klayout-8766" label="scratch" aliases=["test"]
+klink.session_resolve query="scratch"     # → klayout-8766
+klink.session_use session_id="klayout-8766"</code></pre>
+        <p>In practice: when a real working layout and a demo/test window are open at once, <strong>label each window first</strong> so the agent refers to "scratch" instead of a port number and destructive ops never hit the working tab.</p>
+
+        <h2 id="transfer" class="anchor-h">Cross-session transfer — two-phase, confirmation-safe</h2>
+        <p>Moving geometry between windows is <strong>two-phase</strong>: <code>prepare</code> first, <strong>dry-run</strong> on the target, then <code>commit</code> to actually write. That catches "wrong target" and "wrong package" <strong>before</strong> anything lands in the target window.</p>
+        <div class="flow">
+          <div class="flow-item"><strong>Select source</strong><span class="muted">SEND or name a cell/selection.</span></div>
+          <div class="flow-item"><strong>prepare</strong><span class="muted">Builds a package, dry-runs on target.</span></div>
+          <div class="flow-item"><strong>Inspect report</strong><span class="muted">Target, cell, layers, shape/instance counts.</span></div>
+          <div class="flow-item"><strong>commit</strong><span class="muted">Only then write into the target.</span></div>
+        </div>
+        <pre><code>klink.transfer_prepare source_session="klayout-8765" target_session="klayout-8766" \
+    copy_mode="flat_selection" target_cell="IMPORTED"     # dry-run built in
+klink.transfer_commit package_id="pkg_0001"</code></pre>
+        <p><code>copy_mode</code>: <code>flat_selection</code> (default) flat-copies visible geometry without hierarchy; <code>shallow_instance</code> moves instance references — and if the target window lacks the child cell, it <strong>blocks the commit</strong> instead of silently making an empty shell. Nothing lands until commit, so a wrong target is caught at dry-run. Plus <code>layer_map</code> remapping and <code>translate_um</code> offset during transfer.</p>
+
+        <h2 id="klive" class="anchor-h">Port 8082: klive-compatible display, a full klive replacement</h2>
+        <p>Besides RPC on <code>8765</code>, the plugin runs a <strong>klive-protocol-compatible</strong> display server on <strong><code>127.0.0.1:8082</code></strong>. It is a <strong>drop-in replacement</strong> for the original <a href="https://github.com/gdsfactory/klive">klive</a>: any gdsfactory / external script that hard-codes <code>localhost:8082</code> — especially <code>Component.show()</code> — pushes layout into KLayout <strong>with no changes</strong>. You do not install klive separately.</p>
+        <table class="data-table">
+          <thead><tr><th>Capability</th><th>Detail</th></tr></thead>
+          <tbody>
+            <tr><td>Protocol compatible</td><td>Byte-compatible with klive 0.4.1 request/response (<code>{"gds":…, "keep_position":…, "libraries":…, "technology":…, "lyrdb":…, "l2n":…}</code>) and replies <code>{"version":"0.4.1", "type":"open"|"reload", …}</code>.</td></tr>
+            <tr><td><code>c.show()</code> out of the box</td><td>gdsfactory's <code>Component.show()</code> pushes straight into KLayout, reloads if open, <code>keep_position</code> keeps your view.</td></tr>
+            <tr><td>More than GDS</td><td>The klive protocol also carries <code>lyrdb</code> (DRC markers) and <code>l2n</code> (netlist extraction), shown in the browser.</td></tr>
+            <tr><td>Multi-session forward</td><td>Single window loads via pya directly; <strong>with many windows, 8082 is a fixed entrypoint</strong> forwarding to the <strong>registered target session</strong> — pick it with <code>klink.session_set_klive_target</code> / <code>session.mark_klive_target</code>.</td></tr>
+            <tr><td>Never disturbs RPC</td><td>If 8082 can't bind, only display is affected; klink RPC on <code>8765</code> is unaffected.</td></tr>
+          </tbody>
+        </table>
+        <pre><code>import gdsfactory as gf
+c = gf.components.mzi()
+c.show()          # via 127.0.0.1:8082 → klink's klive-compat server → shown in KLayout</code></pre>
+        <pre><code>klink.session_set_klive_target session_id="klayout-8766"   # scratch window receives c.show()</code></pre>
+        <div class="note">This is also the display channel for the <a href="mcp-reference.html#d-photonics">photonics flow</a>: after <code>photonics.import_gf</code> takes over a finished gdsfactory script, later <code>photonics.reroute</code> refreshes the display through the same path.</div>
+
+        <h2 id="recorder" class="anchor-h">Record → replayable script</h2>
+        <p>The recorder turns a whole working session — <strong>manual GUI edits and agent RPC edits alike</strong> — into a replayable script. It is a <strong>replay-script generator, not a literal call log</strong>: it records whatever rebuilds the final layout state, so a bulk RPC or an <code>exec.python</code> snippet may expand into per-object actions.</p>
+        <table class="data-table">
+          <thead><tr><th>Tool</th><th>Use</th></tr></thead>
+          <tbody>
+            <tr><td><code>recorder.start</code></td><td>Begin recording (optional <code>output_path</code>). Idempotent.</td></tr>
+            <tr><td><code>recorder.status</code></td><td>Recording? how many events/actions so far, output path. Safe anytime.</td></tr>
+            <tr><td><code>recorder.stop</code></td><td>Stop and write; returns stats + <code>wrote</code>. Idempotent.</td></tr>
+          </tbody>
+        </table>
+        <p>Stopping writes <strong>two artifacts</strong>:</p>
+        <ul>
+          <li><code>&lt;name&gt;.py</code> — a <code>KLinkClient</code> replay script, annotated with <code># user command:</code> lines naming each menu action.</li>
+          <li><code>&lt;name&gt;_pya.py</code> — a standalone <code>pya</code> companion that runs inside KLayout <strong>with no klink installed</strong>.</li>
+        </ul>
+        <pre><code>recorder.status
+recorder.start
+# … typed RPC edits + manual GUI edits …
+recorder.stop        # writes <name>.py and <name>_pya.py</code></pre>
+        <div class="warning">Check <code>recorder.status</code> before starting your own recording so you never clobber one already in progress.</div>
+        <p>So a one-off manual fix becomes a script you can re-run and re-parameterize, and an agent can regenerate from it.</p>
+
+        <h2 id="profiles" class="anchor-h">Profiles &amp; tool discovery</h2>
+        <p><code>--profile</code> filters by intent (read/write/verify/escape/all) and domain (one of 11 tokens). Default <code>read,write,verify,escape</code>; <code>klink.find_tools</code> navigates narrower tools mid-task. Full detail on <a href="mcp-reference.html#profiles">MCP Reference · Profiles</a>.</p>
+        <pre><code>python -m klink.mcp --profile read,write,verify,escape
+klink.find_tools domain="routing_backends"
+klink.status</code></pre>
+
+        <h2 id="escape" class="anchor-h">Escape hatch</h2>
+        <p><code>exec.python</code> runs controlled <code>pya</code> for cases no typed RPC covers; it still schedules recorder + layout-diff detection. Prefer typed RPCs — they validate input, return structured errors with a <code>next_action</code>, and appear in the recorder as intent rather than opaque code. See <a href="mcp-reference.html#d-escape">MCP Reference · Escape hatch</a>.</p>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>Let a human and an agent collaborate on one live KLayout, working from real geometric evidence.</p></div>
+      <div><h3>Related</h3><p><a href="mcp-reference.html">MCP Tool Reference</a></p><p><a href="architecture.html">Architecture</a></p></div>
+      <div><h3>Start</h3><p><a href="quickstart.html">Quickstart</a></p><p><a href="examples.html">Examples</a></p></div>
+    </div>
+  </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

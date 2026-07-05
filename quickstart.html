@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>快速上手 - klink</title>
+  <meta name="description" content="安装 klayout-klink、KLayout 插件、运行第一个离线 demo 和 live KLayout smoke test。">
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body data-page="quickstart">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="主导航">
+        <a href="index.html" data-nav="home">首页</a>
+        <a href="quickstart.html" data-nav="quickstart">快速上手</a>
+        <a href="tutorials.html" data-nav="tutorials">教程</a>
+        <a href="workflows.html" data-nav="workflows">工作流</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP 参考</a>
+        <a href="examples.html" data-nav="examples">示例</a>
+        <a href="architecture.html" data-nav="architecture">架构</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="语言切换">
+          <a class="active" href="quickstart.html">CN</a>
+          <a href="en/quickstart.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="打开导航" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Start here</div>
+        <h1>快速上手</h1>
+        <p>从零安装 Python 包、KLayout 插件和 MCP server，然后跑一个离线 demo 和一个 live KLayout demo。这里写的是公开 release 里已经存在的路径。</p>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#requirements">环境要求</a>
+          <a href="#python">安装 Python 包</a>
+          <a href="#plugin">安装 KLayout 插件</a>
+          <a href="#smoke">连接测试</a>
+          <a href="#demo">第一个结果</a>
+          <a href="#mcp">接入 MCP</a>
+          <a href="#trouble">排错</a>
+        </nav>
+      </aside>
+
+      <article class="content">
+        <h2 id="requirements">环境要求</h2>
+        <ul>
+          <li>KLayout 桌面版。klink 是围绕 KLayout GUI 和 `pya`/`db` API 工作的工具。</li>
+          <li>Python 3.10 或更新版本。release 元数据声明 `requires-python = ">=3.10"`。</li>
+          <li>可选：Claude Code、Codex 或其他 MCP client。</li>
+          <li>按工作流可选安装 `gdsfactory`、`klayout` Python 包、NumPy/OpenCV、SciPy/scikit 系列库。</li>
+        </ul>
+        <div class="note">
+          klink 核心包不打包第三方科学库。某个功能缺依赖时，工具会返回具体 `pip install` 指令。这样可以保持基础安装轻量。
+        </div>
+
+        <h2 id="python">安装 Python 包</h2>
+        <p>普通用户从 PyPI 安装公开包：</p>
+        <pre><code>python -m pip install klayout-klink</code></pre>
+        <p>这会安装 `klink` 和它自带的两个 Rust 加速内核 `klink-boxmaze-rs` 与 `klink-trackmaze-rs`。如果某个平台没有预编译 wheel，pip 可能回退到源码编译，需要 Rust toolchain；只想安装纯 Python 核心时可用：</p>
+        <pre><code>python -m pip install klayout-klink --no-deps</code></pre>
+        <p>按需安装可选能力：</p>
+        <pre><code>python -m pip install klayout
+python -m pip install gdsfactory
+python -m pip install numpy opencv-python-headless
+python -m pip install scipy scikit-learn scikit-image</code></pre>
+
+        <h2 id="plugin">安装 KLayout 插件</h2>
+        <p>`klink_plugin` 是 KLayout salt package。它不是普通 Python import 包，安装方式是复制公开仓库里的 `klink_plugin/` 文件夹到 KLayout 的 salt 目录。</p>
+        <h3>Windows PowerShell</h3>
+        <pre><code>cd path\to\klink
+New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\KLayout\salt" | Out-Null
+Copy-Item -Path ".\klink_plugin" -Destination "$env:USERPROFILE\KLayout\salt\" -Recurse -Force</code></pre>
+        <h3>Linux / macOS</h3>
+        <pre><code>cd /path/to/klink
+mkdir -p ~/.klayout/salt
+cp -R klink_plugin ~/.klayout/salt/</code></pre>
+        <p>复制后重启 KLayout。插件启动成功时，KLayout console 会出现类似：</p>
+        <pre><code>[klink.server] listening on 127.0.0.1:8765</code></pre>
+        <p>如果 `8765` 被占用，插件会尝试后续端口直到 `8799`。每个 KLayout 窗口都是独立 session。</p>
+
+        <h2 id="smoke">连接测试</h2>
+        <p>启动带插件的 KLayout 后，用 Python client 连接：</p>
+        <pre><code>from klink import KLinkClient
+
+with KLinkClient() as c:
+    print(c.ping(nonce=42))
+    print(c.layout_info(verbosity="summary"))</code></pre>
+        <p>如果 KLayout 监听的是其他端口：</p>
+        <pre><code>from klink import KLinkClient
+
+with KLinkClient(port=8766) as c:
+    print(c.ping())</code></pre>
+        <p>也可以直接跑 preflight：</p>
+        <pre><code>python -m klink.doctor --port 8765</code></pre>
+
+        <h2 id="demo">第一个结果</h2>
+        <h3>完全离线：EBL wraparound</h3>
+        <p>PyPI-only 用户先创建项目，然后运行模板里的 starter demo。这个 demo 不需要 KLayout、不需要外部 GDS：</p>
+        <pre><code>klink init my-chip
+cd my-chip
+python example_template/ebl_wraparound.py</code></pre>
+        <p>如果你是在公开源码/release checkout 里，也可以运行公开 gallery 的模块路径：</p>
+        <pre><code>python -m examples_klink.public.demos.ebl_wraparound</code></pre>
+        <p>release 文档记录的实测摘要：`"ok": true`，40 electrodes，12 patches，writefield 16 fields / 11 windows / 20 crossings，0 violations，0 overlaps。</p>
+
+        <h3>live KLayout：neural electrode harness</h3>
+        <p>这个 demo 需要 KLayout + 插件，但不需要你的 GDS：</p>
+        <pre><code>python example_template/neural_electrode.py --port &lt;session-port&gt; --elec-rows 4</code></pre>
+        <p>源码/release checkout 中对应路径：</p>
+        <pre><code>python -m examples_klink.public.demos.neural_electrode --port &lt;session-port&gt; --elec-rows 4</code></pre>
+        <p>release 文档记录的实测摘要：48 ports，24 nets routed，sibling-overlap 0，obstacle-hit 0。</p>
+        <div class="warning">
+          KLayout 的 port 只是 session 端口，没有特殊角色。跑 demo 时请用空白或测试窗口，不要指向正在手工编辑的重要 layout。
+        </div>
+
+        <h3>升级 klink 后刷新 starter</h3>
+        <p>装了新版本 klink 之后，用 `klink update` 刷新 `example_template/` 里的 starter demo；你自己的文件（`pdk.py`、`custom_devices/`、`.klink/`、`out/`、`specs/`）绝不会被碰：</p>
+        <pre><code>python -m pip install -U klayout-klink
+klink update my-chip   # 或者在项目目录内直接运行: klink update</code></pre>
+
+        <h2 id="mcp">接入 MCP</h2>
+        <p>安装 Python 包后会有 `klink-mcp` 命令入口。先给项目安装 agent skill 和项目记忆文件：</p>
+        <pre><code>cd path\to\klink
+klink-mcp --setup .</code></pre>
+        <p>注册 MCP server 的典型命令：</p>
+        <pre><code>claude mcp add klayout -- python -m klink.mcp --profile read,write,verify,escape --session-id project-klink</code></pre>
+        <p>常用 profile：</p>
+        <table class="data-table">
+          <thead><tr><th>Profile</th><th>用途</th></tr></thead>
+          <tbody>
+            <tr><td>`read`</td><td>layout、cell、layer、shape、view、selection 查询。</td></tr>
+            <tr><td>`write`</td><td>创建 cell、layer、shape、instance、PCell 和 undo transaction。</td></tr>
+            <tr><td>`verify`</td><td>DRC、LVS 和结构化验证工具。</td></tr>
+            <tr><td>`escape`</td><td>`exec.python` 等受控 escape hatch。</td></tr>
+            <tr><td>`all`</td><td>暴露全部工具。</td></tr>
+          </tbody>
+        </table>
+
+        <h2 id="trouble">排错</h2>
+        <ul>
+          <li>Python 连接失败：确认 KLayout 已启动、插件已复制到 salt、重启过 KLayout、端口正确。</li>
+          <li>MCP 工具存在但调用报连接错误：MCP server 在跑，但 KLayout 不可达。启动 KLayout 后调用 `klink.reconnect` 或重启 MCP client。</li>
+          <li>gdsfactory 工具缺依赖：在运行 MCP server 的同一个 Python 环境里安装 `gdsfactory`。</li>
+          <li>PowerShell 不允许激活 venv：只对当前进程放开脚本执行策略。</li>
+        </ul>
+        <pre><code>Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\.venv\Scripts\Activate.ps1</code></pre>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>AI-native control plane for KLayout。</p></div>
+      <div><h3>下一步</h3><p><a href="tutorials.html">继续看教程</a></p><p><a href="workflows.html">理解 MCP 工作流</a></p></div>
+      <div><h3>源码</h3><p><a href="https://github.com/klinkdev2026/klayout-klink">GitHub</a></p></div>
+    </div>
+  </footer>
+  <script src="assets/app.js"></script>
+</body>
+</html>

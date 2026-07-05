@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Architecture - klink</title>
+  <meta name="description" content="klink architecture: three tiers, control path, process purity, batch RPCs, verification, and public release boundaries.">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body data-page="architecture">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="index.html" data-nav="home">Home</a>
+        <a href="quickstart.html" data-nav="quickstart">Quickstart</a>
+        <a href="tutorials.html" data-nav="tutorials">Tutorials</a>
+        <a href="workflows.html" data-nav="workflows">Workflows</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP Reference</a>
+        <a href="examples.html" data-nav="examples">Examples</a>
+        <a href="architecture.html" data-nav="architecture">Architecture</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="Language switch">
+          <a href="../architecture.html">CN</a>
+          <a class="active" href="architecture.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Architecture</div>
+        <h1>Stable mechanism, user-owned process</h1>
+        <p>The public release is built around process purity: `klink/` provides mechanism and algorithms, not your layers, devices, DRC numbers, or PDK instances.</p>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#tiers">Three tiers</a>
+          <a href="#path">Control path</a>
+          <a href="#purity">Process purity</a>
+          <a href="#agent">Agent tool design</a>
+          <a href="#batch">Batch RPCs</a>
+          <a href="#domains">Public domains</a>
+          <a href="#release">Release boundary</a>
+        </nav>
+      </aside>
+      <article class="content">
+        <h2 id="tiers">Three tiers</h2>
+        <table class="data-table">
+          <thead><tr><th>Tier</th><th>Content</th><th>Form</th></tr></thead>
+          <tbody>
+            <tr><td>Mechanism</td><td>`klink` Python client, algorithms, MCP bridge, and KLayout plugin.</td><td>Installed package and salt package; normal users do not edit these.</td></tr>
+            <tr><td>Development repo</td><td>Tests, recordings, development examples, and internal design records.</td><td>Development source, not the full public release surface.</td></tr>
+            <tr><td>User project</td><td>`pdk.py`, `custom_devices/`, specs, and generated outputs.</td><td>Your folder. The agent writes here.</td></tr>
+          </tbody>
+        </table>
+
+        <h2 id="path">Control path</h2>
+        <pre><code>Agent (Claude Code / Codex)
+  -> MCP server (python -m klink.mcp)
+  -> klink client (NDJSON over TCP)
+  -> KLayout plugin (in-process RPC server)
+     RPC: 127.0.0.1:8765+
+     klive-compatible: 127.0.0.1:8082</code></pre>
+        <p>The plugin stays thin. Heavier logic runs in external Python, where agents, tests, and optional third-party libraries are easier to manage.</p>
+
+        <h2 id="purity">Process purity</h2>
+        <p>The core holds no process defaults. Any layer number, size, or device parameter in a demo belongs to that example or to the user's `pdk.py`.</p>
+        <ul>
+          <li>To bring up a new process, write `pdk.py`; do not edit `klink/`.</li>
+          <li>Pass layers, widths, spacing, and device libraries explicitly.</li>
+          <li>When required process facts are missing, tools should return instructive errors with the next action.</li>
+        </ul>
+
+        <h2 id="agent" class="anchor-h">Agent tool design principles</h2>
+        <p>klink's reliability comes from tool design, not prompt wording. The same principles recur across routing, transfer, and the device flows:</p>
+        <ul>
+          <li><strong>One intention = one call.</strong> Orchestration is the product; klink does not rely on a weak agent to assemble primitives in the right order (e.g. <code>structdevice.build_from_netlist</code>, <code>nanodevice.hallbar</code>, <code>photonics.connect</code>).</li>
+          <li><strong>Errors instruct, they don't diagnose.</strong> A failure result carries <code>next_action</code> (the next step to relay verbatim) and <code>problems</code> (relay verbatim, never invent); ambiguity returns candidates rather than guessing; success results also carry <code>next_action</code>, making the workflow "a linked list joined by results".</li>
+          <li><strong>Validate before mutate.</strong> Pure computation/validation runs first; only a clean result writes to disk or edits the layout; edits are wrapped in transactions so a failure is idempotently retryable and leaves no scar (e.g. <code>connect_nets</code> undoes everything on any LVS mismatch).</li>
+          <li><strong>State on disk, not in the agent's memory.</strong> Cross-call/cross-session context is persisted by the tools to documented paths (specs, net tables, interaction context under <code>.klink/</code>), so any agent and any fresh session can resume.</li>
+          <li><strong>Long-running process purity.</strong> Tools must be called repeatedly in one MCP server process without cross-contamination — e.g. <code>exec.python</code> uses a per-connection namespace + an explicit <code>exec.reset</code>.</li>
+        </ul>
+        <p>These guarantees land in <strong>three layers</strong>: strongest is tool-level enforcement (harness-independent) → neutral lane/recipe definitions → thin per-harness adapters (<code>CLAUDE.md</code> / <code>AGENTS.md</code>). Even a weaker agent is steered back on track by tools that refuse bad input with a fix.</p>
+
+        <h2 id="batch">Batch RPCs</h2>
+        <p>Generated layouts should not make one RPC per object. Use batch methods to avoid repeated TCP, JSON, transaction, and GUI bookkeeping costs.</p>
+        <table class="data-table">
+          <thead><tr><th>Workload</th><th>Preferred RPC</th></tr></thead>
+          <tbody>
+            <tr><td>Many boxes on one cell/layer</td><td>`shape.insert_boxes`</td></tr>
+            <tr><td>Mixed shapes</td><td>`shape.insert_many` for box, polygon, path, and text.</td></tr>
+            <tr><td>Many child-cell instances</td><td>`instance.insert_many`</td></tr>
+            <tr><td>Many library/basic PCell instances</td><td>`instance.insert_pcell_many`</td></tr>
+          </tbody>
+        </table>
+
+        <h2 id="domains">Public domains</h2>
+        <div class="grid two">
+          <article class="card"><h3>routing</h3><p>Port/Anchor tapered, steiner, damped, and channel backends, plus custom-device detailed routing to LVS.</p></article>
+          <article class="card"><h3>nanodevice</h3><p>EBL wraparound, Hall bar, neural electrode harness, and flake-related tools.</p></article>
+          <article class="card"><h3>photonics</h3><p>gdsfactory bridge, blackbox port harvesting, `import_gf_component`, photonic net intent, and reroute.</p></article>
+          <article class="card"><h3>structdevice</h3><p>Device extraction, netlists, logic map, layout engine, P&R, LVS-lite, and live LVS integration.</p></article>
+          <article class="card"><h3>MCP core</h3><p>Tool discovery, session registry, interaction context, recorder, transfer, and diagnostics.</p></article>
+        </div>
+
+        <h2 id="release">Release boundary</h2>
+        <p>This website only documents release-verifiable public content: root READMEs, `docs/public`, `examples_klink/public`, package metadata, `klink/`, and `klink_plugin/` public entry points.</p>
+        <div class="warning">Internal development notes are used only to avoid publishing the wrong thing. The public website does not disclose unreleased workflows, private PDKs, private GDS, or confidential validation details.</div>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>Clear boundaries matter more than feature volume.</p></div>
+      <div><h3>Tutorials</h3><p><a href="quickstart.html">Quickstart</a></p><p><a href="tutorials.html">User project</a></p></div>
+      <div><h3>Examples</h3><p><a href="examples.html">Public gallery</a></p></div>
+    </div>
+  </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

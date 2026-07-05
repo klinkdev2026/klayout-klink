@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>核心思路与教程 - klink</title>
+  <meta name="description" content="klink 的核心思路 geometry-first：在几何上标注意图（Port/Anchor），routing 算法据此完成布线。加上用户项目模型、按领域的 recipe 与从 demo 改成自己项目的路径。">
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body data-page="tutorials">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="主导航">
+        <a href="index.html" data-nav="home">首页</a>
+        <a href="quickstart.html" data-nav="quickstart">快速上手</a>
+        <a href="tutorials.html" data-nav="tutorials">教程</a>
+        <a href="workflows.html" data-nav="workflows">工作流</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP 参考</a>
+        <a href="examples.html" data-nav="examples">示例</a>
+        <a href="architecture.html" data-nav="architecture">架构</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="语言切换">
+          <a class="active" href="tutorials.html">CN</a>
+          <a href="en/tutorials.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="打开导航" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Core concepts &amp; tutorials</div>
+        <h1>核心思路：geometry-first</h1>
+        <p>klink 不试图“从文字一键生成整版图”。它的核心方法是 <strong>geometry-first</strong>：几何（手绘的或生成的）在先，你在几何上标注<strong>意图</strong>（Port 与 Anchor），然后 routing 算法据此把布线补全，最后用结构化几何查询和 live LVS 判定完成。人保留 GUI 自由，agent 负责读、写、搬运、录制、路由和验证真实几何。</p>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#geometry-first">geometry-first 核心思路</a>
+          <a href="#port">Port：连接意图</a>
+          <a href="#anchor">Anchor：路由约束</a>
+          <a href="#loop">标记 → 路由 → 验证</a>
+          <a href="#model">用户项目模型</a>
+          <a href="#init">创建项目</a>
+          <a href="#recipe">选择 recipe</a>
+          <a href="#offline">离线器件教程</a>
+          <a href="#photonics">硅光示例</a>
+          <a href="#digital">P&amp;R 到 LVS</a>
+          <a href="#verify">验证习惯</a>
+        </nav>
+      </aside>
+
+      <article class="content">
+        <h2 id="geometry-first" class="anchor-h">geometry-first 核心思路</h2>
+        <p>传统参数化版图工具（如基于 stretch handle 的 PCell）默认<strong>形状是矩形</strong>——拉一条边就等于一个参数 <code>W</code>。CMOS 全是方块，这招管用。但光子学、柔性电子、MEMS、超导电路的形状不是方块：渐变 taper、弧形弯曲、自由拓扑，没有“拉那条边 = 参数”这种一一对应。</p>
+        <p>klink 走另一条路：<strong>轻量语义标注（lightweight semantic annotation）</strong>，而不是完备约束系统。你在自己确定的几何位置上标记意图，routing 算法补全被标记之间的部分；不满意就补标、再跑。这是一个可迭代收敛的过程，不是一次性黑箱生成。两类标记：</p>
+        <div class="grid two">
+          <article class="card">
+            <span class="feature-kicker">Port</span>
+            <h3>连接意图（net endpoint）</h3>
+            <p><code>klink_Port</code> PCell，携带 net + 朝向 + 宽度。它回答“这里要连出一条属于某网络的线，朝哪个方向、多宽”。</p>
+          </article>
+          <article class="card">
+            <span class="feature-kicker green">Anchor</span>
+            <h3>路由约束（routing constraint）</h3>
+            <p><code>klink_Anchor</code> PCell，<code>kind</code> 为 waypoint_region / bend_region / corridor。它回答“线应该经过这里 / 在这里弯 / 走这条通道”。</p>
+          </article>
+        </div>
+        <p>这两者<strong>就是路由后端的输入</strong>：先 mark Port + Anchor，再调一个 <code>routing.*</code> 工具，几何布线由算法生成。这条边界让 klink 的机制层保持工艺无关——所有工艺事实（层、尺寸、间距）都由你在调用时显式传入。</p>
+
+        <h2 id="port" class="anchor-h">Port：连接意图</h2>
+        <p>Port 标记一个网络端点。它是一个 <code>klink_Port</code> PCell，<strong>参数就是唯一权威数据源</strong>（center / orientation / width / target_layer / port_type / net）——三角朝向标记和文字标签由 PCell 自动生成，永远不会和参数漂移。routing 后端默认从 <code>999/99</code> 层读取 Port 标记。</p>
+        <pre><code>port.mark cell="NET1" name="A" center_um=[0,0]   orientation="E" width_um=2 net="sig"
+port.mark cell="NET1" name="B" center_um=[80,20] orientation="W" width_um=2 net="sig"
+port.list cell="NET1"</code></pre>
+        <p>命名对齐 gdsfactory 习惯（方向名 <code>E0/N0/W0/S0</code>、类型名 <code>o1/e1</code>）。你在 GUI 里画的三角/矩形也能被吸附固化成标准 Port——通过方向推断 + 就近真实边吸附（贴边容差、45° 栅格回退）。Port 由不可变 <code>name</code> 标识，可以 <code>update</code> / <code>transform</code>（含按 GUI 选择批量改）/ <code>unmark</code>；重复或空名可以用 <code>port.repair_names</code> 修复。完整工具见 <a href="mcp-reference.html#d-ports">MCP 参考 · Port 与 Anchor</a>。</p>
+
+        <h2 id="anchor" class="anchor-h">Anchor：路由约束</h2>
+        <p>Anchor 表达“线要怎么走”。默认从 <code>999/1</code> 层读取。三种 <code>kind</code>：</p>
+        <table class="data-table">
+          <thead><tr><th>kind</th><th>几何与语义</th></tr></thead>
+          <tbody>
+            <tr><td><code>waypoint_region</code></td><td>矩形<strong>必经</strong>区域——线必须穿过它。</td></tr>
+            <tr><td><code>bend_region</code></td><td>三角形，取其内切圆作为<strong>弯曲搜索区</strong>——线在这里做圆弧/折角过渡。</td></tr>
+            <tr><td><code>corridor</code></td><td>折线定义的<strong>方向性通道</strong>：线要“进入 → 沿方向走 → 离开”，不是简单穿过。普通 corridor <strong>必经</strong>；标 <code>choice_group=BUS</code> 后变成 <code>routing.global_channel_cell</code> 的<strong>可选</strong>负载均衡候选通道。</td></tr>
+          </tbody>
+        </table>
+        <pre><code>anchor.mark cell="NET1" kind="waypoint_region" center_um=[40,40] radius_um=6 net="sig"</code></pre>
+        <p>Anchor 与 Port 共享同一套身份模型：<code>id</code>/<code>name</code> 定位、<code>label</code> 显示、<code>net</code> 连接语义三者分离，重复/空 id 可以用 <code>anchor.repair_ids</code> 修复。这套“薄插件只做增删改、厚客户端负责理解手绘标记”的分工是有意为之——如何解读一个标记属于会持续演化的 workflow 逻辑，不该固化进 KLayout 插件。</p>
+        <div class="note"><strong>Keepout 不是 anchor 类型。</strong> 避障是你传给 routing 工具的 <code>obstacle_layers</code>——你自己设计里的 keepout 层。klink 不带默认 keepout 层（<code>900/0</code> 是保留 keepout 层，structdevice 内部把它当 scratch 用）。</div>
+
+        <h2 id="loop" class="anchor-h">标记 → 路由 → 验证</h2>
+        <p>geometry-first 的最简完整流程：</p>
+        <div class="flow">
+          <div class="flow-item"><strong>1 · 几何</strong><span class="muted">手绘或生成器件/焊盘几何。</span></div>
+          <div class="flow-item"><strong>2 · 标意图</strong><span class="muted">port.mark + anchor.mark。</span></div>
+          <div class="flow-item"><strong>3 · 路由</strong><span class="muted">routing.* 生成布线几何。</span></div>
+          <div class="flow-item"><strong>4 · 验证</strong><span class="muted">结构化报告 + live LVS。</span></div>
+        </div>
+        <pre><code>port.mark cell="NET1" name="A" center_um=[0,0]   orientation="E" width_um=2 net="sig"
+port.mark cell="NET1" name="B" center_um=[80,20] orientation="W" width_um=2 net="sig"
+anchor.mark cell="NET1" kind="waypoint_region" center_um=[40,40] radius_um=6 net="sig"
+routing.tapered_hybrid_cell cell="NET1" angle_mode="manhattan" obstacle_layers=["900/0"]
+# 检查结果：ok=true、obstacle_hit_count=0、无 sibling overlap</code></pre>
+        <p>路由后端按拓扑/质量分工（tapered hybrid 为主、tapered polygon 连续 taper、steiner 多端、damped 更强避让、global channel 全局决策、multilayer escape 跨层逃逸、gdsfactory 策略）。逐个见 <a href="mcp-reference.html#d-routing">MCP 参考 · 路由后端</a>。多后端<strong>拒绝“一个万能路由器”</strong>：它们共享同一套 Port/Anchor 规划器，输出差异是“表达形式不同”而非“质量分级”。</p>
+        <p>几条贯穿路由层的设计原则：</p>
+        <ul>
+          <li><strong>零栅格化几何路由。</strong> 用可见性图 + Dijkstra，产生完美直线段而不是锯齿，天然支持 0/45/90° 角度模式；不依赖 <code>klayout.db</code>。</li>
+          <li><strong>Port 出线契约。</strong> 路由器不能把 Port 当任意点——必须沿 <code>orientation</code> 从 center 发射再进入全局寻路；会造成回折时加一个垂直小 dogleg，而不是静默改写 Port 方向。</li>
+          <li><strong>结果必须自证。</strong> <code>ok</code> / <code>obstacle_hit_count</code> / sibling overlap / <code>route_count</code> 是结构化质量门；零匹配不等于成功。参数无法被所选后端满足时会<strong>报错并点名哪些后端支持它</strong>，绝不静默忽略。</li>
+          <li><strong>诚实汇报边界。</strong> global channel 明确“不是完整的拆线重布拥塞路由器”；multilayer escape 不建模过孔包围盒；gdsfactory 的 astar 不可靠，klink 会二次校验、穿墙则主动报错。</li>
+        </ul>
+
+        <h2 id="model" class="anchor-h">用户项目模型</h2>
+        <p><code>klink</code> 和 <code>klink_plugin</code> 是<strong>机制层</strong>（安装的包，永远不改）。你的工艺、器件、尺寸、层号、DRC/LVS 规则都留在<strong>用户项目</strong>里，显式传给机制层。</p>
+        <pre><code>your-project/
+  pdk.py          你的工艺——工艺事实唯一的家
+  custom_devices/ agent 或你写的 device generator / flow 脚本
+  specs/          .klink 规格、net table、交互意图
+  out/            生成的 GDS / 结果（切勿提交 GDS）
+  AGENTS.md       agent 规则（CLAUDE.md 指向它）
+  mcp.example.json</code></pre>
+        <div class="warning">用户项目<strong>绝不</strong>包含 GDS/PDK 内容——无论专有 foundry PDK 还是器件版图。模板 <code>.gitignore</code> 默认拦 <code>*.gds</code>/<code>*.oas</code>。让 recipe 代码在<strong>运行时</strong>指向这些文件（开放 PDK 可依赖，同样不提交）。</div>
+
+        <h2 id="init" class="anchor-h">创建项目</h2>
+        <p>用打包进 wheel 的 CLI 脚手架一个项目，再用 agent 打开它。</p>
+        <pre><code>klink init my-chip
+cd my-chip</code></pre>
+        <p>描述你在做什么，agent 识别领域后从匹配的 recipe 脚手架 <code>pdk.py</code> + 第一条 <code>custom_devices/</code> 脚本，并把你的工艺<strong>显式</strong>传进 klink。没有硬编码默认项目——新项目要先明确 domain 和 geometry tier 才开始生成。</p>
+        <p>升级 klink 之后，用 <code>klink update mychip</code>（或在项目目录内直接 <code>klink update</code>）刷新 <code>example_template/</code> 里的 starter demo；你自己的 <code>pdk.py</code>、<code>custom_devices/</code>、<code>.klink/</code>、<code>out/</code>、<code>specs/</code> 绝不会被覆盖：</p>
+        <pre><code>python -m pip install -U klayout-klink
+klink update mychip</code></pre>
+
+        <h2 id="recipe" class="anchor-h">选择 recipe</h2>
+        <p>recipe 是某个领域的参考实现。geometry tier 说明它需不需要你的机密几何。</p>
+        <table class="data-table">
+          <thead><tr><th>领域</th><th>几何层级</th><th>公开 release 状态</th></tr></thead>
+          <tbody>
+            <tr><td>EBL nanodevice</td><td>Self-contained</td><td>离线可跑，示例内自带参数。</td></tr>
+            <tr><td>Neural electrode harness</td><td>Self-contained</td><td>需 live KLayout，公开示例用 Port/Anchor PCell + tapered-hybrid router。</td></tr>
+            <tr><td>Silicon photonics</td><td>Open or your own</td><td>公开 feature 用开放 <code>gf.gpdk</code>（需装 gdsfactory）；换成你的 PDK 即路由你的。</td></tr>
+            <tr><td>Digital P&amp;R → LVS</td><td>Self-contained or your own</td><td>fit-device demo 用合成 exemplar；换成你真实器件几何来拟合并布线。Verilog→gates 需外部 yosys，缺失时流程返回确切修复命令。</td></tr>
+          </tbody>
+        </table>
+        <p>新领域=一个为它塑形的 <code>pdk.py</code> + 一个 <code>custom_devices/</code> 脚本（import 你的工艺、显式调 klink API）。复制最近的目录条目改写即可，<strong>你从不编辑 klink 来加领域</strong>。</p>
+
+        <h2 id="offline" class="anchor-h">离线器件教程</h2>
+        <p>从完全离线的 EBL wraparound 或 Hall bar 开始最稳——它们展示“机制层不含工艺事实”：示例自带尺寸、层号和 writefield 规则，再调 <code>klink.domains.nanodevice</code>。</p>
+        <pre><code>klink init nano-demo
+cd nano-demo
+python example_template/ebl_wraparound.py
+python example_template/hallbar.py</code></pre>
+        <p>在仓库 checkout 里也可直接跑公开 gallery：</p>
+        <pre><code>python -m examples_klink.public.demos.ebl_wraparound
+python -m examples_klink.public.demos.hallbar</code></pre>
+        <p>复制到你的项目后，<strong>先改参数、不改 <code>klink/</code></strong>；参数稳定后再整理成 <code>custom_devices/&lt;device&gt;.py</code>。逐个 demo 详解见 <a href="examples.html">示例</a>。</p>
+
+        <h2 id="photonics" class="anchor-h">硅光示例（gdsfactory 桥接）</h2>
+        <p>如果你已有 gdsfactory 代码，公开 checkout 里有两个相关示例：低层 feature（<code>features/24_gdsfactory_route_ports.py</code>、<code>30_gdsfactory_routing_zoo.py</code>），和完整 demo <code>demos/gf_mzi_module.py</code>——把一个普通 gdsfactory MZI 脚本接管进 klink 的 reroute loop。</p>
+        <p>安装始终是<strong>一条命令</strong>：<code>pip install klayout-klink</code> 就装好 klink 全部。这个示例额外需要<strong>同一个解释器</strong>里有 gdsfactory（klink 是 RPC client，几何由 gdsfactory 在客户端构建）——klink 不打包第三方库，缺了会提示你确切的 <code>pip install</code>。<code>[photonics]</code> 不是“按领域安装”，只是把一个测试过的 gdsfactory 一并装上的便捷写法：</p>
+        <pre><code>pip install "klayout-klink[photonics]"    # = klink + 一个已测试的 gdsfactory
+klink init my-chip &amp;&amp; cd my-chip
+python example_template/gf_mzi_module.py --port &lt;session-port&gt;
+# 仓库克隆里也可以: python -m examples_klink.public.demos.gf_mzi_module --port &lt;session-port&gt;</code></pre>
+        <p>接管后，在 KLayout GUI 里拖动组件，一次 <code>photonics.reroute</code> 同时重路由光学和金属——细节见 <a href="workflows.html#klive">工作流 · 8082 klive 显示</a> 与 <a href="mcp-reference.html#d-photonics">MCP 参考 · 硅光</a>。从普通 shell 重新布线用 <code>--reroute</code> flag，它只从拖动后的位置重路由、<strong>不重建</strong>：</p>
+        <pre><code>python example_template/gf_mzi_module.py --port &lt;session-port&gt; --reroute</code></pre>
+        <p>换成你的 PDK 时，层、stub 规则、cross-section 都来自你的脚本或 <code>pdk.py</code>。</p>
+
+        <h2 id="digital" class="anchor-h">P&amp;R 到 LVS</h2>
+        <p>公开 release 的 digital path 是自包含或用户自带几何两种模式。fit-device demo 用合成 exemplar 跑通 device fit、placement、routing 和 live LVS。</p>
+        <pre><code># repo-only：需要仓库克隆运行，不在 pip wheel 里
+python -m examples_klink.public.demos.fit_device_pnr_lvs --port &lt;session-port&gt;</code></pre>
+        <p>器件无关的自定义器件流由 <a href="mcp-reference.html#d-structdevice"><code>structdevice.*</code></a> 一族提供：给器件级网表 → <code>build_from_netlist</code> 自动 floorplan/route/draw/LVS；或 SEND 驱动的 <code>declare_nets</code> → <code>connect_nets</code> → <code>lvs_check</code> → <code>spec_write</code>。任何 LVS mismatch 都会撤销全部改动。</p>
+
+        <h2 id="verify" class="anchor-h">验证习惯</h2>
+        <p>klink 教程<strong>不把截图当完成依据</strong>。判定用：</p>
+        <ul>
+          <li><code>layout.info</code>、<code>cell.tree</code>、<code>layer.list</code> 查结构。</li>
+          <li><code>shape.query</code>、<code>instance.query</code>、<code>selection.get</code> 查几何。</li>
+          <li>routing report 的 <code>ok</code>、overlap、obstacle hit、route count。</li>
+          <li>live LVS 的 <code>match=True</code>。</li>
+        </ul>
+        <p>一个路由/版图只有在 live KLayout LVS 返回 <code>match=True</code> 时才算“完成”；marker 计数和“看起来连上了”都不算。截图可以向人展示结果，但不能替代结构化验证。</p>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>geometry-first：在几何上标意图，让算法补全布线，用结构化证据验证。</p></div>
+      <div><h3>继续阅读</h3><p><a href="mcp-reference.html">MCP 工具参考</a></p><p><a href="examples.html">Demo 详解</a></p></div>
+      <div><h3>安装</h3><p><a href="quickstart.html">快速上手</a></p></div>
+    </div>
+  </footer>
+  <script src="assets/app.js"></script>
+</body>
+</html>

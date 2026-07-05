@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>公开示例与 Demo 详解 - klink</title>
+  <meta name="description" content="klink 8 个公开 demo 逐个详解：EBL wraparound、Hall bar、neural electrode、fit-device P&R LVS、chat-to-netlist、multilayer P&R、padframe、gdsfactory MZI——功能、命令、实测输出、依赖、如何改成自己的。">
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body data-page="examples">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="主导航">
+        <a href="index.html" data-nav="home">首页</a>
+        <a href="quickstart.html" data-nav="quickstart">快速上手</a>
+        <a href="tutorials.html" data-nav="tutorials">教程</a>
+        <a href="workflows.html" data-nav="workflows">工作流</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP 参考</a>
+        <a href="examples.html" data-nav="examples">示例</a>
+        <a href="architecture.html" data-nav="architecture">架构</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="语言切换">
+          <a class="active" href="examples.html">CN</a>
+          <a href="en/examples.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="打开导航" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Demos &amp; examples</div>
+        <h1>公开可跑的 Demo 详解</h1>
+        <p><code>examples_klink/public</code> 是公开 gallery——无 NDA、无私有 PDK、无提交的私有 GDS。<strong>8 个示例 demo</strong>：2 个完全离线，6 个需要 live KLayout（仍不需要外部 GDS），其中 1 个（gdsfactory 接管）还需要同解释器里的 gdsfactory。所有器件与工艺相关的量都在 demo 自己里，<code>klink</code> 不带任何工艺常量——复制一个 demo、改数字，就是你自己的工艺，流程不变。</p>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#how">怎么跑（两种安装）</a>
+          <a href="#overview">8 个 demo 一览</a>
+          <a href="#ebl">1 · EBL wraparound</a>
+          <a href="#hallbar">2 · Hall bar</a>
+          <a href="#neural">3 · Neural electrode</a>
+          <a href="#fitdevice">4 · Fit device → P&amp;R → LVS</a>
+          <a href="#chat">5 · Netlist → lint → P&amp;R</a>
+          <a href="#multilayer">6 · Multilayer P&amp;R 规模</a>
+          <a href="#padframe">7 · Probe-card padframe</a>
+          <a href="#mzi">8 · gdsfactory MZI 接管</a>
+          <a href="#features">Feature 示例</a>
+          <a href="#boundaries">公开边界</a>
+        </nav>
+      </aside>
+
+      <article class="content">
+        <h2 id="how" class="anchor-h">怎么跑取决于你怎么装的</h2>
+        <p>4 个 demo 是<strong>随 wheel 打包的 starter</strong>：<code>klink init &lt;proj&gt;</code> 会把它们脚手架进 <code>&lt;proj&gt;/example_template/</code>，pip 安装的用户直接 <code>python example_template/&lt;name&gt;.py</code> 跑——分别是 <strong>ebl_wraparound、hallbar、neural_electrode、gf_mzi_module</strong>（下文这 4 张卡片直接给这个命令）。另外 4 个（<strong>fit_device_pnr_lvs、chat_to_netlist_pnr、multilayer_pnr_lvs、padframe_pnr_lvs</strong>）是 <strong>repo-only</strong>：它们读源码树 / 内置网表，只能从仓库克隆里跑，不是 pip 装能跑的；下文这 4 张卡片保留仓库 <code>python -m …</code> 形式并标注 repo-only。</p>
+        <div class="note">运行 demo <strong>不需要 MCP</strong>。每个 demo 都是普通 <code>python -m …</code> 脚本，直接通过插件端口和 KLayout 对话。MCP 是让你的 <em>agent</em> 把 klink 当常驻工具调用的那一层，比反复跑脚本更顺。两条路都用同一个 <code>pip install klayout-klink</code>。<br>“KLayout port 就是一个 session——任何端口都行，没有特殊角色。用空的或测试专用的 session，别用你手工的工作 tab。”</div>
+
+        <h2 id="overview" class="anchor-h">8 个 demo 一览</h2>
+        <table class="data-table">
+          <thead><tr><th>Demo</th><th>类别</th><th>依赖</th><th>实测摘要</th></tr></thead>
+          <tbody>
+            <tr><td><a href="#ebl">EBL wraparound</a></td><td>纳米器件</td><td>完全离线</td><td>40 电极 · 12 patch · 0 violations · 0 overlaps</td></tr>
+            <tr><td><a href="#hallbar">Hall bar</a></td><td>纳米器件</td><td>离线（<code>--live</code> 可写入）</td><td>semantic bundle + routed result</td></tr>
+            <tr><td><a href="#neural">Neural electrode</a></td><td>纳米器件</td><td>live KLayout</td><td>48 ports · 24 nets · overlap 0 · hit 0</td></tr>
+            <tr><td><a href="#fitdevice">Fit device → P&amp;R → LVS</a></td><td>数字 P&amp;R</td><td>live KLayout</td><td>routed 94/94 · LVS match=True · 173 器件</td></tr>
+            <tr><td><a href="#chat">Netlist → lint → P&amp;R</a></td><td>数字 P&amp;R</td><td>live KLayout</td><td>lint 0 err · routed 3/3 · LVS match=True</td></tr>
+            <tr><td><a href="#multilayer">Multilayer P&amp;R 规模</a></td><td>数字 P&amp;R</td><td>live KLayout</td><td>routed 405/405 · LVS match=True · 766 器件 · ~17s</td></tr>
+            <tr><td><a href="#padframe">Probe-card padframe</a></td><td>数字 P&amp;R</td><td>live KLayout</td><td>routed 94/94 · LVS match=True · 16 pad connected</td></tr>
+            <tr><td><a href="#mzi">gdsfactory MZI 接管</a></td><td>硅光</td><td>live KLayout + gdsfactory</td><td>6 光学 net · reroute 12 routes · 0 crossings</td></tr>
+          </tbody>
+        </table>
+
+        <!-- ========== 1 EBL ========== -->
+        <div class="demo-card">
+          <h2 id="ebl" class="anchor-h">1 · EBL 纳米器件 wraparound <span class="tier offline">完全离线</span></h2>
+          <p>一个参数化的电子束光刻（EBL）wraparound 生成器。离线运行会打印生成的 bundle；<code>--live</code> 写入 KLayout session。这是<strong>无需任何外部几何</strong>就能看到第一条结果的最快路径。</p>
+          <pre><code>python example_template/ebl_wraparound.py          # [--live] [--keep]
+# 仓库克隆里也可以: python -m examples_klink.public.demos.ebl_wraparound</code></pre>
+          <div class="metric-row">
+            <div class="metric"><b>40</b><span>电极</span></div>
+            <div class="metric"><b>12</b><span>patch</span></div>
+            <div class="metric"><b>16 / 11 / 20</b><span>writefield fields/windows/crossings</span></div>
+            <div class="metric"><b>0</b><span>violations</span></div>
+            <div class="metric"><b>0</b><span>overlaps</span></div>
+          </div>
+          <p><strong>复用核心：</strong> <code>klink.domains.nanodevice.devices.wraparound.build_wraparound_demo</code>。改成你自己的工艺：复制这个 demo，改电极数 / pitch / writefield 参数即可，流程不变。</p>
+        </div>
+
+        <!-- ========== 2 Hall bar ========== -->
+        <div class="demo-card">
+          <h2 id="hallbar" class="anchor-h">2 · Hall bar 纳米器件 <span class="tier offline">离线（可 --live）</span></h2>
+          <p>参数化 Hall-bar 生成器。离线打印 semantic bundle + routed result；<code>--live</code> 写入一个一次性 KLayout cell（除非 <code>--keep</code> 否则用完删除）。它演示 <a href="mcp-reference.html#d-nanodevice"><code>nanodevice.hallbar</code></a> 背后“器件生成器 + 交给通用 router 布线”的流程。</p>
+          <pre><code>python example_template/hallbar.py                 # [--live] [--keep]
+# 仓库克隆里也可以: python -m examples_klink.public.demos.hallbar</code></pre>
+          <p><strong>复用核心：</strong> tapered-hybrid router + <code>port.mark</code> / <code>anchor.mark</code>。从 <code>HallBarSpec</code>（bar 长宽、contact 数、pad 尺寸、pitch、gap）算出整个器件几何，再把 contact→pad 的布线委托给通用路由。</p>
+        </div>
+
+        <!-- ========== 3 Neural ========== -->
+        <div class="demo-card">
+          <h2 id="neural" class="anchor-h">3 · Neural-electrode harness <span class="tier live">live KLayout</span></h2>
+          <p>自包含的探针生成器：定义 pad/via 几何与 Port/Anchor 资源，然后调 tapered-hybrid router。<strong>无 GDS，只有 live Port/Anchor PCell。</strong>用一个空的或测试专用 session。</p>
+          <pre><code>python example_template/neural_electrode.py --port &lt;session-port&gt; --elec-rows 4
+# 仓库克隆里也可以: python -m examples_klink.public.demos.neural_electrode --port &lt;session-port&gt; --elec-rows 4</code></pre>
+          <div class="metric-row">
+            <div class="metric"><b>48</b><span>ports</span></div>
+            <div class="metric"><b>24</b><span>nets routed（12×<code>1/0</code> + 12×<code>3/0</code>）</span></div>
+            <div class="metric"><b>0</b><span>sibling-overlap</span></div>
+            <div class="metric"><b>0</b><span>obstacle-hit</span></div>
+          </div>
+        </div>
+
+        <!-- ========== 4 fit device ========== -->
+        <div class="demo-card">
+          <h2 id="fitdevice" class="anchor-h">4 · 拟合器件 → 数字 place &amp; route → LVS <span class="tier live">live KLayout</span></h2>
+          <p>完整、自包含、无 IP 的数字流：从<strong>合成</strong> exemplar 几何拟合一个参数化器件 PCell，放置它，跑 detailed routing，再用 live LVS 验证。把你自己 harvest 的 exemplar 盒子换进去，就能拟合并布线你真实的器件——流程不变。</p>
+          <pre><code># repo-only：需要仓库克隆运行，不在 pip wheel 里
+python -m examples_klink.public.demos.fit_device_pnr_lvs --port &lt;session-port&gt;   # [--draw-only]</code></pre>
+          <div class="metric-row">
+            <div class="metric"><b>94/94</b><span>routed</span></div>
+            <div class="metric"><b>match=True</b><span>live LVS</span></div>
+            <div class="metric"><b>173</b><span>器件</span></div>
+          </div>
+          <p><strong>复用核心：</strong> <code>map_logic_to_devices(...)</code> → place → FlexDR → live LVS。</p>
+        </div>
+
+        <!-- ========== 5 chat ========== -->
+        <div class="demo-card">
+          <h2 id="chat" class="anchor-h">5 · 手写网表 → lint → place &amp; route → LVS <span class="tier live">live KLayout</span></h2>
+          <p>“在对话里描述，得到一个已验证版图”的流：一个 3 级环形振荡器网表<strong>手写</strong>而成（想象对话里的每个需求映射成几行显式网表），由 <code>lint_netlist</code> 校验（<strong>在任何几何存在之前</strong>每个结构错误都给 fix-it 提示），然后 place、route、LVS 验证，每个 stage 节点作为裸标注 trace 引到周边。网表是纯数据——agent（或你）可以为<strong>任意拓扑</strong>写一个，不需要逻辑综合器。</p>
+          <pre><code># repo-only：需要仓库克隆运行，不在 pip wheel 里
+python -m examples_klink.public.demos.chat_to_netlist_pnr --port &lt;session-port&gt;</code></pre>
+          <div class="metric-row">
+            <div class="metric"><b>0</b><span>lint 错误</span></div>
+            <div class="metric"><b>3/3</b><span>routed</span></div>
+            <div class="metric"><b>match=True</b><span>LVS</span></div>
+            <div class="metric"><b>6</b><span>器件</span></div>
+            <div class="metric"><b>3/3</b><span>tap 抽取验证 CONNECTED</span></div>
+          </div>
+        </div>
+
+        <!-- ========== 6 multilayer ========== -->
+        <div class="demo-card">
+          <h2 id="multilayer" class="anchor-h">6 · 规模化多层 place &amp; route <span class="tier live">live KLayout</span></h2>
+          <p>规模 demo：一个内置的 <strong>766 器件</strong>合成网表（玩具 4-bit ALU，268 门，用开源逻辑综合器网表化，重映射到本 gallery 的合成拟合器件）先 lint，然后用内置的<strong>层数顾问</strong>在两套示例工艺栈上对比——fit-a-device demo 的 3 层公开工艺，和 demo 里自定义的第二套 7 层栈（器件端子上 2 竖 + 2 横干净信号层）。顾问打印每套的 core-area 成本，让你看清这种规模的设计为什么需要额外层，而前面的小 demo 在 3 层上很舒服。然后放置、标出设计全部 20 个主端口（西边 13 进，东边 7 出），用多层路由引擎布线。</p>
+          <pre><code># repo-only：需要仓库克隆运行，不在 pip wheel 里
+python -m examples_klink.public.demos.multilayer_pnr_lvs --port &lt;session-port&gt;</code></pre>
+          <div class="metric-row">
+            <div class="metric"><b>405/405</b><span>nets routed</span></div>
+            <div class="metric"><b>match=True</b><span>LVS</span></div>
+            <div class="metric"><b>766</b><span>器件</span></div>
+            <div class="metric"><b>20/20</b><span>port 抽取验证 CONNECTED</span></div>
+            <div class="metric"><b>~17s</b><span>端到端</span></div>
+          </div>
+          <p>复制这个文件、改 <code>PUBLIC_MULTILAYER</code> 就是你自己的层栈——流程不变。</p>
+        </div>
+
+        <!-- ========== 7 padframe ========== -->
+        <div class="demo-card">
+          <h2 id="padframe" class="anchor-h">7 · Probe-card 优先的 place &amp; route <span class="tier live">live KLayout</span></h2>
+          <p>反序的硬件流：探针卡 / pad ring <strong>先存在</strong>（位置很久前就冻结了），电路必须去迁就它——哪怕卡内部装不下整个 block。用和 fit-a-device 相同的合成 4-bit 加法器与拟合器件，先 lint，然后造一个替身 20-pad 探针卡并用 <code>pads_from_gds</code> <strong>harvest 回来</strong>（真实场景里你跳过 fabricate、直接 harvest 自己的卡文件）。一张 net→pad 表分配全部 14 主端口 + VDD + GND（4 个冗余 pad 保持未用）；因为卡内部只装得下一半行，<code>place_grid(forbid_y_bands=…)</code> 把 block 拆成<strong>一半在卡内 / 一半在卡下</strong>，<code>pdn_split_bands</code> 每区一张电网、用一条 spine strap 桥接。</p>
+          <pre><code># repo-only：需要仓库克隆运行，不在 pip wheel 里
+python -m examples_klink.public.demos.padframe_pnr_lvs --port &lt;session-port&gt;   # [--no-card]</code></pre>
+          <div class="metric-row">
+            <div class="metric"><b>94/94</b><span>routed</span></div>
+            <div class="metric"><b>match=True</b><span>LVS</span></div>
+            <div class="metric"><b>173</b><span>器件</span></div>
+            <div class="metric"><b>85 / 80</b><span>卡内 / 卡下</span></div>
+            <div class="metric"><b>16 + 4</b><span>pad connected + 冗余隔离</span></div>
+          </div>
+          <p><code>--no-card</code> 去掉卡：每个端口作为裸标注线端引到周边（输入西、输出东，吸附到路由通道中心），电源在自动标注的 PDN tie rail 上——routed 94/94，LVS match=True，14 stub 全 CONNECTED。复制这个文件、改 pad 表就是你自己的卡。</p>
+        </div>
+
+        <!-- ========== 8 MZI ========== -->
+        <div class="demo-card">
+          <h2 id="mzi" class="anchor-h">8 · gdsfactory 接管 → 可编辑光子模块 <span class="tier photonics">live KLayout + gdsfactory</span></h2>
+          <p>一个完整的热光 MZI——倾斜 fiber GC → 1×2 MMI 分束 → 两条热相移臂（下臂镜像）→ 2×2 MMI 合束 → 偏移输出 GC，加热器 pad 行和 fiber loopback 对——写成<strong>一个普通 gdsfactory 脚本</strong>，然后被一次 <code>import_gf_component</code> 接管。一张持久 net 表随后容纳<strong>每一种</strong> net：脚本自己的光学（由 klink 重画）、重排成 <code>sbend</code> 的偏移输出、Manhattan router 够不到的倾斜 GC（<code>all_angle</code>）、loopback 对（<code>dubins</code> 圆弧）、以及金属层上的 heater→pad <strong>电学</strong> net。一次 <code>photonics.reroute</code> 把它们全部重画——所以你在 KLayout GUI 里<strong>拖动任意组件后，一次 reroute 同时重路由光学和金属</strong>。</p>
+          <pre><code>python example_template/gf_mzi_module.py --port &lt;session-port&gt;
+# …在 KLayout 里拖动一个组件…
+python example_template/gf_mzi_module.py --port &lt;session-port&gt; --reroute
+# 仓库克隆里也可以: python -m examples_klink.public.demos.gf_mzi_module --port &lt;session-port&gt; [--reroute]</code></pre>
+          <div class="metric-row">
+            <div class="metric"><b>6</b><span>光学 net</span></div>
+            <div class="metric"><b>13 / 5</b><span>instances / device cells</span></div>
+            <div class="metric"><b>12</b><span>reroute routes</span></div>
+            <div class="metric"><b>0 / 0</b><span>crossings / device-hits</span></div>
+          </div>
+          <div class="warning">
+            <strong>拖动 → reroute 循环是重点。</strong> <code>--reroute</code> 从拖动后的位置重路由而<strong>不重建</strong>，保住你的编辑。不带 flag 重跑脚本会从 gdsfactory 源重建、把每个组件吸回原位、撤销你的拖动——这是常见的初次惊吓，所以 flag 就是解药。（有 MCP 工具的 agent 直接调 <code>photonics.reroute</code>。）
+          </div>
+          <p><strong>依赖：</strong> 需要<strong>运行它的同一个解释器</strong>里有 gdsfactory（它在客户端构建模块再推给 KLayout）。demo 钉在测试过的版本线上——<code>pip install "klayout-klink[photonics]"</code> 装到一个已知可用的 gdsfactory。如果 gdsfactory 已在另一个 venv，把 klink 装进<strong>那个</strong> venv 并从那里跑，不要 sys.path-hack 仓库进外部解释器（那条路通向版本不匹配和 1000× 偏差的几何）。</p>
+        </div>
+
+        <!-- ========== features ========== -->
+        <h2 id="features" class="anchor-h">Feature 示例</h2>
+        <p><code>examples_klink/public/features</code> 展示单项能力，适合学 API 并复制到你自己项目：</p>
+        <ul>
+          <li>gdsfactory：route to KLayout（<code>23</code>）、route ports（<code>24</code>）、net examples（<code>25</code>）、component marker（<code>26</code>）、width mismatch + auto taper（<code>29</code>）、routing zoo（<code>30</code>）——用开源 <code>gf.gpdk</code>，同解释器规则同上。</li>
+          <li>Port/Anchor walkthrough（<code>anchor_port_5_example</code> 及其 <code>_pya</code> 版）。</li>
+          <li>路由压力测试：tapered、tapered segments、steiner、damped、以及 future/missing-algorithm 展示。</li>
+          <li>measurement import、harness/probe 生成器。</li>
+        </ul>
+        <p>另有 <code>examples_klink/public/smoke</code> 里的能力 smoke demo（draw、PCell zoo、cells &amp; shapes、delete/undo、exec、route run）——不是完整教程，但适合确认某项底层能力可用。</p>
+
+        <!-- ========== boundaries ========== -->
+        <h2 id="boundaries" class="anchor-h">公开边界</h2>
+        <p>公开 gallery 的合同是 <strong>open + open-box runnable</strong>：</p>
+        <ul>
+          <li>不含 NDA / 专有 PDK 内容。</li>
+          <li>不提交私有 GDS。</li>
+          <li>不 import dev-only PDK module。</li>
+          <li>第三方依赖按普通 <code>pip install</code> 处理。</li>
+        </ul>
+        <div class="warning">如果一个流程需要用户自己的私有器件 GDS，它只能在用户项目<strong>运行时</strong>读取该路径，不能把 GDS/PDK 文件提交到公开仓库或网站示例里。模板 <code>.gitignore</code> 默认拦 <code>*.gds</code>/<code>*.oas</code>。</div>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>用可跑示例降低 GitHub 上手成本，每个 demo 都有公开实测数字。</p></div>
+      <div><h3>继续</h3><p><a href="quickstart.html">快速上手</a></p><p><a href="mcp-reference.html">MCP 工具参考</a></p></div>
+      <div><h3>工作流</h3><p><a href="workflows.html">交互能力</a></p></div>
+    </div>
+  </footer>
+  <script src="assets/app.js"></script>
+</body>
+</html>

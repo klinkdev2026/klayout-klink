@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quickstart - klink</title>
+  <meta name="description" content="Install klayout-klink, the KLayout plugin, run offline starters, and connect a live KLayout session.">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body data-page="quickstart">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="index.html" data-nav="home">Home</a>
+        <a href="quickstart.html" data-nav="quickstart">Quickstart</a>
+        <a href="tutorials.html" data-nav="tutorials">Tutorials</a>
+        <a href="workflows.html" data-nav="workflows">Workflows</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP Reference</a>
+        <a href="examples.html" data-nav="examples">Examples</a>
+        <a href="architecture.html" data-nav="architecture">Architecture</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="Language switch">
+          <a href="../quickstart.html">CN</a>
+          <a class="active" href="quickstart.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Start here</div>
+        <h1>Quickstart</h1>
+        <p>Install the Python package, install the KLayout salt plugin, run one offline starter, then connect to a live KLayout session. All paths here are grounded in the public release.</p>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#requirements">Requirements</a>
+          <a href="#python">Python package</a>
+          <a href="#plugin">KLayout plugin</a>
+          <a href="#smoke">Smoke test</a>
+          <a href="#demo">First result</a>
+          <a href="#mcp">MCP setup</a>
+          <a href="#trouble">Troubleshooting</a>
+        </nav>
+      </aside>
+
+      <article class="content">
+        <h2 id="requirements">Requirements</h2>
+        <ul>
+          <li>KLayout desktop build. Live workflows depend on the GUI macro environment and `pya`/`db` APIs.</li>
+          <li>Python 3.10 or newer. The package metadata declares `requires-python = ">=3.10"`.</li>
+          <li>Optional: Claude Code, Codex, or another MCP client.</li>
+          <li>Optional per workflow: `gdsfactory`, the `klayout` Python package, NumPy/OpenCV, SciPy, scikit-learn, or scikit-image.</li>
+        </ul>
+        <div class="note">The core package does not bundle third-party scientific libraries. Feature errors name the exact missing `pip install` command.</div>
+
+        <h2 id="python">Install the Python package</h2>
+        <pre><code>python -m pip install klayout-klink</code></pre>
+        <p>This installs `klink` and its own two Rust acceleration kernels, `klink-boxmaze-rs` and `klink-trackmaze-rs`. On unsupported platforms pip may build the kernels from source, which requires a Rust toolchain. For pure-Python core only:</p>
+        <pre><code>python -m pip install klayout-klink --no-deps</code></pre>
+        <p>Install optional feature dependencies only when needed:</p>
+        <pre><code>python -m pip install klayout
+python -m pip install gdsfactory
+python -m pip install numpy opencv-python-headless
+python -m pip install scipy scikit-learn scikit-image</code></pre>
+
+        <h2 id="plugin">Install the KLayout plugin</h2>
+        <p>`klink_plugin` is a KLayout salt package. Copy the public repository or release checkout's `klink_plugin/` folder into KLayout's salt directory.</p>
+        <h3>Windows PowerShell</h3>
+        <pre><code>cd path\to\klink
+New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\KLayout\salt" | Out-Null
+Copy-Item -Path ".\klink_plugin" -Destination "$env:USERPROFILE\KLayout\salt\" -Recurse -Force</code></pre>
+        <h3>Linux / macOS</h3>
+        <pre><code>cd /path/to/klink
+mkdir -p ~/.klayout/salt
+cp -R klink_plugin ~/.klayout/salt/</code></pre>
+        <p>Restart KLayout. A successful plugin startup prints something like:</p>
+        <pre><code>[klink.server] listening on 127.0.0.1:8765</code></pre>
+
+        <h2 id="smoke">Smoke test</h2>
+        <pre><code>from klink import KLinkClient
+
+with KLinkClient() as c:
+    print(c.ping(nonce=42))
+    print(c.layout_info(verbosity="summary"))</code></pre>
+        <p>If KLayout is listening on a different port:</p>
+        <pre><code>from klink import KLinkClient
+
+with KLinkClient(port=8766) as c:
+    print(c.ping())</code></pre>
+        <p>Run the preflight check when in doubt:</p>
+        <pre><code>python -m klink.doctor --port 8765</code></pre>
+
+        <h2 id="demo">Your first result</h2>
+        <h3>Offline: EBL wraparound</h3>
+        <p>PyPI-only users create a project first, then run the starter copied into the template:</p>
+        <pre><code>klink init my-chip
+cd my-chip
+python example_template/ebl_wraparound.py</code></pre>
+        <p>In a public source or release checkout, the gallery module path also works:</p>
+        <pre><code>python -m examples_klink.public.demos.ebl_wraparound</code></pre>
+        <p>Recorded public output summary: `"ok": true`, 40 electrodes, 12 patches, writefield 16 fields / 11 windows / 20 crossings, 0 violations, 0 overlaps.</p>
+
+        <h3>Live KLayout: neural electrode harness</h3>
+        <pre><code>python example_template/neural_electrode.py --port &lt;session-port&gt; --elec-rows 4</code></pre>
+        <p>Source or release checkout path:</p>
+        <pre><code>python -m examples_klink.public.demos.neural_electrode --port &lt;session-port&gt; --elec-rows 4</code></pre>
+        <p>Recorded public output summary: 48 ports, 24 routed nets, sibling-overlap 0, obstacle-hit 0.</p>
+        <div class="warning">A KLayout port is just a session. Use an empty or test-owned window for demos, not your manual working layout.</div>
+
+        <h3>Refresh starters after upgrading klink</h3>
+        <p>After installing a newer klink, run `klink update` to refresh the starter demos under `example_template/`; your own files (`pdk.py`, `custom_devices/`, `.klink/`, `out/`, `specs/`) are never touched:</p>
+        <pre><code>python -m pip install -U klayout-klink
+klink update my-chip   # or run it from inside the project folder: klink update</code></pre>
+
+        <h2 id="mcp">Connect MCP</h2>
+        <pre><code>cd path\to\klink
+klink-mcp --setup .</code></pre>
+        <pre><code>claude mcp add klayout -- python -m klink.mcp --profile read,write,verify,escape --session-id project-klink</code></pre>
+        <table class="data-table">
+          <thead><tr><th>Profile</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td>`read`</td><td>Layout, cell, layer, shape, view, and selection queries.</td></tr>
+            <tr><td>`write`</td><td>Cell, layer, shape, instance, PCell, and undo transaction authoring.</td></tr>
+            <tr><td>`verify`</td><td>DRC, LVS, and structured verification tools.</td></tr>
+            <tr><td>`escape`</td><td>Controlled escape-hatch tools such as `exec.python`.</td></tr>
+            <tr><td>`all`</td><td>Expose all tools.</td></tr>
+          </tbody>
+        </table>
+
+        <h2 id="trouble">Troubleshooting</h2>
+        <ul>
+          <li>Python cannot connect: check KLayout is running, the plugin was copied, KLayout was restarted, and the port is correct.</li>
+          <li>MCP tools exist but calls fail: MCP is running but KLayout is unreachable. Start KLayout and call `klink.reconnect` or restart the MCP client.</li>
+          <li>gdsfactory tools miss dependencies: install `gdsfactory` into the same interpreter that runs the MCP server.</li>
+          <li>PowerShell blocks venv activation: allow scripts for the current process.</li>
+        </ul>
+        <pre><code>Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\.venv\Scripts\Activate.ps1</code></pre>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>AI-native control plane for KLayout.</p></div>
+      <div><h3>Next</h3><p><a href="tutorials.html">Read tutorials</a></p><p><a href="workflows.html">MCP workflows</a></p></div>
+      <div><h3>Source</h3><p><a href="https://github.com/klinkdev2026/klayout-klink">GitHub</a></p></div>
+    </div>
+  </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

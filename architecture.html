@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>架构 - klink</title>
+  <meta name="description" content="klink 三层架构、control path、process purity、批量 RPC、验证和公开 release 边界。">
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body data-page="architecture">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="主导航">
+        <a href="index.html" data-nav="home">首页</a>
+        <a href="quickstart.html" data-nav="quickstart">快速上手</a>
+        <a href="tutorials.html" data-nav="tutorials">教程</a>
+        <a href="workflows.html" data-nav="workflows">工作流</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP 参考</a>
+        <a href="examples.html" data-nav="examples">示例</a>
+        <a href="architecture.html" data-nav="architecture">架构</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="语言切换">
+          <a class="active" href="architecture.html">CN</a>
+          <a href="en/architecture.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="打开导航" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Architecture</div>
+        <h1>机制层稳定，工艺层留给用户</h1>
+        <p>公开 release 的核心设计是 process purity：`klink/` 只提供机制和算法，不保存你的层号、器件、DRC 数值或 PDK 实例。</p>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#tiers">三层模型</a>
+          <a href="#path">控制路径</a>
+          <a href="#purity">Process purity</a>
+          <a href="#agent">Agent 工具设计原则</a>
+          <a href="#batch">批量 RPC</a>
+          <a href="#domains">公开领域</a>
+          <a href="#release">release 边界</a>
+        </nav>
+      </aside>
+
+      <article class="content">
+        <h2 id="tiers">三层模型</h2>
+        <table class="data-table">
+          <thead><tr><th>层</th><th>内容</th><th>形式</th></tr></thead>
+          <tbody>
+            <tr><td>Mechanism</td><td>`klink` Python client、算法、MCP bridge、KLayout 插件。</td><td>安装包和 salt package，普通用户不修改。</td></tr>
+            <tr><td>Development repo</td><td>测试、录制、开发示例、内部设计记录。</td><td>开发仓，不等于公开发布内容。</td></tr>
+            <tr><td>User project</td><td>`pdk.py`、`custom_devices/`、specs、输出结果。</td><td>用户自己的目录，agent 在这里写代码。</td></tr>
+          </tbody>
+        </table>
+
+        <h2 id="path">控制路径</h2>
+        <pre><code>Agent (Claude Code / Codex)
+  -> MCP server (python -m klink.mcp)
+  -> klink client (NDJSON over TCP)
+  -> KLayout plugin (in-process RPC server)
+     RPC: 127.0.0.1:8765+
+     klive-compatible: 127.0.0.1:8082</code></pre>
+        <p>KLayout 插件保持薄，复杂逻辑在外部 Python 中运行。这样 agent、脚本、测试和可选第三方库不需要塞进 KLayout macro 环境。</p>
+
+        <h2 id="purity">Process purity</h2>
+        <p>`klink` 核心不带工艺默认值。文档和 demo 中出现的层号、尺寸、器件参数，属于示例或用户 `pdk.py`，不是 klink 的默认工艺。</p>
+        <ul>
+          <li>换工艺：写你的 `pdk.py`，不要改 `klink/`。</li>
+          <li>调用 API：把 layer、width、spacing、device library 等显式传入。</li>
+          <li>缺参数：工具应该返回带 `next_action` 的 instructive error，而不是静默套默认值。</li>
+        </ul>
+
+        <h2 id="agent" class="anchor-h">Agent 工具设计原则</h2>
+        <p>klink 的可靠性不靠“提示词写得好”，而靠工具本身的设计。同一套原则在路由、搬运、器件流里反复出现：</p>
+        <ul>
+          <li><strong>一个用户意图 = 一次调用。</strong> 编排本身就是产品，不指望弱 agent 正确拼装原语顺序（如 <code>structdevice.build_from_netlist</code>、<code>nanodevice.hallbar</code>、<code>photonics.connect</code>）。</li>
+          <li><strong>错误即指令，不是诊断。</strong> 失败结果携带 <code>next_action</code>（可直接复述给用户的下一步）和 <code>problems</code>（须逐字转述、不得杜撰）；歧义返回候选而非瞎猜；成功结果也带 <code>next_action</code>，让工作流成为“靠结果串联的链表”。</li>
+          <li><strong>先验证后变更（validate-before-mutate）。</strong> 纯计算/校验先做完、确认无误才写盘或改版图；编辑包在事务里，失败可幂等重试、不留疤（如 <code>connect_nets</code> 任何 LVS 不匹配就整体撤销）。</li>
+          <li><strong>状态落盘，不留在 agent 记忆里。</strong> 跨调用/跨会话的上下文由工具自己持久化到文档化路径（<code>.klink/</code> 下的 spec、net 表、interaction context），任何 agent、任何新会话都能续接。</li>
+          <li><strong>长驻进程纯净。</strong> 工具要在同一 MCP server 进程里反复调用而不互相污染，例如 <code>exec.python</code> 用每连接独立命名空间 + 显式 <code>exec.reset</code>。</li>
+        </ul>
+        <p>这些保证分三层实现：最强的是工具本身的强制（跨 harness 通用）→ 中立的 lane/recipe 定义 → 各 harness 的薄适配（<code>CLAUDE.md</code> / <code>AGENTS.md</code>）。所以即使换一个较弱的 agent，工具也会用“带修复建议的报错”把它拉回正确做法。</p>
+
+        <h2 id="batch">批量 RPC</h2>
+        <p>生成式版图不能一个 shape 一次 RPC。klink 提供批量方法降低 TCP、JSON、transaction 和 GUI bookkeeping 成本。</p>
+        <table class="data-table">
+          <thead><tr><th>工作量</th><th>优先 RPC</th></tr></thead>
+          <tbody>
+            <tr><td>同一个 cell/layer 上很多 box</td><td>`shape.insert_boxes`</td></tr>
+            <tr><td>混合 shape</td><td>`shape.insert_many`，支持 box、polygon、path、text。</td></tr>
+            <tr><td>很多 child-cell instances</td><td>`instance.insert_many`</td></tr>
+            <tr><td>很多 library/basic PCell instances</td><td>`instance.insert_pcell_many`</td></tr>
+          </tbody>
+        </table>
+        <p>单个 insert 适合调试，不适合作为生成器主循环。</p>
+
+        <h2 id="domains">公开领域</h2>
+        <div class="grid two">
+          <article class="card"><h3>routing</h3><p>Port/Anchor marker 上的 tapered、steiner、damped、channel 后端，以及自定义器件电路 detailed-router 到 LVS。</p></article>
+          <article class="card"><h3>nanodevice</h3><p>EBL wraparound、Hall bar、neural electrode harness 和 flake 相关工具。</p></article>
+          <article class="card"><h3>photonics</h3><p>gdsfactory bridge、blackbox port harvesting、import_gf_component、photonic net intent、reroute。</p></article>
+          <article class="card"><h3>structdevice</h3><p>device extraction、netlist、logic map、layout engine、P&R、LVS-lite 和 live LVS 对接。</p></article>
+          <article class="card"><h3>MCP core</h3><p>tool discovery、session registry、interaction context、recorder、transfer、diagnostics。</p></article>
+        </div>
+
+        <h2 id="release">release 边界</h2>
+        <p>这个网站只写公开 release 可验证的内容。站点内容核对过以下公开入口：</p>
+        <ul>
+          <li>`README.md` / `README.zh-CN.md`</li>
+          <li>`docs/public/` 的 getting-started、architecture、demos、recipes、project-model、control-plane、interactive-workflows</li>
+          <li>`examples_klink/public/` 的 demos、features、smoke</li>
+          <li>`klink/`、`klink_plugin/`、`pyproject.toml` 里的包名、入口和公开源码结构</li>
+        </ul>
+        <div class="warning">
+          内部开发记录只用于判断哪些内容不该公开。网站不发布未进入 release 的开发流程、私有 PDK、私有 GDS 或 NDA 验证细节。
+        </div>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>明确边界比堆功能更重要。</p></div>
+      <div><h3>教程</h3><p><a href="quickstart.html">快速上手</a></p><p><a href="tutorials.html">用户项目</a></p></div>
+      <div><h3>示例</h3><p><a href="examples.html">公开 gallery</a></p></div>
+    </div>
+  </footer>
+  <script src="assets/app.js"></script>
+</body>
+</html>

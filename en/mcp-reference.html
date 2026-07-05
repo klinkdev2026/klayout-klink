@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MCP Tool Reference - klink</title>
+  <meta name="description" content="Complete klink MCP / RPC tool reference: 11 domains, 122 tools, each with its function, parameters, and a call example.">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body data-page="mcp-reference">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="index.html" data-nav="home">Home</a>
+        <a href="quickstart.html" data-nav="quickstart">Quickstart</a>
+        <a href="tutorials.html" data-nav="tutorials">Tutorials</a>
+        <a href="workflows.html" data-nav="workflows">Workflows</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP Reference</a>
+        <a href="examples.html" data-nav="examples">Examples</a>
+        <a href="architecture.html" data-nav="architecture">Architecture</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="Language switch">
+          <a href="../mcp-reference.html">CN</a>
+          <a class="active" href="mcp-reference.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">MCP / RPC reference</div>
+        <h1>Complete MCP tool reference</h1>
+        <p>klink's control plane is one tool catalogue with two faces: a typed Python client (<code>KLinkClient</code>) and the same methods exposed as MCP tools. Both are generated from the live plugin's method registry — there is no hand-maintained list that can drift. This page lists all <strong>83 plugin RPCs</strong> + <strong>39 MCP local tools</strong> (122 total) across 11 domains: function, parameters, examples.</p>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#overview">Overview &amp; conventions</a>
+          <a href="#discovery">Discover tools live</a>
+          <a href="#profiles">Profiles</a>
+          <a href="#d-connection">1 · Connection / self-check / view</a>
+          <a href="#d-session">2 · Sessions &amp; transfer</a>
+          <a href="#d-geometry">3 · Geometry authoring</a>
+          <a href="#d-selection">4 · Selection &amp; SEND memory</a>
+          <a href="#d-ports">5 · Ports &amp; anchors</a>
+          <a href="#d-routing">6 · Routing backends</a>
+          <a href="#d-verify">7 · DRC &amp; LVS</a>
+          <a href="#d-structdevice">8 · Custom-device P&amp;R</a>
+          <a href="#d-nanodevice">9 · Nanodevices</a>
+          <a href="#d-photonics">10 · Photonics</a>
+          <a href="#d-escape">11 · Escape hatch</a>
+        </nav>
+      </aside>
+
+      <article class="content">
+        <h2 id="overview" class="anchor-h">Overview &amp; conventions</h2>
+        <p>Tool names are stable <code>namespace.verb</code>. Each maps to exactly one domain; that domain token is both a <code>klink.find_tools domain=&lt;token&gt;</code> navigation key and a <code>--profile &lt;token&gt;</code> filter.</p>
+        <div class="pill-row">
+          <a href="#d-connection">connection_and_view</a>
+          <a href="#d-session">multi_session_transfer</a>
+          <a href="#d-geometry">geometry_authoring</a>
+          <a href="#d-selection">selection_and_send_memory</a>
+          <a href="#d-ports">ports_and_anchors</a>
+          <a href="#d-routing">routing_backends</a>
+          <a href="#d-verify">drc_and_lvs_verification</a>
+          <a href="#d-structdevice">device_structdevice</a>
+          <a href="#d-nanodevice">device_nanodevice</a>
+          <a href="#d-photonics">device_photonics</a>
+          <a href="#d-escape">escape_hatch</a>
+        </div>
+        <ul>
+          <li><code>name*</code> in a parameter list means <strong>required</strong>.</li>
+          <li>Coordinates: <code>_um</code> = microns (most natural); <code>_dbu</code> = integer database units. <code>micron = dbu × layout.dbu</code>, where <code>dbu</code> comes from <code>layout.info</code>.</li>
+          <li>Layers: layer index <code>int</code>, <code>"L/D"</code> string (e.g. <code>"1/0"</code>), or <code>{layer, datatype}</code> object.</li>
+          <li>Badges: <span class="badge read">read</span> <span class="badge write">write</span> <span class="badge verify">verify</span> <span class="badge escape">escape</span> <span class="badge mutates">mutates</span> (undoable) <span class="badge long">long</span> (separate timeout).</li>
+        </ul>
+        <div class="note"><strong>Batch first.</strong> Never author generated layout one RPC per object — the loop pays TCP + JSON + transaction + GUI bookkeeping per call and is often hundreds of times slower. Use <code>shape.insert_boxes</code> / <code>shape.insert_many</code> / <code>instance.insert_many</code> / <code>instance.insert_pcell_many</code>. Singleton inserts are for debugging one object.</div>
+
+        <h2 id="discovery" class="anchor-h">Discover tools live</h2>
+        <p>The catalogue is queried live, never memorized:</p>
+        <pre><code>from klink import KLinkClient
+with KLinkClient() as c:
+    print([m["name"] for m in c.methods()["methods"]])   # meta.methods</code></pre>
+        <pre><code>klink.find_tools                          # no args → domain index
+klink.find_tools domain="routing_backends"  # that area's tools + usage
+klink.find_tools query="lvs route"          # ranked matches across all tools</code></pre>
+        <p><code>klink.guide</code> reports what is open, the on-disk intent state (declared nets / LVS reports / spec files), and the literal next call for each available intention.</p>
+
+        <h2 id="profiles" class="anchor-h">Profiles</h2>
+        <p><code>--profile</code> filters along two orthogonal axes — <strong>intent</strong> and <strong>domain</strong>. Default is <code>read,write,verify,escape</code>.</p>
+        <table class="data-table">
+          <thead><tr><th>Intent</th><th>Exposes</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge read">read</span></td><td>Read-only: <code>layout.info</code>, <code>cell.list</code>, <code>shape.query</code>, <code>view.*</code>, <code>pcell.*</code>, recorder.</td></tr>
+            <tr><td><span class="badge write">write</span></td><td>Editing: <code>shape.insert_*</code>, <code>cell.create</code>, <code>layer.ensure</code>, <code>instance.insert*</code>, <code>edit.undo</code>.</td></tr>
+            <tr><td><span class="badge verify">verify</span></td><td>Checks: <code>drc.run</code>, <code>lvs.run</code>.</td></tr>
+            <tr><td><span class="badge escape">escape</span></td><td>Escape hatches: <code>exec.python</code>, <code>exec.reset</code>, <code>events.*</code>.</td></tr>
+            <tr><td><code>all</code></td><td>Everything, no filtering.</td></tr>
+          </tbody>
+        </table>
+        <pre><code>python -m klink.mcp --profile read,write,verify,escape   # default
+python -m klink.mcp --profile read,device_photonics      # mix both axes
+python -m klink.mcp --profile routing_backends           # one domain only</code></pre>
+        <p>All local tools are always included under any intent profile; <code>klink.find_tools</code> / <code>klink.status</code> / <code>klink.reconnect</code> are always on. Legacy aliases: <code>basic→read</code>, <code>draw→write</code>, <code>advanced→escape</code>, <code>drc→verify</code>.</p>
+
+        <!-- 1 connection -->
+        <h2 id="d-connection" class="anchor-h">1 · Connection, self-check, discovery &amp; view <span class="tool-count">connection_and_view · 15 tools</span></h2>
+        <div class="domain-intro">
+          <span class="token">klink.find_tools domain="connection_and_view"</span>
+          <p><strong>Start here when unsure.</strong> <code>klink.status</code> reports connection, active session, interpreter and optional capabilities; <code>klink.guide</code> reports what is open + on-disk intent state + the literal next call; <code>klink.find_tools</code> navigates the rest; <code>klink.reconnect</code> recovers a dropped link. A freshly created cell is invisible until <code>view.show_cell</code>. Screenshots (<code>view.screenshot</code>) are a user-requested artifact only — never an agent verification step; prefer geometry queries.</p>
+        </div>
+        <table class="data-table reftable">
+          <thead><tr><th>Tool</th><th>Params</th><th>Function</th></tr></thead>
+          <tbody>
+            <tr><td><code>klink.status</code></td><td>—</td><td>MCP bridge connection status, active session, interpreter, last connection error. <strong>First stop when debugging.</strong></td></tr>
+            <tr><td><code>klink.reconnect</code></td><td>—</td><td>Close a stale client and try to reconnect to KLayout.</td></tr>
+            <tr><td><code>klink.guide</code></td><td>—</td><td>Reports what is open, on-disk intent state, and the literal call for each available intention + a suggested next action.</td></tr>
+            <tr><td><code>klink.find_tools</code></td><td>domain, query</td><td>Discover tools by domain or keyword.</td></tr>
+            <tr><td><code>hello</code></td><td>client, protocol</td><td>Introduce the client, receive server info + capabilities. Recommended first call per connection.</td></tr>
+            <tr><td><code>meta.ping</code></td><td>—</td><td>Liveness probe; echoes params + trace id.</td></tr>
+            <tr><td><code>meta.methods</code></td><td>—</td><td>Full RPC method catalogue with descriptions + JSON schemas, ready for LLM function-calling.</td></tr>
+            <tr><td><code>meta.debug_signals</code></td><td>fire</td><td>SignalHub diagnostics; optionally fire a synthetic event to test delivery.</td></tr>
+            <tr><td><code>view.list_tabs</code></td><td>—</td><td>List layout tabs (index, title, file, active cell, current).</td></tr>
+            <tr><td><code>view.activate_tab</code> <span class="badge mutates">mutates</span></td><td>index*</td><td>Switch the current tab; all single-layout RPCs then act on it.</td></tr>
+            <tr><td><code>view.show_cell</code></td><td>cell*, zoom_fit</td><td>Set the displayed top cell (makes a new cell visible), zoom-fits by default.</td></tr>
+            <tr><td><code>view.screenshot</code></td><td>mode, width_px, height_px, bbox_dbu, path</td><td>Render a PNG. <code>base64</code> data URL or <code>path</code> to disk. User-requested only.</td></tr>
+            <tr><td><code>view.zoom_fit</code> <span class="badge mutates">mutates</span></td><td>—</td><td>Fit the whole layout into the viewport.</td></tr>
+            <tr><td><code>view.zoom_box</code> <span class="badge mutates">mutates</span></td><td>bbox_dbu*</td><td>Zoom to exactly the given bbox (dbu).</td></tr>
+            <tr><td><code>view.viewport</code></td><td>—</td><td>Report current viewport: visible bbox (dbu), pixel size, cellview index.</td></tr>
+            <tr><td><code>view.show_lvsdb</code></td><td>path*, kind</td><td>Load a saved LVS/netlist DB into the Netlist Browser and show it. <code>lvs</code>→<code>.lvsdb</code>, <code>l2n</code>→<code>.l2n</code>.</td></tr>
+          </tbody>
+        </table>
+        <pre><code>klink.status
+klink.guide
+view.list_tabs
+
+from klink import KLinkClient
+with KLinkClient() as c:
+    print(c.hello(client="my-script"))
+    print(c.layout_info(verbosity="summary"))</code></pre>
+
+        <!-- 2 session -->
+        <h2 id="d-session" class="anchor-h">2 · Multi-session registry &amp; cross-session transfer <span class="tool-count">multi_session_transfer · 15 tools</span></h2>
+        <div class="domain-intro">
+          <span class="token">klink.find_tools domain="multi_session_transfer"</span>
+          <p>klink drives <strong>many KLayout sessions</strong> from <strong>one MCP bridge</strong> (each a port in the local registry, typically 8765, 8766, …). Sessions are equal peers — pass the one you mean explicitly. Transfer is two-phase and confirmation-safe: <code>transfer_prepare</code> builds a package, dry-runs it on the target, and persists it pending; <code>transfer_commit</code> writes it.</p>
+        </div>
+        <table class="data-table reftable">
+          <thead><tr><th>Tool</th><th>Params</th><th>Function</th></tr></thead>
+          <tbody>
+            <tr><td><code>klink.session_list</code></td><td>include_stale</td><td>Enumerate discoverable sessions.</td></tr>
+            <tr><td><code>klink.session_status</code></td><td>session_id, include_stale</td><td>One session record (default: active).</td></tr>
+            <tr><td><code>klink.session_label</code></td><td>session_id*, label*, aliases, description</td><td>Attach a human label and aliases.</td></tr>
+            <tr><td><code>klink.session_resolve</code></td><td>query*</td><td>Resolve id / label / alias / active cell / top cell to a session.</td></tr>
+            <tr><td><code>klink.session_use</code></td><td>session_id*</td><td>Repoint the bridge's primary RPC target.</td></tr>
+            <tr><td><code>klink.session_set_klive_target</code></td><td>session_id*</td><td>Choose the klive-compatible 8082 endpoint (where <code>c.show()</code> lands).</td></tr>
+            <tr><td><code>klink.transfer_prepare</code></td><td>source_session*, target_session*, target_cell, copy_mode, layer_map, translate_um</td><td>Build a flat-selection package and dry-run it on the target.</td></tr>
+            <tr><td><code>klink.transfer_commit</code></td><td>package_id*, dry_run</td><td>Commit a prepared package.</td></tr>
+            <tr><td><code>session.mark_klive_target</code></td><td>—</td><td>(plugin) Mark this window as the klive/8082 target.</td></tr>
+            <tr><td><code>session.label_set</code></td><td>session_id*, label*, aliases, description</td><td>(plugin) Set label/aliases in the shared registry.</td></tr>
+            <tr><td><code>transfer.pending_set</code></td><td>package*</td><td>Store a reviewed package in this window.</td></tr>
+            <tr><td><code>transfer.pending_status</code></td><td>—</td><td>Pending package status for this window.</td></tr>
+            <tr><td><code>transfer.pending_clear</code></td><td>—</td><td>Clear the pending package (no geometry written).</td></tr>
+            <tr><td><code>transfer.paste_pending</code> <span class="badge mutates">mutates</span></td><td>dry_run, clear_after</td><td>Paste the pending package (already contains final layers/coords).</td></tr>
+            <tr><td><code>transfer.import_cell_tree_package</code> <span class="badge mutates">mutates</span> <span class="badge long">long</span></td><td>path*, source_cell*, dry_run</td><td>Import one cell tree from a GDS/OAS via native <code>Cell.copy_tree</code>; conflicts get <code>$N</code>.</td></tr>
+          </tbody>
+        </table>
+        <pre><code>klink.session_list
+klink.session_label session_id="klayout-8766" label="scratch" aliases=["test"]
+klink.transfer_prepare source_session="klayout-8765" target_session="klayout-8766" copy_mode="flat_selection"
+klink.transfer_commit package_id="pkg_0001"</code></pre>
+
+        <!-- 3 geometry -->
+        <h2 id="d-geometry" class="anchor-h">3 · Geometry &amp; cell-structure authoring <span class="tool-count">geometry_authoring · 28 tools</span></h2>
+        <div class="domain-intro">
+          <span class="token">klink.find_tools domain="geometry_authoring"</span>
+          <p>The core drawing surface. <strong>Read first</strong>: <code>layout.info</code>, <code>cell.list</code>/<code>cell.tree</code>, <code>layer.list</code>, <code>shape.query</code>, <code>instance.query</code>, <code>pcell.*</code>. <strong>Author with batch RPCs.</strong> <code>layer.ensure</code> before drawing. Edits are transactional; <code>edit.undo/redo/status</code>. Destructive <code>layout.clear</code>/<code>cell.delete</code> only on disposable test cells.</p>
+        </div>
+        <h3>Read</h3>
+        <table class="data-table reftable">
+          <thead><tr><th>Tool</th><th>Params</th><th>Function</th></tr></thead>
+          <tbody>
+            <tr><td><code>layout.info</code></td><td>verbosity</td><td>Snapshot: views, active cellview, top cell, source file, <code>dbu</code>, top-cell list, layers. Refresh your world view.</td></tr>
+            <tr><td><code>cell.list</code></td><td>name_prefix, top_only, with_bbox, offset, limit</td><td>Flat paginated cell list.</td></tr>
+            <tr><td><code>cell.tree</code></td><td>root, max_depth, max_nodes</td><td>Hierarchical cell tree (bounded).</td></tr>
+            <tr><td><code>layer.list</code></td><td>—</td><td>All layers: <code>layer_index</code>, <code>layer</code>/<code>datatype</code>, name, <code>dbu_um</code>.</td></tr>
+            <tr><td><code>shape.query</code> <span class="badge long">long</span></td><td>cell*, layers, bbox_dbu, kinds, limit</td><td>Read shapes from ONE cell (no recursion) as JSON. Narrow with layers+bbox; paginate (default 500, max 5000).</td></tr>
+            <tr><td><code>instance.query</code></td><td>parent*, child, bbox, limit</td><td>Direct child instances: name, bbox, transform, array, PCell metadata, per-layer shape counts.</td></tr>
+            <tr><td><code>pcell.libraries</code></td><td>—</td><td>Available PCell libraries (Basic + PDKs).</td></tr>
+            <tr><td><code>pcell.list</code></td><td>library</td><td>PCell names in a library (default Basic).</td></tr>
+            <tr><td><code>pcell.info</code></td><td>library, pcell*</td><td>Parameters of a PCell (name/type/default/description/choices).</td></tr>
+          </tbody>
+        </table>
+        <h3>Write · cells, layers, shapes, instances</h3>
+        <table class="data-table reftable">
+          <thead><tr><th>Tool</th><th>Params</th><th>Function</th></tr></thead>
+          <tbody>
+            <tr><td><code>cell.create</code> <span class="badge mutates">mutates</span></td><td>name</td><td>New cell (dup name → <code>$1</code>…). Not idempotent.</td></tr>
+            <tr><td><code>cell.rename</code> <span class="badge mutates">mutates</span></td><td>cell*, new_name*, allow_suffix</td><td>Rename; dup name errors unless <code>allow_suffix=true</code>.</td></tr>
+            <tr><td><code>cell.delete</code> <span class="badge mutates">mutates</span></td><td>cell*, recursive</td><td>Delete a cell (recursive drops orphaned children). Destructive.</td></tr>
+            <tr><td><code>layer.ensure</code> <span class="badge mutates">mutates</span></td><td>layer*, datatype, name</td><td>Upsert a GDS layer; returns <code>layer_index</code>.</td></tr>
+            <tr><td><code>shape.insert_boxes</code> <span class="badge mutates">mutates</span></td><td>cell, layer, boxes_um/boxes_dbu</td><td><strong>Batch</strong> many rectangles on one cell/layer.</td></tr>
+            <tr><td><code>shape.insert_many</code> <span class="badge mutates">mutates</span></td><td>cell*, items*, dry_run</td><td><strong>Batch</strong> mixed box/polygon/path/text.</td></tr>
+            <tr><td><code>shape.insert_box</code> <span class="badge mutates">mutates</span></td><td>cell, layer, bbox</td><td>One rectangle.</td></tr>
+            <tr><td><code>shape.insert_polygon</code> <span class="badge mutates">mutates</span></td><td>cell, layer, points</td><td>One polygon (hull only), auto-closed.</td></tr>
+            <tr><td><code>shape.insert_path</code> <span class="badge mutates">mutates</span></td><td>cell, layer, points, width, begin_ext, end_ext, round_ends</td><td>One path (center line + width).</td></tr>
+            <tr><td><code>shape.insert_text</code> <span class="badge mutates">mutates</span></td><td>cell, layer, position, size_um</td><td>One text label (annotation, no mask geometry).</td></tr>
+            <tr><td><code>shape.delete</code> <span class="badge mutates">mutates</span></td><td>cell, layer(s), bbox, kinds, dry_run</td><td>Delete shapes by selector; <code>dry_run</code> previews count. One transaction.</td></tr>
+            <tr><td><code>instance.insert_many</code> <span class="badge mutates">mutates</span></td><td>parent*, items*, dry_run</td><td><strong>Batch</strong> child-cell instances.</td></tr>
+            <tr><td><code>instance.insert_pcell_many</code> <span class="badge mutates">mutates</span></td><td>parent*, items*, dry_run</td><td><strong>Batch</strong> PCell instances.</td></tr>
+            <tr><td><code>instance.insert</code> <span class="badge mutates">mutates</span></td><td>parent*, child*, position, rotation, mirror, magnification, array</td><td>Place child in parent; optional array grid.</td></tr>
+            <tr><td><code>instance.insert_pcell</code> <span class="badge mutates">mutates</span></td><td>parent*, library, pcell*, params, position, …</td><td>Build a PCell variant then insert. Call <code>pcell.info</code> first.</td></tr>
+            <tr><td><code>instance.delete</code> <span class="badge mutates">mutates</span></td><td>parent*, child, bbox, all, limit, dry_run</td><td>Delete instances by selector (non-destructive to the child cell).</td></tr>
+            <tr><td><code>pcell.register_fitted</code></td><td>name*, fit_table*</td><td>Register a fitted-device PCell at runtime into <code>klink_structdevice</code>; no plugin reload.</td></tr>
+          </tbody>
+        </table>
+        <h3>Write · layout-level &amp; edit history</h3>
+        <table class="data-table reftable">
+          <thead><tr><th>Tool</th><th>Params</th><th>Function</th></tr></thead>
+          <tbody>
+            <tr><td><code>layout.show_file</code> <span class="badge mutates">mutates</span> <span class="badge long">long</span></td><td>path*, mode, keep_position, technology</td><td>Load GDS/OAS (reload if open). <code>replace</code> or <code>new</code> tab.</td></tr>
+            <tr><td><code>layout.save_file</code> <span class="badge mutates">mutates</span></td><td>path*, cellview_index</td><td>Save; extension picks GDSII/OASIS.</td></tr>
+            <tr><td><code>layout.clear</code> <span class="badge mutates">mutates</span></td><td>cellview_index</td><td>Destructive: clear the whole layout.</td></tr>
+            <tr><td><code>edit.undo</code> <span class="badge mutates">mutates</span></td><td>—</td><td>Undo last undoable op; returns before/after stack.</td></tr>
+            <tr><td><code>edit.redo</code> <span class="badge mutates">mutates</span></td><td>—</td><td>Redo.</td></tr>
+            <tr><td><code>edit.status</code></td><td>debug</td><td>Undo/redo availability.</td></tr>
+          </tbody>
+        </table>
+        <pre><code>layout.info verbosity="summary"
+cell.create name="MYBLOCK"
+layer.ensure layer=1 datatype=0 name="M1"
+shape.insert_boxes cell="MYBLOCK" layer="1/0" boxes_um=[[0,0,10,4],[20,0,30,4],[40,0,50,4]]
+shape.insert_many cell="MYBLOCK" items=[
+  {"kind":"path","layer":"2/0","points_um":[[0,20],[50,20]],"width_um":2},
+  {"kind":"text","layer":"63/0","position_um":[0,26],"text":"MYBLOCK","size_um":4}
+]
+view.show_cell cell="MYBLOCK"
+
+pcell.info library="Basic" pcell="CIRCLE"
+instance.insert_pcell parent="MYBLOCK" library="Basic" pcell="CIRCLE" params={"l":"1/0","r":5.0,"n":64} position_um=[100,0]</code></pre>
+
+        <!-- 4 selection -->
+        <h2 id="d-selection" class="anchor-h">4 · Selection &amp; SEND interaction memory <span class="tool-count">selection_and_send_memory · 11 tools</span></h2>
+        <div class="domain-intro">
+          <span class="token">klink.find_tools domain="selection_and_send_memory"</span>
+          <p>Two distinct things. <code>selection.*</code> is the <strong>live current selection</strong>; <code>interaction.*</code> is the durable, session-scoped memory of selections the user explicitly <strong>SENT</strong> (recorded as ids like <code>sel_0006</code>). Resolve by order/count, not age. Bind user phrases ("just sent", "this area", "that one") to these ids, not to screenshots.</p>
+        </div>
+        <table class="data-table reftable">
+          <thead><tr><th>Tool</th><th>Params</th><th>Function</th></tr></thead>
+          <tbody>
+            <tr><td><code>selection.get</code></td><td>limit</td><td>Current selection (shape or instance). Empty = empty list, not an error.</td></tr>
+            <tr><td><code>selection.set_box</code> <span class="badge mutates">mutates</span></td><td>cell*, bbox_dbu*, layers, limit</td><td>Select all shapes intersecting a box on given layers; <strong>replaces</strong> current selection.</td></tr>
+            <tr><td><code>selection.clear</code> <span class="badge mutates">mutates</span></td><td>—</td><td>Clear the current selection.</td></tr>
+            <tr><td><code>selection.send_context</code></td><td>source, max_items</td><td>Emit the current selection as a <code>selection_sent</code> event (agent-side SEND).</td></tr>
+            <tr><td><code>interaction.selection.latest</code></td><td>—</td><td>Latest stored SEND.</td></tr>
+            <tr><td><code>interaction.selection.recent</code></td><td>limit</td><td>Recent SENDs (default latest 5, by order).</td></tr>
+            <tr><td><code>interaction.selection.get</code></td><td>id*</td><td>One stored selection by id.</td></tr>
+            <tr><td><code>interaction.selection.label</code></td><td>id*, label, description</td><td>Attach a label/description.</td></tr>
+            <tr><td><code>interaction.selection.clear_session</code></td><td>confirm*</td><td>Clear this session's interaction context after confirmation.</td></tr>
+            <tr><td><code>interaction.context</code></td><td>include_current_selection</td><td>Current selection + recent SEND memory together.</td></tr>
+          </tbody>
+        </table>
+        <pre><code># user selects A → SEND, selects B → SEND
+interaction.selection.recent limit=2      # → [sel_0007(B), sel_0006(A)]
+interaction.selection.label id="sel_0006" label="probe pad"</code></pre>
+
+        <!-- 5 ports -->
+        <h2 id="d-ports" class="anchor-h">5 · Ports &amp; anchors (routing markers) <span class="tool-count">ports_and_anchors · 16 tools</span></h2>
+        <div class="domain-intro">
+          <span class="token">klink.find_tools domain="ports_and_anchors"</span>
+          <p>Ports are net endpoints (<code>klink_Port</code> PCells: net + orientation + width). Anchors are routing constraints (<code>klink_Anchor</code> PCells) whose <code>kind</code> is <code>waypoint_region</code>, <code>bend_region</code>, or <code>corridor</code>. Routing tools default <code>port_layer=999/99</code>, <code>anchor_layer=999/1</code>. Keepouts are NOT an anchor kind — pass your own design's <code>obstacle_layers</code> to routing tools. <strong>These are the input to routing:</strong> mark Ports+Anchors, then call a <code>routing.*</code> tool.</p>
+        </div>
+        <table class="data-table reftable">
+          <thead><tr><th>Tool</th><th>Params</th><th>Function</th></tr></thead>
+          <tbody>
+            <tr><td><code>port.set_layer</code> <span class="badge mutates">mutates</span></td><td>layer*</td><td>Configure the default Port marker layer.</td></tr>
+            <tr><td><code>port.mark</code> <span class="badge mutates">mutates</span></td><td>cell*, name, center, orientation, width_um, port_type, net, target_layer, …</td><td>Create one <code>klink_Port</code> PCell (a net endpoint).</td></tr>
+            <tr><td><code>port.list</code></td><td>cell*, layer, sort</td><td>List Ports in a cell.</td></tr>
+            <tr><td><code>port.update</code> <span class="badge mutates">mutates</span></td><td>cell*, name*, orientation, width_um, net, …</td><td>Update one Port by immutable name.</td></tr>
+            <tr><td><code>port.transform</code> <span class="badge mutates">mutates</span></td><td>cell*, names / selection, rotate_delta, net, …</td><td>Batch-update Ports by names or GUI selection.</td></tr>
+            <tr><td><code>port.repair_names</code> <span class="badge mutates">mutates</span></td><td>cell*, layer, prefix</td><td>Repair duplicate/empty Port names (GUI-inserted).</td></tr>
+            <tr><td><code>port.unmark</code> <span class="badge mutates">mutates</span></td><td>cell*, name*</td><td>Delete one Port.</td></tr>
+            <tr><td><code>port.delete_all</code> <span class="badge mutates">mutates</span></td><td>cell*, layer</td><td>Delete all Ports in a cell.</td></tr>
+            <tr><td><code>anchor.set_layer</code> <span class="badge mutates">mutates</span></td><td>layer*</td><td>Configure the default Anchor marker layer.</td></tr>
+            <tr><td><code>anchor.mark</code> <span class="badge mutates">mutates</span></td><td>cell*, kind, center, net, radius_um, width_um, height_um, path_points, …</td><td>Create one <code>klink_Anchor</code> PCell (routing constraint).</td></tr>
+            <tr><td><code>anchor.list</code></td><td>cell*, layer, sort</td><td>List Anchors in a cell.</td></tr>
+            <tr><td><code>anchor.update</code> <span class="badge mutates">mutates</span></td><td>cell*, id*, new_id, kind, net, …</td><td>Update one Anchor by immutable id.</td></tr>
+            <tr><td><code>anchor.transform</code> <span class="badge mutates">mutates</span></td><td>cell*, ids / names / selection, kind, …</td><td>Batch-update Anchors.</td></tr>
+            <tr><td><code>anchor.repair_ids</code> <span class="badge mutates">mutates</span></td><td>cell*, layer, prefix</td><td>Repair duplicate/empty Anchor ids.</td></tr>
+            <tr><td><code>anchor.unmark</code> <span class="badge mutates">mutates</span></td><td>cell*, id*</td><td>Delete one Anchor.</td></tr>
+            <tr><td><code>anchor.delete_all</code> <span class="badge mutates">mutates</span></td><td>cell*, layer</td><td>Delete all Anchors in a cell.</td></tr>
+          </tbody>
+        </table>
+        <pre><code>port.mark cell="NET1" name="A" center_um=[0,0]   orientation="E" width_um=2 net="sig"
+port.mark cell="NET1" name="B" center_um=[80,20] orientation="W" width_um=2 net="sig"
+anchor.mark cell="NET1" kind="waypoint_region" center_um=[40,40] radius_um=6 net="sig"
+routing.tapered_hybrid_cell cell="NET1" angle_mode="manhattan" obstacle_layers=["10/0"]</code></pre>
+
+        <!-- 6 routing -->
+        <h2 id="d-routing" class="anchor-h">6 · Routing backends <span class="tool-count">routing_backends · 9 tools</span></h2>
+        <div class="domain-intro">
+          <span class="token">klink.find_tools domain="routing_backends"</span>
+          <p>All read Port/Anchor PCells and write routes. Pick by topology/quality. <strong>Always inspect the structured result</strong>: <code>ok=false</code>, <code>obstacle_hit_count&gt;0</code>, sibling overlaps, short <code>route_count</code> all mean failure. Pass your own design's <code>obstacle_layers</code> (no default).</p>
+        </div>
+        <table class="data-table reftable">
+          <thead><tr><th>Tool</th><th>Params</th><th>Function</th></tr></thead>
+          <tbody>
+            <tr><td><code>routing.tapered_hybrid_cell</code></td><td>cell*, spacing_um, angle_mode, clear, port_layer, anchor_layer, obstacle_layers</td><td><strong>Main</strong> path+patch backend. <code>angle_mode</code>: any/manhattan/fortyfive.</td></tr>
+            <tr><td><code>routing.tapered_polygon_cell</code></td><td>cell*, …, route_layer, corner_style, obstacle_layers</td><td>Continuous taper polygons (first-class).</td></tr>
+            <tr><td><code>routing.steiner_cell</code></td><td>cell*, route_layer, root_ports, clear, obstacle_layers</td><td>Multi-terminal nets (&gt;2 ports).</td></tr>
+            <tr><td><code>routing.damped_segment_cell</code></td><td>cell, damping_distance_um, obstacle_layers, …</td><td>Extra obstacle clearance, segment output.</td></tr>
+            <tr><td><code>routing.damped_polygon_cell</code></td><td>cell, damping_distance_um, corner_style, …</td><td>Damped continuous taper polygons.</td></tr>
+            <tr><td><code>routing.damped_steiner_cell</code></td><td>cell, damping_distance_um, root_ports, …</td><td>Damped multi-terminal trunk/branch.</td></tr>
+            <tr><td><code>routing.global_channel_cell</code></td><td>cell*, spacing_um, angle_mode, safe_distance_um, obstacle_layers</td><td><strong>Stronger global-decision</strong> router: candidate assignment + corridor-capacity load-balancing, reuses hybrid geometry.</td></tr>
+            <tr><td><code>routing.multilayer_escape_cell</code></td><td>cell*, route_layer*, bridge_layer*, via_layer*, spacing_um, obstacle_layers</td><td>Wall-blocked nets via bridge layer + vias.</td></tr>
+            <tr><td><code>routing.gdsfactory_ports</code></td><td>cell*, route_layer*, router, cross_section, separation_um, radius_um, waypoints_um, path_length_match, obstacle_bboxes_um, …</td><td>Route Port markers with one named gdsfactory strategy. Needs gdsfactory in the interpreter.</td></tr>
+          </tbody>
+        </table>
+        <p><code>routing.gdsfactory_ports</code> routers: <code>bundle</code> (default, Manhattan river routing), <code>electrical</code> (sharp corners + electrical typing), <code>sbend</code> (offset facing ports), <code>all_angle</code> (non-Manhattan + optional <code>backbone_um</code> spine), <code>single</code> (per-pair Manhattan), <code>dubins</code> (arc-based any-heading), <code>astar</code> (experimental grid A* — klink verifies and errors on wall-crossing). A parameter the chosen router can't honor is an error, never silently ignored.</p>
+        <pre><code>routing.tapered_hybrid_cell cell="BLOCK" angle_mode="manhattan" spacing_um=20 obstacle_layers=["900/0"]
+routing.steiner_cell cell="BLOCK" route_layer="1/0"
+routing.gdsfactory_ports cell="BLOCK" route_layer="1/0" router="bundle" separation_um=5 radius_um=10 path_length_match=true</code></pre>
+        <div class="note">"Done" for a route/P&amp;R stage is a live LVS <code>match=True</code> — marker counts and "looks routed" never substitute.</div>
+
+        <!-- 7 verify -->
+        <h2 id="d-verify" class="anchor-h">7 · DRC &amp; LVS verification <span class="tool-count">drc_and_lvs_verification · 2 tools</span></h2>
+        <div class="domain-intro">
+          <span class="token">klink.find_tools domain="drc_and_lvs_verification"</span>
+          <p>Both are long-running, pure-pya, domain-agnostic. <code>drc.run</code> runs arbitrary DRC DSL you supply — exceptions come back as results, they do NOT fail the RPC. <code>lvs.run</code> extracts the live layout into a device netlist and compares it against a reference netlist you supply, writes a <code>.lvsdb</code>, and (default) opens the Netlist/LVS browser. For structdevice flows prefer <code>structdevice.lvs_check</code>.</p>
+        </div>
+        <table class="data-table reftable">
+          <thead><tr><th>Tool</th><th>Params</th><th>Function</th></tr></thead>
+          <tbody>
+            <tr><td><code>drc.run</code> <span class="badge mutates">mutates</span> <span class="badge long">long</span></td><td>(DRC DSL source + optional output_rdb)</td><td>Run arbitrary DRC DSL in KLayout's Ruby DRC engine. With <code>source()</code> = standalone, else interactive on the current layout.</td></tr>
+            <tr><td><code>lvs.run</code> <span class="badge long">long</span></td><td>cell*, conductors*, vias, devices*, reference*, out_lvsdb, show</td><td>Extract (per-cell extractors + conductor layers) → compare to reference (<code>reference.spice</code> or <code>reference.netlist</code>) → write <code>.lvsdb</code> and show.</td></tr>
+          </tbody>
+        </table>
+        <pre><code>drc.run script="m1 = input(1,0)\nm1.space(0.2.um).output('M1_space','M1 spacing < 0.2um')"
+lvs.run cell="BLOCK" conductors=["1/0","3/0"] vias=["2/0"] devices={...} reference={"spice":"ref.spice"} out_lvsdb="block.lvsdb" show=true</code></pre>
+
+        <!-- 8 structdevice -->
+        <h2 id="d-structdevice" class="anchor-h">8 · Custom-device netlist → auto P&amp;R → LVS <span class="tool-count">device_structdevice · 7 tools</span></h2>
+        <div class="domain-intro">
+          <span class="token">klink.find_tools domain="device_structdevice"</span>
+          <p>Device-agnostic custom-device P&amp;R. A "device" is any cell with an arbitrary parameter set + terminals; klink assumes no device vocabulary. The device library, process profile, and terminal source are example/PDK data passed in explicitly — the tools ship none and return an instructive "write/run an example" error. Compact physical model: the device's own metal layers double as routing layers; <code>mode</code> 2L/3L picks 2 or 3.</p>
+        </div>
+        <table class="data-table reftable">
+          <thead><tr><th>Tool</th><th>Params</th><th>Function</th></tr></thead>
+          <tbody>
+            <tr><td><code>structdevice.build_from_netlist</code></td><td>cell*, netlist*, confirm, mode, rows, cols, session</td><td><strong>Headline one-call flow</strong>: device-level netlist → floorplan → single-pass multilayer routes → draw → device-LVS a fresh cell. Confirmation-gated (call once → proposal; again with confirm → build).</td></tr>
+            <tr><td><code>structdevice.declare_nets</code></td><td>recent_sends*, cell*, conductors, vias</td><td>One SEND framing ≥2 terminals = one declared net (persisted). Example-driven.</td></tr>
+            <tr><td><code>structdevice.connect_nets</code></td><td>cell*, session, route_layer, route_width_um, via_cell, min_spacing_um, min_width_um, conductors, vias</td><td>Wire declared-but-unconnected nets + verify; any LVS mismatch undoes everything.</td></tr>
+            <tr><td><code>structdevice.lvs_check</code></td><td>cell*, session, mode, conductors, vias</td><td>Net-level reconcile; <code>device</code>/<code>both</code> also run device-level NetlistComparer.</td></tr>
+            <tr><td><code>structdevice.spec_write</code></td><td>cell*, layer_roles*, session, device_class, conductors, vias</td><td>Project a live cell into a <code>klink.spec.json</code> fact file.</td></tr>
+            <tr><td><code>structdevice.register_pcell</code></td><td>name*, fit_table*, session</td><td>Register a fitted-device PCell at runtime; zero plugin reloads.</td></tr>
+            <tr><td><code>pcell.register_fitted</code></td><td>name*, fit_table*</td><td>The plugin RPC behind <code>register_pcell</code>.</td></tr>
+          </tbody>
+        </table>
+        <pre><code># step 1: no confirm → proposal
+structdevice.build_from_netlist cell="RINGOSC" netlist={"instances":[...], "nets":[...], "groups":[]} mode="3L"
+# step 2: same args + confirm token → build
+structdevice.build_from_netlist cell="RINGOSC" netlist={...} mode="3L" confirm="CONFIRM-xyz"
+
+# SEND-driven interactive path
+structdevice.declare_nets recent_sends=3 cell="BLOCK" conductors=["1/0","3/0"] vias=["2/0"]
+structdevice.connect_nets cell="BLOCK" route_layer="3/0" route_width_um=0.5
+structdevice.lvs_check cell="BLOCK" mode="both"
+structdevice.spec_write cell="BLOCK" layer_roles={"1/0":"gate","3/0":"metal1"}</code></pre>
+
+        <!-- 9 nanodevice -->
+        <h2 id="d-nanodevice" class="anchor-h">9 · Nanodevices (Hall bar / EBL / flake) <span class="tool-count">device_nanodevice · 2 tools</span></h2>
+        <div class="domain-intro">
+          <span class="token">klink.find_tools domain="device_nanodevice"</span>
+          <p><code>nanodevice.hallbar</code> is a one-call closed loop: from a <code>HallBarSpec</code> it computes and draws the whole device (bar + N contact arms + pads + Port markers + labels), then delegates routing to the generic router (overlap validation on, optional EBL writefield walls as keepouts), committing to a disposable cell. Failures return problems/next_action and change nothing.</p>
+        </div>
+        <table class="data-table reftable">
+          <thead><tr><th>Tool</th><th>Params</th><th>Function</th></tr></thead>
+          <tbody>
+            <tr><td><code>nanodevice.hallbar</code></td><td>cell, spec, writefield, route_layer, spacing_um, dry_run, session</td><td>Build + route + validate + commit one Hall bar in one call.</td></tr>
+            <tr><td><code>nanodevice.detect_commit</code></td><td>cell, traces_path, image, pixel_size_um, coordinate, dry_run, session</td><td>Commit flake traces as polygons. <code>traces_path</code> (no extra deps) or <code>image</code>+<code>pixel_size_um</code> for live detection (needs cv2 + numpy).</td></tr>
+          </tbody>
+        </table>
+        <pre><code>nanodevice.hallbar cell="HB1" spec={"bar_length_um":60,"bar_width_um":8,"contact_count":6,"pad_size_um":40,"pitch_um":24,"gap_um":6} route_layer="1/0" dry_run=true
+nanodevice.detect_commit cell="FLAKE" traces_path="out/traces.json"</code></pre>
+
+        <!-- 10 photonics -->
+        <h2 id="d-photonics" class="anchor-h">10 · Photonics (gdsfactory import / connect / reroute) <span class="tool-count">device_photonics · 4 tools</span></h2>
+        <div class="domain-intro">
+          <span class="token">klink.find_tools domain="device_photonics"</span>
+          <p>Photonic circuit flow; needs gdsfactory in the interpreter. <code>photonics.import_gf</code> takes over a finished gdsfactory script in one call; <code>port.harvest_blackbox</code> derives Ports from live blackbox positions via the stub convention. After takeover, <strong>drag a component in the GUI → one <code>photonics.reroute</code> re-routes optics and metal together</strong>. That drag → reroute loop is the point: the layout stays live and editable.</p>
+        </div>
+        <table class="data-table reftable">
+          <thead><tr><th>Tool</th><th>Params</th><th>Function</th></tr></thead>
+          <tbody>
+            <tr><td><code>photonics.import_gf</code></td><td>script_path*, component, cell, route_layer, port_layer, route, session</td><td>Take over a finished gdsfactory script: import device instances (batch RPC), collapse routed connections to nets, persist port templates + net table, route with klink.</td></tr>
+            <tr><td><code>port.harvest_blackbox</code></td><td>cell*, tags*, nets, wg_layer*, stub_size_um*, port_layer, clear</td><td>Derive Ports from PDK blackbox instances via the waveguide stub convention. Re-run after moving instances.</td></tr>
+            <tr><td><code>photonics.connect</code></td><td>recent_sends*, cell, width_um, radius_um, separation_um, wg_layer, stub_size_um, route_layer</td><td>Connect ports the user just SENT: read latest N SENDs → port pairs → auto-name nets → persist → re-harvest → route.</td></tr>
+            <tr><td><code>photonics.reroute</code></td><td>cell*, session, wg_layer, stub_size_um, route_layer</td><td>Re-route after the user moved components (reads the persisted net table). Multi-port optical nets need a splitter first.</td></tr>
+          </tbody>
+        </table>
+        <pre><code>photonics.import_gf script_path="my_mzi.py" cell="MZI" route_layer="1/0"
+# drag a component in KLayout, then:
+photonics.reroute cell="MZI"
+port.harvest_blackbox cell="MZI" tags=["gc","mmi"] wg_layer="1/0" stub_size_um=0.5
+photonics.connect recent_sends=4 cell="MZI" radius_um=10 separation_um=5</code></pre>
+
+        <!-- 11 escape -->
+        <h2 id="d-escape" class="anchor-h">11 · Escape hatch (pya exec, events, recorder) <span class="tool-count">escape_hatch · 8 tools</span></h2>
+        <div class="domain-intro">
+          <span class="token">klink.find_tools domain="escape_hatch"</span>
+          <p><strong>Prefer typed RPCs.</strong> <code>exec.python</code> runs raw pya for what no typed RPC covers — it still schedules recorder + layout-diff detection. <code>events.*</code> is the live event stream (usually read <code>interaction.*</code> instead). <code>recorder.*</code> generates a replay script; check <code>recorder.status</code> before tests so you never clobber a user recording.</p>
+        </div>
+        <table class="data-table reftable">
+          <thead><tr><th>Tool</th><th>Params</th><th>Function</th></tr></thead>
+          <tbody>
+            <tr><td><code>exec.python</code> <span class="badge mutates">mutates</span></td><td>(code + optional reset)</td><td>Run arbitrary Python on KLayout's Qt main thread. Pre-bound <code>pya, mw, view, layout</code>. State persists per connection (<code>reset=true</code> wipes). stdout/stderr captured.</td></tr>
+            <tr><td><code>exec.reset</code> <span class="badge mutates">mutates</span></td><td>—</td><td>Clear the per-connection namespace.</td></tr>
+            <tr><td><code>events.channels</code></td><td>—</td><td>List pushable event channels (NDJSON frames).</td></tr>
+            <tr><td><code>events.status</code></td><td>—</td><td>Subscription + SignalHub diagnostics.</td></tr>
+            <tr><td><code>events.subscribe</code></td><td>channels*</td><td>Subscribe to channels (unknown silently ignored).</td></tr>
+            <tr><td><code>events.unsubscribe</code></td><td>channels</td><td>Unsubscribe; <code>*</code> drops all.</td></tr>
+            <tr><td><code>recorder.start</code></td><td>output_path</td><td>Begin recording into a replayable Python script. Idempotent.</td></tr>
+            <tr><td><code>recorder.stop</code></td><td>output_path</td><td>Stop and write the script; returns stats + <code>wrote</code>.</td></tr>
+            <tr><td><code>recorder.status</code></td><td>—</td><td>Recording state, event/action counts, output path.</td></tr>
+          </tbody>
+        </table>
+        <pre><code>recorder.status
+recorder.start
+# … typed RPC edits + manual GUI edits …
+recorder.stop        # writes <name>.py and standalone <name>_pya.py
+
+exec.python code="print(layout.top_cell().name)"</code></pre>
+
+        <div class="note" style="margin-top:36px">
+          See these tools composed into real loops on the <a href="examples.html">Examples</a> page (8 public demos), or the domain-by-domain onboarding on <a href="tutorials.html">Tutorials</a>.
+        </div>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>One tool catalogue, two faces: a typed Python client and MCP tools, both generated from the live plugin.</p></div>
+      <div><h3>Related</h3><p><a href="workflows.html">MCP workflows</a></p><p><a href="architecture.html">Architecture</a></p></div>
+      <div><h3>Start</h3><p><a href="quickstart.html">Quickstart</a></p><p><a href="examples.html">Examples</a></p></div>
+    </div>
+  </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

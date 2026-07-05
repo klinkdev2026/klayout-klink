@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>klink · AI-native control plane for KLayout</title>
+  <meta name="description" content="klink is an AI-native control plane for KLayout: geometry-first layout automation, 122 MCP tools, SEND memory, multi-session, cross-window transfer, an 8082 klive-compatible display, and a replay recorder — all driven by the live KLayout plugin.">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body data-page="home">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html" aria-label="klink home">
+        <span class="brand-mark">k</span>
+        <span>klink</span>
+      </a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="index.html" data-nav="home">Home</a>
+        <a href="quickstart.html" data-nav="quickstart">Quickstart</a>
+        <a href="tutorials.html" data-nav="tutorials">Tutorials</a>
+        <a href="workflows.html" data-nav="workflows">Workflows</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP Reference</a>
+        <a href="examples.html" data-nav="examples">Examples</a>
+        <a href="architecture.html" data-nav="architecture">Architecture</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="Language switch">
+          <a href="../index.html">CN</a>
+          <a class="active" href="index.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- ===== HERO ===== -->
+    <section class="hero">
+      <div class="hero-inner">
+        <div class="eyebrow">KLayout + Python + MCP</div>
+        <h1>klink</h1>
+        <p class="hero-copy">
+          An AI-native control plane for KLayout. It turns a running KLayout GUI into a layout kernel driven by external Python, MCP clients, and AI agents — <strong>geometry-first</strong>: mark intent on geometry, let algorithms complete the wiring, and decide "done" with structured geometry and LVS, not a screenshot that "looks right". It is an <strong>early-stage, experimental</strong> open-source project — try it and send feedback.
+        </p>
+        <div class="hero-actions">
+          <a class="button" href="quickstart.html">Install</a>
+          <a class="button-secondary" href="mcp-reference.html">Browse 122 tools</a>
+          <a class="button-secondary" href="examples.html">See the examples</a>
+        </div>
+        <div class="hero-meta" aria-label="Project facts">
+          <span class="chip">Package: klayout-klink</span>
+          <span class="chip">Python 3.10+</span>
+          <span class="chip">KLayout 0.30.x tested</span>
+          <span class="chip">Apache-2.0 open source</span>
+          <span class="chip">Alpha · early stage</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 1. What it is ===== -->
+    <section class="section">
+      <div class="container">
+        <div class="section-head">
+          <h2>More than a chat plugin</h2>
+          <p>klink's core method is <strong>geometry-first</strong>: geometry comes first, you mark intent on it (<a href="tutorials.html#port">Port</a> for connectivity, <a href="tutorials.html#anchor">Anchor</a> for routing constraints), routing algorithms complete the wiring, and structured queries plus live LVS decide "done". The human keeps GUI freedom; the agent reads, writes, moves, records, routes, and verifies real geometry.</p>
+        </div>
+        <div class="grid three">
+          <a class="card" href="tutorials.html#geometry-first">
+            <span class="feature-kicker">Concept</span>
+            <h3>The geometry-first idea</h3>
+            <p>Mark intent → algorithms route → structured verification. Ports/Anchors are the input to routing; the mechanism layer stays process-agnostic.</p>
+            <span class="card-more">Read the core idea →</span>
+          </a>
+          <a class="card" href="mcp-reference.html">
+            <span class="feature-kicker green">Agent</span>
+            <h3>MCP tool surface</h3>
+            <p><code>klink-mcp</code> exposes the same catalogue to Claude Code, Codex and others — <strong>122 tools across 11 domains</strong>, navigated by <code>klink.find_tools</code>.</p>
+            <span class="card-more">See the MCP Reference →</span>
+          </a>
+          <a class="card" href="tutorials.html#verify">
+            <span class="feature-kicker amber">Verify</span>
+            <h3>Structured verification</h3>
+            <p>Routing, LVS, DRC and geometry queries return structured reports. "Done" is <code>ok</code>, overlap/hit counts, LVS <code>match=True</code> — never how a screenshot looks.</p>
+            <span class="card-more">Verification habits →</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 2. First result ===== -->
+    <section class="section alt">
+      <div class="container">
+        <div class="section-head">
+          <h2>A first result in 30 seconds</h2>
+          <p>The public release ships examples that need no private GDS. Run an offline demo first, then connect a live KLayout. Full steps on <a href="quickstart.html">Quickstart</a>.</p>
+        </div>
+        <div class="grid two">
+          <div class="command-panel">
+            <div class="terminal-title"><span class="dots"><i></i><i></i><i></i></span> install &amp; run</div>
+            <pre><code>python -m pip install klayout-klink
+klink init my-chip
+cd my-chip
+python example_template/ebl_wraparound.py</code></pre>
+          </div>
+          <div class="steps">
+            <a class="step" href="quickstart.html#python" style="text-decoration:none;color:inherit">
+              <div>
+                <h3>Install the Python package</h3>
+                <p>The PyPI package brings the klink core + its two bundled Rust kernels; starter demos are copied into your project by <code>klink init</code>, and refreshed later with <code>klink update</code> — your own files are never touched.</p>
+              </div>
+            </a>
+            <a class="step" href="quickstart.html#plugin" style="text-decoration:none;color:inherit">
+              <div>
+                <h3>Install the KLayout plugin</h3>
+                <p>Copy <code>klink_plugin/</code> into KLayout's salt dir and restart. The plugin runs <code>8765</code> RPC and the <code>8082</code> klive display.</p>
+              </div>
+            </a>
+            <a class="step" href="workflows.html#profiles" style="text-decoration:none;color:inherit">
+              <div>
+                <h3>Connect an agent</h3>
+                <p>Run <code>python -m klink.mcp</code>, using a profile to select read/write/verify/escape or a specific domain.</p>
+              </div>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 3. Control path ===== -->
+    <section class="section">
+      <div class="container">
+        <div class="section-head">
+          <h2>The control path</h2>
+          <p>A thin plugin hugs KLayout; the heavy intelligence runs in external Python. The two sides talk only over RPC. Detail on <a href="architecture.html">Architecture</a>.</p>
+        </div>
+        <div class="grid two">
+          <div class="command-panel">
+            <div class="terminal-title"><span class="dots"><i></i><i></i><i></i></span> control path</div>
+            <pre><code>Agent (Claude Code / Codex)
+  → MCP server   (python -m klink.mcp)
+  → klink client (NDJSON over TCP)
+  → KLayout plugin (in-process RPC)
+       RPC:            127.0.0.1:8765+
+       klive-compat:   127.0.0.1:8082</code></pre>
+          </div>
+          <div class="steps">
+            <div class="step"><div>
+              <h3>Sessions are ports, equal peers</h3>
+              <p>Each KLayout window binds a port (<code>8765</code>, <code>8766</code>…) as a session. No port has a privileged role — you always say which one.</p>
+            </div></div>
+            <div class="step"><div>
+              <h3>Process purity</h3>
+              <p><code>klink</code> holds no process constants. Layers, sizes and devices are passed in from your <code>pdk.py</code>; a missing fact returns an instructive error with a <code>next_action</code>.</p>
+            </div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 4. Interaction capabilities ===== -->
+    <section class="section alt">
+      <div class="container">
+        <div class="section-head">
+          <h2>Interaction capabilities for human + agent</h2>
+          <p>A set of interaction capabilities that let a human and an agent collaborate on one live KLayout. Full detail on <a href="workflows.html">Workflows</a>.</p>
+        </div>
+        <div class="grid three">
+          <a class="card" href="workflows.html#send">
+            <h3>SEND selection memory</h3>
+            <p>The toolbar SEND records a selection as a stable id (e.g. <code>sel_0006</code>) so an agent resolves "this area", "that one" — by order not age, journaled and never lost.</p>
+            <span class="card-more">SEND memory →</span>
+          </a>
+          <a class="card" href="workflows.html#multi">
+            <h3>One agent, many KLayouts</h3>
+            <p>One MCP bridge drives many KLayout windows; label, resolve, and switch the target session.</p>
+            <span class="card-more">Sessions →</span>
+          </a>
+          <a class="card" href="workflows.html#transfer">
+            <h3>Cross-session transfer</h3>
+            <p>Two-phase and confirmation-safe: prepare + dry-run on the target, then commit — a wrong target is caught at dry-run.</p>
+            <span class="card-more">Transfer →</span>
+          </a>
+          <a class="card" href="workflows.html#klive">
+            <h3>8082 klive display</h3>
+            <p>A drop-in klive replacement: any gdsfactory <code>c.show()</code> hard-coded to <code>localhost:8082</code> pushes into KLayout unchanged, with a selectable target in multi-session mode.</p>
+            <span class="card-more">klive compat →</span>
+          </a>
+          <a class="card" href="workflows.html#recorder">
+            <h3>Record → replay script</h3>
+            <p>Record manual GUI edits and RPC edits into a replayable script, plus a standalone <code>pya</code> variant that runs inside KLayout with no klink.</p>
+            <span class="card-more">Recorder →</span>
+          </a>
+          <a class="card" href="mcp-reference.html#d-escape">
+            <h3>Escape hatch</h3>
+            <p><code>exec.python</code> runs controlled pya for what typed RPCs don't cover yet; it still schedules the recorder and layout-diff detection.</p>
+            <span class="card-more">Escape hatch →</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 5. By domain ===== -->
+    <section class="section">
+      <div class="container">
+        <div class="section-head">
+          <h2>Capabilities, by domain</h2>
+          <p>klink is a general geometry-first control plane. Below are some current capabilities grouped by domain, each backed by a runnable example script (all with no private GDS). The project is still early and experimental, so coverage will keep changing. Per-example measured detail on <a href="examples.html">Examples</a>.</p>
+        </div>
+        <div class="grid three">
+          <a class="card" href="examples.html#ebl">
+            <span class="feature-kicker">EBL nanodevice</span>
+            <h3>EBL nanodevices</h3>
+            <p>Electron-beam-lithography device generation: EBL wraparound, Hall bar, with writefield planning, patches and geometry validation. Offline EBL measures 40 electrodes / 0 violations / 0 overlaps.</p>
+            <span class="card-more">See EBL / Hall bar →</span>
+          </a>
+          <a class="card" href="examples.html#neural">
+            <span class="feature-kicker">Neural electrode</span>
+            <h3>Neural electrodes</h3>
+            <p>Parametric neural-electrode probe: pad/via geometry → Ports → corridor anchors → tapered-hybrid routing, self-contained with no GDS. 4 rows: 48 ports / 24 nets / overlap 0.</p>
+            <span class="card-more">See neural electrode →</span>
+          </a>
+          <a class="card" href="mcp-reference.html#d-nanodevice">
+            <span class="feature-kicker amber">New materials</span>
+            <h3>Material flake detection</h3>
+            <p>Detect material flakes from a microscope image (needs cv2+numpy), or read a precomputed <code>traces.json</code>, commit them as polygons and derive contact Ports. Built on KlayoutClaw priors.</p>
+            <span class="card-more">See nanodevice tools →</span>
+          </a>
+          <a class="card" href="examples.html#mzi">
+            <span class="feature-kicker magenta">Silicon photonics</span>
+            <h3>Silicon photonics</h3>
+            <p>Take an ordinary gdsfactory MZI script into klink in one call; after a GUI drag, one <code>photonics.reroute</code> re-routes optics (incl. sbend / all_angle / dubins) and metal together.</p>
+            <span class="card-more">See the gdsfactory MZI →</span>
+          </a>
+          <a class="card" href="examples.html#fitdevice">
+            <span class="feature-kicker green">Digital P&amp;R</span>
+            <h3>Custom-device digital P&amp;R → LVS</h3>
+            <p>Fit a device from synthetic exemplars, place, detailed-route, verify with live LVS. Measured routed 94/94, <strong>LVS match=True</strong>, 173 devices; the device-agnostic netlist flow is <code>structdevice.*</code>.</p>
+            <span class="card-more">See the fit-device demo →</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 6. 122 tools ===== -->
+    <section class="section dark">
+      <div class="container">
+        <div class="section-head">
+          <h2>122 tools, 11 domains</h2>
+          <p class="muted">83 plugin RPCs + 39 MCP local tools, each with function, parameters and examples. The catalogue is generated from the live plugin's method registry — no hand-maintained list that can drift.</p>
+        </div>
+        <div class="pill-row">
+          <a href="mcp-reference.html#d-connection">Connection / view</a>
+          <a href="mcp-reference.html#d-session">Sessions / transfer</a>
+          <a href="mcp-reference.html#d-geometry">Geometry / cells</a>
+          <a href="mcp-reference.html#d-selection">Selection / SEND</a>
+          <a href="mcp-reference.html#d-ports">Ports / anchors</a>
+          <a href="mcp-reference.html#d-routing">Routing backends</a>
+          <a href="mcp-reference.html#d-verify">DRC / LVS</a>
+          <a href="mcp-reference.html#d-structdevice">Custom device</a>
+          <a href="mcp-reference.html#d-nanodevice">Nanodevices</a>
+          <a href="mcp-reference.html#d-photonics">Photonics</a>
+          <a href="mcp-reference.html#d-escape">Escape hatch</a>
+        </div>
+        <div class="hero-actions" style="margin-top:8px">
+          <a class="button" href="mcp-reference.html">Open the MCP Tool Reference</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 7. Doc map ===== -->
+    <section class="section">
+      <div class="container">
+        <div class="section-head">
+          <h2>Documentation map</h2>
+          <p>Not sure where to start? Pick a path by your goal.</p>
+        </div>
+        <div class="grid three">
+          <a class="card" href="quickstart.html">
+            <h3>Quickstart</h3>
+            <p>Install the Python package and KLayout plugin, register the MCP server, get a first offline result.</p>
+            <span class="card-more">Install →</span>
+          </a>
+          <a class="card" href="tutorials.html">
+            <h3>Core concepts &amp; tutorials</h3>
+            <p>geometry-first, Ports/Anchors, the user-project model, per-domain recipes, verification habits.</p>
+            <span class="card-more">Concepts →</span>
+          </a>
+          <a class="card" href="workflows.html">
+            <h3>Interactive workflows</h3>
+            <p>SEND, sessions, cross-window transfer, 8082 klive, record/replay — the collaboration loop.</p>
+            <span class="card-more">Workflows →</span>
+          </a>
+          <a class="card" href="mcp-reference.html">
+            <h3>MCP tool reference</h3>
+            <p>All 122 tools across 11 domains: function, parameters, examples.</p>
+            <span class="card-more">Reference →</span>
+          </a>
+          <a class="card" href="examples.html">
+            <h3>Demos explained</h3>
+            <p>8 public demos: function, command, measured numbers, requirements, how to adapt.</p>
+            <span class="card-more">Examples →</span>
+          </a>
+          <a class="card" href="architecture.html">
+            <h3>Architecture</h3>
+            <p>Three tiers, the control path, process purity, agent tool design principles, batch RPCs.</p>
+            <span class="card-more">Architecture →</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div>
+        <h2>klink</h2>
+        <p>An AI-native control plane for KLayout. Everything here is verified against the release repo; no internal development assets.</p>
+      </div>
+      <div>
+        <h3>Docs</h3>
+        <p><a href="quickstart.html">Quickstart</a></p>
+        <p><a href="tutorials.html">Core concepts &amp; tutorials</a></p>
+        <p><a href="workflows.html">Interactive workflows</a></p>
+        <p><a href="mcp-reference.html">MCP tool reference</a></p>
+      </div>
+      <div>
+        <h3>Project</h3>
+        <p><a href="architecture.html">Architecture</a></p>
+        <p><a href="https://github.com/klinkdev2026/klayout-klink">GitHub repository</a></p>
+        <p><a href="https://pypi.org/project/klayout-klink/">PyPI package</a></p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../assets/app.js"></script>
+</body>
+</html>

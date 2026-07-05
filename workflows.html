@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>交互工作流 - klink</title>
+  <meta name="description" content="klink 的交互能力：SEND 选择记忆、一个 agent 控制多个 KLayout、跨会话搬运、8082 klive 兼容显示、录制回放。">
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body data-page="workflows">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="主导航">
+        <a href="index.html" data-nav="home">首页</a>
+        <a href="quickstart.html" data-nav="quickstart">快速上手</a>
+        <a href="tutorials.html" data-nav="tutorials">教程</a>
+        <a href="workflows.html" data-nav="workflows">工作流</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP 参考</a>
+        <a href="examples.html" data-nav="examples">示例</a>
+        <a href="architecture.html" data-nav="architecture">架构</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="语言切换">
+          <a class="active" href="workflows.html">CN</a>
+          <a href="en/workflows.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="打开导航" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Interactive workflows</div>
+        <h1>人、agent 和 live KLayout 一起工作</h1>
+        <p>让人和 agent 在同一个 live KLayout 上协作的一组交互能力：<strong>SEND 选择记忆</strong>、<strong>一个 agent 控制多个 KLayout</strong>、<strong>跨会话搬运</strong>、<strong>8082 端口 klive 兼容显示</strong>，以及<strong>把整段会话录成可回放脚本</strong>。以下每一项都是普通工具，除插件外无需任何特殊配置。</p>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#surface">一份目录，两张脸</a>
+          <a href="#send">SEND 选择记忆</a>
+          <a href="#multi">一个 agent 控制多个 KLayout</a>
+          <a href="#transfer">跨会话搬运</a>
+          <a href="#klive">8082 klive 兼容显示</a>
+          <a href="#recorder">录制 → 可回放脚本</a>
+          <a href="#profiles">Profiles 与发现</a>
+          <a href="#escape">Escape hatch</a>
+        </nav>
+      </aside>
+
+      <article class="content">
+        <h2 id="surface" class="anchor-h">一份目录，两张脸</h2>
+        <p>klink 的控制面有两张脸：Python client <code>KLinkClient</code>，以及 MCP server 暴露的同名工具。二者都来自 live plugin 的 method registry，<strong>不维护一份会漂移的手写清单</strong>。全部工具的功能、参数与示例见 <a href="mcp-reference.html">MCP 工具参考</a>；本页讲的是把这些工具串起来的<strong>交互流程</strong>。</p>
+        <pre><code>from klink import KLinkClient
+with KLinkClient() as c:
+    print([m["name"] for m in c.methods()["methods"]])</code></pre>
+
+        <!-- ============ SEND ============ -->
+        <h2 id="send" class="anchor-h">SEND 选择记忆 —— “这块区域”到底指哪</h2>
+        <p>人和 agent 协作最大的摩擦，是“我说的‘这块’是哪块”。klink 用 <strong>SEND</strong> 解决它：你在 KLayout 里选中几何，点插件工具栏的 <strong>SEND</strong>（或 agent 调 <code>selection.send_context</code>），这次选择就被记成一个稳定 id（如 <code>sel_0006</code>），存进 session 级记忆 <code>.klink/sessions/&lt;id&gt;/interaction_context.jsonl</code>。从此“刚发的”“这里”“那一个”都能解析到<strong>精确几何，而不是截图</strong>。</p>
+        <table class="data-table">
+          <thead><tr><th>工具</th><th>用途</th></tr></thead>
+          <tbody>
+            <tr><td><code>interaction.selection.recent</code></td><td>最近若干次 SEND（默认最新 5，<strong>按顺序不按时间</strong>）。</td></tr>
+            <tr><td><code>interaction.selection.latest</code></td><td>最新一次 SEND。</td></tr>
+            <tr><td><code>interaction.selection.get</code></td><td>按 id 读精确记录。</td></tr>
+            <tr><td><code>interaction.selection.label</code></td><td>给重要选择加名字/描述。</td></tr>
+            <tr><td><code>interaction.context</code></td><td>同时返回 live 选择 + 最近 SEND 记忆。</td></tr>
+          </tbody>
+        </table>
+        <p>关键区别：<code>selection.get</code> 是<strong>当前 live 选择</strong>；<code>interaction.*</code> 是<strong>明确 SEND 过的持久记忆</strong>。因为从 SEND 到那句引用它的话，中间可能隔了好几分钟的版图操作，所以记忆<strong>按序号/数量解析，而不是按时间</strong>。用 <code>interaction.context</code> 可以同时拿到“当前选择”和“最近 SEND”，让 agent 判断用户指的是哪个。</p>
+        <p>两个刻意的设计取舍：一是<strong>用显式 SEND，而不是被动监听每次点选</strong>——只有用户主动发出的选择才记一条 <code>sel_000N</code>，过滤掉探索性点击和误选的噪音；二是<strong>记忆放在插件外部（桥侧）</strong>，插件只保持“此刻”的零层事实（<code>selection.get</code> 和事件流），会话级记忆、id 分配、语言解析都在 MCP 桥的 <code>interaction.*</code>，按会话持久化到磁盘 JSONL。</p>
+        <div class="note">
+          <strong>SEND 是持久的、不丢的。</strong> 插件在广播前就用单调递增序号把每次 SEND 写进 journal，所以即使 SEND 时没有 agent 在监听也不会丢——桥下次连上时会从 journal 补齐并去重。
+        </div>
+        <p><strong>示例：把我刚发的两块连起来。</strong></p>
+        <pre><code># 用户：选中 A → SEND；再选中 B → SEND
+interaction.selection.recent limit=2      # → [sel_0007(B), sel_0006(A)]
+interaction.selection.label id="sel_0006" label="probe pad"
+# agent 用这两个 id 去 port.mark / structdevice.declare_nets，不靠截图猜坐标</code></pre>
+
+        <!-- ============ MULTI SESSION ============ -->
+        <h2 id="multi" class="anchor-h">一个 agent 控制多个 KLayout</h2>
+        <p>每个 KLayout 窗口启动时绑定一个端口（第一个空闲的 <code>8765</code>–<code>8799</code>）并注册为一个 session。<strong>一个 MCP 桥可以同时驱动全部这些 session</strong>——它们是<strong>平等 peer</strong>，没有“工作端口”或“LVS 端口”的特殊角色，你总是显式说要哪个。</p>
+        <div class="flow">
+          <div class="flow-item"><strong>klayout-8765</strong><span class="muted">真实工作版图</span></div>
+          <div class="flow-item"><strong>klayout-8766</strong><span class="muted">scratch / 测试</span></div>
+          <div class="flow-item"><strong>klayout-8767</strong><span class="muted">参考 / 对比</span></div>
+          <div class="flow-item"><strong>一个 MCP 桥</strong><span class="muted">按需切换目标</span></div>
+        </div>
+        <table class="data-table">
+          <thead><tr><th>工具</th><th>用途</th></tr></thead>
+          <tbody>
+            <tr><td><code>klink.session_list</code></td><td>枚举正在运行的 session。</td></tr>
+            <tr><td><code>klink.session_label</code></td><td>给某个 session 打人类 label / 别名。</td></tr>
+            <tr><td><code>klink.session_resolve</code></td><td>把 label / 别名 / active cell / top cell 解析成 session id。</td></tr>
+            <tr><td><code>klink.session_use</code></td><td>把桥的主 RPC 目标切到某个 session。</td></tr>
+            <tr><td><code>klink.session_status</code></td><td>看某个 session 的记录。</td></tr>
+          </tbody>
+        </table>
+        <pre><code>klink.session_list
+klink.session_label session_id="klayout-8766" label="scratch" aliases=["test"]
+klink.session_resolve query="scratch"     # → klayout-8766
+klink.session_use session_id="klayout-8766"</code></pre>
+        <p>实践建议：同时开着真实工作版图和 demo/测试窗口时，<strong>先给每个窗口打 label</strong>，agent 就能用“scratch”这种名字而不是端口号来指代，破坏性操作也不会误伤工作 tab。</p>
+
+        <!-- ============ TRANSFER ============ -->
+        <h2 id="transfer" class="anchor-h">跨会话搬运 —— 两阶段、确认安全</h2>
+        <p>在窗口之间搬几何是<strong>两阶段</strong>的：先 <code>prepare</code>，对目标 session <strong>dry-run</strong> 通过后，再 <code>commit</code> 才真正写入。这样在写进目标窗口<strong>之前</strong>就能发现“搬错窗口”“包内容不对”。</p>
+        <div class="flow">
+          <div class="flow-item"><strong>选择源几何</strong><span class="muted">源 KLayout 里 SEND 或指定 cell/selection。</span></div>
+          <div class="flow-item"><strong>prepare</strong><span class="muted">构建包并对目标 session dry-run。</span></div>
+          <div class="flow-item"><strong>检查报告</strong><span class="muted">确认目标、cell、layer、shape/instance 统计。</span></div>
+          <div class="flow-item"><strong>commit</strong><span class="muted">确认后才写入目标窗口。</span></div>
+        </div>
+        <pre><code>klink.transfer_prepare source_session="klayout-8765" target_session="klayout-8766" \
+    copy_mode="flat_selection" target_cell="IMPORTED"     # dry-run 内建
+# → package_id + dry-run 报告（目标/cell/layer/统计）
+klink.transfer_commit package_id="pkg_0001"</code></pre>
+        <p><code>copy_mode</code>：<code>flat_selection</code>（默认）只拍平复制可见几何、不带层级；<code>shallow_instance</code> 只搬实例引用——若目标窗口缺对应子 cell，它会<strong>阻断提交</strong>而不是静默造一个空壳。目标窗口写入前什么都不会真正写进去，所以搬错目标会在 dry-run 阶段被发现。搬运中还可用 <code>layer_map</code> 重映射图层、<code>translate_um</code> 平移。</p>
+
+        <!-- ============ KLIVE 8082 ============ -->
+        <h2 id="klive" class="anchor-h">8082 端口：klive 兼容显示，完全替代 klive</h2>
+        <p>插件除了 <code>8765</code> 的 RPC，还在 <strong><code>127.0.0.1:8082</code></strong> 起了一个 <strong>klive 协议兼容</strong>的显示服务。它是原版 <a href="https://github.com/gdsfactory/klive">klive</a> 的<strong>直接替代（drop-in replacement）</strong>：任何硬编码 <code>localhost:8082</code> 的 gdsfactory / 外部脚本——尤其是 <code>Component.show()</code>——<strong>无需改动</strong>就能把版图推进 KLayout。你不需要再单独装 klive。</p>
+        <table class="data-table">
+          <thead><tr><th>能力</th><th>说明</th></tr></thead>
+          <tbody>
+            <tr><td>协议兼容</td><td>逐字节兼容 klive 0.4.1 的请求/响应（<code>{"gds":…, "keep_position":…, "libraries":…, "technology":…, "lyrdb":…, "l2n":…}</code>），并回 <code>{"version":"0.4.1", "type":"open"|"reload", …}</code>。</td></tr>
+            <tr><td><code>c.show()</code> 开箱即用</td><td>gdsfactory 的 <code>Component.show()</code> 直接把组件推进 KLayout，已开则 reload、可 <code>keep_position</code> 保住视角。</td></tr>
+            <tr><td>不止 GDS</td><td>随 klive 协议一并推送 <code>lyrdb</code>（DRC 标记）和 <code>l2n</code>（网表抽取），一并在浏览器里显示。</td></tr>
+            <tr><td>多会话转发</td><td>单窗口时直接走 pya 载入；<strong>多窗口时 8082 是固定入口</strong>，把请求转发给<strong>注册的目标 session</strong>——用 <code>klink.session_set_klive_target</code> / <code>session.mark_klive_target</code> 选定哪个 KLayout 接收 <code>c.show()</code>。</td></tr>
+            <tr><td>不干扰 RPC</td><td>即使 8082 被占用起不来，也只影响显示；<code>8765</code> 的 klink RPC 完全不受影响。</td></tr>
+          </tbody>
+        </table>
+        <p><strong>示例：普通 gdsfactory 脚本，一行 <code>c.show()</code> 推进 KLayout。</strong></p>
+        <pre><code>import gdsfactory as gf
+c = gf.components.mzi()
+c.show()          # 走 127.0.0.1:8082 → klink 的 klive 兼容服务 → 显示在 KLayout</code></pre>
+        <p><strong>示例：多窗口时，先指定谁接收显示。</strong></p>
+        <pre><code>klink.session_set_klive_target session_id="klayout-8766"   # scratch 窗口接收 c.show()
+# 之后所有 c.show() / import_gf 的显示都落到 klayout-8766</code></pre>
+        <div class="note">这也是 <a href="mcp-reference.html#d-photonics">硅光流</a> 的显示通道：<code>photonics.import_gf</code> 把成品 gdsfactory 脚本接管进 klink 后，后续的 <code>photonics.reroute</code> 也通过同一条链路刷新显示。</div>
+
+        <!-- ============ RECORDER ============ -->
+        <h2 id="recorder" class="anchor-h">录制 → 可回放脚本</h2>
+        <p>recorder 把一整段工作会话——<strong>手工 GUI 编辑和 agent 的 RPC 编辑一视同仁</strong>——变成可回放脚本。它不是逐条 RPC 日志，而是 <strong>replay-script 生成器</strong>：记录足以重建最终 layout 状态的动作，所以一个批量 RPC 或一段 <code>exec.python</code> 可能会展开成逐对象的动作。</p>
+        <table class="data-table">
+          <thead><tr><th>工具</th><th>用途</th></tr></thead>
+          <tbody>
+            <tr><td><code>recorder.start</code></td><td>开始录制（可选 <code>output_path</code> 指定输出）。幂等。</td></tr>
+            <tr><td><code>recorder.status</code></td><td>是否在录、已记录多少事件/动作、输出路径。随时可调。</td></tr>
+            <tr><td><code>recorder.stop</code></td><td>停止并写脚本，返回统计 + <code>wrote</code>。幂等。</td></tr>
+          </tbody>
+        </table>
+        <p>停止时写出<strong>两个产物</strong>：</p>
+        <ul>
+          <li><code>&lt;name&gt;.py</code> —— 基于 <code>KLinkClient</code> 的回放脚本，并用 <code># user command:</code> 注释标出每步对应的菜单动作。</li>
+          <li><code>&lt;name&gt;_pya.py</code> —— 独立 <code>pya</code> 版，可在<strong>没装 klink</strong> 的 KLayout 里直接跑。</li>
+        </ul>
+        <pre><code>recorder.status                 # 先确认没在录别人的
+recorder.start
+# …做一些 typed RPC 编辑 + 手工 GUI 编辑…
+recorder.stop                   # 产出 <name>.py 和 <name>_pya.py</code></pre>
+        <div class="warning">开始你自己的录制前<strong>先看 <code>recorder.status</code></strong>，避免覆盖一个正在进行的录制。</div>
+        <p>这样一来，原本一次性的手工修改就变成了能重复运行、能改参数的脚本，agent 也能在此基础上重新生成。</p>
+
+        <!-- ============ PROFILES ============ -->
+        <h2 id="profiles" class="anchor-h">Profiles 与工具发现</h2>
+        <p><code>--profile</code> 同时按意图（read/write/verify/escape/all）和领域（11 个 token 之一）过滤。默认 <code>read,write,verify,escape</code>；<code>klink.find_tools</code> 在任务中导航更窄的工具。完整说明见 <a href="mcp-reference.html#profiles">MCP 参考 · Profiles</a>。</p>
+        <pre><code>python -m klink.mcp --profile read,write,verify,escape   # 默认
+python -m klink.mcp --profile read,device_photonics
+klink.find_tools domain="routing_backends"
+klink.status                                             # 解释器 / 能力 / 连接状态</code></pre>
+
+        <!-- ============ ESCAPE ============ -->
+        <h2 id="escape" class="anchor-h">Escape hatch</h2>
+        <p><code>exec.python</code> 可在 KLayout 内跑受控 <code>pya</code> 片段，适合 typed RPC 暂未覆盖的边角场景；它仍会触发 recorder + layout-diff 检测。但优先级应低于 typed RPC——后者有输入验证、结构化错误、<code>next_action</code>，且在 recorder 里表现为“意图”而非不透明代码。详见 <a href="mcp-reference.html#d-escape">MCP 参考 · Escape hatch</a>。</p>
+
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>让人和 agent 在同一个 live KLayout 上协作，用真实几何证据工作。</p></div>
+      <div><h3>相关页面</h3><p><a href="mcp-reference.html">MCP 工具参考</a></p><p><a href="architecture.html">架构</a></p></div>
+      <div><h3>上手</h3><p><a href="quickstart.html">快速上手</a></p><p><a href="examples.html">示例</a></p></div>
+    </div>
+  </footer>
+  <script src="assets/app.js"></script>
+</body>
+</html>

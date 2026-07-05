@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Demos &amp; Examples - klink</title>
+  <meta name="description" content="The 8 public klink demos explained in detail: EBL wraparound, Hall bar, neural electrode, fit-device P&R LVS, chat-to-netlist, multilayer P&R, padframe, gdsfactory MZI — function, command, measured output, requirements, and how to adapt.">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body data-page="examples">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="index.html" data-nav="home">Home</a>
+        <a href="quickstart.html" data-nav="quickstart">Quickstart</a>
+        <a href="tutorials.html" data-nav="tutorials">Tutorials</a>
+        <a href="workflows.html" data-nav="workflows">Workflows</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP Reference</a>
+        <a href="examples.html" data-nav="examples">Examples</a>
+        <a href="architecture.html" data-nav="architecture">Architecture</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="Language switch">
+          <a href="../examples.html">CN</a>
+          <a class="active" href="examples.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Demos &amp; examples</div>
+        <h1>The public demos, explained</h1>
+        <p><code>examples_klink/public</code> is the public gallery — no NDA, no proprietary PDK, no committed private GDS. <strong>8 example demos</strong>: 2 run fully offline, 6 need a live KLayout (still no external GDS), one of those (the gdsfactory takeover) also needs gdsfactory in the same interpreter. Everything device- and process-specific lives in the demo itself; <code>klink</code> ships zero process constants — copy a demo, edit its numbers, and the flow is identical for your process.</p>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#how">How you run them</a>
+          <a href="#overview">The 8 demos at a glance</a>
+          <a href="#ebl">1 · EBL wraparound</a>
+          <a href="#hallbar">2 · Hall bar</a>
+          <a href="#neural">3 · Neural electrode</a>
+          <a href="#fitdevice">4 · Fit device → P&amp;R → LVS</a>
+          <a href="#chat">5 · Netlist → lint → P&amp;R</a>
+          <a href="#multilayer">6 · Multilayer P&amp;R at scale</a>
+          <a href="#padframe">7 · Probe-card padframe</a>
+          <a href="#mzi">8 · gdsfactory MZI takeover</a>
+          <a href="#features">Feature examples</a>
+          <a href="#boundaries">Public boundaries</a>
+        </nav>
+      </aside>
+
+      <article class="content">
+        <h2 id="how" class="anchor-h">How you run them depends on how you installed</h2>
+        <p>4 demos are <strong>starters bundled in the wheel</strong>: <code>klink init &lt;proj&gt;</code> scaffolds them into <code>&lt;proj&gt;/example_template/</code> and a pip user runs <code>python example_template/&lt;name&gt;.py</code> — <strong>ebl_wraparound, hallbar, neural_electrode, gf_mzi_module</strong> (the 4 cards below give this command directly). The other 4 (<strong>fit_device_pnr_lvs, chat_to_netlist_pnr, multilayer_pnr_lvs, padframe_pnr_lvs</strong>) are <strong>repo-only</strong>: they read the source tree / a bundled netlist, so they only run from a clone, not from a pip install; the 4 cards below keep the repo <code>python -m …</code> form and are marked repo-only.</p>
+        <div class="note">Running the demos <strong>needs no MCP</strong>. Each is a plain <code>python -m …</code> script talking to KLayout over the plugin port. MCP is the layer that lets your <em>agent</em> call klink as resident tools. Both paths use the same <code>pip install klayout-klink</code>.<br>A KLayout "port" is just a session — any port works; none has a special role. Use an empty or test-owned session, not your manual working tab.</div>
+
+        <h2 id="overview" class="anchor-h">The 8 demos at a glance</h2>
+        <table class="data-table">
+          <thead><tr><th>Demo</th><th>Category</th><th>Requires</th><th>Measured</th></tr></thead>
+          <tbody>
+            <tr><td><a href="#ebl">EBL wraparound</a></td><td>nanodevice</td><td>fully offline</td><td>40 electrodes · 12 patches · 0 violations · 0 overlaps</td></tr>
+            <tr><td><a href="#hallbar">Hall bar</a></td><td>nanodevice</td><td>offline (<code>--live</code> optional)</td><td>semantic bundle + routed result</td></tr>
+            <tr><td><a href="#neural">Neural electrode</a></td><td>nanodevice</td><td>live KLayout</td><td>48 ports · 24 nets · overlap 0 · hit 0</td></tr>
+            <tr><td><a href="#fitdevice">Fit device → P&amp;R → LVS</a></td><td>digital P&amp;R</td><td>live KLayout</td><td>routed 94/94 · LVS match=True · 173 devices</td></tr>
+            <tr><td><a href="#chat">Netlist → lint → P&amp;R</a></td><td>digital P&amp;R</td><td>live KLayout</td><td>lint 0 err · routed 3/3 · LVS match=True</td></tr>
+            <tr><td><a href="#multilayer">Multilayer P&amp;R at scale</a></td><td>digital P&amp;R</td><td>live KLayout</td><td>routed 405/405 · LVS match=True · 766 devices · ~17s</td></tr>
+            <tr><td><a href="#padframe">Probe-card padframe</a></td><td>digital P&amp;R</td><td>live KLayout</td><td>routed 94/94 · LVS match=True · 16 pads connected</td></tr>
+            <tr><td><a href="#mzi">gdsfactory MZI takeover</a></td><td>photonics</td><td>live KLayout + gdsfactory</td><td>6 optical nets · reroute 12 routes · 0 crossings</td></tr>
+          </tbody>
+        </table>
+
+        <div class="demo-card">
+          <h2 id="ebl" class="anchor-h">1 · EBL nanodevice wraparound <span class="tier offline">fully offline</span></h2>
+          <p>A parametric electron-beam-lithography wraparound generator. Offline it prints the generated bundle; <code>--live</code> writes to a KLayout session. The fastest path to a first result <strong>with no external geometry</strong>.</p>
+          <pre><code>python example_template/ebl_wraparound.py          # [--live] [--keep]
+# from a repo clone you can also run: python -m examples_klink.public.demos.ebl_wraparound</code></pre>
+          <div class="metric-row">
+            <div class="metric"><b>40</b><span>electrodes</span></div>
+            <div class="metric"><b>12</b><span>patches</span></div>
+            <div class="metric"><b>16 / 11 / 20</b><span>fields/windows/crossings</span></div>
+            <div class="metric"><b>0</b><span>violations</span></div>
+            <div class="metric"><b>0</b><span>overlaps</span></div>
+          </div>
+          <p><strong>Reusable core:</strong> <code>klink.domains.nanodevice.devices.wraparound.build_wraparound_demo</code>. Copy the demo and edit electrode count / pitch / writefield params — the flow does not change.</p>
+        </div>
+
+        <div class="demo-card">
+          <h2 id="hallbar" class="anchor-h">2 · Hall bar nanodevice <span class="tier offline">offline (--live)</span></h2>
+          <p>A parametric Hall-bar generator. Offline it prints the semantic bundle + routed result; <code>--live</code> writes a disposable KLayout cell (deleted unless <code>--keep</code>). It demonstrates the "device generator + delegate to the generic router" loop behind <a href="mcp-reference.html#d-nanodevice"><code>nanodevice.hallbar</code></a>.</p>
+          <pre><code>python example_template/hallbar.py                 # [--live] [--keep]
+# from a repo clone you can also run: python -m examples_klink.public.demos.hallbar</code></pre>
+          <p><strong>Reusable core:</strong> tapered-hybrid router + <code>port.mark</code> / <code>anchor.mark</code>. From a <code>HallBarSpec</code> (bar length/width, contact count, pad dims, pitch, gaps) it computes the whole device geometry, then delegates contact→pad routing to the generic router.</p>
+        </div>
+
+        <div class="demo-card">
+          <h2 id="neural" class="anchor-h">3 · Neural-electrode harness <span class="tier live">live KLayout</span></h2>
+          <p>A self-contained probe generator: defines pad/via geometry and Port/Anchor resources, then calls the tapered-hybrid router. <strong>No GDS, just live Port/Anchor PCells.</strong> Use an empty or test-owned session.</p>
+          <pre><code>python example_template/neural_electrode.py --port &lt;session-port&gt; --elec-rows 4
+# from a repo clone you can also run: python -m examples_klink.public.demos.neural_electrode --port &lt;session-port&gt; --elec-rows 4</code></pre>
+          <div class="metric-row">
+            <div class="metric"><b>48</b><span>ports</span></div>
+            <div class="metric"><b>24</b><span>nets (12×<code>1/0</code> + 12×<code>3/0</code>)</span></div>
+            <div class="metric"><b>0</b><span>sibling-overlap</span></div>
+            <div class="metric"><b>0</b><span>obstacle-hit</span></div>
+          </div>
+        </div>
+
+        <div class="demo-card">
+          <h2 id="fitdevice" class="anchor-h">4 · Fit a device → digital P&amp;R → LVS <span class="tier live">live KLayout</span></h2>
+          <p>The full self-contained, IP-free digital flow: fit a parametric device PCell from <strong>synthetic</strong> exemplar geometry, place it, run detailed routing, and verify with live LVS. Swap in your own harvested exemplar boxes to fit your real device — the flow does not change.</p>
+          <pre><code># repo-only: needs a repo clone to run, not in the pip wheel
+python -m examples_klink.public.demos.fit_device_pnr_lvs --port &lt;session-port&gt;   # [--draw-only]</code></pre>
+          <div class="metric-row">
+            <div class="metric"><b>94/94</b><span>routed</span></div>
+            <div class="metric"><b>match=True</b><span>live LVS</span></div>
+            <div class="metric"><b>173</b><span>devices</span></div>
+          </div>
+          <p><strong>Reusable core:</strong> <code>map_logic_to_devices(...)</code> → place → FlexDR → live LVS.</p>
+        </div>
+
+        <div class="demo-card">
+          <h2 id="chat" class="anchor-h">5 · Hand-written netlist → lint → P&amp;R → LVS <span class="tier live">live KLayout</span></h2>
+          <p>The "describe it in chat, get a verified layout" flow: a 3-stage ring oscillator netlist is written <strong>by hand</strong>, validated by <code>lint_netlist</code> (every structural mistake gets a fix-it message <strong>before any geometry exists</strong>), then placed, routed, LVS-verified, and every stage node brought out as a bare labelled trace. Netlists are plain data — an agent (or you) can write one for <strong>any topology</strong>, no logic synthesizer required.</p>
+          <pre><code># repo-only: needs a repo clone to run, not in the pip wheel
+python -m examples_klink.public.demos.chat_to_netlist_pnr --port &lt;session-port&gt;</code></pre>
+          <div class="metric-row">
+            <div class="metric"><b>0</b><span>lint errors</span></div>
+            <div class="metric"><b>3/3</b><span>routed</span></div>
+            <div class="metric"><b>match=True</b><span>LVS</span></div>
+            <div class="metric"><b>6</b><span>devices</span></div>
+            <div class="metric"><b>3/3</b><span>taps CONNECTED</span></div>
+          </div>
+        </div>
+
+        <div class="demo-card">
+          <h2 id="multilayer" class="anchor-h">6 · Multilayer place &amp; route at scale <span class="tier live">live KLayout</span></h2>
+          <p>The scale demo: a bundled <strong>766-device</strong> synthetic netlist (a toy 4-bit ALU, 268 gates, netted by an open logic synthesizer, remapped onto this gallery's synthetic fitted devices) is linted, then compared on two example process stacks with the built-in layer-count advisor — the 3-layer public process from the fit-a-device demo, and a 7-layer example stack defined in the demo itself. The advisor prints each stack's core-area cost so you can see why a design this size wants the extra layers. It then places, marks all 20 primary ports (13 in west, 7 out east), and routes with the multilayer engine.</p>
+          <pre><code># repo-only: needs a repo clone to run, not in the pip wheel
+python -m examples_klink.public.demos.multilayer_pnr_lvs --port &lt;session-port&gt;</code></pre>
+          <div class="metric-row">
+            <div class="metric"><b>405/405</b><span>nets routed</span></div>
+            <div class="metric"><b>match=True</b><span>LVS</span></div>
+            <div class="metric"><b>766</b><span>devices</span></div>
+            <div class="metric"><b>20/20</b><span>ports CONNECTED</span></div>
+            <div class="metric"><b>~17s</b><span>end to end</span></div>
+          </div>
+          <p>Copy this file and edit <code>PUBLIC_MULTILAYER</code> for your own layer stack — the flow does not change.</p>
+        </div>
+
+        <div class="demo-card">
+          <h2 id="padframe" class="anchor-h">7 · Probe-card-first place &amp; route <span class="tier live">live KLayout</span></h2>
+          <p>The reversed-order hardware flow: the probe card / pad ring <strong>exists first</strong> (positions frozen long ago) and the circuit must meet it — even when the card interior is too small for the whole block. The same synthetic 4-bit adder is linted, then a stand-in 20-pad probe card is fabricated and <strong>harvested back</strong> with <code>pads_from_gds</code>. A net→pad table assigns all 14 primary ports + VDD + GND; because the interior fits only half the rows, <code>place_grid(forbid_y_bands=…)</code> splits the block <strong>half inside / half below</strong>, and <code>pdn_split_bands</code> threads one power grid per region bridged by a spine strap.</p>
+          <pre><code># repo-only: needs a repo clone to run, not in the pip wheel
+python -m examples_klink.public.demos.padframe_pnr_lvs --port &lt;session-port&gt;   # [--no-card]</code></pre>
+          <div class="metric-row">
+            <div class="metric"><b>94/94</b><span>routed</span></div>
+            <div class="metric"><b>match=True</b><span>LVS</span></div>
+            <div class="metric"><b>173</b><span>devices</span></div>
+            <div class="metric"><b>85 / 80</b><span>inside / below</span></div>
+            <div class="metric"><b>16 + 4</b><span>connected + redundant isolated</span></div>
+          </div>
+          <p><code>--no-card</code> drops the card: every port leaves as a bare labelled wire-end trace at the periphery (inputs west, outputs east), power on the auto-labelled PDN tie rails — routed 94/94, LVS match=True, all 14 stubs CONNECTED. Copy this file and edit the pad table for your own card.</p>
+        </div>
+
+        <div class="demo-card">
+          <h2 id="mzi" class="anchor-h">8 · gdsfactory takeover → editable photonic module <span class="tier photonics">live KLayout + gdsfactory</span></h2>
+          <p>A complete thermo-optic MZI — tilted fiber GC → 1×2 MMI splitter → two thermal phase-shifter arms (bottom mirrored) → 2×2 MMI combiner → offset output GCs, plus heater pad rows and a fiber-loopback pair — written as an <strong>ordinary gdsfactory script</strong>, then taken over by a single <code>import_gf_component</code> call. One persisted net table then holds <strong>every kind</strong> of net: the script's own optics (re-drawn by klink), the offset output bank restyled to <code>sbend</code>, the tilted GC a Manhattan router can't reach (<code>all_angle</code>), the loopback pair (<code>dubins</code> arcs), and the heater→pad <strong>electrical</strong> nets on metal. A single <code>photonics.reroute</code> redraws all of them — so after you <strong>drag any component in the GUI, one reroute re-routes optics and metal together</strong>.</p>
+          <pre><code>python example_template/gf_mzi_module.py --port &lt;session-port&gt;
+# … drag a component in KLayout …
+python example_template/gf_mzi_module.py --port &lt;session-port&gt; --reroute
+# from a repo clone you can also run: python -m examples_klink.public.demos.gf_mzi_module --port &lt;session-port&gt; [--reroute]</code></pre>
+          <div class="metric-row">
+            <div class="metric"><b>6</b><span>optical nets</span></div>
+            <div class="metric"><b>13 / 5</b><span>instances / device cells</span></div>
+            <div class="metric"><b>12</b><span>reroute routes</span></div>
+            <div class="metric"><b>0 / 0</b><span>crossings / device-hits</span></div>
+          </div>
+          <div class="warning"><strong>The drag → reroute loop is the point.</strong> <code>--reroute</code> re-routes from the dragged positions <strong>without rebuilding</strong>, keeping your edit. Re-running with no flag rebuilds from the gdsfactory source and snaps every component back to its original spot, undoing the drag — a common first-time surprise, so the flag is the fix. (An agent with the MCP tools calls <code>photonics.reroute</code> directly.)</div>
+          <p><strong>Requirements:</strong> gdsfactory in the <strong>same interpreter</strong> that runs it. The demos are pinned to the tested line — <code>pip install "klayout-klink[photonics]"</code> gets a known-good gdsfactory. If gdsfactory already lives in another venv, add klink into <strong>that</strong> venv and run from there; do not sys.path-hack the repo into a foreign interpreter (that path leads to version mismatch and 1000×-off geometry).</p>
+        </div>
+
+        <h2 id="features" class="anchor-h">Feature examples</h2>
+        <p><code>examples_klink/public/features</code> shows single capabilities, good to learn the API and copy into your project:</p>
+        <ul>
+          <li>gdsfactory: route to KLayout (<code>23</code>), route ports (<code>24</code>), net examples (<code>25</code>), component marker (<code>26</code>), width mismatch + auto taper (<code>29</code>), routing zoo (<code>30</code>) — on the open <code>gf.gpdk</code>, same interpreter rule.</li>
+          <li>Port/Anchor walkthrough (<code>anchor_port_5_example</code> and its <code>_pya</code> variant).</li>
+          <li>Router stress: tapered, tapered segments, steiner, damped, plus future/missing-algorithm showcases.</li>
+          <li>measurement import, harness/probe generators.</li>
+        </ul>
+        <p>The <code>examples_klink/public/smoke</code> folder has capability smoke demos (draw, PCell zoo, cells &amp; shapes, delete/undo, exec, route run) — not full tutorials, but good to confirm a primitive works.</p>
+
+        <h2 id="boundaries" class="anchor-h">Public boundaries</h2>
+        <p>The public gallery's contract is <strong>open + open-box runnable</strong>:</p>
+        <ul>
+          <li>No NDA / proprietary PDK content.</li>
+          <li>No committed private GDS.</li>
+          <li>No dev-only PDK module imports.</li>
+          <li>Third-party deps handled as ordinary <code>pip install</code>.</li>
+        </ul>
+        <div class="warning">If a flow needs your private device GDS, it may only read that path at <strong>run time</strong> in your project — never commit GDS/PDK files to a public repo or site example. The template <code>.gitignore</code> blocks <code>*.gds</code>/<code>*.oas</code> by default.</div>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>Runnable examples lower the cost of getting started, each with public measured numbers.</p></div>
+      <div><h3>Continue</h3><p><a href="quickstart.html">Quickstart</a></p><p><a href="mcp-reference.html">MCP Tool Reference</a></p></div>
+      <div><h3>Workflows</h3><p><a href="workflows.html">Interaction capabilities</a></p></div>
+    </div>
+  </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>
