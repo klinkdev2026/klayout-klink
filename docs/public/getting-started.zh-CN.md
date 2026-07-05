@@ -17,10 +17,11 @@ PCell、布线、跑 LVS——用你的工艺,通过你的 agent。
    > (硅光 recipe 用 `pip install -e ".[photonics]"`)。本页命令写的是将来上了
    > PyPI 后的 `pip install klayout-klink` 形式。
 
-   klink 的 Rust 内核以预编译轮发布(Linux/macOS/Windows、CPython 3.10–3.13):核心
-   布线内核随包安装,多层布线引擎的内核是可选的 `[fast]` extra、带纯 Python 兜底
-   (装不装都能跑,大设计上不装会慢些)。不打包任何第三方库——硅光 recipe 额外需要
-   **同一个** Python 里有 `gdsfactory`(`klayout-klink[photonics]` 会装一个已测版本)。
+   klink 的两个 Rust 内核都以预编译轮发布(Linux/macOS/Windows、CPython 3.10–3.13),
+   且都是运行时依赖,所以 `pip install klayout-klink` 一次就把 klink + 两个加速核
+   (单栈 + 多层 P&R)全装好。它们只管速度——有纯 Python 兜底,`pip install --no-deps`
+   只装纯 Python 核。不打包任何第三方库——硅光 recipe 额外需要**同一个** Python 里有
+   `gdsfactory`(`klayout-klink[photonics]` 会装一个已测版本)。
 3. **把 klink MCP server 注册进你的 agent,然后重启 agent。** klink 自带这个 server;
    唯一因 agent 而异的是**怎么登记**。让 klink 替你把精确命令写好:
 

@@ -60,10 +60,11 @@ reports `interpreter` and `capabilities` so you can verify.
 
 ## Environment
 
-- klink core is pure Python; its only runtime dependencies are its own Rust
-  kernels (prebuilt wheels, byte-parity with the pure-Python reference). The
-  multilayer engine's kernel is an optional `[fast]` extra with a pure-Python
-  fallback.
+- klink core is pure Python; its only runtime dependencies are its own two Rust
+  kernels (prebuilt wheels, byte-parity with the pure-Python reference), so
+  `pip install klayout-klink` brings klink + both accelerators. They are
+  speed-only (pure-Python fallbacks exist); `pip install --no-deps` gives the
+  pure-Python core alone.
 - gdsfactory must be in the SAME interpreter that runs `klink.mcp`.
 - klink RPC port: 8765; klive-compat port: 8082.
 - interaction context memory: `.klink/sessions/<session-id>/interaction_context.jsonl`

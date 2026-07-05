@@ -4,16 +4,14 @@ name: Release
 # manually (workflow_dispatch) to build artifacts without publishing.
 #
 # Publishes THREE PyPI projects from one tag:
-#   - klayout-klink        (one universal py3-none-any wheel; depends on the core kernel)
+#   - klayout-klink        (one universal py3-none-any wheel; depends on BOTH kernels)
 #   - klink-boxmaze-rs     (single-stack P&R kernel; platform wheels; runtime dep)
-#   - klink-trackmaze-rs   (multilayer P&R kernel; platform wheels; OPTIONAL
-#                           `[fast]` extra — the engine has a pure-Python fallback)
-# klayout-klink declares klink-boxmaze-rs as a runtime dependency, so
-# `pip install klayout-klink` pulls klink + that kernel together. Both kernels
-# are speed-only accelerators with pure-Python fallbacks; use
-# `pip install klayout-klink --no-deps` to install the core alone when you cannot
-# fetch/build a kernel, or `pip install "klayout-klink[fast]"` to add the
-# multilayer kernel.
+#   - klink-trackmaze-rs   (multilayer P&R kernel; platform wheels; runtime dep)
+# klayout-klink declares BOTH kernels as runtime dependencies, so
+# `pip install klayout-klink` pulls klink + both Rust accelerators together. They
+# are speed-only (pure-Python fallbacks exist); use
+# `pip install klayout-klink --no-deps` to install the pure-Python core alone
+# when you cannot fetch/build a kernel wheel.
 #
 # BEFORE THE FIRST REAL PUBLISH (maintainer setup, one-time):
 #   Publishing uses PyPI Trusted Publishing (OIDC) — no API token needed.
@@ -68,7 +66,7 @@ jobs:
 
   install-smoke:
     # Prove the WHOLE vision before publishing: a clean env `pip install
-    # klayout-klink` off the just-built wheels pulls klink + the Rust kernel in
+    # klayout-klink` off the just-built wheels pulls klink + BOTH Rust kernels in
     # one shot, imports, and `klink init` scaffolds a usable agent project --
     # across every OS x Python we ship.
     name: pip-install one-shot (${{ matrix.os }}, py${{ matrix.python }})
@@ -87,10 +85,10 @@ jobs:
         with:
           path: dist
           merge-multiple: true
-      - name: pip install klayout-klink[fast] (core + both Rust kernels) from the built wheels
+      - name: pip install klayout-klink (core + both Rust kernels) from the built wheels
         run: |
           python -m pip install --upgrade pip
-          python -m pip install --no-index --find-links dist "klayout-klink[fast]"
+          python -m pip install --no-index --find-links dist klayout-klink
       - name: one-shot import (klink + both kernels) then klink init a project
         run: |
           python -c "import klink, klink.mcp, klink_boxmaze_rs, klink_trackmaze_rs; print('one-shot install ok:', klink.__version__)"

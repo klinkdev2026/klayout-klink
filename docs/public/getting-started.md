@@ -20,13 +20,13 @@ agent.
    > for the silicon-photonics recipe). The commands on this page show the
    > eventual `pip install klayout-klink` form.
 
-   klink ships its Rust kernels as prebuilt wheels (Linux/macOS/Windows, CPython
-   3.10–3.13): the core routing kernel installs with the package, and the
-   multilayer routing engine's kernel is an optional `[fast]` extra with a
-   pure-Python fallback (it runs either way, just slower on large designs). No
-   third-party libs are bundled — the silicon-photonics recipe additionally needs
-   `gdsfactory` in that **same** Python (`klayout-klink[photonics]` gets a tested
-   one).
+   klink ships its two Rust kernels as prebuilt wheels (Linux/macOS/Windows,
+   CPython 3.10–3.13) and both are runtime dependencies, so `pip install
+   klayout-klink` brings klink + both accelerators (single-stack + multilayer
+   P&R) in one shot. They are speed-only — pure-Python fallbacks exist, and
+   `pip install --no-deps` gives the pure-Python core alone. No third-party libs
+   are bundled — the silicon-photonics recipe additionally needs `gdsfactory` in
+   that **same** Python (`klayout-klink[photonics]` gets a tested one).
 3. **Register the klink MCP server into your agent, then restart the agent.**
    klink ships the server; the one thing that varies is how your agent records
    it. Let klink write the exact command for you:

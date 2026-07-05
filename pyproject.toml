@@ -28,21 +28,19 @@ classifiers = [
 # those yourself. On a platform with no pre-built kernel wheel, pip builds them
 # from source (needs a Rust toolchain) — or use `--no-deps` for the pure-Python
 # core only (everything still runs, just slower on large P&R).
-# Version bound: core and kernel are released together and the byte-parity
+# Version bound: core and kernels are released together and the byte-parity
 # promise only holds within a minor series — an old core must not pick up a
-# newer kernel line.
+# newer kernel line. Both kernels are runtime dependencies, so
+# `pip install klayout-klink` brings klink + both Rust accelerators (boxmaze for
+# single-stack P&R, trackmaze for the multilayer engine) in one shot. They are
+# speed-only (pure-Python fallbacks exist); `pip install --no-deps` gives the
+# pure-Python core alone when you cannot fetch/build a kernel wheel.
 dependencies = [
     "klink-boxmaze-rs>=0.1,<0.2",
+    "klink-trackmaze-rs>=0.1,<0.2",
 ]
 
 [project.optional-dependencies]
-# Acceleration kernel for the multilayer routing engine. OPTIONAL: without it
-# the engine runs a pure-Python path with identical results, just slower on
-# large designs. `pip install "klayout-klink[fast]"` once its wheels are on
-# PyPI (built by the same release workflow as the core kernel).
-fast = [
-    "klink-trackmaze-rs>=0.1,<0.2",
-]
 # Photonics demos build geometry with gdsfactory IN THE SAME interpreter that
 # runs the example (klink is an RPC client; gf builds the layout client-side).
 # gdsfactory's port unit contract and routing API move fast, so pin to the
