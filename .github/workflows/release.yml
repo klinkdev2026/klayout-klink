@@ -15,16 +15,21 @@ name: Release
 # when you cannot fetch/build a kernel wheel.
 #
 # BEFORE THE FIRST PUBLISH (maintainer setup, one-time):
-#   Publishing uses PyPI Trusted Publishing (OIDC) — no API token needed.
-#   Add a "pending publisher" (GitHub) ONCE PER project name — one form
-#   submission each, three total: klayout-klink, klink-boxmaze-rs,
-#   klink-trackmaze-rs — owner/repo = klinkdev2026/klayout-klink,
-#   workflow = release.yml, environment blank. Do it on BOTH indexes:
-#     - test.pypi.org  -> for the `target: testpypi` dry run below
-#     - pypi.org       -> for the real tag-triggered publish
+#   Publishing uses PyPI Trusted Publishing (OIDC) — no API token needed. Add a
+#   "pending publisher" (GitHub) for EACH project (one form submission each),
+#   owner/repo = klinkdev2026/klayout-klink, workflow = release.yml, and a
+#   DISTINCT environment per project. The distinct environment is what lets all
+#   three coexist: PyPI keys a pending publisher on owner/repo/workflow/
+#   environment, so three projects with a shared blank environment collide.
+#     project name        ->  environment name
+#     klayout-klink        ->  pypi-klayout-klink
+#     klink-boxmaze-rs     ->  pypi-klink-boxmaze-rs
+#     klink-trackmaze-rs   ->  pypi-klink-trackmaze-rs
+#   Do it on BOTH indexes: test.pypi.org (for `target: testpypi`) and pypi.org
+#   (for the real tag publish).
 #   NOTE: a pending publisher only AUTHORIZES the upload; it does NOT reserve the
-#   name. The name is created + claimed on the FIRST successful publish, so
-#   publish promptly after adding the publishers to secure the three names.
+#   name — the name is created on the FIRST successful publish, so publish
+#   promptly to secure the three names.
 #   Recommended flow: run `target: testpypi` once, verify with
 #   `pip install -i https://test.pypi.org/simple/ klayout-klink`, THEN tag v0.1.0.
 # Only tag from a green `main` (the rust-build CI gates the kernel build per OS).
@@ -108,45 +113,59 @@ jobs:
           klink init smoke_proj
           python -c "import os,sys; sys.exit(0 if os.path.isdir(os.path.join('smoke_proj','example_template')) else 1)"
 
+  # One PUBLISH JOB PER PROJECT, each under its own GitHub environment. PyPI keys
+  # a *pending* publisher on (owner, repo, workflow, environment), so three
+  # projects sharing a blank environment collide -- you can only register one
+  # pending publisher at a time. Distinct environments make the three tuples
+  # unique, so you register all three pending publishers up front and one run
+  # publishes all three. Each job uploads ONLY its own project's files.
   publish-testpypi:
-    name: publish to TestPyPI (dry run)
+    name: publish ${{ matrix.project }} to TestPyPI (dry run)
     needs: [build-main, build-accel, install-smoke]
     runs-on: ubuntu-latest
-    # Manual dry run only: Actions -> Release -> Run workflow -> target: testpypi.
-    # Needs the 3 pending publishers on test.pypi.org (see header).
     if: github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { project: klayout-klink,      glob: "klayout_klink-*",      environment: pypi-klayout-klink }
+          - { project: klink-boxmaze-rs,   glob: "klink_boxmaze_rs-*",   environment: pypi-klink-boxmaze-rs }
+          - { project: klink-trackmaze-rs, glob: "klink_trackmaze_rs-*", environment: pypi-klink-trackmaze-rs }
+    environment: ${{ matrix.environment }}
     permissions:
       id-token: write
     steps:
       - uses: actions/download-artifact@v4
+        with: { path: all_dist, merge-multiple: true }
+      - name: isolate ${{ matrix.project }} files
+        run: mkdir pkg && cp all_dist/${{ matrix.glob }} pkg/
+      - uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          path: dist
-          merge-multiple: true
-      - name: Publish all wheels + sdist to TestPyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          packages-dir: dist
+          packages-dir: pkg
           skip-existing: true
           repository-url: https://test.pypi.org/legacy/
 
   publish:
-    name: publish to PyPI
+    name: publish ${{ matrix.project }} to PyPI
     needs: [build-main, build-accel, install-smoke]
     runs-on: ubuntu-latest
-    # Only on a real version tag; manual runs build (and optionally hit TestPyPI)
-    # but never publish to real PyPI.
     if: startsWith(github.ref, 'refs/tags/v')
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { project: klayout-klink,      glob: "klayout_klink-*",      environment: pypi-klayout-klink }
+          - { project: klink-boxmaze-rs,   glob: "klink_boxmaze_rs-*",   environment: pypi-klink-boxmaze-rs }
+          - { project: klink-trackmaze-rs, glob: "klink_trackmaze_rs-*", environment: pypi-klink-trackmaze-rs }
+    environment: ${{ matrix.environment }}
     permissions:
-      # PyPI Trusted Publishing (OIDC): all three project names must list this
-      # repo + workflow as a (pending) publisher on pypi.org.
       id-token: write
     steps:
       - uses: actions/download-artifact@v4
+        with: { path: all_dist, merge-multiple: true }
+      - name: isolate ${{ matrix.project }} files
+        run: mkdir pkg && cp all_dist/${{ matrix.glob }} pkg/
+      - uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          path: dist
-          merge-multiple: true
-      - name: Publish all wheels + sdist to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          packages-dir: dist
+          packages-dir: pkg
           skip-existing: true
