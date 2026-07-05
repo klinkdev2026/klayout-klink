@@ -18,8 +18,8 @@ The project is split into three layers:
   validation, and release documentation.
 
 The core Python package pulls in no third-party runtime libraries — its only
-declared dependency is klink's own Rust acceleration kernel, shipped as a
-prebuilt wheel. Virtual environments, caches, build outputs, and local test
+declared dependencies are klink's own two Rust acceleration kernels, shipped as
+prebuilt wheels. Virtual environments, caches, build outputs, and local test
 artifacts are intentionally not part of a clean release.
 
 ## What It Does
@@ -50,7 +50,7 @@ klink_plugin/           KLayout salt plugin
 examples_klink/public/  Public, open-box-runnable example gallery
 tests/public/           Public test suite (no KLayout required)
 docs/public/            Release documentation
-rust/                   Rust acceleration crate (klink_boxmaze)
+rust/                   Rust acceleration crates (klink_boxmaze, klink_trackmaze)
 pyproject.toml          Python packaging configuration
 README.md               English README
 README.zh-CN.md         Chinese README
@@ -67,7 +67,7 @@ THIRD_PARTY_NOTICES.md  Third-party notices
   KLayout 0.30.x; any recent official desktop build (whose macro environment
   provides the `pya` Qt bindings) should work. Purely offline workflows (the
   public test suite and the offline demos) run without it.
-- Python 3.10 or newer (the bundled Rust kernel targets CPython 3.10–3.13).
+- Python 3.10 or newer (the bundled Rust kernels target CPython 3.10–3.13).
 - Optional: Claude Code or another MCP client.
 - Optional: gdsfactory, the `klayout` Python package, NumPy/OpenCV, or detector
   dependencies depending on the workflow.

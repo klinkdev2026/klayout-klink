@@ -12,7 +12,7 @@ klink 是一个面向 [KLayout](https://www.klayout.de/) 的 AI-native 控制面
 - `klink_plugin`: 运行在 KLayout 里的薄 RPC 插件，负责暴露选定的 `pya` 和 GUI 操作。
 - `examples_klink/public`、`tests/public`、`docs/public`: 示例、验证和发布文档。
 
-核心 Python 包不引入任何第三方运行依赖——唯一声明的依赖是 klink 自己的 Rust 加速内核(以预编译轮子发布)。虚拟环境、缓存、构建产物和本机测试输出都不属于干净 release。
+核心 Python 包不引入任何第三方运行依赖——唯一声明的依赖是 klink 自己的两个 Rust 加速内核(以预编译轮子发布)。虚拟环境、缓存、构建产物和本机测试输出都不属于干净 release。
 
 ## 功能概览
 
@@ -41,7 +41,7 @@ klink_plugin/           KLayout salt 插件
 examples_klink/public/  开箱可跑的公开示例画廊
 tests/public/           公开测试套(无需 KLayout)
 docs/public/            发布文档
-rust/                   Rust 加速 crate(klink_boxmaze)
+rust/                   Rust 加速 crate(klink_boxmaze、klink_trackmaze)
 pyproject.toml          Python 打包配置
 README.md               英文 README
 README.zh-CN.md         中文 README
@@ -56,7 +56,7 @@ THIRD_PARTY_NOTICES.md  第三方声明
   <https://www.klayout.de/build.html> 安装对应操作系统的标准桌面版。klink 基于
   KLayout 0.30.x 开发和测试；任何较新的官方桌面版(宏环境带 `pya` Qt 绑定)都
   应该可用。纯离线工作流(公开测试套件和离线 demo)不需要它。
-- Python 3.10 或更新版本(自带的 Rust 内核针对 CPython 3.10–3.13)。
+- Python 3.10 或更新版本(自带的两个 Rust 内核针对 CPython 3.10–3.13)。
 - 可选: Claude Code 或其它 MCP 客户端。
 - 可选: gdsfactory、`klayout` Python 包、NumPy/OpenCV 或 detector 依赖，取决于具体工作流。
 
