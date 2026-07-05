@@ -13,20 +13,20 @@ agent.
    repo's `klink_plugin/` folder into KLayout's `salt/` directory (exact
    commands are in the README's *Install KLayout Plugin* section) and start
    KLayout. The plugin runs an in-process RPC server.
-2. **Install klink** into one Python (call it the *klink interpreter*).
+2. **`pip install klayout-klink`** into one Python (call it the *klink
+   interpreter*).
 
-   > **Not on PyPI yet** (publishing is imminent). Until it lands, install from a
-   > clone of the repo: `pip install -e .` (or `pip install -e ".[photonics]"`
-   > for the silicon-photonics recipe). The commands on this page show the
-   > eventual `pip install klayout-klink` form.
+   ```bash
+   pip install klayout-klink
+   ```
 
    klink ships its two Rust kernels as prebuilt wheels (Linux/macOS/Windows,
-   CPython 3.10–3.13) and both are runtime dependencies, so `pip install
-   klayout-klink` brings klink + both accelerators (single-stack + multilayer
-   P&R) in one shot. They are speed-only — pure-Python fallbacks exist, and
-   `pip install --no-deps` gives the pure-Python core alone. No third-party libs
-   are bundled — the silicon-photonics recipe additionally needs `gdsfactory` in
-   that **same** Python (`klayout-klink[photonics]` gets a tested one).
+   CPython 3.10–3.13) and both are runtime dependencies, so this one command
+   brings klink + both accelerators (single-stack + multilayer P&R) in one shot.
+   They are speed-only — pure-Python fallbacks exist, and `pip install --no-deps
+   klayout-klink` gives the pure-Python core alone. No third-party libs are
+   bundled — the silicon-photonics recipe additionally needs `gdsfactory` in that
+   **same** Python (`pip install "klayout-klink[photonics]"` gets a tested one).
 3. **Register the klink MCP server into your agent, then restart the agent.**
    klink ships the server; the one thing that varies is how your agent records
    it. Let klink write the exact command for you:

@@ -68,9 +68,10 @@ THIRD_PARTY_NOTICES.md  第三方声明
 python -m pip install klayout-klink
 ```
 
-`pip install klayout-klink` 会装上 klink **以及它自己的 Rust 加速内核**
-(`klink-boxmaze-rs`——是 klink 自己的代码),以 Linux / macOS / Windows 上
-CPython 3.10–3.13 的**预编译轮子**形式发布。快路径自动到位,无需额外操作。
+`pip install klayout-klink` 会装上 klink **以及它自己的两个 Rust 加速内核**
+(`klink-boxmaze-rs` + `klink-trackmaze-rs`——都是 klink 自己的代码),以
+Linux / macOS / Windows 上 CPython 3.10–3.13 的**预编译轮子**形式发布。快路径
+自动到位,无需额外操作。
 
 > **如果某平台没有预编译内核轮子**(冷门 OS / 架构 / Python),pip 会回退到**从源码
 > 编译**内核,这需要 Rust 工具链(rustup)。没有工具链、或只想要最轻安装时,用
@@ -241,25 +242,6 @@ python -m pytest -q tests/public
 ```
 
 集成测试(路由、LVS、recorder)需要 live KLayout + 已加载的 `klink_plugin`,在开发仓里执行。
-
-## 发布到 PyPI(维护者)
-
-一个 tag 同时发布两个 PyPI 项目：`klayout-klink`(纯 Python 核心)和
-`klink-boxmaze-rs`(Rust 内核,Linux/macOS/Windows × CPython 3.10–3.13 平台
-轮子)。KLayout 插件作为 salt 包单独发布,不上 PyPI。发布由 CI
-(`.github/workflows/release.yml`)完成,不手动上传——它构建全部产物、通过 16
-组合的 `pip install` 冒烟门禁,再经 PyPI Trusted Publishing 上传:
-
-```powershell
-git tag v0.1.0            # 版本号需与 klink/_meta.py 和 rust/klink_boxmaze/pyproject.toml 一致
-git push origin v0.1.0    # 触发 Release workflow
-```
-
-一次性配置:在 pypi.org 上为两个项目名各加一个 *pending publisher*(GitHub),
-指向本仓库和 `release.yml`。
-
-发布后用户用 `pip install klayout-klink` 安装——不用 clone、不用 `-e`。可编辑
-(`-e`)安装只用于开发 klink 本身。
 
 ## 常见问题
 

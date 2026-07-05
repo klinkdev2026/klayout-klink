@@ -11,17 +11,17 @@ PCell、布线、跑 LVS——用你的工艺,通过你的 agent。
    <https://www.klayout.de/build.html>),再把仓库的 `klink_plugin/` 文件夹拷进
    KLayout 的 `salt/` 目录(具体命令见 README 的"安装 KLayout 插件"一节),启动
    KLayout。插件跑一个进程内 RPC server。
-2. **装 klink**:装进一个 Python(称它*klink 解释器*)。
+2. **`pip install klayout-klink`**:装进一个 Python(称它*klink 解释器*)。
 
-   > **尚未上 PyPI**(很快就发)。在那之前,从仓库克隆里装:`pip install -e .`
-   > (硅光 recipe 用 `pip install -e ".[photonics]"`)。本页命令写的是将来上了
-   > PyPI 后的 `pip install klayout-klink` 形式。
+   ```bash
+   pip install klayout-klink
+   ```
 
    klink 的两个 Rust 内核都以预编译轮发布(Linux/macOS/Windows、CPython 3.10–3.13),
-   且都是运行时依赖,所以 `pip install klayout-klink` 一次就把 klink + 两个加速核
-   (单栈 + 多层 P&R)全装好。它们只管速度——有纯 Python 兜底,`pip install --no-deps`
-   只装纯 Python 核。不打包任何第三方库——硅光 recipe 额外需要**同一个** Python 里有
-   `gdsfactory`(`klayout-klink[photonics]` 会装一个已测版本)。
+   且都是运行时依赖,所以这一条命令就把 klink + 两个加速核(单栈 + 多层 P&R)全装好。
+   它们只管速度——有纯 Python 兜底,`pip install --no-deps klayout-klink` 只装纯 Python
+   核。不打包任何第三方库——硅光 recipe 额外需要**同一个** Python 里有 `gdsfactory`
+   (`pip install "klayout-klink[photonics]"` 会装一个已测版本)。
 3. **把 klink MCP server 注册进你的 agent,然后重启 agent。** klink 自带这个 server;
    唯一因 agent 而异的是**怎么登记**。让 klink 替你把精确命令写好:
 

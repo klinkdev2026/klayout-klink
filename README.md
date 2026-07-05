@@ -80,10 +80,10 @@ For normal use, install the published package from PyPI:
 python -m pip install klayout-klink
 ```
 
-`pip install klayout-klink` installs klink **and its Rust acceleration kernel**
-(`klink-boxmaze-rs`) — klink's own code, shipped as a pre-built wheel for
-Linux / macOS / Windows on CPython 3.10–3.13. You get the fast path
-automatically; nothing else to do.
+`pip install klayout-klink` installs klink **and its two Rust acceleration
+kernels** (`klink-boxmaze-rs` + `klink-trackmaze-rs`) — klink's own code, shipped
+as pre-built wheels for Linux / macOS / Windows on CPython 3.10–3.13. You get the
+fast path automatically; nothing else to do.
 
 > **On a platform with no pre-built kernel wheel** (an unusual OS / arch /
 > Python), pip falls back to building the kernel from source, which needs a
@@ -269,26 +269,6 @@ python -m pytest -q tests/public
 
 Integration tests (routing, LVS, recorder) need a live KLayout with the
 `klink_plugin` loaded and are exercised in the development repository.
-
-## Publishing to PyPI (maintainers)
-
-One tag publishes TWO PyPI projects: `klayout-klink` (pure-Python core) and
-`klink-boxmaze-rs` (the Rust kernel, platform wheels for Linux/macOS/Windows ×
-CPython 3.10–3.13). The KLayout plugin is shipped separately as a salt package
-and is not on PyPI. Publishing is done by CI (`.github/workflows/release.yml`),
-not by hand — it builds everything, gates on a 16-combo `pip install` smoke
-test, then uploads via PyPI Trusted Publishing:
-
-```powershell
-git tag v0.1.0            # version must match klink/_meta.py + rust/klink_boxmaze/pyproject.toml
-git push origin v0.1.0    # triggers the Release workflow
-```
-
-One-time setup: on pypi.org add a *pending publisher* (GitHub) for each of the
-two project names, pointing at this repo and `release.yml`.
-
-After publishing, users install with `pip install klayout-klink` — no clone and
-no `-e`. The editable (`-e`) install is only for developing klink itself.
 
 ## Troubleshooting
 
