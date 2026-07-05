@@ -133,6 +133,31 @@ python -m pip install -U pip
 python -m pip install -e .
 ```
 
+## Start a project
+
+`pip install` gives you the `klink` CLI. Scaffold a project into a **new empty
+folder** with `klink init`:
+
+```powershell
+klink init mychip     # creates ./mychip (pdk.py, example_template/, recipes/, agent rules, MCP config)
+cd mychip
+```
+
+`klink init` refuses a non-empty folder, so point it at a fresh name. Then open
+the folder with your agent (Claude Code / Codex) and describe what you are
+building — it fills in `pdk.py` + `custom_devices/` from the matching recipe. The
+scaffolded `example_template/` holds copy-and-adapt starter demos; run one with
+`python example_template/<name>.py`.
+
+When you upgrade klink later, refresh those bundled starters **without touching
+your own work** (`pdk.py`, `custom_devices/`, `.klink/`, `out/`, `specs/` are
+never changed):
+
+```powershell
+python -m pip install -U klayout-klink
+klink update mychip   # or run `klink update` from inside the project folder
+```
+
 ## Install KLayout Plugin
 
 Prerequisite: KLayout itself must be installed first — get the desktop build

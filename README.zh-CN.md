@@ -117,6 +117,29 @@ python -m pip install -U pip
 python -m pip install -e .
 ```
 
+## 开一个项目
+
+`pip install` 会带来 `klink` 命令行。用 `klink init` 把项目脚手架铺进一个
+**新的空文件夹**:
+
+```powershell
+klink init mychip     # 生成 ./mychip(pdk.py、example_template/、recipes/、agent 规则、MCP 配置)
+cd mychip
+```
+
+`klink init` 会拒绝非空文件夹,所以给它一个新名字。然后用你的 agent(Claude Code /
+Codex)打开这个文件夹、描述你要做什么——它会从对应 recipe 补出 `pdk.py` +
+`custom_devices/`。脚手架里的 `example_template/` 是可"抄了就改"的 starter demo;
+跑其中一个:`python example_template/<name>.py`。
+
+以后升级 klink 时,刷新这些自带 starter 而**不动你自己的东西**(`pdk.py`、
+`custom_devices/`、`.klink/`、`out/`、`specs/` 绝不改动):
+
+```powershell
+python -m pip install -U klayout-klink
+klink update mychip   # 或在项目文件夹里直接跑 `klink update`
+```
+
 ## 安装 KLayout 插件
 
 前置条件：先安装 KLayout 本体——从 <https://www.klayout.de/build.html> 下载对应
