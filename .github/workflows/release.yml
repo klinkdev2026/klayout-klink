@@ -16,12 +16,15 @@ name: Release
 #
 # BEFORE THE FIRST PUBLISH (maintainer setup, one-time):
 #   Publishing uses PyPI Trusted Publishing (OIDC) — no API token needed.
-#   Add a "pending publisher" (GitHub) once per project name (klayout-klink,
-#   klink-boxmaze-rs, klink-trackmaze-rs), owner/repo = klinkdev2026/klayout-klink,
-#   workflow = release.yml, environment blank. Pending publishers also reserve
-#   the names. Do it on BOTH indexes:
+#   Add a "pending publisher" (GitHub) ONCE PER project name — one form
+#   submission each, three total: klayout-klink, klink-boxmaze-rs,
+#   klink-trackmaze-rs — owner/repo = klinkdev2026/klayout-klink,
+#   workflow = release.yml, environment blank. Do it on BOTH indexes:
 #     - test.pypi.org  -> for the `target: testpypi` dry run below
 #     - pypi.org       -> for the real tag-triggered publish
+#   NOTE: a pending publisher only AUTHORIZES the upload; it does NOT reserve the
+#   name. The name is created + claimed on the FIRST successful publish, so
+#   publish promptly after adding the publishers to secure the three names.
 #   Recommended flow: run `target: testpypi` once, verify with
 #   `pip install -i https://test.pypi.org/simple/ klayout-klink`, THEN tag v0.1.0.
 # Only tag from a green `main` (the rust-build CI gates the kernel build per OS).
