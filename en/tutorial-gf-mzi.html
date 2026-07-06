@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Step-by-step tutorial: gdsfactory MZI takeover and drag-to-reroute - klink</title>
+  <meta name="description" content="Use klink's gdsfactory bridge to take an ordinary gdsfactory thermo-optic MZI script over into klink's interactive loop: one import_gf_component call takes over devices and ports, recovers routability for a tilted grating coupler, restyles a net to sbend, adds all_angle/dubins/electrical nets, then actually drags a component, watches the routing go stale, and reconnects it with the SAME reroute() call -- step-by-step screenshots, runnable code, and a real structured report.">
+  <link rel="stylesheet" href="../assets/styles.css">
+  <style>
+    /* Minimal figure styling, following the site's existing card/note language
+       (border var(--line), radius 8px) -- assets/styles.css has no <img>
+       usage yet, so this stays scoped to this page until it lands there. */
+    .tut-figure {
+      margin: 16px 0 26px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .tut-figure img {
+      width: 100%;
+      display: block;
+      background: #fff;
+    }
+    .tut-figure figcaption {
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      background: #f7fafb;
+    }
+    .tut-figure-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    @media (max-width: 760px) {
+      .tut-figure-row { grid-template-columns: 1fr; }
+    }
+    .stage-kicker {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 26px;
+      height: 26px;
+      padding: 0 8px;
+      border-radius: 6px;
+      background: #dff1ee;
+      color: #12654b;
+      font-weight: 800;
+      font-size: 13px;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body data-page="tutorials">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="index.html" data-nav="home">Home</a>
+        <a href="quickstart.html" data-nav="quickstart">Quickstart</a>
+        <a href="tutorials.html" data-nav="tutorials" class="active">Tutorials</a>
+        <a href="workflows.html" data-nav="workflows">Workflows</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP Reference</a>
+        <a href="examples.html" data-nav="examples">Examples</a>
+        <a href="architecture.html" data-nav="architecture">Architecture</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="Language switch">
+          <a href="../tutorial-gf-mzi.html">CN</a>
+          <a class="active" href="tutorial-gf-mzi.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Step-by-step tutorial · silicon photonics · gdsfactory bridge</div>
+        <h1>Step-by-step: gdsfactory MZI takeover and "drag → reroute"</h1>
+        <p>This walks through <code>example_template/gf_mzi_module.py</code> from the public gallery. It's the fourth tutorial, after <a href="tutorial-hallbar.html">Hall bar</a>, <a href="tutorial-ebl-wraparound.html">EBL wraparound</a>, and <a href="tutorial-neural-electrode.html">the neural electrode harness</a> -- and closes out this first batch. The first three all "draw inside KLayout"; this one flips that: you draw in gdsfactory and let klink take the result over. An ordinary gdsfactory thermo-optic MZI script gets taken over into klink's interactive loop with <strong>one</strong> <code>import_gf_component</code> call, and after that you can drag any component in the KLayout GUI and re-route -- <strong>without rebuilding</strong> -- with a single <code>photonics.reroute</code> call (or the script's <code>--reroute</code> flag) that reconnects optics and electrical metal together. This drag-then-reroute loop is the everyday iteration workflow for silicon-photonics users.</p>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#prereqs">Prerequisites</a>
+          <a href="#stage-1">① One call takes over the whole module</a>
+          <a href="#stage-2">② Harvest ports: derived from live instance positions</a>
+          <a href="#stage-3">③ Extend the net table + one route</a>
+          <a href="#stage-4">④ Simulate a drag: routing goes stale</a>
+          <a href="#stage-5">⑤ reroute: same call, reconnects</a>
+          <a href="#stage-6">⑥ Finish + exact verification</a>
+          <a href="#verify">Verify, don't just look</a>
+          <a href="#next">Next steps</a>
+        </nav>
+      </aside>
+
+      <article class="content">
+        <h2 id="prereqs" class="anchor-h">Prerequisites</h2>
+        <ul>
+          <li>KLayout running with the klink plugin loaded (RPC port defaults to <code>8765</code>).</li>
+          <li>This tutorial needs klink AND gdsfactory in the <strong>same interpreter</strong> -- klink is an RPC client, and the geometry gets built with gdsfactory in this Python process before being pushed to KLayout. Two ways to get there:
+            <ol>
+              <li>one venv, both libs (simplest): <code>pip install "klayout-klink[photonics]"</code> (= klink + a tested gdsfactory version line, <code>&gt;=9.0,&lt;10</code>);</li>
+              <li>gdsfactory already lives in another venv: <code>&lt;that-venv&gt;/python -m pip install klayout-klink</code> (klink is pure Python), then run this tutorial's script from that venv.</li>
+            </ol>
+          </li>
+          <li>Scaffold a project and enter it: <code>klink init my-chip &amp;&amp; cd my-chip</code> -- the full script is <code>python example_template/gf_mzi_module.py --port &lt;session-port&gt;</code>. In a repo checkout the equivalent is <code>python -m examples_klink.public.demos.gf_mzi_module --port &lt;session-port&gt;</code>.</li>
+        </ul>
+        <div class="note">Do not sys.path-hack the repo into a random interpreter and monkey-patch klink internals to paper over a gdsfactory version gap -- <code>gf.Port</code>'s <code>center</code> unit contract has changed across gdsfactory versions, and that shortcut's real consequence is 1000x-off geometry. <code>[photonics]</code> installs a CI-tested version; if you must use a different gdsfactory, expect to adjust the script, not klink.</div>
+
+        <h2 id="stage-1" class="anchor-h"><span class="stage-kicker">1</span>One call takes over the whole module</h2>
+        <p>The script's "user part" (<code>build_user_module()</code>) is <strong>plain gdsfactory code</strong> -- no KLayout involved yet: a 1x2 MMI splitter -> two thermal phase-shifter arms (the bottom one <code>mirror_y()</code>-ed, deliberately awkward) -> a 2x2 MMI combiner -> two laterally offset output grating couplers (GCs), plus a tilted 15-degree input GC (unreachable for a Manhattan router), a fiber-loopback GC pair at arbitrary headings, and four pads for the heaters. The script routes 6 Manhattan optical connections itself with <code>gf.routing.route_bundle</code> -- these get discarded wholesale and redrawn per-net once klink takes over; the script's own routing only exists so the gdsfactory code stands on its own.</p>
+        <p>The actual takeover is <strong>one call</strong>:</p>
+        <pre><code>from klink import KLinkClient
+from klink.domains.photonics.gf_import import import_gf_component
+from examples_klink.public.demos.gf_mzi_module import build_user_module, CELL, OPTICAL_LAYER
+
+component = build_user_module()   # plain gdsfactory, no KLayout involved yet
+with KLinkClient(port=PORT).connect() as client:
+    result = import_gf_component(
+        client, component, cell=CELL, route_layer=OPTICAL_LAYER, route=False)
+    # result: {"ok": True, "nets": [...6...], "instances": 13, "device_cells": [...5...], ...}</code></pre>
+        <p>This one call does three things at once -- per <code>docs/AGENT_TOOL_DESIGN.md</code>'s "one user intention = one call" rule: (1) batch-places <strong>13 device instances</strong> (splitter, combiner, two phase-shifter arms, 5 GCs, 4 pads -- <strong>5 unique device cells</strong>) into KLayout; (2) <strong>collapses</strong> the script's own optical routing into device-level nets (<strong>6</strong> of them), persisted to <code>.klink/specs/GF_MZI_MODULE.nets.json</code>; (3) because <code>route=False</code> was passed, this step only marks <strong>every</strong> harvested port (57 of them) so the wiring can be inspected -- it draws no routes yet. Passing <code>route=True</code> (the demo's default with no flags) would route in the same call; this tutorial splits it in two on purpose, to lay the state out for inspection.</p>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/gf-mzi/step-02-placed.png" alt="Scattered devices: two thermal phase-shifter arms, several grating couplers, several pads, with no wiring between them, only small port markers">
+          <figcaption>Stage 1 · After <code>import_gf_component(route=False)</code>: all 13 device instances are placed and every port is marked, but not a single route is drawn yet -- the script's own 6 Manhattan routes have already been discarded (the two "line-like" traces visible here are actually the MMI devices' own simplified geometry, not routes). Framed with <code>view.zoom_box(bbox_um=[-150,-290,420,230])</code>.</figcaption>
+        </figure>
+        <div class="note">The one purely cosmetic pitfall this tutorial hit: klink's batch-placed devices all sit at exactly <strong>one child-cell hierarchy level</strong>, and KLayout's LayoutView defaults to <code>max_hier_levels=1</code> -- any instance sitting right at that "hierarchy boundary" gets a "box + cell name" annotation drawn on top of its real geometry; with this many small devices packed close together those annotations overlap into unreadable text soup. No typed RPC exposes this display depth. Using <code>exec.python</code> to raise <code>view.max_hier_levels</code> to 4 (above the real hierarchy depth) plus <code>view.update_content()</code> to force a redraw makes the annotation disappear -- a pure display fix, zero geometry bytes changed: <code>port.list</code>/<code>reroute()</code> report numbers were checked identical before and after. Every screenshot below already has this fix applied.</div>
+
+        <h2 id="stage-2" class="anchor-h"><span class="stage-kicker">2</span>Harvest ports: derived from live instance positions</h2>
+        <p>The point made repeatedly in <a href="tutorials.html#photonics">the photonics section</a> and <code>docs/GDSFACTORY_PDK_LOOP.md</code> is clearest right here: <strong>ports are derived data</strong>, always recomputed from live instance positions, never a static annotation drawn once and frozen. Of all 57 ports, the tilted input grating coupler <code>gc_in</code> makes the point best -- the gdsfactory script <code>rotate(195)</code>s it to an awkward heading ("195 degrees" and "facing outward at 15 degrees" are the same fact stated two ways), completely unreachable for a Manhattan router, which is exactly why the script leaves it unrouted:</p>
+        <pre><code>ports = client.call(
+    "port.list", {"cell": "GF_MZI_MODULE", "layer": "999/99", "sort": "name"}
+).get("ports", [])
+by_name = {p["name"]: p for p in ports}
+gc_in_port = by_name["grating_coupler_elliptical1_o1"]
+# {"center_um": [-80.0, -25.0], "orientation": 15.0, "net": ""}</code></pre>
+        <p>The port center <code>[-80.0, -25.0]</code> matches exactly what the gdsfactory script's <code>gc_in.move((-80, -25))</code> placed, and the <code>15.0</code>-degree orientation is correctly transformed from the device's own <code>rotate(195)</code> -- all through <code>klink.domains.photonics.gf_import.harvest_gf_template_ports</code>, which maps the gf port template (child-local coordinates) through each instance's LIVE transform into parent coordinates, never a hardcoded angle table. This step is a pure query -- it writes no geometry.</p>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/gf-mzi/step-03-gcin-detail.png" alt="A clearly tilted purple device outline with a small pink triangular port marker extending from its side, also tilted">
+          <figcaption>Stage 2 · Detail crop of the tilted input GC (<code>gc_in</code>): the purple shape is the device's own outline after its 195-degree rotation; the pink triangle is the port marker <strong>re-harvested</strong> from the live instance, its orientation correctly following the device's rotation -- the exact precondition that lets Stage 3's <code>router="all_angle"</code> reach it. Framed with <code>view.screenshot(bbox_um=[-145,-55,-65,25], width_px=900, height_px=900)</code> (an 80x80 um square, no aspect-ratio expansion).</figcaption>
+        </figure>
+
+        <h2 id="stage-3" class="anchor-h"><span class="stage-kicker">3</span>Extend the net table + one <code>reroute()</code> wires everything</h2>
+        <p>The 6 optical nets collapsed during the takeover only cover the Manhattan part the script itself could route. The demo keeps adding to the SAME persisted net table -- three more kinds of connection -- before calling <code>reroute()</code> just <strong>once</strong>. This is the key design point of this net table: a net's <strong>style</strong> (which router, which layer) and a net's <strong>existence</strong> are two separate concerns, so every intent can be added first and routed once at the end:</p>
+        <pre><code>from klink.domains.photonics.net_intent import NetTable, RouteStyle, reroute
+
+table = NetTable.load("GF_MZI_MODULE")
+
+# 1) Restyle the offset output GC nets to sbend (smooth S-curve, not two right-angle bends)
+for entry in table.entries:
+    members = {entry["a"], entry["b"]}
+    if any(m.startswith("mmi2x2") and m.endswith(("_o3", "_o4")) for m in members):
+        entry["style"]["router"] = "sbend"
+
+# 2) Add what a Manhattan router cannot reach: all_angle for the tilted GC, dubins for the loopback pair
+table.add_pair("grating_coupler_elliptical1_o1", "mmi1x20_o1",
+               RouteStyle(router="all_angle", route_layer="1/0"))
+table.add_pair("grating_coupler_elliptical2_o1", "grating_coupler_elliptical3_o1",
+               RouteStyle(router="dubins", radius_um=40.0, route_layer="1/0"))
+
+# 3) Heater -> pad electrical nets, on the metal layer 49/0
+metal = RouteStyle(router="electrical", route_layer="49/0", separation_um=12.0)
+table.add_pair("straight_heater_metal_undercut0_l_e2", "pad0_e2", metal)
+# ...the other 3 pairs follow the same pattern (2 electrodes per arm x 2 arms, paired to pads by x order)
+table.save()
+
+report = reroute(client, cell="GF_MZI_MODULE")
+# {"ok": True, "routes": 12, "abutted": 0, "crossings": 0, "device_hits": 0}</code></pre>
+        <p>All 12 nets route in one pass: 6 imported optical nets (Manhattan, 2 of them restyled to sbend) + 1 all_angle (the tilted GC) + 1 dubins (the loopback pair) + 4 electrical (2 electrodes per arm across both arms -> 4 pads). <code>ok=true</code>, <code>crossings=0</code>, <code>device_hits=0</code> -- these numbers match exactly what's on record on the <a href="examples.html#mzi">examples page's gf_mzi_module card</a>.</p>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/gf-mzi/step-04-routed.png" alt="A fully wired MZI: splitter to both arms, both arms to the combiner, smooth curved lines from the combiner to the two offset output GCs, an all-angle connection to the tilted GC on the left, an arc between the two loopback GCs below, and right-angle traces from the heaters to their pads">
+          <figcaption>Stage 3 · After one <code>reroute()</code> call: all 12 nets are drawn -- optical on <code>1/0</code> (pink), electrical on <code>49/0</code> (same color family, running between pads and heater electrodes). This is the baseline state for the drag-then-reconnect that follows.</figcaption>
+        </figure>
+
+        <h2 id="stage-4" class="anchor-h"><span class="stage-kicker">4</span>Simulate a drag: make one route stale</h2>
+        <p>In a real workflow this step is a human dragging with the mouse in the KLayout GUI. This tutorial has to reproduce that exact action honestly with no human present, which raises a real question: is there a typed RPC that repositions an already-placed instance? After checking <code>klink_plugin/python/klink_server/methods/instance_m.py</code>, the answer is no -- that module only exposes <code>instance.insert</code> / <code>insert_many</code> / <code>insert_pcell</code> / <code>insert_pcell_many</code> / <code>query</code> / <code>delete</code>, none of which <strong>mutate</strong> an existing instance's transform. A human dragging in the GUI is, under the hood, calling exactly the <code>pya.Instance.dcplx_trans</code> setter -- there's no higher-level klink RPC to prefer here, so this is a documented, justified <code>exec.python</code> escape hatch, not a shortcut around typed RPCs:</p>
+        <pre><code># All 5 grating coupler instances share the same child cell; gc_up is picked
+# out by its live transform position, not by cell identity alone.
+top_cell = layout.cell("GF_MZI_MODULE")
+child_idx = layout.cell("GFDEV_grating_coupler_elliptical_2f9b04be").cell_index()
+for inst in top_cell.each_inst():
+    if inst.cell_index != child_idx:
+        continue
+    t = inst.dcplx_trans
+    if abs(t.disp.x - 360.0) > 0.01 or abs(t.disp.y - 30.0) > 0.01:
+        continue  # not gc_up -- skip the other 4 grating couplers
+    inst.dcplx_trans = pya.DCplxTrans(t.mag, t.angle, t.mirror,
+                                       t.disp + pya.DVector(0.0, 70.0))</code></pre>
+        <p>The component moved is <code>gc_up</code> (one of the offset output grating couplers, carrying a single net), shifted <code>70 um</code> in +y from <code>(360, 30)</code> to <code>(360, 100)</code> -- open space above it, clear of any pad or other device's obstacle box. <strong>Only the instance's position changed</strong> -- no routing geometry and no net table entry was touched: the old sbend trace is still pinned to the old coordinates, and the port marker is still sitting at the old position too. This is exactly the real state right after a drag, before any re-route.</p>
+        <div class="tut-figure-row">
+          <figure class="tut-figure">
+            <img src="../assets/tutorials/gf-mzi/step-05-dragged.png" alt="The overall layout looks almost the same as before, but an isolated grating coupler now sits in the top-right corner, and the curved trace that used to lead there is now dangling in mid-air, connected to nothing">
+            <figcaption>Stage 4a · Post-drag overview (same framing as Stage 3, for exact pixel comparison): <code>gc_up</code> now sits alone at its new position in the top-right; the old sbend trace is still parked at the original coordinates, visibly dangling in empty space -- this is what "just dragged, not yet re-routed" looks like.</figcaption>
+          </figure>
+          <figure class="tut-figure">
+            <img src="../assets/tutorials/gf-mzi/step-05-gcup-detail.png" alt="A tight crop: a pink curved line climbs from the left and ends hanging at a small yellow dot, with an isolated purple device box far off in the top-right corner, unconnected to anything">
+            <figcaption>Stage 4b · Tight crop of the same location: a wide gap now separates the trace's end (the yellow dot, the old port position) from <code>gc_up</code>'s new position -- the routing is visibly stale, no verification tool needed to see it.</figcaption>
+          </figure>
+        </div>
+
+        <h2 id="stage-5" class="anchor-h"><span class="stage-kicker">5</span><code>reroute()</code>: same call, reconnects from the new position</h2>
+        <p>This is the whole point of this tutorial: fixing the stale routing uses <strong>the exact same function</strong> that established the baseline in Stage 3 -- <code>photonics.reroute</code> (the script's <code>--reroute</code> flag maps to this). It needs only the cell name; everything else comes from the persisted net table on disk:</p>
+        <pre><code>from klink.domains.photonics.net_intent import reroute
+
+report = reroute(client, cell="GF_MZI_MODULE")
+# {"ok": True, "routes": 12, "abutted": 0, "crossings": 0, "device_hits": 0}</code></pre>
+        <p><code>reroute()</code> first re-<strong>harvests</strong> ports (the same live-position-derived process from Stage 2 -- <code>gc_up</code>'s port is now found sitting at its new coordinates), then re-routes every net per its stored <code>RouteStyle</code>. <strong>No device gets rebuilt</strong>, so your drag is preserved -- exactly the point the script's own docstring keeps making: re-running the whole script with no flag would rebuild from the gdsfactory source and snap every device back to its original spot, undoing your edit. <code>--reroute</code> is the path that keeps the edit and only re-wires.</p>
+        <div class="tut-figure-row">
+          <figure class="tut-figure">
+            <img src="../assets/tutorials/gf-mzi/step-05-dragged.png" alt="Post-drag overview: isolated grating coupler top-right, old trace dangling">
+            <figcaption>Stage 5a · Before reroute (same as Stage 4a): <code>gc_up</code> has moved, the trace is still at the old coordinates.</figcaption>
+          </figure>
+          <figure class="tut-figure">
+            <img src="../assets/tutorials/gf-mzi/step-06-rerouted.png" alt="Nearly the same overview as before, but the trace in the top right now bends upward and connects precisely to the relocated grating coupler, restoring a complete layout">
+            <figcaption>Stage 5b · After reroute (same framing): the trace bends upward and lands precisely on <code>gc_up</code>'s new position -- the component moved, and the wire followed; the other 11 nets did not shift by a single pixel.</figcaption>
+          </figure>
+        </div>
+        <div class="tut-figure-row">
+          <figure class="tut-figure">
+            <img src="../assets/tutorials/gf-mzi/step-05-gcup-detail.png" alt="Tight crop: trace end dangling, grating coupler isolated far away">
+            <figcaption>Stage 5c · Tight crop, before reroute: same as Stage 4b -- the dangling trace end and the isolated device.</figcaption>
+          </figure>
+          <figure class="tut-figure">
+            <img src="../assets/tutorials/gf-mzi/step-06-gcup-detail.png" alt="Same tight crop, the trace now bends upward, its end landing exactly on the grating coupler's port position">
+            <figcaption>Stage 5d · Tight crop, after reroute: the trace bends upward, landing exactly on <code>gc_up</code>'s new port coordinates -- same crop frame, Stage 5c to 5d is the single point this tutorial most wants to make.</figcaption>
+          </figure>
+        </div>
+
+        <h2 id="stage-6" class="anchor-h"><span class="stage-kicker">6</span>Finish: overview + exact verification of where it landed</h2>
+        <p><code>reroute()</code> was the last geometry write; this step just confirms the result -- by coordinates, not by eye:</p>
+        <pre><code>client.zoom_fit()
+overview = client.screenshot(mode="base64", width_px=1200)
+
+ports = client.call("port.list", {"cell": "GF_MZI_MODULE", "layer": "999/99", "sort": "name"})["ports"]
+gc_up_port = next(p for p in ports if p["name"] == "grating_coupler_elliptical4_o1")
+# {"center_um": [360.0, 100.0], "orientation": 180.0, ...} -- exactly the post-drag coordinates</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/gf-mzi/step-07-overview.png" alt="A complete MZI layout overview: the splitter, two thermal phase-shifter arms, the combiner, two offset output grating couplers (one now relocated), the tilted input grating coupler, the loopback grating coupler pair, and four heater pads, all fully connected by traces">
+          <figcaption>Stage 6a · Finished overview (<code>view.zoom_fit</code>): all 13 devices, 12 nets, and the post-drag <code>gc_up</code>, fully wired in one cell.</figcaption>
+        </figure>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/gf-mzi/step-06-gcup-detail-annotated.png" alt="Tight crop with an orange box and arrow pointing at the connection point between the trace end and the grating coupler">
+          <figcaption>Stage 6b · Orange highlight: <code>grating_coupler_elliptical4_o1</code> (<code>gc_up</code>'s fiber port) -- <code>port.list</code> reports its current coordinates as <code>[360.0, 100.0]</code>, exactly matching <code>(360, 30) + (0, 70) = (360, 100)</code> from the drag script, checked by coordinates, not by eye. This is also the proof that <code>reroute()</code> re-harvests from the LIVE instance position rather than replaying the script's original layout.</figcaption>
+        </figure>
+
+        <h2 id="verify" class="anchor-h">Verify, don't just look</h2>
+        <p>As the <a href="tutorials.html#verify">tutorials home page</a> says: screenshots are for people, not proof of done. Here's the actual structured result from this run:</p>
+        <pre><code>{
+  "import": {"ok": true, "nets": 6, "instances": 13, "device_cells": 5, "ports_marked": 57},
+  "baseline_reroute":  {"ok": true, "routes": 12, "abutted": 0, "crossings": 0, "device_hits": 0},
+  "drag": {"cell": "GFDEV_grating_coupler_elliptical_2f9b04be", "target": "gc_up",
+           "from_to": [360.0, 30.0, 360.0, 100.0]},
+  "post_drag_reroute": {"ok": true, "routes": 12, "abutted": 0, "crossings": 0, "device_hits": 0}
+}</code></pre>
+        <p>The two <code>reroute()</code> reports -- before and after the drag -- are <strong>identical field-for-field</strong>: <code>routes=12</code> (matching the net table's full count), <code>crossings=0</code>, <code>device_hits=0</code> -- meaning all 12 nets paired and routed successfully both times, with no crossings and no collisions with any device's obstacle box. These numbers match the <a href="examples.html#mzi">public record on the examples page</a> exactly -- <code>6 optical nets, 13/5 instances/device cells, 12 reroute routes, 0/0 crossings/device-hits</code> -- this tutorial runs the same public path, nothing special was set up on the side.</p>
+
+        <h2 id="next" class="anchor-h">Next steps</h2>
+        <p>Try this path on your own gdsfactory script: keeping or removing any <code>gf.routing.route_bundle</code> call doesn't affect the takeover -- <code>import_gf_component</code> only cares about device instances and the connections collapsed between them, not how the script itself routed. Switching to your own PDK, the layers, stub convention, and cross-sections all come from your script or <code>pdk.py</code> -- klink itself ships no process layers. If you haven't read the first three yet, read them in order: <a href="tutorial-hallbar.html">"Step-by-step: drawing a Hall bar device"</a> (the geometry-first basics), <a href="tutorial-ebl-wraparound.html">"Step-by-step: drawing an EBL wraparound nanodevice"</a> (writefield obstacle avoidance), and <a href="tutorial-neural-electrode.html">"Step-by-step: drawing a neural electrode harness"</a> (parametric generation + batch RPCs) -- this tutorial's <code>reroute()</code> loop shares the same "mark intent -> route -> verify" skeleton, just with the intent coming from gdsfactory instead of hand-written <code>port.mark</code> calls. Next up (a new batch) is the digital side: a full custom-device flow from netlist to place&amp;route to live LVS. The full commands, dependencies, and public measured numbers are on the <a href="examples.html#mzi">examples page's gdsfactory MZI takeover card</a>; the full <code>NetTable</code>/<code>RouteStyle</code>/<code>reroute</code> field reference is in this repo's <code>klink/domains/photonics/net_intent.py</code> and the <a href="mcp-reference.html#d-photonics">MCP reference · Photonics</a> section.</p>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>geometry-first: mark intent on geometry, let algorithms complete the wiring, verify with structured evidence.</p></div>
+      <div><h3>Keep reading</h3><p><a href="tutorial-hallbar.html">Step-by-step tutorial: Hall bar device</a></p><p><a href="tutorial-ebl-wraparound.html">Step-by-step tutorial: EBL wraparound nanodevice</a></p><p><a href="tutorial-neural-electrode.html">Step-by-step tutorial: neural electrode harness</a></p><p><a href="tutorials.html">Core concepts &amp; tutorials</a></p><p><a href="mcp-reference.html">MCP tool reference</a></p></div>
+      <div><h3>Install</h3><p><a href="quickstart.html">Quickstart</a></p></div>
+    </div>
+  </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

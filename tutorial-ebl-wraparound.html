@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>分步教程：EBL wraparound 纳米器件 - klink</title>
+  <meta name="description" content="用 klink 的 typed RPC 在 live KLayout 里一步步画出一个电子束光刻（EBL）wraparound 纳米器件：flake + 局部 keepout、近场接触/via、绕行走线到远端探针 pad、Port/Anchor 标记、writefield 避障规划、拼接 patch 补偿，每一步配截图和可运行代码。">
+  <link rel="stylesheet" href="assets/styles.css">
+  <style>
+    /* Minimal figure styling, following the site's existing card/note language
+       (border var(--line), radius 8px) -- assets/styles.css has no <img>
+       usage yet, so this stays scoped to this page until it lands there. */
+    .tut-figure {
+      margin: 16px 0 26px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .tut-figure img {
+      width: 100%;
+      display: block;
+      background: #fff;
+    }
+    .tut-figure figcaption {
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      background: #f7fafb;
+    }
+    .tut-figure-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    @media (max-width: 760px) {
+      .tut-figure-row { grid-template-columns: 1fr; }
+    }
+    .stage-kicker {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 26px;
+      height: 26px;
+      padding: 0 8px;
+      border-radius: 6px;
+      background: #dff1ee;
+      color: #12654b;
+      font-weight: 800;
+      font-size: 13px;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body data-page="tutorials">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="主导航">
+        <a href="index.html" data-nav="home">首页</a>
+        <a href="quickstart.html" data-nav="quickstart">快速上手</a>
+        <a href="tutorials.html" data-nav="tutorials" class="active">教程</a>
+        <a href="workflows.html" data-nav="workflows">工作流</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP 参考</a>
+        <a href="examples.html" data-nav="examples">示例</a>
+        <a href="architecture.html" data-nav="architecture">架构</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="语言切换">
+          <a class="active" href="tutorial-ebl-wraparound.html">CN</a>
+          <a href="en/tutorial-ebl-wraparound.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="打开导航" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Step-by-step tutorial · nanodevice · EBL</div>
+        <h1>分步教程：画一个 EBL wraparound 纳米器件</h1>
+        <p>对应仓库里的 <code>example_template/ebl_wraparound.py</code>。这是<a href="tutorial-hallbar.html">Hall bar 教程</a>之后的第二篇：同样是纯离线合成器件、同样用 Port/Anchor 标记意图，但这次引入了 Hall bar 教程结尾留下的悬念——<strong>写场（writefield）避障</strong>。电子束光刻按矩形写场分块曝光，拼接处会有对准误差，因此走线只能在预先规划好的"允许穿越窗口"里跨越写场边界，klink 把这个约束表达成一批 keepout 几何和 corridor Anchor，而不是靠算法临时猜。</p>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#prereqs">前置条件</a>
+          <a href="#stage-1">① cell + 层规划</a>
+          <a href="#stage-2">② flake + 局部 keepout</a>
+          <a href="#stage-3">③ 近场接触 + via</a>
+          <a href="#stage-4">④ 绕行走线到探针 pad</a>
+          <a href="#stage-5">⑤ 标记 Port + Anchor</a>
+          <a href="#stage-6">⑥ writefield 避障规划</a>
+          <a href="#stage-7">⑦ 拼接 patch + 收尾</a>
+          <a href="#verify">验证，不是截图</a>
+          <a href="#next">下一步</a>
+        </nav>
+      </aside>
+
+      <article class="content">
+        <h2 id="prereqs" class="anchor-h">前置条件</h2>
+        <ul>
+          <li>安装 klink：<code>pip install klayout-klink</code>（一条命令装好 klink 和它的 Rust 内核，无需第三方科学库）。</li>
+          <li>KLayout 正在运行，并已加载 klink 插件（RPC 端口默认 <code>8765</code>）。</li>
+          <li>建一个项目并进入：<code>klink init nano-demo &amp;&amp; cd nano-demo</code>——完整脚本就是 <code>python example_template/ebl_wraparound.py --live</code>（想留住生成的 cell 便于查看再加 <code>--keep</code>）。仓库 checkout 里等价的是 <code>python -m examples_klink.public.demos.ebl_wraparound --live --keep</code>。</li>
+        </ul>
+        <div class="note">这篇教程把 <code>build_wraparound_demo()</code> 内部一次性完成的批量调用拆成 7 个可观察的阶段。构造顺序是固定的：4 个对准十字（每个 3 个 item）→ flake 多边形 → keepout 框 + 文字 → 8 组接触（每组 7 个 item，顺序固定为 contact box / M1 走线 / via / M2 绕行走线 / 锥形过渡 / pad / 标签）→ 拼接 patch → writefield keepout 框。教程按这个真实顺序对 <code>shape_items</code> 做切片，没有引入教程专属的绘制逻辑。</div>
+
+        <h2 id="stage-1" class="anchor-h"><span class="stage-kicker">1</span>建 cell + 层规划</h2>
+        <p>这个器件的所有层都是 example-owned（<code>example_template/ebl_wraparound.py</code> 里的 <code>WRAP_LAYERS</code>），klink 本身不带任何工艺层。真实脚本用一个通用的 <code>_ensure_layers</code> helper 扫一遍 <code>shape_items</code> 里出现过的每个 <code>(layer, datatype)</code>，自动建齐——包括 klink 保留的写场 keepout 层 <code>900/0</code>（它是从 writefield 障碍框的 shape item 里自然出现的，不用单独声明）：</p>
+        <table class="data-table">
+          <thead><tr><th>层</th><th>用途</th></tr></thead>
+          <tbody>
+            <tr><td><code>30/0</code></td><td>flake（器件有源区）</td></tr>
+            <tr><td><code>10/0</code></td><td>M1（近场接触走线）</td></tr>
+            <tr><td><code>11/0</code></td><td>M2（绕行走线到远端 pad）</td></tr>
+            <tr><td><code>40/0</code></td><td>via（接触过孔）</td></tr>
+            <tr><td><code>20/0</code></td><td>探针 pad</td></tr>
+            <tr><td><code>6/0</code></td><td>标签 + 对准标记 + 局部 keepout 框</td></tr>
+            <tr><td><code>113/0</code></td><td>写场拼接 patch</td></tr>
+            <tr><td><code>900/0</code></td><td>klink 保留的写场 keepout 层（自动出现）</td></tr>
+            <tr><td><code>999/99</code></td><td>klink 保留的 Port 标记层</td></tr>
+            <tr><td><code>999/1</code></td><td>klink 保留的 Anchor 标记层</td></tr>
+          </tbody>
+        </table>
+        <pre><code>from klink import KLinkClient
+from klink.domains.nanodevice.devices.wraparound import (
+    ANCHOR_LAYER, CELL, PORT_LAYER, build_wraparound_demo,
+)
+
+def _ensure_layers(client, items):
+    seen = set()
+    for item in items:
+        key = (int(item["layer"]), int(item.get("datatype", 0)))
+        if key not in seen:
+            seen.add(key)
+            client.layer_ensure(key[0], key[1], name=f"NANODEVICE_{key[0]}_{key[1]}")
+
+with KLinkClient(port=PORT).connect() as c:
+    bundle = build_wraparound_demo(WRAP_LAYERS)
+    c.cell_create(CELL)
+    _ensure_layers(c, bundle["shape_items"])
+    c.call("port.set_layer", {"layer": PORT_LAYER})
+    c.call("anchor.set_layer", {"layer": ANCHOR_LAYER})</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/ebl/step-01-layers.png" alt="空白 cell，已建好全部图层，画布中还没有任何几何形状">
+          <figcaption>Step 1 · 层规划完成后的空 cell，画面框住整个 460×340 µm 芯片区域，此时还没有任何形状。</figcaption>
+        </figure>
+
+        <h2 id="stage-2" class="anchor-h"><span class="stage-kicker">2</span>画 flake + 局部 keepout + 对准标记</h2>
+        <p>中心是一块不规则多边形 flake（真正的器件有源区），外面套一个局部 keepout 框（<code>[-54,-44,54,44]</code>，标签 "flake + local keepout"）防止后续走线太靠近；四个角上各放一个对准十字，供 EBL 系统做全局对准：</p>
+        <pre><code>c.shape_insert_many(CELL, bundle["shape_items"][0:15])  # 12 个对准十字 item + flake 多边形 + keepout 框 + 文字</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/ebl/step-02-flake.png" alt="画面中央是一个不规则多边形 flake，外面套着一个红色 keepout 方框，四角各有一个红色对准十字">
+          <figcaption>Step 2 · flake（<code>30/0</code>）+ 局部 keepout 框（<code>6/0</code>）+ 四角对准十字（<code>6/0</code>）。</figcaption>
+        </figure>
+
+        <h2 id="stage-3" class="anchor-h"><span class="stage-kicker">3</span>画近场接触 + via</h2>
+        <p>flake 周围伸出 8 条窄 M1 走线（<code>C0</code>–<code>C7</code>），从 flake 边缘附近的接触点斜着连到各自的 via——这一段是"近场"布线，尺度和 flake 本身相当：</p>
+        <pre><code>contact_block = bundle["shape_items"][15:71]  # 8 组 x 7 个 item
+stage3 = [it for i, it in enumerate(contact_block) if i % 7 in (0, 1, 2)]  # contact box / M1 走线 / via
+c.shape_insert_many(CELL, stage3)</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/ebl/step-03-contacts-vias.png" alt="flake 周围放射状伸出八条细窄蓝色走线，每条末端连到一个小方块 via">
+          <figcaption>Step 3 · 8 条 M1 近场接触走线（<code>10/0</code>）+ 8 个 via（<code>40/0</code>），像蜘蛛一样从 keepout 框边缘辐射出去。</figcaption>
+        </figure>
+
+        <h2 id="stage-4" class="anchor-h"><span class="stage-kicker">4</span>绕行走线到探针 pad</h2>
+        <p>这才是 "wraparound" 名字的由来：每条 via 到 pad 之间不是走直线，而是先水平/垂直拉到芯片边界附近，再拐向远端探针 pad——这样可以让 8 个 pad 均匀分布在芯片四周，同时避开 flake 和相邻走线：</p>
+        <pre><code>stage4 = [it for i, it in enumerate(contact_block) if i % 7 in (3, 4, 5, 6)]  # M2 绕行走线 / 锥形过渡 / pad / 标签
+c.shape_insert_many(CELL, stage4)</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/ebl/step-04-wraparound.png" alt="八条 M2 走线从每个 via 拐出直角弯道绕到芯片外侧的大探针 pad，pad 标注 C0 到 C7">
+          <figcaption>Step 4 · 8 条 M2 绕行走线（<code>11/0</code>，含锥形过渡）+ 8 个探针 pad（<code>20/0</code>，标注 <code>C0</code>–<code>C7</code>）。</figcaption>
+        </figure>
+
+        <h2 id="stage-5" class="anchor-h"><span class="stage-kicker">5</span>标记 Port + Anchor 意图</h2>
+        <p>和 Hall bar 教程不同：这里几何是<strong>先手工画好的</strong>，Port/Anchor 是<strong>事后补标</strong>的，不是路由前的意图声明。原因是写场拼接走廊是硬约束，路径形状必须先按走廊定死，klink 的路由算法不适合在这种强约束下从零求解；Port/Anchor 在这里的作用是记录意图，供后面的验证步骤核对：</p>
+        <pre><code>for port in bundle["port_marks"]:          # 16 个：8 接触 + 8 pad
+    payload = dict(port); payload["cell"] = CELL
+    c.call("port.mark", payload)
+for anchor in bundle["anchor_marks"][0:8]:  # 8 个 via waypoint anchor
+    payload = dict(anchor); payload["cell"] = CELL
+    c.call("anchor.mark", payload)</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/ebl/step-05-ports-anchors.png" alt="每个接触点和 pad 旁边出现红色 Port 标记方框，每个 via 上出现红色 Anchor 文字标签 wrap_0 到 wrap_7">
+          <figcaption>Step 5 · 16 个 Port（8 接触 + 8 pad，<code>999/99</code>）+ 8 个 via waypoint Anchor（<code>999/1</code>，标签 <code>via (wrap_0)</code> … <code>via (wrap_7)</code>）。</figcaption>
+        </figure>
+
+        <h2 id="stage-6" class="anchor-h"><span class="stage-kicker">6</span>writefield 避障规划</h2>
+        <p>这是这篇教程和 Hall bar 教程真正不同的地方。<code>klink.domains.nanodevice.ebl.writefield.plan_writefields()</code> 把 460×340 µm 的芯片按 115 µm 写场尺寸切成 4×4=16 个写场，在每条写场边界上画出 keepout 障碍框（klink 保留层 <code>900/0</code>）——<strong>除了 11 个预先规划好的"允许穿越窗口"</strong>。只有在这些窗口对应的位置，走线才被允许跨越写场边界；窗口本身用 <code>corridor</code> 类型的 Anchor 标出来：</p>
+        <pre><code>obstacle_items = bundle["shape_items"][71 + bundle["patch_report"]["patch_count"]:]  # 17 个 900/0 keepout 框
+c.shape_insert_many(CELL, obstacle_items)
+
+for anchor in bundle["anchor_marks"][8:]:   # 11 个 corridor 窗口 anchor
+    payload = dict(anchor); payload["cell"] = CELL
+    c.call("anchor.mark", payload)</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/ebl/step-06-writefield.png" alt="芯片被黑色网格线分成四乘四的写场，网格线上有红色条纹状的 keepout 墙，墙上有若干缺口，缺口处标着 WF 开头的红色文字标签，走线正好从缺口穿过">
+          <figcaption>Step 6 · 4×4 写场网格 + 写场边界 keepout 墙（红色条纹，<code>900/0</code>）+ 11 个 corridor 窗口 Anchor（标签 <code>WF_XL_MID</code>、<code>WF_Y0_WIDE</code> 等）——已经画好的走线全部从窗口缺口穿过，不碰墙。</figcaption>
+        </figure>
+
+        <h2 id="stage-7" class="anchor-h"><span class="stage-kicker">7</span>拼接 patch + 收尾</h2>
+        <p>光刻写场拼接处存在对准误差，<code>generate_wf_patches()</code>（移植自 Klayout-Router 的 Auto-patching 宏）会在每条走线穿越写场边界的地方补一个方形 patch 做误差补偿。最后写入 cell 名标签，看整体和一处细节：</p>
+        <pre><code>patch_items = bundle["shape_items"][71:71 + bundle["patch_report"]["patch_count"]]
+c.shape_insert_many(CELL, patch_items)</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/ebl/step-07-overview.png" alt="完整的 EBL wraparound 版图全景：中央 flake、八条辐射状近场走线、八条绕行走线、写场网格、keepout 墙、走廊窗口和探针 pad">
+          <figcaption>Step 7a · 成品全景（<code>view.zoom_fit</code>）：flake + 8 接触 + 8 绕行走线 + 写场网格/keepout/走廊 + 8 pad + 12 个拼接 patch。</figcaption>
+        </figure>
+        <div class="tut-figure-row">
+          <figure class="tut-figure">
+            <img src="assets/tutorials/ebl/step-07-detail.png" alt="放大显示一条走线穿过写场竖直边界的位置，边界上有一个灰色方形拼接 patch，边界墙在窗口范围之外重新出现">
+            <figcaption>Step 7b · 局部放大：<code>C0</code> 网络的 M2 绕行走线穿过 <code>x=-115</code> 写场边界的位置，正好落在 <code>WF_XL_MID</code> 走廊窗口内；灰色方块是拼接 patch，可以看到窗口上方 keepout 墙重新出现。</figcaption>
+          </figure>
+          <figure class="tut-figure">
+            <img src="assets/tutorials/ebl/step-07-detail-annotated.png" alt="同一位置，橙色方框和箭头标出拼接 patch 的确切位置">
+            <figcaption>Step 7c · 同一位置橙色高亮：这个 7×7 µm 的灰色方块就是这条走线在写场边界上唯一的一个拼接 patch。</figcaption>
+          </figure>
+        </div>
+
+        <h2 id="verify" class="anchor-h">验证，不是截图</h2>
+        <p>和<a href="tutorials.html#verify">教程首页</a>说的一样，截图只是给人看的，不是完成依据。这次实际运行的构建报告：</p>
+        <pre><code>{
+  "shape_items": 100,
+  "ports": 16,
+  "anchors": 19,
+  "patches": 12,
+  "wf_obstacles": 17,
+  "wf_crossings": 20,
+  "wf_crossing_violations": 0,
+  "route_centerline_overlaps": 0
+}</code></pre>
+        <p><code>wf_crossings=20</code> 且 <code>wf_crossing_violations=0</code>，说明这 20 次"走线穿越写场边界"全部落在预先规划的走廊窗口内，没有一次直接撞在 keepout 墙上；<code>route_centerline_overlaps=0</code> 说明 8 条不同网络的走线中心线互不重叠、没有短路风险。这两个数字合在一起，才是"这版图对写场约束合规"的依据，而不是"看起来穿过去了"。</p>
+
+        <h2 id="next" class="anchor-h">下一步</h2>
+        <p>如果还没看过第一篇教程，建议先读<a href="tutorial-hallbar.html">《分步教程：画一个 Hall bar 器件》</a>——它是这篇教程的前置：同样的 Port/Anchor/geometry-first 流程，但走线是 klink 路由算法先标记后求解，而不是像这里手工画好再补标。把 <code>WRAP_LAYERS</code> 和 <code>build_wraparound_demo</code> 里的 <code>crossing_windows</code> 改成你自己的写场尺寸、走廊位置，重跑一遍确认 <code>wf_crossing_violations=0</code>；Port/Anchor 的完整字段说明见 <a href="mcp-reference.html#d-ports">MCP 参考</a>，更多离线器件背景见<a href="tutorials.html#offline">核心思路教程 · 离线器件教程</a>。</p>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>geometry-first：在几何上标意图，让算法补全布线，用结构化证据验证。</p></div>
+      <div><h3>继续阅读</h3><p><a href="tutorial-hallbar.html">分步教程：Hall bar 器件</a></p><p><a href="tutorials.html">核心思路与教程</a></p><p><a href="mcp-reference.html">MCP 工具参考</a></p></div>
+      <div><h3>安装</h3><p><a href="quickstart.html">快速上手</a></p></div>
+    </div>
+  </footer>
+  <script src="assets/app.js"></script>
+</body>
+</html>

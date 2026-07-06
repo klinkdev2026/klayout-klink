@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Step-by-step tutorial: Hall bar device - klink</title>
+  <meta name="description" content="Draw a Hall bar device in live KLayout with klink's typed RPCs, one stage at a time: layer plan, mesa, ohmic contacts, probe pads, Port/Anchor marking, geometry-first routing, and structured verification -- with a screenshot and runnable code for every step.">
+  <link rel="stylesheet" href="../assets/styles.css">
+  <style>
+    /* Minimal figure styling, following the site's existing card/note language
+       (border var(--line), radius 8px) -- assets/styles.css has no <img>
+       usage yet, so this stays scoped to this page until it lands there. */
+    .tut-figure {
+      margin: 16px 0 26px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .tut-figure img {
+      width: 100%;
+      display: block;
+      background: #fff;
+    }
+    .tut-figure figcaption {
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      background: #f7fafb;
+    }
+    .tut-figure-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    @media (max-width: 760px) {
+      .tut-figure-row { grid-template-columns: 1fr; }
+    }
+    .stage-kicker {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 26px;
+      height: 26px;
+      padding: 0 8px;
+      border-radius: 6px;
+      background: #dff1ee;
+      color: #12654b;
+      font-weight: 800;
+      font-size: 13px;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body data-page="tutorials">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="index.html" data-nav="home">Home</a>
+        <a href="quickstart.html" data-nav="quickstart">Quickstart</a>
+        <a href="tutorials.html" data-nav="tutorials" class="active">Tutorials</a>
+        <a href="workflows.html" data-nav="workflows">Workflows</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP Reference</a>
+        <a href="examples.html" data-nav="examples">Examples</a>
+        <a href="architecture.html" data-nav="architecture">Architecture</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="Language switch">
+          <a href="../tutorial-hallbar.html">CN</a>
+          <a class="active" href="tutorial-hallbar.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Step-by-step tutorial · nanodevice</div>
+        <h1>Step-by-step: drawing a Hall bar device</h1>
+        <p>This walks through <code>example_template/hallbar.py</code> from the public gallery. We split its drawing pass into 7 stages, each one actually drawn in a live KLayout session, screenshotted, and paired with the klink RPC calls that produced it -- the exact geometry-first loop: draw geometry, mark Port/Anchor intent, let a routing algorithm complete the wiring, then verify with structured results.</p>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#prereqs">Prerequisites</a>
+          <a href="#stage-1">① Cell + layer plan</a>
+          <a href="#stage-2">② Mesa / channel</a>
+          <a href="#stage-3">③ Ohmic contacts</a>
+          <a href="#stage-4">④ Probe pads</a>
+          <a href="#stage-5">⑤ Mark Port + Anchor</a>
+          <a href="#stage-6">⑥ Route the fanout</a>
+          <a href="#stage-7">⑦ Finish + overview/detail</a>
+          <a href="#verify">Verify, don't just look</a>
+          <a href="#next">Next steps</a>
+        </nav>
+      </aside>
+
+      <article class="content">
+        <h2 id="prereqs" class="anchor-h">Prerequisites</h2>
+        <ul>
+          <li>Install klink: <code>pip install klayout-klink</code> (one command installs klink plus its Rust kernels -- no third-party scientific libraries needed).</li>
+          <li>KLayout running with the klink plugin loaded (RPC port defaults to <code>8765</code>).</li>
+          <li>Scaffold a project and enter it: <code>klink init nano-demo &amp;&amp; cd nano-demo</code> -- the full script is <code>python example_template/hallbar.py --live --port &lt;session-port&gt;</code>. In a repo checkout the equivalent is <code>python -m examples_klink.public.demos.hallbar --live --port &lt;session-port&gt;</code>.</li>
+        </ul>
+        <div class="note">This tutorial breaks the single batched call inside <code>hallbar.py</code> into 7 observable stages so each step of what's drawn, marked, and why is visible on its own. In production you'd usually still write geometry with one <code>shape.insert_many</code> batch call (see the batch-RPC rule in this repo's CLAUDE.md) -- the staged version here is purely for teaching.</div>
+
+        <h2 id="stage-1" class="anchor-h"><span class="stage-kicker">1</span>Create the cell + plan the layers</h2>
+        <p>Start with a disposable cell, then <code>ensure</code> every layer this device needs. The Hall bar is a fully offline, self-contained device -- it carries its own layer numbers and reads no PDK:</p>
+        <table class="data-table">
+          <thead><tr><th>Layer</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td><code>1/0</code></td><td>Device layer (mesa / conducting channel)</td></tr>
+            <tr><td><code>10/0</code></td><td>Metal layer (ohmic contacts + probe pads)</td></tr>
+            <tr><td><code>6/0</code></td><td>Label layer</td></tr>
+            <tr><td><code>12/0</code></td><td>Route layer (fanout traces, written after routing)</td></tr>
+            <tr><td><code>999/99</code></td><td>klink's reserved Port marker layer</td></tr>
+            <tr><td><code>999/1</code></td><td>klink's reserved Anchor marker layer</td></tr>
+          </tbody>
+        </table>
+        <pre><code>from klink import KLinkClient
+
+with KLinkClient(port=PORT).connect() as c:
+    cell = c.cell_create("NANODEVICE_HALLBAR_TEST")["cell"]
+    device_li = c.layer_ensure(1, 0, name="NANODEVICE_DEVICE")["layer_index"]
+    metal_li  = c.layer_ensure(10, 0, name="NANODEVICE_METAL")["layer_index"]
+    label_li  = c.layer_ensure(6, 0, name="NANODEVICE_LABEL")["layer_index"]
+    route_li  = c.layer_ensure(12, 0, name="KLINK_ROUTES")["layer_index"]</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/hallbar/step-01-layers.png" alt="Empty cell with every layer already created, no geometry on the canvas yet">
+          <figcaption>Step 1 · Empty cell right after the layer plan (<code>view.zoom_box</code> framed on where the device will sit; nothing is drawn yet).</figcaption>
+        </figure>
+
+        <h2 id="stage-2" class="anchor-h"><span class="stage-kicker">2</span>Draw the mesa / channel</h2>
+        <p>The mesa is a centered rectangular conducting channel, sized from <code>HallBarSpec</code>'s <code>bar_length_um</code> / <code>bar_width_um</code> (144 × 8 µm by default). Full coordinate arithmetic lives in <code>example_template/hallbar.py</code>; here's just the write call:</p>
+        <pre><code>c.shape_insert_boxes(cell, layer_index=device_li, boxes_um=[mesa_bbox_um])</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/hallbar/step-02-mesa.png" alt="A centered, thin pink rectangle representing the Hall bar's conducting channel mesa">
+          <figcaption>Step 2 · Mesa / channel (layer <code>1/0</code>).</figcaption>
+        </figure>
+
+        <h2 id="stage-3" class="anchor-h"><span class="stage-kicker">3</span>Draw the ohmic contacts</h2>
+        <p>Three narrow contact stubs stick out from each of the mesa's top and bottom edges (<code>contact_count=6</code> in this example). Each contact's inner end sits exactly on the mesa edge -- that's where the Port will later fire from.</p>
+        <pre><code>c.shape_insert_boxes(cell, layer_index=metal_li, boxes_um=contact_bboxes_um)</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/hallbar/step-03-contacts.png" alt="Three thin metal contact stubs sticking out from each side of the mesa">
+          <figcaption>Step 3 · Six ohmic contact stubs (layer <code>10/0</code>), extending outward from the mesa edge.</figcaption>
+        </figure>
+
+        <h2 id="stage-4" class="anchor-h"><span class="stage-kicker">4</span>Draw the probe pads</h2>
+        <p>Each contact gets a matching large probe pad; pad-to-mesa distance is set by <code>pad_gap_um</code> -- this is the "array pitch vs. probe-pad pitch are different scales" case from this repo's CLAUDE.md. The gap between a contact and its pad is exactly what stage ⑥ will route.</p>
+        <pre><code>c.shape_insert_boxes(cell, layer_index=metal_li, boxes_um=pad_bboxes_um)</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/hallbar/step-04-pads.png" alt="Six large probe pads sitting outside the contact stubs, with a gap to the mesa">
+          <figcaption>Step 4 · Six probe pads (also layer <code>10/0</code>) -- still no wiring between contacts and pads at this point.</figcaption>
+        </figure>
+
+        <h2 id="stage-5" class="anchor-h"><span class="stage-kicker">5</span>Mark Port + Anchor intent</h2>
+        <p>This is the geometry-first pivot: instead of drawing the wires directly, you mark "a wire needs to leave from here" (Port) and "the wire must pass through this region" (Anchor <code>waypoint_region</code>). Each contact is an <code>electrical</code> Port carrying a real net; each pad is a <code>candidate_sink</code> Port -- a candidate endpoint with no net assigned yet:</p>
+        <pre><code>c.call("port.mark", {
+    "cell": cell, "layer": "999/99", "name": "NDHB_T0",
+    "center_um": [-36, 18], "orientation": 90, "width_um": 4,
+    "net": "ndhb_t0", "target_layer": "12/0",
+})
+c.call("anchor.mark", {
+    "cell": cell, "layer": "999/1", "id": "NDHB_T0_WAYPOINT",
+    "kind": "waypoint_region", "center_um": [-36, 32],
+    "width_um": 8, "height_um": 34, "net": "ndhb_t0",
+})</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/hallbar/step-05-ports-anchors.png" alt="Red Port/Anchor marker boxes and text labels appear next to every contact and pad, with nothing routed between them yet">
+          <figcaption>Step 5 · All 12 Ports (contacts + pads) and 6 Anchor waypoint_regions are marked; the red boxes are the markers themselves -- there's still no routed geometry.</figcaption>
+        </figure>
+
+        <h2 id="stage-6" class="anchor-h"><span class="stage-kicker">6</span>Route the fanout</h2>
+        <p>Once everything is marked, call klink's tapered-hybrid routing backend: planning happens client-side in Python (a visibility graph + Dijkstra, no rasterization), and the result is written back to layer <code>12/0</code> with one batched RPC:</p>
+        <pre><code>from klink.routing.backends.geometric.tapered_segments import (
+    route_tapered_hybrid_many, commit_tapered_hybrid_many,
+)
+
+pairs = [{"net": contact["net"], "source": contact, "target": pad,
+          "route_layer": "12/0"} for contact, pad in zip(contact_ports, pad_ports)]
+route_result = route_tapered_hybrid_many(pairs, anchors=anchor_marks)
+assert route_result["ok"]
+commit_tapered_hybrid_many(c, cell, route_result, route_layer="12/0", clear=True)</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/hallbar/step-06-routed.png" alt="Blue routed traces now fill the space between each contact and its pad, sitting inside the earlier Anchor waypoint regions">
+          <figcaption>Step 6 · All 6 fanout traces are routed, landing exactly inside the Anchor waypoint_regions marked earlier.</figcaption>
+        </figure>
+
+        <h2 id="stage-7" class="anchor-h"><span class="stage-kicker">7</span>Finish: label + overview/detail</h2>
+        <p>Last, write the device name label, then look at the whole chip and one detail:</p>
+        <pre><code>c.shape_insert_text(cell, "NDHB", layer_index=label_li,
+                     position_um=[-72, 10], size_um=3.0)</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/hallbar/step-07-overview.png" alt="The finished Hall bar layout in full: mesa, six contacts, six fanout traces, six probe pads, and the device label">
+          <figcaption>Step 7a · Finished overview (<code>view.zoom_fit</code>): mesa + 6 contacts + 6 traces + 6 pads + label.</figcaption>
+        </figure>
+        <div class="tut-figure-row">
+          <figure class="tut-figure">
+            <img src="../assets/tutorials/hallbar/step-07-detail.png" alt="Zoomed-in view of two adjacent contact/trace/pad columns, showing the red Port and Anchor marker boxes still in place">
+            <figcaption>Step 7b · Detail crop: two adjacent fanout columns. The Port (small red box) and Anchor waypoint (tall red box) markers are still visible, useful for checking they landed where intended.</figcaption>
+          </figure>
+          <figure class="tut-figure">
+            <img src="../assets/tutorials/hallbar/step-07-detail-annotated.png" alt="Further zoomed-in view of where a contact stub meets the mesa edge, with an orange highlight box and arrow pointing at the junction">
+            <figcaption>Step 7c · Zoomed further into where a contact meets the mesa edge (orange highlight): the contact metal starts right at the mesa boundary -- this is where the ohmic contact actually lands.</figcaption>
+          </figure>
+        </div>
+
+        <h2 id="verify" class="anchor-h">Verify, don't just look</h2>
+        <p>As the <a href="tutorials.html#verify">tutorials home page</a> says: screenshots are for people, not proof of done. Here's the actual routing report from this run:</p>
+        <pre><code>{
+  "ok": true,
+  "route_count": 6,
+  "obstacle_hits": 0,
+  "sibling_overlaps": 0
+}</code></pre>
+        <p><code>ok=true</code> with zero <code>obstacle_hits</code> and zero <code>sibling_overlaps</code> means all 6 fanout traces avoid each other and any obstacle layer -- that's what "routing is done" actually rests on, not "it looks connected."</p>
+
+        <h2 id="next" class="anchor-h">Next steps</h2>
+        <p>Edit the <code>HallBarSpec</code> parameters in <code>example_template/hallbar.py</code> to your own sizes (contact count, pad spacing, layer numbers), rerun with <code>--live</code>, and confirm the routing report still says <code>ok=true</code>. From there, decide whether you need writefield obstacle avoidance (EBL scenarios) or a <code>drc.run</code> pass. For more on offline devices see <a href="tutorials.html#offline">Core concepts &amp; tutorials · Offline device tutorial</a>; the full Port/Anchor field reference is in the <a href="mcp-reference.html#d-ports">MCP reference</a>.</p>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>geometry-first: mark intent on geometry, let algorithms complete the wiring, verify with structured evidence.</p></div>
+      <div><h3>Keep reading</h3><p><a href="tutorials.html">Core concepts &amp; tutorials</a></p><p><a href="mcp-reference.html">MCP tool reference</a></p></div>
+      <div><h3>Install</h3><p><a href="quickstart.html">Quickstart</a></p></div>
+    </div>
+  </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

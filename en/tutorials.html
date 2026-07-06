@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -50,6 +50,7 @@
           <a href="#model">The user-project model</a>
           <a href="#init">Create a project</a>
           <a href="#recipe">Pick a recipe</a>
+          <a href="#walkthroughs">Step-by-step tutorials</a>
           <a href="#offline">Offline device tutorial</a>
           <a href="#photonics">Silicon-photonics example</a>
           <a href="#digital">P&amp;R to LVS</a>
@@ -150,6 +151,35 @@ klink update mychip</code></pre>
           </tbody>
         </table>
         <p>A new domain is just a <code>pdk.py</code> shaped for it + a <code>custom_devices/</code> script that imports your process and calls klink explicitly. Copy the closest catalog entry and adapt — <strong>you never edit klink to add a domain</strong>.</p>
+
+        <h2 id="walkthroughs" class="anchor-h">Step-by-step tutorials</h2>
+        <p>These four tutorials break the corresponding demo script into observable stages: every step is actually drawn in a live KLayout session, screenshotted, and paired with the klink calls that produced it, then verified with a structured report -- not a screenshot. Read them in order; each one builds on concepts from the one before it.</p>
+        <div class="grid two">
+          <a class="card" href="tutorial-hallbar.html">
+            <span class="feature-kicker">Getting started · nanodevice</span>
+            <h3>Hall bar device</h3>
+            <p>The full geometry-first loop end to end: draw the mesa/contacts/pads, mark Port + Anchor intent, route the fanout with one call, verify with the routing report. A fully offline, self-contained device; needs live KLayout.</p>
+            <span class="card-more">Read the tutorial →</span>
+          </a>
+          <a class="card" href="tutorial-ebl-wraparound.html">
+            <span class="feature-kicker amber">EBL · writefield</span>
+            <h3>EBL wraparound nanodevice</h3>
+            <p>Hand-drawn routing under writefield constraints: keepout boundaries, pre-planned crossing windows (corridor Anchors), stitch-patch compensation, and marking Port/Anchor after the fact instead of before.</p>
+            <span class="card-more">Read the tutorial →</span>
+          </a>
+          <a class="card" href="tutorial-neural-electrode.html">
+            <span class="feature-kicker green">Batch RPC · parametric</span>
+            <h3>Neural electrode array harness</h3>
+            <p>Parametrized by <code>--elec-rows</code>; 394 geometry objects written with batched <code>shape.insert_many</code> calls. An almost 8x scale gap between bond pads and electrodes, closed with a corridor Anchor that forces convergence before routing all 24 nets in one pass.</p>
+            <span class="card-more">Read the tutorial →</span>
+          </a>
+          <a class="card" href="tutorial-gf-mzi.html">
+            <span class="feature-kicker magenta">Photonics · gdsfactory</span>
+            <h3>gdsfactory MZI takeover and drag-to-reroute</h3>
+            <p>One <code>import_gf_component</code> call takes over an ordinary gdsfactory thermo-optic MZI script; after dragging any component in the GUI, the same <code>photonics.reroute</code> call only re-routes -- it never rebuilds a device. Needs gdsfactory.</p>
+            <span class="card-more">Read the tutorial →</span>
+          </a>
+        </div>
 
         <h2 id="offline" class="anchor-h">Offline device tutorial</h2>
         <p>Starting from the fully offline EBL wraparound or Hall bar is safest — they show "the mechanism layer holds no process facts": the example carries sizes, layer numbers and writefield rules, then calls <code>klink.domains.nanodevice</code>.</p>

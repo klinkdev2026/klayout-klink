@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Step-by-step tutorial: EBL wraparound nanodevice - klink</title>
+  <meta name="description" content="Draw an electron-beam lithography (EBL) wraparound nanodevice in live KLayout with klink's typed RPCs, one stage at a time: flake + local keepout, near-field contacts/vias, wraparound routing to distant probe pads, Port/Anchor marking, writefield obstacle planning, and stitch-patch compensation -- with a screenshot and runnable code for every step.">
+  <link rel="stylesheet" href="../assets/styles.css">
+  <style>
+    /* Minimal figure styling, following the site's existing card/note language
+       (border var(--line), radius 8px) -- assets/styles.css has no <img>
+       usage yet, so this stays scoped to this page until it lands there. */
+    .tut-figure {
+      margin: 16px 0 26px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .tut-figure img {
+      width: 100%;
+      display: block;
+      background: #fff;
+    }
+    .tut-figure figcaption {
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      background: #f7fafb;
+    }
+    .tut-figure-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    @media (max-width: 760px) {
+      .tut-figure-row { grid-template-columns: 1fr; }
+    }
+    .stage-kicker {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 26px;
+      height: 26px;
+      padding: 0 8px;
+      border-radius: 6px;
+      background: #dff1ee;
+      color: #12654b;
+      font-weight: 800;
+      font-size: 13px;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body data-page="tutorials">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="index.html" data-nav="home">Home</a>
+        <a href="quickstart.html" data-nav="quickstart">Quickstart</a>
+        <a href="tutorials.html" data-nav="tutorials" class="active">Tutorials</a>
+        <a href="workflows.html" data-nav="workflows">Workflows</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP Reference</a>
+        <a href="examples.html" data-nav="examples">Examples</a>
+        <a href="architecture.html" data-nav="architecture">Architecture</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="Language switch">
+          <a href="../tutorial-ebl-wraparound.html">CN</a>
+          <a class="active" href="tutorial-ebl-wraparound.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Step-by-step tutorial · nanodevice · EBL</div>
+        <h1>Step-by-step: drawing an EBL wraparound nanodevice</h1>
+        <p>This walks through <code>example_template/ebl_wraparound.py</code> from the public gallery -- the second tutorial after the <a href="tutorial-hallbar.html">Hall bar tutorial</a>. It's the same offline, self-contained device pattern with Port/Anchor intent markers, but this time it picks up the thread the Hall bar tutorial left dangling: <strong>writefield obstacle avoidance</strong>. Electron-beam lithography exposes a chip one rectangular writefield at a time, and the stitch boundary between adjacent fields carries alignment error -- so wiring may only cross a writefield boundary through a pre-planned "crossing window." klink expresses that as a batch of keepout geometry plus corridor Anchors, not something a router guesses at runtime.</p>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#prereqs">Prerequisites</a>
+          <a href="#stage-1">① Cell + layer plan</a>
+          <a href="#stage-2">② Flake + local keepout</a>
+          <a href="#stage-3">③ Near-field contacts + vias</a>
+          <a href="#stage-4">④ Wraparound routing to pads</a>
+          <a href="#stage-5">⑤ Mark Port + Anchor</a>
+          <a href="#stage-6">⑥ Writefield obstacle planning</a>
+          <a href="#stage-7">⑦ Stitch patches + finish</a>
+          <a href="#verify">Verify, don't just look</a>
+          <a href="#next">Next steps</a>
+        </nav>
+      </aside>
+
+      <article class="content">
+        <h2 id="prereqs" class="anchor-h">Prerequisites</h2>
+        <ul>
+          <li>Install klink: <code>pip install klayout-klink</code> (one command installs klink plus its Rust kernels -- no third-party scientific libraries needed).</li>
+          <li>KLayout running with the klink plugin loaded (RPC port defaults to <code>8765</code>).</li>
+          <li>Scaffold a project and enter it: <code>klink init nano-demo &amp;&amp; cd nano-demo</code> -- the full script is <code>python example_template/ebl_wraparound.py --live</code> (add <code>--keep</code> to keep the generated cell around for inspection). In a repo checkout the equivalent is <code>python -m examples_klink.public.demos.ebl_wraparound --live --keep</code>.</li>
+        </ul>
+        <div class="note">This tutorial breaks the single batched call inside <code>build_wraparound_demo()</code> into 7 observable stages. Construction order is fixed: 4 corner alignment crosses (3 items each) -> the flake polygon -> the keepout box + its label -> 8 contact groups (7 items each, in this fixed order: contact box / M1 stub / via / M2 wraparound path / taper transition / pad / label) -> stitch patches -> writefield keepout boxes. The tutorial slices <code>shape_items</code> along this real order -- there is no tutorial-only drawing logic here.</div>
+
+        <h2 id="stage-1" class="anchor-h"><span class="stage-kicker">1</span>Create the cell + plan the layers</h2>
+        <p>Every layer here is example-owned (<code>WRAP_LAYERS</code> in <code>example_template/ebl_wraparound.py</code>) -- klink ships no process layers of its own. The real script uses a generic <code>_ensure_layers</code> helper that scans every <code>(layer, datatype)</code> pair that actually appears in <code>shape_items</code> and creates it, including klink's reserved writefield keepout layer <code>900/0</code> (it shows up automatically because the writefield obstacle boxes are already shape items -- no separate declaration needed):</p>
+        <table class="data-table">
+          <thead><tr><th>Layer</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td><code>30/0</code></td><td>Flake (the device's active region)</td></tr>
+            <tr><td><code>10/0</code></td><td>M1 (near-field contact wiring)</td></tr>
+            <tr><td><code>11/0</code></td><td>M2 (wraparound routing to distant pads)</td></tr>
+            <tr><td><code>40/0</code></td><td>Via (contact via)</td></tr>
+            <tr><td><code>20/0</code></td><td>Probe pads</td></tr>
+            <tr><td><code>6/0</code></td><td>Labels + alignment marks + local keepout box</td></tr>
+            <tr><td><code>113/0</code></td><td>Writefield stitch patches</td></tr>
+            <tr><td><code>900/0</code></td><td>klink's reserved writefield keepout layer (appears automatically)</td></tr>
+            <tr><td><code>999/99</code></td><td>klink's reserved Port marker layer</td></tr>
+            <tr><td><code>999/1</code></td><td>klink's reserved Anchor marker layer</td></tr>
+          </tbody>
+        </table>
+        <pre><code>from klink import KLinkClient
+from klink.domains.nanodevice.devices.wraparound import (
+    ANCHOR_LAYER, CELL, PORT_LAYER, build_wraparound_demo,
+)
+
+def _ensure_layers(client, items):
+    seen = set()
+    for item in items:
+        key = (int(item["layer"]), int(item.get("datatype", 0)))
+        if key not in seen:
+            seen.add(key)
+            client.layer_ensure(key[0], key[1], name=f"NANODEVICE_{key[0]}_{key[1]}")
+
+with KLinkClient(port=PORT).connect() as c:
+    bundle = build_wraparound_demo(WRAP_LAYERS)
+    c.cell_create(CELL)
+    _ensure_layers(c, bundle["shape_items"])
+    c.call("port.set_layer", {"layer": PORT_LAYER})
+    c.call("anchor.set_layer", {"layer": ANCHOR_LAYER})</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/ebl/step-01-layers.png" alt="Empty cell with every layer already created, no geometry on the canvas yet">
+          <figcaption>Step 1 · Empty cell right after the layer plan, framed on the full 460x340 um chip area; nothing is drawn yet.</figcaption>
+        </figure>
+
+        <h2 id="stage-2" class="anchor-h"><span class="stage-kicker">2</span>Draw the flake + local keepout + alignment marks</h2>
+        <p>An irregular polygon flake sits at the center -- the device's real active region -- wrapped in a local keepout box (<code>[-54,-44,54,44]</code>, labeled "flake + local keepout") that keeps later wiring at a safe distance. Four alignment crosses sit in the corners for the EBL system's global alignment pass:</p>
+        <pre><code>c.shape_insert_many(CELL, bundle["shape_items"][0:15])  # 12 alignment-cross items + flake polygon + keepout box + text</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/ebl/step-02-flake.png" alt="An irregular polygon flake sits at the center of the frame, wrapped in a red keepout box, with a red alignment cross in each corner">
+          <figcaption>Step 2 · Flake (<code>30/0</code>) + local keepout box (<code>6/0</code>) + four corner alignment crosses (<code>6/0</code>).</figcaption>
+        </figure>
+
+        <h2 id="stage-3" class="anchor-h"><span class="stage-kicker">3</span>Draw the near-field contacts + vias</h2>
+        <p>Eight narrow M1 stubs (<code>C0</code>-<code>C7</code>) reach out from the flake, each running diagonally from a contact point near the flake edge to its own via -- near-field wiring, at roughly the flake's own scale:</p>
+        <pre><code>contact_block = bundle["shape_items"][15:71]  # 8 groups x 7 items
+stage3 = [it for i, it in enumerate(contact_block) if i % 7 in (0, 1, 2)]  # contact box / M1 stub / via
+c.shape_insert_many(CELL, stage3)</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/ebl/step-03-contacts-vias.png" alt="Eight thin blue traces radiate outward from around the flake, each ending in a small square via">
+          <figcaption>Step 3 · 8 M1 near-field contact stubs (<code>10/0</code>) + 8 vias (<code>40/0</code>), radiating outward from the keepout box like spider legs.</figcaption>
+        </figure>
+
+        <h2 id="stage-4" class="anchor-h"><span class="stage-kicker">4</span>Route the wraparound to the probe pads</h2>
+        <p>This is where the name "wraparound" comes from: instead of a straight line from via to pad, each route first runs horizontally or vertically out toward the chip boundary, then turns toward its distant probe pad -- this spreads all 8 pads evenly around the chip perimeter while dodging the flake and neighboring routes:</p>
+        <pre><code>stage4 = [it for i, it in enumerate(contact_block) if i % 7 in (3, 4, 5, 6)]  # M2 wraparound path / taper / pad / label
+c.shape_insert_many(CELL, stage4)</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/ebl/step-04-wraparound.png" alt="Eight M2 traces turn a right angle from each via and wrap around to large probe pads outside the flake, pads labeled C0 through C7">
+          <figcaption>Step 4 · 8 M2 wraparound routes (<code>11/0</code>, with tapered transitions) + 8 probe pads (<code>20/0</code>, labeled <code>C0</code>-<code>C7</code>).</figcaption>
+        </figure>
+
+        <h2 id="stage-5" class="anchor-h"><span class="stage-kicker">5</span>Mark Port + Anchor intent</h2>
+        <p>This is where it diverges from the Hall bar tutorial: here the geometry is drawn <strong>by hand first</strong>, and Port/Anchor markers are added <strong>after the fact</strong> -- not as an upstream routing intent. Writefield stitch corridors are a hard constraint, so the path shape has to be pinned to the corridor layout before anything runs; klink's route solver isn't the right tool for that kind of constrained, pre-determined geometry. Port/Anchor here record intent for the validation pass in stage 7:</p>
+        <pre><code>for port in bundle["port_marks"]:          # 16: 8 contacts + 8 pads
+    payload = dict(port); payload["cell"] = CELL
+    c.call("port.mark", payload)
+for anchor in bundle["anchor_marks"][0:8]:  # 8 via waypoint anchors
+    payload = dict(anchor); payload["cell"] = CELL
+    c.call("anchor.mark", payload)</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/ebl/step-05-ports-anchors.png" alt="Red Port marker boxes appear next to every contact point and pad, red Anchor text labels wrap_0 through wrap_7 appear at every via">
+          <figcaption>Step 5 · 16 Ports (8 contacts + 8 pads, <code>999/99</code>) + 8 via waypoint Anchors (<code>999/1</code>, labeled <code>via (wrap_0)</code> ... <code>via (wrap_7)</code>).</figcaption>
+        </figure>
+
+        <h2 id="stage-6" class="anchor-h"><span class="stage-kicker">6</span>Plan the writefield obstacles</h2>
+        <p>This is the real difference from the Hall bar tutorial. <code>klink.domains.nanodevice.ebl.writefield.plan_writefields()</code> divides the 460x340 um chip into a 4x4 grid of 115 um writefields, and draws a keepout obstacle box (klink's reserved layer <code>900/0</code>) along every writefield boundary -- <strong>except at 11 pre-planned "crossing windows."</strong> Wiring may only cross a writefield boundary at one of these windows; the windows themselves are marked with <code>corridor</code>-kind Anchors:</p>
+        <pre><code>obstacle_items = bundle["shape_items"][71 + bundle["patch_report"]["patch_count"]:]  # 17 keepout boxes on 900/0
+c.shape_insert_many(CELL, obstacle_items)
+
+for anchor in bundle["anchor_marks"][8:]:   # 11 corridor window anchors
+    payload = dict(anchor); payload["cell"] = CELL
+    c.call("anchor.mark", payload)</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/ebl/step-06-writefield.png" alt="The chip is divided by black grid lines into a 4x4 writefield grid, with red-striped keepout walls along the grid lines; the walls have gaps labeled with WF-prefixed red text, and the routed traces pass exactly through those gaps">
+          <figcaption>Step 6 · 4x4 writefield grid + boundary keepout walls (red stripes, <code>900/0</code>) + 11 corridor-window Anchors (labeled <code>WF_XL_MID</code>, <code>WF_Y0_WIDE</code>, etc.) -- every route drawn so far passes cleanly through a window gap, never through the wall.</figcaption>
+        </figure>
+
+        <h2 id="stage-7" class="anchor-h"><span class="stage-kicker">7</span>Add stitch patches + finish</h2>
+        <p>Field-stitching in real lithography carries alignment error, so <code>generate_wf_patches()</code> (ported from Klayout-Router's Auto-patching macro) drops a square patch everywhere a drawn route crosses a writefield boundary, to compensate. Last, look at the whole chip and one detail:</p>
+        <pre><code>patch_items = bundle["shape_items"][71:71 + bundle["patch_report"]["patch_count"]]
+c.shape_insert_many(CELL, patch_items)</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/ebl/step-07-overview.png" alt="The finished EBL wraparound layout in full: central flake, eight radiating near-field traces, eight wraparound routes, the writefield grid, keepout walls, corridor windows, and the probe pads">
+          <figcaption>Step 7a · Finished overview (<code>view.zoom_fit</code>): flake + 8 contacts + 8 wraparound routes + writefield grid/keepout/corridors + 8 pads + 12 stitch patches.</figcaption>
+        </figure>
+        <div class="tut-figure-row">
+          <figure class="tut-figure">
+            <img src="../assets/tutorials/ebl/step-07-detail.png" alt="Zoomed-in view of a route crossing a vertical writefield boundary, with a gray square stitch patch at the crossing, and the boundary wall reappearing outside the window">
+            <figcaption>Step 7b · Detail crop: the <code>C0</code> net's M2 wraparound route crossing the <code>x=-115</code> writefield boundary, landing exactly inside the <code>WF_XL_MID</code> corridor window. The gray square is the stitch patch; note the keepout wall reappearing just above the window.</figcaption>
+          </figure>
+          <figure class="tut-figure">
+            <img src="../assets/tutorials/ebl/step-07-detail-annotated.png" alt="Same spot, with an orange box and arrow pointing at the exact location of the stitch patch">
+            <figcaption>Step 7c · Same spot, orange highlight: this 7x7 um gray square is this route's only stitch patch on this writefield boundary.</figcaption>
+          </figure>
+        </div>
+
+        <h2 id="verify" class="anchor-h">Verify, don't just look</h2>
+        <p>As the <a href="tutorials.html#verify">tutorials home page</a> says: screenshots are for people, not proof of done. Here's the actual build report from this run:</p>
+        <pre><code>{
+  "shape_items": 100,
+  "ports": 16,
+  "anchors": 19,
+  "patches": 12,
+  "wf_obstacles": 17,
+  "wf_crossings": 20,
+  "wf_crossing_violations": 0,
+  "route_centerline_overlaps": 0
+}</code></pre>
+        <p><code>wf_crossings=20</code> with <code>wf_crossing_violations=0</code> means all 20 boundary crossings made by the routed geometry land inside a pre-planned corridor window -- none of them punch straight through a keepout wall. <code>route_centerline_overlaps=0</code> means the 8 different nets' route centerlines never overlap, so there's no short-risk between them. Together, that's what "this layout respects the writefield constraint" actually rests on -- not "it looks like it crosses cleanly."</p>
+
+        <h2 id="next" class="anchor-h">Next steps</h2>
+        <p>If you haven't read the first tutorial yet, start with <a href="tutorial-hallbar.html">Step-by-step: drawing a Hall bar device</a> -- it's the prerequisite for this one: the same Port/Anchor/geometry-first loop, but there the wiring is mark-first, solve-second through klink's routing backend, instead of hand-drawn-first, marked-after like here. Edit <code>WRAP_LAYERS</code> and the <code>crossing_windows</code> passed into <code>build_wraparound_demo</code> to your own writefield size and corridor placement, rerun, and confirm <code>wf_crossing_violations</code> stays at 0. The full Port/Anchor field reference is in the <a href="mcp-reference.html#d-ports">MCP reference</a>; for more on offline devices see <a href="tutorials.html#offline">Core concepts &amp; tutorials · Offline device tutorial</a>.</p>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>geometry-first: mark intent on geometry, let algorithms complete the wiring, verify with structured evidence.</p></div>
+      <div><h3>Keep reading</h3><p><a href="tutorial-hallbar.html">Step-by-step tutorial: Hall bar device</a></p><p><a href="tutorials.html">Core concepts &amp; tutorials</a></p><p><a href="mcp-reference.html">MCP tool reference</a></p></div>
+      <div><h3>Install</h3><p><a href="quickstart.html">Quickstart</a></p></div>
+    </div>
+  </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

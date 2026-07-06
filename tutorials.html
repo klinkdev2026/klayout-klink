@@ -50,6 +50,7 @@
           <a href="#model">用户项目模型</a>
           <a href="#init">创建项目</a>
           <a href="#recipe">选择 recipe</a>
+          <a href="#walkthroughs">图文分步教程</a>
           <a href="#offline">离线器件教程</a>
           <a href="#photonics">硅光示例</a>
           <a href="#digital">P&amp;R 到 LVS</a>
@@ -150,6 +151,35 @@ klink update mychip</code></pre>
           </tbody>
         </table>
         <p>新领域=一个为它塑形的 <code>pdk.py</code> + 一个 <code>custom_devices/</code> 脚本（import 你的工艺、显式调 klink API）。复制最近的目录条目改写即可，<strong>你从不编辑 klink 来加领域</strong>。</p>
+
+        <h2 id="walkthroughs" class="anchor-h">图文分步教程</h2>
+        <p>下面四篇把对应示例脚本拆成可观察的阶段：每一步在 live KLayout 里真的画出来、截图，并配上产生它的 klink 调用，最后用结构化报告（而不是截图）判定完成。建议按顺序读——后一篇会复用前一篇建立的概念。</p>
+        <div class="grid two">
+          <a class="card" href="tutorial-hallbar.html">
+            <span class="feature-kicker">入门 · nanodevice</span>
+            <h3>Hall bar 器件</h3>
+            <p>geometry-first 的完整入门流程：画 mesa/接触/pad，标 Port + Anchor 意图，一次调用路由 fanout，用路由报告验证。纯离线合成器件，需 live KLayout。</p>
+            <span class="card-more">看分步教程 →</span>
+          </a>
+          <a class="card" href="tutorial-ebl-wraparound.html">
+            <span class="feature-kicker amber">EBL · writefield</span>
+            <h3>EBL wraparound 纳米器件</h3>
+            <p>写场（writefield）约束下的手工布线：keepout 边界、允许穿越窗口（corridor Anchor）、拼接 patch 补偿，以及事后补标 Port/Anchor 的场景。</p>
+            <span class="card-more">看分步教程 →</span>
+          </a>
+          <a class="card" href="tutorial-neural-electrode.html">
+            <span class="feature-kicker green">批量 RPC · 参数化</span>
+            <h3>神经电极阵列 harness</h3>
+            <p>由 <code>--elec-rows</code> 参数化生成，394 个几何对象靠 <code>shape.insert_many</code> 批量写入；键合 pad 到电极之间近 8 倍尺度落差，走廊 Anchor 强制汇聚后一次批量路由 24 个 net。</p>
+            <span class="card-more">看分步教程 →</span>
+          </a>
+          <a class="card" href="tutorial-gf-mzi.html">
+            <span class="feature-kicker magenta">硅光 · gdsfactory</span>
+            <h3>gdsfactory MZI 接管与拖动重布线</h3>
+            <p>一次 <code>import_gf_component</code> 接管普通 gdsfactory 热光 MZI 脚本；GUI 里拖动任意组件后，同一个 <code>photonics.reroute</code> 调用只重新布线、不重建器件。需要 gdsfactory。</p>
+            <span class="card-more">看分步教程 →</span>
+          </a>
+        </div>
 
         <h2 id="offline" class="anchor-h">离线器件教程</h2>
         <p>从完全离线的 EBL wraparound 或 Hall bar 开始最稳——它们展示“机制层不含工艺事实”：示例自带尺寸、层号和 writefield 规则，再调 <code>klink.domains.nanodevice</code>。</p>

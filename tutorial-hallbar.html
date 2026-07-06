@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>分步教程：Hall bar 器件 - klink</title>
+  <meta name="description" content="用 klink 的 typed RPC 在 live KLayout 里一步步画出一个 Hall bar 器件：层规划、mesa、欧姆接触、探针 pad、Port/Anchor 标记、geometry-first 路由、成品验证，每一步配截图和可运行代码。">
+  <link rel="stylesheet" href="assets/styles.css">
+  <style>
+    /* Minimal figure styling, following the site's existing card/note language
+       (border var(--line), radius 8px) -- assets/styles.css has no <img>
+       usage yet, so this stays scoped to this page until it lands there. */
+    .tut-figure {
+      margin: 16px 0 26px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .tut-figure img {
+      width: 100%;
+      display: block;
+      background: #fff;
+    }
+    .tut-figure figcaption {
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      background: #f7fafb;
+    }
+    .tut-figure-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    @media (max-width: 760px) {
+      .tut-figure-row { grid-template-columns: 1fr; }
+    }
+    .stage-kicker {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 26px;
+      height: 26px;
+      padding: 0 8px;
+      border-radius: 6px;
+      background: #dff1ee;
+      color: #12654b;
+      font-weight: 800;
+      font-size: 13px;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body data-page="tutorials">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="主导航">
+        <a href="index.html" data-nav="home">首页</a>
+        <a href="quickstart.html" data-nav="quickstart">快速上手</a>
+        <a href="tutorials.html" data-nav="tutorials" class="active">教程</a>
+        <a href="workflows.html" data-nav="workflows">工作流</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP 参考</a>
+        <a href="examples.html" data-nav="examples">示例</a>
+        <a href="architecture.html" data-nav="architecture">架构</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="语言切换">
+          <a class="active" href="tutorial-hallbar.html">CN</a>
+          <a href="en/tutorial-hallbar.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="打开导航" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Step-by-step tutorial · nanodevice</div>
+        <h1>分步教程：画一个 Hall bar 器件</h1>
+        <p>对应仓库里的 <code>example_template/hallbar.py</code>。这篇教程把它的绘制过程拆成 7 个阶段，每一步都在 live KLayout 里真的画出来、截图，并给出对应的 klink RPC 代码——展示的正是 geometry-first 的核心流程：先画几何，再标 Port/Anchor 意图，再让路由算法补全布线，最后用结构化结果验证。</p>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#prereqs">前置条件</a>
+          <a href="#stage-1">① cell + 层规划</a>
+          <a href="#stage-2">② mesa / 沟道</a>
+          <a href="#stage-3">③ 欧姆接触</a>
+          <a href="#stage-4">④ 探针 pad</a>
+          <a href="#stage-5">⑤ 标记 Port + Anchor</a>
+          <a href="#stage-6">⑥ 路由扇出</a>
+          <a href="#stage-7">⑦ 收尾 + 全景/细节</a>
+          <a href="#verify">验证，不是截图</a>
+          <a href="#next">下一步</a>
+        </nav>
+      </aside>
+
+      <article class="content">
+        <h2 id="prereqs" class="anchor-h">前置条件</h2>
+        <ul>
+          <li>安装 klink：<code>pip install klayout-klink</code>（一条命令装好 klink 和它的 Rust 内核，无需第三方科学库）。</li>
+          <li>KLayout 正在运行，并已加载 klink 插件（RPC 端口默认 <code>8765</code>）。</li>
+          <li>建一个项目并进入：<code>klink init nano-demo &amp;&amp; cd nano-demo</code>——完整脚本就是 <code>python example_template/hallbar.py --live --port &lt;session-port&gt;</code>。仓库 checkout 里等价的是 <code>python -m examples_klink.public.demos.hallbar --live --port &lt;session-port&gt;</code>。</li>
+        </ul>
+        <div class="note">这篇教程把 <code>hallbar.py</code> 内部一次性完成的批量调用拆成 7 个可观察的阶段，方便讲清每一步在画什么、标什么、为什么。生产环境里你通常还是用一次 <code>shape.insert_many</code> 批量写入（见 CLAUDE.md 的批量 RPC 铁律）——分阶段只是教学手段。</div>
+
+        <h2 id="stage-1" class="anchor-h"><span class="stage-kicker">1</span>建 cell + 层规划</h2>
+        <p>先建一个disposable cell，再把这个器件要用到的层都 <code>ensure</code> 一遍。Hall bar 是纯离线合成器件，自带层号——不读任何 PDK：</p>
+        <table class="data-table">
+          <thead><tr><th>层</th><th>用途</th></tr></thead>
+          <tbody>
+            <tr><td><code>1/0</code></td><td>器件层（mesa / 导电沟道）</td></tr>
+            <tr><td><code>10/0</code></td><td>金属层（欧姆接触 + 探针 pad）</td></tr>
+            <tr><td><code>6/0</code></td><td>标签层</td></tr>
+            <tr><td><code>12/0</code></td><td>路由层（fanout 走线，路由后写入）</td></tr>
+            <tr><td><code>999/99</code></td><td>klink 保留的 Port 标记层</td></tr>
+            <tr><td><code>999/1</code></td><td>klink 保留的 Anchor 标记层</td></tr>
+          </tbody>
+        </table>
+        <pre><code>from klink import KLinkClient
+
+with KLinkClient(port=PORT).connect() as c:
+    cell = c.cell_create("NANODEVICE_HALLBAR_TEST")["cell"]
+    device_li = c.layer_ensure(1, 0, name="NANODEVICE_DEVICE")["layer_index"]
+    metal_li  = c.layer_ensure(10, 0, name="NANODEVICE_METAL")["layer_index"]
+    label_li  = c.layer_ensure(6, 0, name="NANODEVICE_LABEL")["layer_index"]
+    route_li  = c.layer_ensure(12, 0, name="KLINK_ROUTES")["layer_index"]</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/hallbar/step-01-layers.png" alt="空白 cell，已建好全部图层，画布中还没有任何几何形状">
+          <figcaption>Step 1 · 层规划完成后的空 cell（<code>view.zoom_box</code> 定位到器件将要占据的区域，此时还没有任何形状）。</figcaption>
+        </figure>
+
+        <h2 id="stage-2" class="anchor-h"><span class="stage-kicker">2</span>画 mesa / 沟道</h2>
+        <p>mesa 是一条居中的矩形导电沟道，尺寸由 <code>HallBarSpec</code> 的 <code>bar_length_um</code> / <code>bar_width_um</code> 决定（默认 144 × 8 µm）。完整坐标算术见 <code>example_template/hallbar.py</code>；这里只展示写入调用：</p>
+        <pre><code>c.shape_insert_boxes(cell, layer_index=device_li, boxes_um=[mesa_bbox_um])</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/hallbar/step-02-mesa.png" alt="居中的细长粉色矩形，代表 Hall bar 的导电沟道 mesa">
+          <figcaption>Step 2 · mesa / 沟道（<code>1/0</code> 层）。</figcaption>
+        </figure>
+
+        <h2 id="stage-3" class="anchor-h"><span class="stage-kicker">3</span>画欧姆接触</h2>
+        <p>沿 mesa 上下边各伸出 3 个窄接触条（本例 <code>contact_count=6</code>），接触条的一端正好落在 mesa 边缘上——这是后面 Port 出线的起点。</p>
+        <pre><code>c.shape_insert_boxes(cell, layer_index=metal_li, boxes_um=contact_bboxes_um)</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/hallbar/step-03-contacts.png" alt="mesa 上下边各伸出三条细长的金属接触条">
+          <figcaption>Step 3 · 六个欧姆接触条（<code>10/0</code> 层），从 mesa 边缘向外伸出。</figcaption>
+        </figure>
+
+        <h2 id="stage-4" class="anchor-h"><span class="stage-kicker">4</span>画探针 pad</h2>
+        <p>每个接触对应一个大探针 pad，pad 中心到 mesa 的距离由 <code>pad_gap_um</code> 决定——这就是 CLAUDE.md 里说的"阵列间距 vs 探针间距不同尺度"，pad 和接触之间那段空隙正是第 ⑥ 步要路由的 fanout。</p>
+        <pre><code>c.shape_insert_boxes(cell, layer_index=metal_li, boxes_um=pad_bboxes_um)</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/hallbar/step-04-pads.png" alt="六个大探针 pad 分布在接触条外侧，与 mesa 之间留有空隙">
+          <figcaption>Step 4 · 六个探针 pad（同样在 <code>10/0</code> 层），此时与接触之间还没有连线。</figcaption>
+        </figure>
+
+        <h2 id="stage-5" class="anchor-h"><span class="stage-kicker">5</span>标记 Port + Anchor 意图</h2>
+        <p>这是 geometry-first 的关键一步：不直接画连线，而是先标注"这里要出一条线"（Port）和"线要经过这片区域"（Anchor waypoint_region）。每个接触是一个 <code>electrical</code> Port（真实网络），每个 pad 是一个 <code>candidate_sink</code> Port（还没定网络的候选终点）：</p>
+        <pre><code>c.call("port.mark", {
+    "cell": cell, "layer": "999/99", "name": "NDHB_T0",
+    "center_um": [-36, 18], "orientation": 90, "width_um": 4,
+    "net": "ndhb_t0", "target_layer": "12/0",
+})
+c.call("anchor.mark", {
+    "cell": cell, "layer": "999/1", "id": "NDHB_T0_WAYPOINT",
+    "kind": "waypoint_region", "center_um": [-36, 32],
+    "width_um": 8, "height_um": 34, "net": "ndhb_t0",
+})</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/hallbar/step-05-ports-anchors.png" alt="每个接触和 pad 旁边出现红色的 Port/Anchor 标记方框和文字标签，中间尚未布线">
+          <figcaption>Step 5 · 12 个 Port（接触 + pad）与 6 个 Anchor waypoint_region 全部标记完成；红框是标记本身，几何还没有连线。</figcaption>
+        </figure>
+
+        <h2 id="stage-6" class="anchor-h"><span class="stage-kicker">6</span>路由扇出</h2>
+        <p>标记完成后，调用 klink 的 tapered-hybrid 路由后端：规划在 Python 客户端完成（可见性图 + Dijkstra，零栅格化），结果用一次批量 RPC 写回 <code>12/0</code> 层：</p>
+        <pre><code>from klink.routing.backends.geometric.tapered_segments import (
+    route_tapered_hybrid_many, commit_tapered_hybrid_many,
+)
+
+pairs = [{"net": contact["net"], "source": contact, "target": pad,
+          "route_layer": "12/0"} for contact, pad in zip(contact_ports, pad_ports)]
+route_result = route_tapered_hybrid_many(pairs, anchors=anchor_marks)
+assert route_result["ok"]
+commit_tapered_hybrid_many(c, cell, route_result, route_layer="12/0", clear=True)</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/hallbar/step-06-routed.png" alt="接触和 pad 之间出现蓝色走线，填满了之前的 Anchor waypoint 区域">
+          <figcaption>Step 6 · 6 条 fanout 走线全部路由完成，正好落在此前标记的 Anchor waypoint_region 内。</figcaption>
+        </figure>
+
+        <h2 id="stage-7" class="anchor-h"><span class="stage-kicker">7</span>收尾：标签 + 成品全景/细节</h2>
+        <p>最后写入器件名标签，然后分别看整体和一个细节：</p>
+        <pre><code>c.shape_insert_text(cell, "NDHB", layer_index=label_li,
+                     position_um=[-72, 10], size_um=3.0)</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/hallbar/step-07-overview.png" alt="完整的 Hall bar 版图全景：mesa、六个接触、六个 fanout 走线、六个探针 pad 和器件标签">
+          <figcaption>Step 7a · 成品全景（<code>view.zoom_fit</code>）：mesa + 6 接触 + 6 走线 + 6 pad + 标签。</figcaption>
+        </figure>
+        <div class="tut-figure-row">
+          <figure class="tut-figure">
+            <img src="assets/tutorials/hallbar/step-07-detail.png" alt="放大显示两列相邻的接触/走线/pad，可见红色 Port 与 Anchor 标记方框">
+            <figcaption>Step 7b · 局部放大：相邻两列 fanout，Port（红色小方框）和 Anchor waypoint（红色长方框）都还留在图上，方便核对标记是否落位正确。</figcaption>
+          </figure>
+          <figure class="tut-figure">
+            <img src="assets/tutorials/hallbar/step-07-detail-annotated.png" alt="进一步放大到接触条与 mesa 相接的位置，橙色方框和箭头标出接触-mesa 交界处">
+            <figcaption>Step 7c · 再放大到接触条与 mesa 相接的边界（橙色高亮）：接触金属从 mesa 边缘正上方开始伸出，这是欧姆接触真正落地的位置。</figcaption>
+          </figure>
+        </div>
+
+        <h2 id="verify" class="anchor-h">验证，不是截图</h2>
+        <p>和 <a href="tutorials.html#verify">教程首页</a>说的一样，截图只是给人看的，不是完成依据。这次实际运行的路由报告：</p>
+        <pre><code>{
+  "ok": true,
+  "route_count": 6,
+  "obstacle_hits": 0,
+  "sibling_overlaps": 0
+}</code></pre>
+        <p><code>ok=true</code> 且 <code>obstacle_hits</code> / <code>sibling_overlaps</code> 均为 0，说明 6 条 fanout 走线互不重叠、没有撞到任何避障层——这才是"布线做完了"的依据，而不是"看起来连上了"。</p>
+
+        <h2 id="next" class="anchor-h">下一步</h2>
+        <p>把 <code>example_template/hallbar.py</code> 里的 <code>HallBarSpec</code> 参数改成你自己的尺寸（接触数量、pad 间距、层号），跑一遍 <code>--live</code> 确认路由报告 <code>ok=true</code>，再决定要不要接入 writefield 避障（EBL 场景）或加测 <code>drc.run</code>。更多离线器件背景见<a href="tutorials.html#offline">核心思路教程 · 离线器件教程</a>，Port/Anchor 的完整字段说明见<a href="mcp-reference.html#d-ports">MCP 参考</a>。</p>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>geometry-first：在几何上标意图，让算法补全布线，用结构化证据验证。</p></div>
+      <div><h3>继续阅读</h3><p><a href="tutorials.html">核心思路与教程</a></p><p><a href="mcp-reference.html">MCP 工具参考</a></p></div>
+      <div><h3>安装</h3><p><a href="quickstart.html">快速上手</a></p></div>
+    </div>
+  </footer>
+  <script src="assets/app.js"></script>
+</body>
+</html>

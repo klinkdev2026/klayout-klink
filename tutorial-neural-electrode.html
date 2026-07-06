@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>分步教程：神经电极阵列 harness - klink</title>
+  <meta name="description" content="用 klink 的 typed RPC 在 live KLayout 里一步步画出一个参数化神经电极探针 harness：探针本体、24 个键合 pad、由 --elec-rows 控制的电极阵列、Port/Anchor 标记、走廊约束下的批量路由，每一步配截图和可运行代码，展示批量 RPC 如何一次写入成百上千个对象。">
+  <link rel="stylesheet" href="assets/styles.css">
+  <style>
+    /* Minimal figure styling, following the site's existing card/note language
+       (border var(--line), radius 8px) -- assets/styles.css has no <img>
+       usage yet, so this stays scoped to this page until it lands there. */
+    .tut-figure {
+      margin: 16px 0 26px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .tut-figure img {
+      width: 100%;
+      display: block;
+      background: #fff;
+    }
+    .tut-figure figcaption {
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      background: #f7fafb;
+    }
+    .tut-figure-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    @media (max-width: 760px) {
+      .tut-figure-row { grid-template-columns: 1fr; }
+    }
+    .stage-kicker {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 26px;
+      height: 26px;
+      padding: 0 8px;
+      border-radius: 6px;
+      background: #dff1ee;
+      color: #12654b;
+      font-weight: 800;
+      font-size: 13px;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body data-page="tutorials">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="主导航">
+        <a href="index.html" data-nav="home">首页</a>
+        <a href="quickstart.html" data-nav="quickstart">快速上手</a>
+        <a href="tutorials.html" data-nav="tutorials" class="active">教程</a>
+        <a href="workflows.html" data-nav="workflows">工作流</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP 参考</a>
+        <a href="examples.html" data-nav="examples">示例</a>
+        <a href="architecture.html" data-nav="architecture">架构</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="语言切换">
+          <a class="active" href="tutorial-neural-electrode.html">CN</a>
+          <a href="en/tutorial-neural-electrode.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="打开导航" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Step-by-step tutorial · nanodevice · 批量 RPC</div>
+        <h1>分步教程：画一个神经电极阵列 harness</h1>
+        <p>对应仓库里的 <code>example_template/neural_electrode.py</code>。这是<a href="tutorial-hallbar.html">Hall bar</a>和<a href="tutorial-ebl-wraparound.html">EBL wraparound</a>两篇教程之后的第三篇：还是同一套 Port/Anchor/geometry-first 流程，但这次的主角是<strong>参数化生成 + 批量 RPC</strong>——一个 <code>--elec-rows</code> 参数就能改变电极阵列的行数，而全芯片近万微米跨度里，394 个几何对象只用 3 次分阶段的 <code>shape.insert_many</code> 调用写完（生产环境是 1 次）。</p>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#prereqs">前置条件</a>
+          <a href="#stage-1">① cell + 层规划</a>
+          <a href="#stage-2">② 探针本体 / 外壳</a>
+          <a href="#stage-3">③ 键合 pad + 中继过孔</a>
+          <a href="#stage-4">④ 电极阵列（参数化）</a>
+          <a href="#stage-5">⑤ 标记 Port + 走廊 Anchor</a>
+          <a href="#stage-6">⑥ 走廊约束下的批量路由</a>
+          <a href="#stage-7">⑦ 收尾 + 全景/细节</a>
+          <a href="#verify">验证，不是截图</a>
+          <a href="#next">下一步</a>
+        </nav>
+      </aside>
+
+      <article class="content">
+        <h2 id="prereqs" class="anchor-h">前置条件</h2>
+        <ul>
+          <li>安装 klink：<code>pip install klayout-klink</code>（一条命令装好 klink 和它的 Rust 内核，无需第三方科学库）。</li>
+          <li>KLayout 正在运行，并已加载 klink 插件（RPC 端口默认 <code>8765</code>）。</li>
+          <li>建一个项目并进入：<code>klink init nano-demo &amp;&amp; cd nano-demo</code>——完整脚本就是 <code>python example_template/neural_electrode.py --port &lt;session-port&gt; --elec-rows 4</code>。仓库 checkout 里等价的是 <code>python -m examples_klink.public.demos.neural_electrode --port &lt;session-port&gt; --elec-rows 4</code>。</li>
+        </ul>
+        <div class="note">这篇教程把 <code>generate_harnesspcell()</code> 内部一次性完成的批量调用拆成 7 个可观察的阶段，方便讲清每一步在画什么、标什么、为什么。生产环境里它就是<strong>一次</strong> <code>shape.insert_many</code> 批量写入全部 394 个 shape（见 CLAUDE.md 的批量 RPC 铁律）——分阶段只是教学手段，不是推荐用法。</div>
+        <div class="note">单位说明：取景和截图都直接用微米——<code>view.zoom_box(bbox_um=[x1,y1,x2,y2])</code> 和 <code>view.screenshot(bbox_um=..., width_px=..., height_px=...)</code> 的坐标参数都是 <code>bbox_um</code>，单位微米（klink 的标准用户单位）。<code>view.viewport</code> 同时返回 <code>bbox_um</code>（微米）和 <code>bbox_dbu</code>（数据库单位）两种坐标，按需取用。</div>
+
+        <h2 id="stage-1" class="anchor-h"><span class="stage-kicker">1</span>建 cell + 层规划</h2>
+        <p>这个器件的所有层都是 example-owned（<code>example_template/neural_electrode.py</code> 里硬编码的层号），klink 本身不带任何工艺层。先建 cell，把 Port/Anchor 的标记层指定一遍，再把 7 个工艺层加上 klink 保留的 3 个标记层全部 <code>ensure</code> 出来：</p>
+        <table class="data-table">
+          <thead><tr><th>层</th><th>用途</th></tr></thead>
+          <tbody>
+            <tr><td><code>1/0</code></td><td>M1（近场键合 pad 侧走线，net 1-12）</td></tr>
+            <tr><td><code>2/0</code></td><td>VIA13（M1↔M3 过孔，仅电极远端一侧用到）</td></tr>
+            <tr><td><code>3/0</code></td><td>M3（远场走线 net 13-24，以及电极自身接线）</td></tr>
+            <tr><td><code>4/0</code></td><td>VIA35（pad 过孔 + 电极过孔）</td></tr>
+            <tr><td><code>5/0</code></td><td>Pads（24 个 net 的键合 pad，72 个方块 + 电极阵列 pad）</td></tr>
+            <tr><td><code>6/0</code></td><td>Frame（探针外壳/本体轮廓）</td></tr>
+            <tr><td><code>7/0</code></td><td>Protect（保护层，与 Frame 同形状 + 居中填充）</td></tr>
+            <tr><td><code>999/99</code></td><td>klink 保留的 Port 标记层（<code>KLINK_PORTS</code>，主 Port，带标签）</td></tr>
+            <tr><td><code>999/98</code></td><td>klink 保留的辅助 Port 层（<code>KLINK_ROUTE_PORTS</code>，供路由用；键合 pad 侧的 24 个显示标签，电极侧的 24 个隐藏标签）</td></tr>
+            <tr><td><code>999/1</code></td><td>klink 保留的 Anchor 标记层（<code>KLINK_ANCHORS</code>）</td></tr>
+          </tbody>
+        </table>
+        <pre><code>from klink import KLinkClient
+
+with KLinkClient(port=PORT).connect() as c:
+    c.cell_create(cell_name)
+    c.call("port.set_layer", {"layer": "999/99"})
+    c.call("anchor.set_layer", {"layer": "999/1"})
+    for layer, name in ((1,"M1"),(2,"VIA13"),(3,"M3"),(4,"VIA35"),(5,"Pads"),(6,"Frame"),(7,"Protect")):
+        c.layer_ensure(layer, 0, name=name)
+    c.layer_ensure(999, 99, name="KLINK_PORTS")
+    c.layer_ensure(999, 98, name="KLINK_ROUTE_PORTS")
+    c.layer_ensure(999, 1, name="KLINK_ANCHORS")
+    c.show_cell(cell_name, zoom_fit=False)</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/neural/step-01-layers.png" alt="空白 cell，已建好全部图层，画布中还没有任何几何形状">
+          <figcaption>Step 1 · 层规划完成后的空 cell，画面框住整个 10600×5400 µm 的探针芯片区域，此时还没有任何形状（<code>view.zoom_box(bbox_um=...)</code> 定位）。</figcaption>
+        </figure>
+
+        <h2 id="stage-2" class="anchor-h"><span class="stage-kicker">2</span>画探针本体 / 外壳</h2>
+        <p>探针本体是一圈"匚"字形空心外壳：左边是键合 pad housing（三面墙、右侧开口），中间收窄成一段带圆角过渡的颈部（neck），再分叉成上下两条细长的臂（arm），最后在远端收拢成一个尖端三角形（tip）——这正是真实神经探针"宽底座 + 细长探针轴"的形状。<code>_frame_items()</code> 在 <code>6/0</code>（Frame）和 <code>7/0</code>（Protect）两层各画一份（<code>7/0</code> 多两块居中/尖端填充），一共 22 个 shape，一次 <code>shape_insert_many</code> 写完：</p>
+        <pre><code>frame_items = _frame_items(spec)   # 22 个 box/polygon，覆盖 6/0 + 7/0 两层
+c.shape_insert_many(cell_name, frame_items)</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/neural/step-02-frame.png" alt="左侧是一个三面墙的矩形外壳，右侧伸出一条细长的探针轴，末端收拢成尖点">
+          <figcaption>Step 2 · 探针外壳（<code>6/0</code>/<code>7/0</code>）：键合 pad housing + 颈部 + 双臂 + 尖端，22 个 shape 一次写入。全景尺度下双臂之间 130 µm 的间隙已经小到看不出分叉，这也是下面几步要反复面对的"整体 vs. 局部"尺度问题。</figcaption>
+        </figure>
+
+        <h2 id="stage-3" class="anchor-h"><span class="stage-kicker">3</span>画键合 pad + 中继过孔</h2>
+        <p>housing 内部沿 y 方向排布着 24 个 net；每个 net 在 <code>probe_pad_x_um=(-6650,-5450,-4250)</code> 三个 x 位置各留一个 <code>150×150 µm</code> 键合 pad（探针最常用的探针台/引线键合尺寸），一共 <strong>3 列 × 24 行 = 72 个 pad 方块</strong>，像接力棒一样从最外侧一路排到 <code>route_via_x_um=-3050</code>；其中一半 net（<code>net_num &lt;= pads_per_half</code>）还在这里多留了一对中继过孔——这是给 Stage 6 路由用的"落脚点"。这一步是全篇批量最大的一次写入：<strong>288 个 shape，横跨 <code>1/0</code>/<code>2/0</code>/<code>3/0</code>/<code>4/0</code>/<code>5/0</code> 五个层，一次 RPC</strong>：</p>
+        <pre><code>probe_items = items[frame_count:frame_count + probe_count]   # 288 个 shape
+c.shape_insert_many(cell_name, probe_items)</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/neural/step-03-bondpads.png" alt="housing 内部整齐排列着三列、每列 24 个键合 pad，每个 pad 都带一个小方块过孔标记">
+          <figcaption>Step 3 · 24 个 net 的键合 pad 链路（72 个 pad 方块）+ 中继过孔（<code>1/0</code>/<code>2/0</code>/<code>3/0</code>/<code>4/0</code>/<code>5/0</code>），288 个 shape 一次批量写入。要是逐个 <code>shape.insert_box</code> 单发，这一步就是 288 次独立 RPC——CLAUDE.md 的批量 RPC 铁律在这种规模的版图上不是"最佳实践"，是"能不能用"的区别。</figcaption>
+        </figure>
+
+        <h2 id="stage-4" class="anchor-h"><span class="stage-kicker">4</span>画电极阵列（由 <code>--elec-rows</code> 参数化）</h2>
+        <p>探针轴远端是真正接触组织的电极阵列：<code>elec_rows</code> 行 × 3 列，两组（<code>elec_left_x_um</code> 靠近颈部、<code>elec_right_x_um</code> 靠近尖端），每个电极 pad 只有 <code>20×21 µm</code>——这就是键合 pad（150 µm）和电极 pad（20 µm）之间接近 <strong>8 倍</strong>的间距落差，和 CLAUDE.md 里"阵列间距 vs 探针间距不同尺度"是同一个问题，只是这次两端都在同一颗芯片上。<code>--elec-rows</code> 只改一个数字，行数、pad 总数、shape 数量全部联动：</p>
+        <table class="data-table">
+          <thead><tr><th><code>--elec-rows</code></th><th>每半边键合 pad 数<br><code>pads_per_half = 3×rows</code></th><th>net 总数<br><code>net_count = 2×pads_per_half</code></th><th>电极 shape 数<br><code>rows×21</code></th></tr></thead>
+          <tbody>
+            <tr><td>2</td><td>6</td><td>12</td><td>42</td></tr>
+            <tr><td><strong>4（本篇实测）</strong></td><td><strong>12</strong></td><td><strong>24</strong></td><td><strong>84</strong></td></tr>
+            <tr><td>6</td><td>18</td><td>36</td><td>126</td></tr>
+          </tbody>
+        </table>
+        <p><code>--elec-rows 2</code>/<code>6</code> 两行是从同一份 <code>HarnessPCellSpec</code> 公式推出来的（<code>pads_per_half</code>/<code>net_count</code> 是 <code>@property</code>，电极 shape 数是 <code>elec_rows × 21</code>），本篇实际跑的是 <code>--elec-rows 4</code> 那一行，其余两行没有单独重跑截图。</p>
+        <pre><code>electrode_items = items[frame_count + probe_count:]   # elec_rows x 21 = 84 个 shape（本例 rows=4）
+c.shape_insert_many(cell_name, electrode_items)</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/neural/step-04-electrodes-overview.png" alt="全景图里键合 pad 阵列清晰可见，但电极阵列只在探针轴远端呈现为两个几乎看不清的小点">
+          <figcaption>Step 4a · 全景尺度下的电极阵列：两个浅蓝色小方块（<code>860px</code> 和 <code>1140px</code> 附近，分别是 <code>elec_left</code>/<code>elec_right</code> 两组）就是 84 个电极 shape 的全部视觉痕迹——这就是尺度落差的直观后果。</figcaption>
+        </figure>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/neural/step-04-electrodes-detail.png" alt="放大后可见 4 行 3 列共 12 个电极 pad，每个 pad 内部有一个小方块过孔标记">
+          <figcaption>Step 4b · 同一个位置，换成 <code>view.screenshot(bbox_um=[2370,-70,2510,70], width_px=1200, height_px=1200)</code> 的精确裁剪（140×140 µm，无长宽比扩展）：<code>elec_rows=4</code> 对应的 4×3=12 个电极 pad 清晰可数，每个 pad 里一个深色小方块是它自己的过孔。</figcaption>
+        </figure>
+
+        <h2 id="stage-5" class="anchor-h"><span class="stage-kicker">5</span>标记 Port + 走廊 Anchor</h2>
+        <p>几何画完后开始标意图。这里有三类 Port：24 个键合 pad Port（<code>electrical</code>，<code>access_mode="edge"</code>，可沿 pad 边滑动，一个 net 一个）、24 个中继 Port（供路由用，走辅助层 <code>999/98</code>，同样一个 net 一个）、以及电极侧的 12+24 个 Port——每个 <code>(row, col)</code> 电极位置一个主 Port（<code>elec_left</code> 侧，<code>net</code> 字段同时写 <code>bottom_net</code> 和 <code>top_net</code> 两个 net token）+ 两个辅助 Port（<code>ET{top_net}</code> 在 <code>elec_left</code> 侧、<code>EB{bottom_net}</code> 在 <code>elec_right</code> 侧，各自只认一个 net）——加起来 <strong>84 次独立 <code>port.mark</code> 调用</strong>。Port 创建走的是 PCell 实例化路径，不在 <code>shape.insert_many</code> 的批量范围内，这 84 次确实是 84 次 RPC，教程如实展示这一点，不掩盖。</p>
+        <p>Anchor 只有 2 个，但类型和前两篇都不一样：<code>kind="corridor"</code>，一条贯穿全芯片 y 方向、宽度由 <code>corridor_width_um()</code>（本例 700 µm）算出的强制走廊——所有键合 pad 侧的走线必须收拢进这条走廊才能穿过颈部，这是"允许穿越窗口"（EBL 教程的 <code>kind="corridor"</code> 窗口）在完全不同场景下的复用：不是避障，而是强制汇聚。</p>
+        <pre><code>c.call("port.mark", {
+    "cell": cell_name, "layer": "999/99", "name": "P36", "label": "n1",
+    "center_um": [x, y], "orientation": 0, "width_um": 30.0,
+    "port_type": "electrical", "net": "n1", "target_layer": "1/0",
+    "access_mode": "edge", "slide_allowed": True, "slide_edge": "x0,y0,x1,y1",
+})
+c.call("anchor.mark", {
+    "cell": cell_name, "layer": "999/1", "id": "A1_BOTTOM_M1_CORRIDOR",
+    "kind": "corridor", "center_um": [-1650.0, 0.0], "width_um": 700.0,
+    "path_points": "0,-1;0,1", "net": "n1,n2,...,n12", "priority": 1, "required": True,
+})</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/neural/step-05-ports-anchors.png" alt="键合 pad 一侧出现细小的标签文字，housing 出口处出现一条横贯的深红色走廊标记线，电极一侧因为尺度太小看不出变化">
+          <figcaption>Step 5 · 84 个 Port + 2 个走廊 Anchor 全部标记完成。键合 pad 侧的标签（<code>n1</code>…<code>n24</code>）和 housing 出口处的走廊标记线在这个尺度下可见；电极侧的 Port 只有 5 µm 宽，在全景截图里是亚像素级的——像素级对比（<code>step-04</code> 与本图逐像素 diff）证实变化只发生在 <code>x∈[118,719]</code> 键合 pad 区域，电极区域 <code>x∈[800,1200]</code> 零像素差异。要看电极侧的 Port 落位，得等 Step 7 的细节裁剪图。</figcaption>
+        </figure>
+
+        <h2 id="stage-6" class="anchor-h"><span class="stage-kicker">6</span>走廊约束下的批量路由</h2>
+        <p>标记完成后，一次调用把 24 个 net 全部路由完：先用 <code>port.list</code>/<code>anchor.list</code> 批量取回所有辅助 Port 和走廊 Anchor，按 <code>route_layer</code>（<code>1/0</code> 一组、<code>3/0</code> 一组）分组，每组各调一次 <code>route_tapered_hybrid_many</code>（客户端 Python 里做可见性图 + Dijkstra 规划，零栅格化）+ <code>commit_tapered_hybrid_many</code>（一次批量 RPC 写回）：</p>
+        <pre><code>from klink.routing.backends.geometric.tapered_segments import (
+    pair_ports_by_net_tokens, route_tapered_hybrid_many, commit_tapered_hybrid_many,
+)
+
+ports = c.call("port.list", {"cell": cell_name, "layer": "999/98"})["ports"]
+ports = [p for p in ports if str(p.get("name") or "").startswith(("R", "EB", "ET"))]
+anchors = c.call("anchor.list", {"cell": cell_name, "layer": "999/1"})["anchors"]
+pairs = pair_ports_by_net_tokens(ports)   # 按 net token 配对 source/target
+
+by_layer = {}
+for pair in pairs:
+    by_layer.setdefault(pair.get("route_layer") or "10/0", []).append(pair)
+
+for route_layer, layer_pairs in sorted(by_layer.items()):
+    planned = route_tapered_hybrid_many(
+        layer_pairs, anchors=anchors, spacing_um=8.0,
+        strategy="uniform", angle_mode="manhattan", validate_sibling_overlap=True,
+    )
+    commit_tapered_hybrid_many(c, cell_name, planned, route_layer=route_layer, clear=True)</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/neural/step-06-routed.png" alt="24 条走线从每个键合 pad 出发，先各自保持独立通道，再在 housing 出口处收拢进一条窄走廊，穿过颈部伸向探针轴远端">
+          <figcaption>Step 6 · 24 条走线全部路由完成（图下半区粉色 12 条是 net1-12，在 <code>1/0</code>；图上半区紫蓝色 12 条是 net13-24，在 <code>3/0</code>）：每条走线在键合 pad 区保持独立通道（CLAUDE.md 的"channel isolation"），到 housing 出口才收拢进 700 µm 宽的走廊 Anchor——多对一收敛，而不是各走各的直线。</figcaption>
+        </figure>
+
+        <h2 id="stage-7" class="anchor-h"><span class="stage-kicker">7</span>收尾：全景 + 电极端细节</h2>
+        <p>routing 已经是最后一次几何写入，Stage 7 只是看结果：</p>
+        <pre><code>c.zoom_fit()
+overview = c.screenshot(mode="base64", width_px=1200)
+detail = c.screenshot(mode="base64", bbox_um=[2370.0, -70.0, 2510.0, 70.0],
+                       width_px=1200, height_px=1200)</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/neural/step-07-overview.png" alt="完整的神经电极探针 harness 全景：键合 pad housing、颈部、双臂、尖端，以及从 pad 收拢到走廊再分散到电极的全部走线">
+          <figcaption>Step 7a · 成品全景（<code>view.zoom_fit</code>）：housing + 24 个 net 的键合 pad 链路 + 24 条走线 + 走廊收拢 + 探针轴 + 电极阵列，全部在一个 cell 里。</figcaption>
+        </figure>
+        <div class="tut-figure-row">
+          <figure class="tut-figure">
+            <img src="assets/tutorials/neural/step-07-detail.png" alt="同一处电极阵列细节裁剪，这次每个电极 pad 上方都多了一条走线，精确落在过孔位置">
+            <figcaption>Step 7b · 与 Step 4b 完全相同的裁剪框，路由完成后再看一次：12 条走线精确终止在各自电极 pad 的过孔上——这才是"两端尺度差 8 倍也能连上"的直接证据。</figcaption>
+          </figure>
+          <figure class="tut-figure">
+            <img src="assets/tutorials/neural/step-07-detail-annotated.png" alt="同一位置，橙色方框和箭头标出右上角一个电极 pad，一条走线正好终止在它的过孔上">
+            <figcaption>Step 7c · 橙色高亮：<code>elec_right_x_um[2]=2480, y=45</code> 处的电极 pad——它的过孔上标着 <code>EB12</code>（net <code>n12</code>，<code>1/0</code> 层），这条走线从最远的键合 pad 出发、穿过走廊、走完全部近万微米，最终精确落在这个 20×21 µm 的电极上（用 <code>port.list</code> 按坐标核对过，不是目测）。</figcaption>
+          </figure>
+        </div>
+
+        <h2 id="verify" class="anchor-h">验证，不是截图</h2>
+        <p>和<a href="tutorials.html#verify">教程首页</a>说的一样，截图只是给人看的，不是完成依据。这次实际运行（<code>--elec-rows 4</code>）的结构化结果：</p>
+        <pre><code>{
+  "shape_item_counts": {"frame": 22, "bondpads_and_vias": 288, "electrodes": 84, "total": 394},
+  "port_count_total": 84,
+  "anchor_count_total": 2,
+  "route_result": {
+    "ok": true,
+    "port_count": 48,
+    "anchor_count": 2,
+    "pair_count": 24,
+    "groups": [
+      {"route_layer": "1/0", "route_count": 12, "sibling_overlap_count": 0, "obstacle_hit_count": 0, "inserted": 84},
+      {"route_layer": "3/0", "route_count": 12, "sibling_overlap_count": 0, "obstacle_hit_count": 0, "inserted": 84}
+    ]
+  }
+}</code></pre>
+        <p><code>ok=true</code>，两个 route_layer 分组的 <code>sibling_overlap_count</code>/<code>obstacle_hit_count</code> 全部为 0，说明 24 条走线（12 在 <code>1/0</code>，12 在 <code>3/0</code>）互不重叠、没有相互撞线；<code>pair_count=24</code> 等于 <code>net_count</code>，说明每个 net 都恰好配对成功，没有落单的 Port。这三个数字合在一起，才是"这版参数化 harness 布线正确"的依据，而不是"看起来接上了"。</p>
+
+        <h2 id="next" class="anchor-h">下一步</h2>
+        <p>把 <code>--elec-rows</code> 改成你自己的行数（比如 2 或 6），对照上面 Stage 4 的公式表核实 shape 数量是否符合预期，再确认 <code>route_result.ok</code> 依旧是 <code>true</code>。如果还没看过前两篇，建议按顺序读：<a href="tutorial-hallbar.html">《分步教程：Hall bar 器件》</a>（geometry-first 入门：先标 Port/Anchor 意图再路由）和<a href="tutorial-ebl-wraparound.html">《分步教程：EBL wraparound 纳米器件》</a>（写场避障：<code>kind="corridor"</code> 窗口第一次出现）——这篇教程的走廊 Anchor 正是从那篇借来的同一个 <code>kind</code>，用在了完全不同的"强制汇聚"场景里。下一篇预告是硅光方向的 <code>gf_mzi_module</code> 教程（<code>python -m examples_klink.public.demos.gf_mzi_module --port &lt;session-port&gt;</code>），会换到 gdsfactory 桥接和 MZI 器件。Port/Anchor 的完整字段说明见 <a href="mcp-reference.html#d-ports">MCP 参考</a>，批量 RPC 的完整设计边界见仓库 CLAUDE.md 的"Use batch RPCs for generated layouts"一节。</p>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>geometry-first：在几何上标意图，让算法补全布线，用结构化证据验证。</p></div>
+      <div><h3>继续阅读</h3><p><a href="tutorial-hallbar.html">分步教程：Hall bar 器件</a></p><p><a href="tutorial-ebl-wraparound.html">分步教程：EBL wraparound 纳米器件</a></p><p><a href="tutorials.html">核心思路与教程</a></p><p><a href="mcp-reference.html">MCP 工具参考</a></p></div>
+      <div><h3>安装</h3><p><a href="quickstart.html">快速上手</a></p></div>
+    </div>
+  </footer>
+  <script src="assets/app.js"></script>
+</body>
+</html>

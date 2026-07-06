@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Step-by-step tutorial: neural electrode harness - klink</title>
+  <meta name="description" content="Draw a parametric neural electrode probe harness in live KLayout with klink's typed RPCs: probe frame, 24 bond-pad nets, an --elec-rows-controlled electrode array, Port/Anchor marking, and corridor-constrained batch routing -- with a screenshot and runnable code for every step, showing how batch RPCs write hundreds of objects in one call.">
+  <link rel="stylesheet" href="../assets/styles.css">
+  <style>
+    /* Minimal figure styling, following the site's existing card/note language
+       (border var(--line), radius 8px) -- assets/styles.css has no <img>
+       usage yet, so this stays scoped to this page until it lands there. */
+    .tut-figure {
+      margin: 16px 0 26px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .tut-figure img {
+      width: 100%;
+      display: block;
+      background: #fff;
+    }
+    .tut-figure figcaption {
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      background: #f7fafb;
+    }
+    .tut-figure-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    @media (max-width: 760px) {
+      .tut-figure-row { grid-template-columns: 1fr; }
+    }
+    .stage-kicker {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 26px;
+      height: 26px;
+      padding: 0 8px;
+      border-radius: 6px;
+      background: #dff1ee;
+      color: #12654b;
+      font-weight: 800;
+      font-size: 13px;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body data-page="tutorials">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="index.html" data-nav="home">Home</a>
+        <a href="quickstart.html" data-nav="quickstart">Quickstart</a>
+        <a href="tutorials.html" data-nav="tutorials" class="active">Tutorials</a>
+        <a href="workflows.html" data-nav="workflows">Workflows</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP Reference</a>
+        <a href="examples.html" data-nav="examples">Examples</a>
+        <a href="architecture.html" data-nav="architecture">Architecture</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="Language switch">
+          <a href="../tutorial-neural-electrode.html">CN</a>
+          <a class="active" href="tutorial-neural-electrode.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Step-by-step tutorial · nanodevice · batch RPC</div>
+        <h1>Step-by-step: drawing a neural electrode harness</h1>
+        <p>This walks through <code>example_template/neural_electrode.py</code> from the public gallery. It's the third in the series, after <a href="tutorial-hallbar.html">Hall bar</a> and <a href="tutorial-ebl-wraparound.html">EBL wraparound</a>: same Port/Anchor/geometry-first loop, but this time the headline feature is <strong>parametric generation + batch RPCs</strong> -- one <code>--elec-rows</code> argument changes the electrode array's row count, and across a chip that spans nearly ten thousand microns, 394 geometry objects get written with just 3 staged <code>shape.insert_many</code> calls (1 call in production).</p>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#prereqs">Prerequisites</a>
+          <a href="#stage-1">① Cell + layer plan</a>
+          <a href="#stage-2">② Probe body / shell</a>
+          <a href="#stage-3">③ Bond pads + relay vias</a>
+          <a href="#stage-4">④ Electrode array (parametric)</a>
+          <a href="#stage-5">⑤ Mark Port + corridor Anchor</a>
+          <a href="#stage-6">⑥ Corridor-constrained batch routing</a>
+          <a href="#stage-7">⑦ Finish + overview/detail</a>
+          <a href="#verify">Verify, don't just look</a>
+          <a href="#next">Next steps</a>
+        </nav>
+      </aside>
+
+      <article class="content">
+        <h2 id="prereqs" class="anchor-h">Prerequisites</h2>
+        <ul>
+          <li>Install klink: <code>pip install klayout-klink</code> (one command installs klink plus its Rust kernels -- no third-party scientific libraries needed).</li>
+          <li>KLayout running with the klink plugin loaded (RPC port defaults to <code>8765</code>).</li>
+          <li>Scaffold a project and enter it: <code>klink init nano-demo &amp;&amp; cd nano-demo</code> -- the full script is <code>python example_template/neural_electrode.py --port &lt;session-port&gt; --elec-rows 4</code>. In a repo checkout the equivalent is <code>python -m examples_klink.public.demos.neural_electrode --port &lt;session-port&gt; --elec-rows 4</code>.</li>
+        </ul>
+        <div class="note">This tutorial breaks the single batched call inside <code>generate_harnesspcell()</code> into 7 observable stages so each step of what's drawn, marked, and why is visible on its own. In production it's <strong>one</strong> <code>shape.insert_many</code> call writing all 394 shapes (see the batch-RPC rule in this repo's CLAUDE.md) -- the staged version here is purely for teaching, not a recommended pattern.</div>
+        <div class="note">Units: framing and screenshots both take microns directly -- <code>view.zoom_box(bbox_um=[x1,y1,x2,y2])</code> and <code>view.screenshot(bbox_um=..., width_px=..., height_px=...)</code> both take a <code>bbox_um</code> coordinate argument, in microns (klink's standard user-facing unit). <code>view.viewport</code> reports both <code>bbox_um</code> (microns) and <code>bbox_dbu</code> (database units) so you can use whichever you need.</div>
+
+        <h2 id="stage-1" class="anchor-h"><span class="stage-kicker">1</span>Create the cell + plan the layers</h2>
+        <p>Every layer this device uses is example-owned (hardcoded layer numbers in <code>example_template/neural_electrode.py</code>) -- klink itself ships no process layers. Create the cell, set the Port/Anchor marker layers once, then <code>ensure</code> the 7 process layers plus klink's 3 reserved marker layers:</p>
+        <table class="data-table">
+          <thead><tr><th>Layer</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td><code>1/0</code></td><td>M1 (near-field bond-pad-side routing, nets 1-12)</td></tr>
+            <tr><td><code>2/0</code></td><td>VIA13 (M1↔M3 via, used only on the far electrode group)</td></tr>
+            <tr><td><code>3/0</code></td><td>M3 (far-field routing, nets 13-24, plus the electrodes' own wiring)</td></tr>
+            <tr><td><code>4/0</code></td><td>VIA35 (pad vias + electrode vias)</td></tr>
+            <tr><td><code>5/0</code></td><td>Pads (24 nets' worth of bond pads, 72 squares, plus the electrode array pads)</td></tr>
+            <tr><td><code>6/0</code></td><td>Frame (probe shell / body outline)</td></tr>
+            <tr><td><code>7/0</code></td><td>Protect (protective layer, same shape as Frame plus a center fill)</td></tr>
+            <tr><td><code>999/99</code></td><td>klink's reserved Port marker layer (<code>KLINK_PORTS</code>, primary Ports, labeled)</td></tr>
+            <tr><td><code>999/98</code></td><td>klink's reserved auxiliary Port layer (<code>KLINK_ROUTE_PORTS</code>, for routing; the 24 bond-pad-side ones show labels, the 24 electrode-side ones hide them)</td></tr>
+            <tr><td><code>999/1</code></td><td>klink's reserved Anchor marker layer (<code>KLINK_ANCHORS</code>)</td></tr>
+          </tbody>
+        </table>
+        <pre><code>from klink import KLinkClient
+
+with KLinkClient(port=PORT).connect() as c:
+    c.cell_create(cell_name)
+    c.call("port.set_layer", {"layer": "999/99"})
+    c.call("anchor.set_layer", {"layer": "999/1"})
+    for layer, name in ((1,"M1"),(2,"VIA13"),(3,"M3"),(4,"VIA35"),(5,"Pads"),(6,"Frame"),(7,"Protect")):
+        c.layer_ensure(layer, 0, name=name)
+    c.layer_ensure(999, 99, name="KLINK_PORTS")
+    c.layer_ensure(999, 98, name="KLINK_ROUTE_PORTS")
+    c.layer_ensure(999, 1, name="KLINK_ANCHORS")
+    c.show_cell(cell_name, zoom_fit=False)</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/neural/step-01-layers.png" alt="Empty cell with every layer already created, no geometry on the canvas yet">
+          <figcaption>Step 1 · Empty cell right after the layer plan, framed on the full 10600x5400 um probe-chip area (<code>view.zoom_box(bbox_um=...)</code>); nothing is drawn yet.</figcaption>
+        </figure>
+
+        <h2 id="stage-2" class="anchor-h"><span class="stage-kicker">2</span>Draw the probe body / shell</h2>
+        <p>The probe body is a hollow "C"-shaped shell: on the left, a bond-pad housing (three walls, open on the right), narrowing into a rounded-transition neck, then forking into two thin upper/lower arms, and finally converging into a triangular tip far to the right -- exactly the "wide base + thin shank" shape of a real neural probe. <code>_frame_items()</code> draws one copy on layer <code>6/0</code> (Frame) and one on <code>7/0</code> (Protect) -- <code>7/0</code> gets two extra center/tip fill pieces -- 22 shapes total, written with one <code>shape_insert_many</code> call:</p>
+        <pre><code>frame_items = _frame_items(spec)   # 22 box/polygon items, covering layers 6/0 + 7/0
+c.shape_insert_many(cell_name, frame_items)</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/neural/step-02-frame.png" alt="A three-walled rectangular shell on the left, with a thin shank extending to the right and converging to a point">
+          <figcaption>Step 2 · Probe shell (<code>6/0</code>/<code>7/0</code>): bond-pad housing + neck + twin arms + tip, 22 shapes written in one call. At full-chip zoom the 130 um gap between the two arms is already too small to see as a fork -- the first taste of the "whole chip vs. local detail" scale problem the rest of this tutorial keeps coming back to.</figcaption>
+        </figure>
+
+        <h2 id="stage-3" class="anchor-h"><span class="stage-kicker">3</span>Draw the bond pads + relay vias</h2>
+        <p>Inside the housing, 24 nets are laid out along y; each net gets a <code>150x150 um</code> bond pad (a typical probe-station/wire-bond pad size) at each of three x positions -- <code>probe_pad_x_um=(-6650,-5450,-4250)</code> -- for <strong>3 columns x 24 rows = 72 pad squares</strong> total, relayed like a baton from the outermost position all the way to <code>route_via_x_um=-3050</code>. Half the nets (<code>net_num &lt;= pads_per_half</code>) also get an extra pair of relay vias there -- the landing spot Stage 6's routing will use. This is the biggest single write in the whole tutorial: <strong>288 shapes across 5 layers (<code>1/0</code>/<code>2/0</code>/<code>3/0</code>/<code>4/0</code>/<code>5/0</code>) in one RPC</strong>:</p>
+        <pre><code>probe_items = items[frame_count:frame_count + probe_count]   # 288 shapes
+c.shape_insert_many(cell_name, probe_items)</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/neural/step-03-bondpads.png" alt="Three neat columns of 24 bond pads each fill the housing, each pad carrying a small via marker">
+          <figcaption>Step 3 · The bond-pad chain for 24 nets (72 pad squares) + relay vias (<code>1/0</code>/<code>2/0</code>/<code>3/0</code>/<code>4/0</code>/<code>5/0</code>), 288 shapes in one batched write. Fired one <code>shape.insert_box</code> at a time, this step alone would be 288 separate RPCs -- at this scale, CLAUDE.md's batch-RPC rule isn't "best practice," it's the difference between usable and not.</figcaption>
+        </figure>
+
+        <h2 id="stage-4" class="anchor-h"><span class="stage-kicker">4</span>Draw the electrode array (parametrized by <code>--elec-rows</code>)</h2>
+        <p>At the far end of the shank sits the actual tissue-contacting electrode array: <code>elec_rows</code> rows x 3 columns, in two groups (<code>elec_left_x_um</code> near the neck, <code>elec_right_x_um</code> near the tip), each electrode pad only <code>20x21 um</code> -- roughly an <strong>8x</strong> size gap from the 150 um bond pads, the exact same "array pitch vs. probe-pad pitch, different scales" issue from this repo's CLAUDE.md, except both ends now live on one chip. Changing <code>--elec-rows</code> touches one number, and the row count, pad total, and shape count all move together:</p>
+        <table class="data-table">
+          <thead><tr><th><code>--elec-rows</code></th><th>Bond pads per half<br><code>pads_per_half = 3×rows</code></th><th>Total nets<br><code>net_count = 2×pads_per_half</code></th><th>Electrode shape count<br><code>rows×21</code></th></tr></thead>
+          <tbody>
+            <tr><td>2</td><td>6</td><td>12</td><td>42</td></tr>
+            <tr><td><strong>4 (measured in this run)</strong></td><td><strong>12</strong></td><td><strong>24</strong></td><td><strong>84</strong></td></tr>
+            <tr><td>6</td><td>18</td><td>36</td><td>126</td></tr>
+          </tbody>
+        </table>
+        <p>The <code>--elec-rows 2</code>/<code>6</code> rows are derived from the same <code>HarnessPCellSpec</code> formulas (<code>pads_per_half</code>/<code>net_count</code> are <code>@property</code>s; the electrode shape count is <code>elec_rows x 21</code>) -- this tutorial actually ran <code>--elec-rows 4</code>, the other two rows were not independently re-run or screenshotted.</p>
+        <pre><code>electrode_items = items[frame_count + probe_count:]   # elec_rows x 21 = 84 shapes (rows=4 here)
+c.shape_insert_many(cell_name, electrode_items)</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/neural/step-04-electrodes-overview.png" alt="In the full-chip overview the bond-pad array is clearly visible, but the electrode array only appears as two barely-visible dots at the far end of the shank">
+          <figcaption>Step 4a · The electrode array at full-chip scale: two tiny light-blue squares (around <code>860px</code> and <code>1140px</code>, the <code>elec_left</code> and <code>elec_right</code> groups) are the entire visible trace of 84 electrode shapes -- the direct consequence of the scale gap.</figcaption>
+        </figure>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/neural/step-04-electrodes-detail.png" alt="Zoomed in, a clear 4-row by 3-column grid of 12 electrode pads appears, each with a small via marker inside">
+          <figcaption>Step 4b · Same location, this time with <code>view.screenshot(bbox_um=[2370,-70,2510,70], width_px=1200, height_px=1200)</code>'s exact clip (140x140 um, no aspect-ratio expansion): the 4x3=12 electrode pads for <code>elec_rows=4</code> are now clearly countable, each pad's darker inner square its own via.</figcaption>
+        </figure>
+
+        <h2 id="stage-5" class="anchor-h"><span class="stage-kicker">5</span>Mark Port + corridor Anchor</h2>
+        <p>With geometry drawn, intent-marking begins. There are three kinds of Port here: 24 bond-pad Ports (<code>electrical</code>, <code>access_mode="edge"</code>, free to slide along the pad edge, one per net), 24 relay Ports (for routing, on auxiliary layer <code>999/98</code>, also one per net), and 12+24 Ports on the electrode side -- one primary Port per <code>(row, col)</code> electrode site (on the <code>elec_left</code> side, its <code>net</code> field carries both the <code>bottom_net</code> and <code>top_net</code> tokens) plus two auxiliary Ports (<code>ET{top_net}</code> on the <code>elec_left</code> side, <code>EB{bottom_net}</code> on the <code>elec_right</code> side, each carrying just one net) -- <strong>84 separate <code>port.mark</code> calls</strong> in total. Port creation goes through PCell instantiation, which is outside <code>shape.insert_many</code>'s batch surface -- these really are 84 individual RPCs, and this tutorial shows that plainly instead of glossing over it.</p>
+        <p>There are only 2 Anchors, but a different kind from either earlier tutorial: <code>kind="corridor"</code>, a mandatory lane running the full chip height, its width computed by <code>corridor_width_um()</code> (700 um here) -- every bond-pad-side trace must converge into this corridor before it can cross the neck. This reuses the same <code>kind="corridor"</code> concept from the EBL tutorial's "allowed crossing window," but for a completely different purpose: not obstacle avoidance, but forced convergence.</p>
+        <pre><code>c.call("port.mark", {
+    "cell": cell_name, "layer": "999/99", "name": "P36", "label": "n1",
+    "center_um": [x, y], "orientation": 0, "width_um": 30.0,
+    "port_type": "electrical", "net": "n1", "target_layer": "1/0",
+    "access_mode": "edge", "slide_allowed": True, "slide_edge": "x0,y0,x1,y1",
+})
+c.call("anchor.mark", {
+    "cell": cell_name, "layer": "999/1", "id": "A1_BOTTOM_M1_CORRIDOR",
+    "kind": "corridor", "center_um": [-1650.0, 0.0], "width_um": 700.0,
+    "path_points": "0,-1;0,1", "net": "n1,n2,...,n12", "priority": 1, "required": True,
+})</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/neural/step-05-ports-anchors.png" alt="Small labels appear on the bond-pad side, a dark red corridor marker line crosses the housing exit, and the electrode side shows no visible change at this scale">
+          <figcaption>Step 5 · All 84 Ports + 2 corridor Anchors are marked. The bond-pad-side labels (<code>n1</code>...<code>n24</code>) and the corridor marker line at the housing exit are visible at this scale; the electrode-side Ports are only 5 um wide -- sub-pixel in a full-chip screenshot. A pixel-level diff (<code>step-04</code> vs. this image) confirms every changed pixel is inside <code>x∈[118,719]</code>, the bond-pad region -- the electrode region <code>x∈[800,1200]</code> shows zero pixel difference. Seeing where the electrode-side Ports actually landed has to wait for Step 7's detail crop.</figcaption>
+        </figure>
+
+        <h2 id="stage-6" class="anchor-h"><span class="stage-kicker">6</span>Corridor-constrained batch routing</h2>
+        <p>Once everything is marked, one pass routes all 24 nets: pull every auxiliary Port and the corridor Anchors back in bulk with <code>port.list</code>/<code>anchor.list</code>, group by <code>route_layer</code> (<code>1/0</code> in one group, <code>3/0</code> in the other), and call <code>route_tapered_hybrid_many</code> once per group (a visibility graph + Dijkstra plan, computed client-side in Python, no rasterization) followed by <code>commit_tapered_hybrid_many</code> (one batched RPC write-back):</p>
+        <pre><code>from klink.routing.backends.geometric.tapered_segments import (
+    pair_ports_by_net_tokens, route_tapered_hybrid_many, commit_tapered_hybrid_many,
+)
+
+ports = c.call("port.list", {"cell": cell_name, "layer": "999/98"})["ports"]
+ports = [p for p in ports if str(p.get("name") or "").startswith(("R", "EB", "ET"))]
+anchors = c.call("anchor.list", {"cell": cell_name, "layer": "999/1"})["anchors"]
+pairs = pair_ports_by_net_tokens(ports)   # pair source/target by shared net token
+
+by_layer = {}
+for pair in pairs:
+    by_layer.setdefault(pair.get("route_layer") or "10/0", []).append(pair)
+
+for route_layer, layer_pairs in sorted(by_layer.items()):
+    planned = route_tapered_hybrid_many(
+        layer_pairs, anchors=anchors, spacing_um=8.0,
+        strategy="uniform", angle_mode="manhattan", validate_sibling_overlap=True,
+    )
+    commit_tapered_hybrid_many(c, cell_name, planned, route_layer=route_layer, clear=True)</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/neural/step-06-routed.png" alt="24 traces leave the bond pads, each keeping its own channel at first, then converging into a single narrow corridor at the housing exit before crossing the neck toward the far shank">
+          <figcaption>Step 6 · All 24 traces routed (the 12 pink ones in the bottom half of the image are nets 1-12, on <code>1/0</code>; the 12 blue-violet ones in the top half are nets 13-24, on <code>3/0</code>): each trace keeps its own channel in the bond-pad region (CLAUDE.md's "channel isolation"), only converging into the 700 um corridor Anchor at the housing exit -- a many-to-one convergence, not each tracing its own straight line.</figcaption>
+        </figure>
+
+        <h2 id="stage-7" class="anchor-h"><span class="stage-kicker">7</span>Finish: overview + electrode-end detail</h2>
+        <p>Routing was the last geometry write; Stage 7 just looks at the result:</p>
+        <pre><code>c.zoom_fit()
+overview = c.screenshot(mode="base64", width_px=1200)
+detail = c.screenshot(mode="base64", bbox_um=[2370.0, -70.0, 2510.0, 70.0],
+                       width_px=1200, height_px=1200)</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/neural/step-07-overview.png" alt="The finished neural electrode probe harness in full: bond-pad housing, neck, twin arms, tip, and every trace from the converged corridor out to the electrode array">
+          <figcaption>Step 7a · Finished overview (<code>view.zoom_fit</code>): housing + 24 nets' worth of bond-pad chains + 24 traces + corridor convergence + shank + electrode array, all in one cell.</figcaption>
+        </figure>
+        <div class="tut-figure-row">
+          <figure class="tut-figure">
+            <img src="../assets/tutorials/neural/step-07-detail.png" alt="The same electrode-array detail crop, now with a trace landing on top of each electrode pad's via">
+            <figcaption>Step 7b · The exact same crop as Step 4b, revisited after routing: 12 traces terminate precisely on their respective electrode pads' vias -- the direct evidence that an 8x scale gap between the two ends is not a problem.</figcaption>
+          </figure>
+          <figure class="tut-figure">
+            <img src="../assets/tutorials/neural/step-07-detail-annotated.png" alt="Same location, an orange box and arrow point at one electrode pad in the top-right, with a trace terminating exactly on its via">
+            <figcaption>Step 7c · Orange highlight: the electrode pad at <code>elec_right_x_um[2]=2480, y=45</code> -- its via is labeled <code>EB12</code> (net <code>n12</code>, layer <code>1/0</code>). This trace started at the farthest bond pad, crossed the corridor, ran nearly ten thousand microns, and landed exactly on this 20x21 um electrode (checked by coordinates via <code>port.list</code>, not by eye).</figcaption>
+          </figure>
+        </div>
+
+        <h2 id="verify" class="anchor-h">Verify, don't just look</h2>
+        <p>As the <a href="tutorials.html#verify">tutorials home page</a> says: screenshots are for people, not proof of done. Here's the actual structured result from this run (<code>--elec-rows 4</code>):</p>
+        <pre><code>{
+  "shape_item_counts": {"frame": 22, "bondpads_and_vias": 288, "electrodes": 84, "total": 394},
+  "port_count_total": 84,
+  "anchor_count_total": 2,
+  "route_result": {
+    "ok": true,
+    "port_count": 48,
+    "anchor_count": 2,
+    "pair_count": 24,
+    "groups": [
+      {"route_layer": "1/0", "route_count": 12, "sibling_overlap_count": 0, "obstacle_hit_count": 0, "inserted": 84},
+      {"route_layer": "3/0", "route_count": 12, "sibling_overlap_count": 0, "obstacle_hit_count": 0, "inserted": 84}
+    ]
+  }
+}</code></pre>
+        <p><code>ok=true</code>, and both route-layer groups report zero <code>sibling_overlap_count</code>/<code>obstacle_hit_count</code> -- meaning all 24 traces (12 on <code>1/0</code>, 12 on <code>3/0</code>) avoid each other with no crossed wiring; <code>pair_count=24</code> equals <code>net_count</code>, meaning every net paired successfully with no orphaned Port. Together these three numbers -- not "it looks connected" -- are what "this parametric harness is correctly routed" actually rests on.</p>
+
+        <h2 id="next" class="anchor-h">Next steps</h2>
+        <p>Change <code>--elec-rows</code> to your own row count (say 2 or 6), check the shape counts against the formula table in Stage 4, and confirm <code>route_result.ok</code> is still <code>true</code>. If you haven't read the first two yet, read them in order: <a href="tutorial-hallbar.html">"Step-by-step: drawing a Hall bar device"</a> (the geometry-first basics: mark Port/Anchor intent, then route) and <a href="tutorial-ebl-wraparound.html">"Step-by-step: drawing an EBL wraparound nanodevice"</a> (writefield obstacle avoidance, where <code>kind="corridor"</code> windows first appear) -- this tutorial's corridor Anchor borrows that exact same <code>kind</code> for a completely different "forced convergence" purpose. Next up is a photonics-flavored <code>gf_mzi_module</code> tutorial (<code>python -m examples_klink.public.demos.gf_mzi_module --port &lt;session-port&gt;</code>), which switches to the gdsfactory bridge and an MZI device. The full Port/Anchor field reference is in the <a href="mcp-reference.html#d-ports">MCP reference</a>; the full design boundary for batch RPCs is in this repo's CLAUDE.md, under "Use batch RPCs for generated layouts."</p>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>geometry-first: mark intent on geometry, let algorithms complete the wiring, verify with structured evidence.</p></div>
+      <div><h3>Keep reading</h3><p><a href="tutorial-hallbar.html">Step-by-step tutorial: Hall bar device</a></p><p><a href="tutorial-ebl-wraparound.html">Step-by-step tutorial: EBL wraparound nanodevice</a></p><p><a href="tutorials.html">Core concepts &amp; tutorials</a></p><p><a href="mcp-reference.html">MCP tool reference</a></p></div>
+      <div><h3>Install</h3><p><a href="quickstart.html">Quickstart</a></p></div>
+    </div>
+  </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>
