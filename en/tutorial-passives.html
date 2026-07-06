@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tutorial: passive-device geometry templates - klink</title>
+  <meta name="description" content="A step-by-step tutorial for the four parametric passive-device geometry templates (IDC capacitor, square spiral inductor, SAW IDT filter, BAW/FBAR plan view): one default-parameter live screenshot plus one parameter-expanded variant screenshot per family, with a parameter table and real self-check numbers.">
+  <link rel="stylesheet" href="../assets/styles.css">
+  <style>
+    /* Minimal figure styling, following the site's existing card/note language
+       (border var(--line), radius 8px) -- assets/styles.css has no <img>
+       usage yet, so this stays scoped to this page until it lands there. */
+    .tut-figure {
+      margin: 16px 0 26px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .tut-figure img {
+      width: 100%;
+      display: block;
+      background: #fff;
+    }
+    .tut-figure figcaption {
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      background: #f7fafb;
+    }
+    .tut-figure-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    @media (max-width: 760px) {
+      .tut-figure-row { grid-template-columns: 1fr; }
+    }
+    .stage-kicker {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 26px;
+      height: 26px;
+      padding: 0 8px;
+      border-radius: 6px;
+      background: #dff1ee;
+      color: #12654b;
+      font-weight: 800;
+      font-size: 13px;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body data-page="tutorials">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="index.html" data-nav="home">Home</a>
+        <a href="quickstart.html" data-nav="quickstart">Quickstart</a>
+        <a href="tutorials.html" data-nav="tutorials" class="active">Tutorials</a>
+        <a href="workflows.html" data-nav="workflows">Workflows</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP Reference</a>
+        <a href="examples.html" data-nav="examples">Examples</a>
+        <a href="architecture.html" data-nav="architecture">Architecture</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="Language switch">
+          <a href="../tutorial-passives.html">CN</a>
+          <a class="active" href="tutorial-passives.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Step-by-step tutorial · passives</div>
+        <h1>Tutorial: passive-device geometry templates</h1>
+        <p>This walks through the four <code>passives/</code>-category starters: the IDC (interdigitated) capacitor, the square spiral inductor, the SAW IDT filter, and the BAW/FBAR plan view (full geometry contracts in the repo's <code>docs/PASSIVE_TEMPLATES_SPEC.md</code>). One rule applies to all four, stated once here: <strong>these are geometry templates, not validated electrical/acoustic designs</strong> -- tune the numbers for your own process and verify with your own models; the SAW and BAW families in particular make NO frequency or material claims. All four are <strong>starters</strong> in the <code>passives/</code> category -- after <code>klink init</code>, run <code>python example_template/passives/&lt;name&gt;.py</code> (offline writes a GDS by default, <code>--live</code> pushes to KLayout); see the <a href="../examples.html#passives">examples gallery · passive-device templates</a> for how the rest of the demos run.</p>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#prereqs">Prerequisites</a>
+          <a href="#idc">① IDC capacitor</a>
+          <a href="#spiral">② Square spiral inductor</a>
+          <a href="#saw">③ SAW IDT filter</a>
+          <a href="#baw">④ BAW / FBAR plan view</a>
+          <a href="#next">Next steps</a>
+        </nav>
+      </aside>
+
+      <article class="content">
+        <h2 id="prereqs" class="anchor-h">Prerequisites</h2>
+        <ul>
+          <li>Install klink: <code>pip install klayout-klink</code> (one command installs klink and its Rust kernels, no third-party scientific libraries needed).</li>
+          <li>KLayout is running with the klink plugin loaded.</li>
+          <li>After <code>klink init</code>: <code>python example_template/passives/&lt;name&gt;.py</code> runs offline and writes a GDS under <code>test_outputs/</code>, printing a structured self-check summary; add <code>--live --port &lt;session-port&gt;</code> to push to a KLayout session instead (a repo clone can also run the same code as a module, <code>python -m examples_klink.public.passives.&lt;name&gt;</code>, with identical flags).</li>
+        </ul>
+        <div class="note">Every "default" and "variant" screenshot below comes from running the SAME template module's <code>build_*()</code> function with two different parameter sets -- the variant parameters are exactly the "expanded" case already exercised by <code>tests/unit/test_passive_templates.py</code>, so the two screenshots are the same contract seen at a larger scale. The "Where are the Ports + self-check numbers" note at the end of each section is genuinely recomputed by this tutorial's own capture run (via the template's own <code>write_offline()</code> self-check), not copied from any implementation report.</div>
+
+        <h2 id="idc" class="anchor-h"><span class="stage-kicker">1</span>IDC capacitor</h2>
+        <p>Two opposing bus bars (bottom bus / top bus) with fingers in between, alternating ownership left-to-right: each finger's width is <code>finger_width</code>, and the spacing between adjacent fingers (which doubles as the finger-to-opposite-bus clearance) is <code>gap</code>, so the finger pitch is <code>finger_width + gap</code>. Single metal layer.</p>
+        <table class="data-table">
+          <thead><tr><th>Param</th><th>Meaning</th><th>Default</th></tr></thead>
+          <tbody>
+            <tr><td><code>finger_count</code></td><td>total finger count (&gt;=2, alternates bus ownership)</td><td>10</td></tr>
+            <tr><td><code>finger_length</code></td><td>length of each finger from its own bus</td><td>20.0 µm</td></tr>
+            <tr><td><code>finger_width</code></td><td>finger width (also sets pitch = width + gap)</td><td>2.0 µm</td></tr>
+            <tr><td><code>gap</code></td><td>finger-to-finger AND finger-to-opposite-bus clearance</td><td>1.5 µm</td></tr>
+            <tr><td><code>bus_width</code></td><td>bus bar thickness</td><td>4.0 µm</td></tr>
+          </tbody>
+        </table>
+        <pre><code>python example_template/passives/idc_capacitor.py --live --port &lt;session-port&gt;</code></pre>
+        <div class="tut-figure-row">
+          <figure class="tut-figure">
+            <img src="../assets/tutorials/passives/idc-default.png" alt="IDC capacitor with default parameters: 10 fingers alternating between the top and bottom bus">
+            <figcaption>Default parameters (10 fingers), live screenshot.</figcaption>
+          </figure>
+          <figure class="tut-figure">
+            <img src="../assets/tutorials/passives/idc-variant.png" alt="IDC capacitor with expanded parameters: 24 wider, longer fingers, visibly larger overall">
+            <figcaption>Variant: <code>finger_count</code> 10&rarr;24, plus <code>finger_width</code> 2.0&rarr;3.0, <code>gap</code> 1.5&rarr;2.0, <code>finger_length</code> 20.0&rarr;35.0, <code>bus_width</code> 4.0&rarr;6.0 (matches the unit tests' expanded-parameter case).</figcaption>
+          </figure>
+        </div>
+        <p><strong>Where are the Ports:</strong> <code>P1</code> at the bottom bus's outer-edge midpoint (this run: center_um=[16.75, -4.0], orientation 270°), <code>P2</code> at the top bus's outer-edge midpoint ([16.75, 25.5], orientation 90°), both on layer <code>10/0</code>. <strong>Self-check numbers (this run):</strong> with default params, merged-region count <code>2</code> (<code>no_short=true</code> -- neither bus's finger network shorts to the other), total metal area 668.0 µm²; with the variant params, still <code>2</code> merged regions and <code>no_short=true</code>, total metal area up to 3936.0 µm².</p>
+        <p class="note">Geometry template, not a validated electrical design -- tune the numbers for your own process and verify capacitance with your own models.</p>
+
+        <h2 id="spiral" class="anchor-h"><span class="stage-kicker">2</span>Square spiral inductor</h2>
+        <p>A square spiral wound outward on the top metal, starting from an inner opening of side <code>inner_size</code>, with each turn's side growing by one pitch (<code>track_width + spacing</code>). The coil's own inner end is trapped inside the winding and can't be routed directly: a via drops from a small pad at the inner end straight down to an underpass strip on <code>metal_under</code> that runs out past the coil's outline, surfacing as the <code>IN</code> port; <code>OUT</code> is simply the coil's outer end on the top metal.</p>
+        <table class="data-table">
+          <thead><tr><th>Param</th><th>Meaning</th><th>Default</th></tr></thead>
+          <tbody>
+            <tr><td><code>turns</code></td><td>number of turns (&gt;=1)</td><td>3</td></tr>
+            <tr><td><code>track_width</code></td><td>spiral track width</td><td>2.0 µm</td></tr>
+            <tr><td><code>spacing</code></td><td>gap between adjacent turns (pitch = track_width + spacing)</td><td>1.5 µm</td></tr>
+            <tr><td><code>inner_size</code></td><td>side of the inner opening square (first segment length)</td><td>10.0 µm</td></tr>
+            <tr><td><code>underpass_width</code></td><td>width of the underpass strip</td><td>3.0 µm</td></tr>
+          </tbody>
+        </table>
+        <pre><code>python example_template/passives/spiral_inductor.py --live --port &lt;session-port&gt;</code></pre>
+        <div class="tut-figure-row">
+          <figure class="tut-figure">
+            <img src="../assets/tutorials/passives/spiral-default.png" alt="Square spiral inductor with default parameters: 3 turns, inner end brought out via an underpass strip">
+            <figcaption>Default parameters (3 turns), live screenshot.</figcaption>
+          </figure>
+          <figure class="tut-figure">
+            <img src="../assets/tutorials/passives/spiral-variant.png" alt="Square spiral inductor with expanded parameters: 6 wider turns, visibly larger and denser">
+            <figcaption>Variant: <code>turns</code> 3&rarr;6, plus <code>track_width</code> 2.0&rarr;3.0, <code>spacing</code> 1.5&rarr;2.0, <code>inner_size</code> 10.0&rarr;15.0, <code>underpass_width</code> 3.0&rarr;4.0 (matches the unit tests' expanded-parameter case).</figcaption>
+          </figure>
+        </div>
+        <p><strong>Where are the Ports:</strong> <code>OUT</code> at the coil's outer end on the top metal (this run: center_um=[-10.5, -10.5], orientation 270°, layer <code>11/0</code>), <code>IN</code> at the underpass's outer end ([-12.5, 0.0], orientation 180°, layer <code>12/0</code>). <strong>Self-check numbers (this run):</strong> with default params, exactly <code>1</code> merged region on each metal layer (<code>no_self_short=true</code> -- the winding is one continuous track), the underpass crosses <code>4</code> spiral segments (&gt;= turns=3), and the via lands fully inside both the inner-end pad and the underpass (<code>via_in_pad</code> / <code>via_in_underpass</code> both <code>true</code>); with the variant params, still 1 merged region per layer, crossing count up to <code>7</code> (&gt;= turns=6), same via checks pass.</p>
+        <p class="note">Geometry template, not a validated electrical design -- tune the numbers for your own process and verify inductance/Q with your own models.</p>
+
+        <h2 id="saw" class="anchor-h"><span class="stage-kicker">3</span>SAW IDT filter</h2>
+        <p>Two identical interdigital transducers (TX, RX) facing each other along the acoustic axis, with optional shorted-grating reflectors outside each. Each IDT is electrically the same comb structure as the IDC template (two buses + alternating fingers): electrode width = <code>pitch/4</code> (metallization ratio 0.5, so the finger-to-finger gap is also <code>pitch/4</code>), overlapping over a length of <code>aperture</code> (apodization is NOT modeled in this version -- uniform overlap, a future knob). Single metal layer.</p>
+        <table class="data-table">
+          <thead><tr><th>Param</th><th>Meaning</th><th>Default</th></tr></thead>
+          <tbody>
+            <tr><td><code>pitch</code></td><td>electrode period (electrode width = pitch/4)</td><td>4.0 µm</td></tr>
+            <tr><td><code>pairs</code></td><td>finger pairs per IDT (total fingers = 2×pairs)</td><td>12</td></tr>
+            <tr><td><code>aperture</code></td><td>finger overlap length (acoustic aperture)</td><td>40.0 µm</td></tr>
+            <tr><td><code>bus_width</code></td><td>bus bar thickness</td><td>6.0 µm</td></tr>
+            <tr><td><code>idt_gap</code></td><td>edge-to-edge distance between the two IDTs along the acoustic axis</td><td>30.0 µm</td></tr>
+            <tr><td><code>reflector_fingers</code></td><td>reflector finger count per grating (0 disables)</td><td>8</td></tr>
+            <tr><td><code>reflector_gap</code></td><td>edge-to-edge distance from an IDT to its reflector</td><td>4.0 µm</td></tr>
+          </tbody>
+        </table>
+        <pre><code>python example_template/passives/saw_idt_filter.py --live --port &lt;session-port&gt;</code></pre>
+        <div class="tut-figure-row">
+          <figure class="tut-figure">
+            <img src="../assets/tutorials/passives/saw-default.png" alt="SAW IDT filter with default parameters: two facing interdigital transducers, each with a reflector grating outside">
+            <figcaption>Default parameters (pitch 4 µm, 12 pairs), live screenshot; each IDT has a reflector grating just outside it.</figcaption>
+          </figure>
+          <figure class="tut-figure">
+            <img src="../assets/tutorials/passives/saw-variant.png" alt="SAW IDT filter with expanded parameters: wider electrodes, larger aperture, more finger pairs, visibly larger overall">
+            <figcaption>Variant: <code>pitch</code> 4.0&rarr;6.0, plus <code>pairs</code> 12&rarr;20, <code>aperture</code> 40.0&rarr;60.0, <code>bus_width</code> 6.0&rarr;8.0, <code>idt_gap</code> 30.0&rarr;45.0, <code>reflector_fingers</code> 8&rarr;15, <code>reflector_gap</code> 4.0&rarr;6.0 (matches the unit tests' expanded-parameter case).</figcaption>
+          </figure>
+        </div>
+        <p><strong>Where are the Ports:</strong> 4 electrical ports, each at its own bus's outer-edge midpoint, facing outward, all on layer <code>14/0</code> -- this run: <code>TX_N</code>=[23.5, -6.0] (270°), <code>TX_P</code>=[23.5, 47.0] (90°), <code>RX_N</code>=[100.5, -6.0] (270°), <code>RX_P</code>=[100.5, 47.0] (90°). <strong>Self-check numbers (this run):</strong> with default params, each IDT (clipped to its own x-range) has exactly <code>2</code> merged regions (no finger short), each reflector grating exactly <code>1</code> merged region (a shorted grating should be one continuous piece), electrode width 1.0 µm (= pitch/4); with the variant params, still 2 per IDT and 1 per grating, electrode width up to 1.5 µm (= 6.0/4).</p>
+        <p class="note">Geometry template, not a validated acoustic design -- we make NO frequency or material claims; the real SAW response depends on the piezo substrate cut/orientation, which this plan-view template does not model at all. Tune the numbers for your own process and verify with your own acoustic simulation.</p>
+
+        <h2 id="baw" class="anchor-h"><span class="stage-kicker">4</span>BAW / FBAR plan view</h2>
+        <p>A plan-view template for a membrane-type resonator: <code>top_electrode</code> is an irregular pentagon with <strong>no two edges parallel</strong> (the spurious-mode apodization convention some FBAR designs use), generated from a fixed, deterministic, seedless vertex recipe and uniformly scaled to hit the target <code>active_area_um2</code>; <code>bottom_electrode</code> is a rectangle that covers the pentagon's bounding box and extends further out (opposite the top connection) to its own pad -- so the top/bottom overlap area is effectively the whole pentagon; <code>top_connect</code> runs from the pentagon's most eastward edge to a probe pad, and <code>bottom_connect</code> is simply the bottom electrode's own westward extension. A descriptive <code>StackSpec</code> instance documents the intended vertical stack (top electrode / piezo / bottom electrode) as data -- illustrative only, this is a plan view with no film cross-section drawn.</p>
+        <table class="data-table">
+          <thead><tr><th>Param</th><th>Meaning</th><th>Default</th></tr></thead>
+          <tbody>
+            <tr><td><code>active_area_um2</code></td><td>target pentagon (active membrane) area</td><td>2000.0 µm²</td></tr>
+            <tr><td><code>connect_width_um</code></td><td>width of the top/bottom connect strips</td><td>8.0 µm</td></tr>
+            <tr><td><code>pad_size_um</code></td><td>side of the square probe pads</td><td>30.0 µm</td></tr>
+            <tr><td><code>bottom_extension_um</code></td><td>how far the bottom electrode reaches past the pentagon opposite the top connection</td><td>60.0 µm</td></tr>
+            <tr><td><code>overlap_margin_um</code></td><td>margin the bottom electrode adds around the pentagon's bbox on the other three sides</td><td>6.0 µm</td></tr>
+            <tr><td><code>membrane_margin_um</code></td><td>margin of the optional membrane_release documentation layer</td><td>15.0 µm</td></tr>
+          </tbody>
+        </table>
+        <pre><code>python example_template/passives/baw_fbar_planview.py --live --port &lt;session-port&gt;</code></pre>
+        <div class="tut-figure-row">
+          <figure class="tut-figure">
+            <img src="../assets/tutorials/passives/baw-default.png" alt="BAW/FBAR plan view with default parameters: pentagon top electrode, covering rectangular bottom electrode, top connect strip, and two probe pads">
+            <figcaption>Default parameters (target area 2000 µm²), live screenshot.</figcaption>
+          </figure>
+          <figure class="tut-figure">
+            <img src="../assets/tutorials/passives/baw-variant.png" alt="BAW/FBAR plan view with expanded parameters: visibly larger pentagon, thicker/longer pads and connect strips">
+            <figcaption>Variant: <code>active_area_um2</code> 2000.0&rarr;6000.0, plus <code>connect_width_um</code> 8.0&rarr;12.0, <code>pad_size_um</code> 30.0&rarr;40.0, <code>bottom_extension_um</code> 60.0&rarr;90.0, <code>overlap_margin_um</code> 6.0&rarr;10.0, <code>membrane_margin_um</code> 15.0&rarr;20.0 (matches the unit tests' expanded-parameter case; both screenshots are <code>zoom_fit</code>, so compare the scale bars -- 20 µm vs 40 µm -- to see the actual size difference).</figcaption>
+          </figure>
+        </div>
+        <p><strong>No two edges parallel</strong> is this template's core invariant, and it's hard to eyeball on the full overview -- here's a zoomed, annotated crop of the default pentagon's closest-to-parallel edge pair, which is still not parallel:</p>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/passives/baw-apodization-annotated.png" alt="Zoomed pentagon top electrode with two edges highlighted in orange, labeled as about 12.5 degrees apart, not parallel">
+          <figcaption>The closest-to-parallel pair among the pentagon's 5 edges (independently recomputed for this run, not copied from any implementation report): edges 2 and 3 are 12.5° apart -- close enough to need a careful look, but confirmed not parallel, matching the invariant in spec §3.4.</figcaption>
+        </figure>
+        <p><strong>Where are the Ports:</strong> <code>TOP</code> at the top-connect probe pad (this run: center_um=[116.9, 5.44], orientation 0°, layer <code>15/0</code>), <code>BOT</code> at the bottom electrode's own pad ([-124.85, 0.0], orientation 180°, layer <code>16/0</code>). <strong>Self-check numbers (this run):</strong> with default params, top and bottom electrodes each have exactly <code>1</code> merged region, no two edges parallel is <code>true</code>, pentagon area 1999.996 µm² (target 2000, 0% error), top/bottom overlap is <code>100%</code> of the pentagon area; with the variant params, still 1 merged region each, not-parallel still <code>true</code>, area 5999.991 µm² (target 6000, within 1%), overlap still 100%.</p>
+        <p class="note">Geometry template, not a validated acoustic design -- we make NO frequency or material claims; this is a plan view only, no film cross-section or piezo-layer geometry drawn. Tune the numbers for your own process and verify resonance with your own acoustic simulation.</p>
+
+        <h2 id="next" class="anchor-h">Next steps</h2>
+        <p>Copy one of these template files, adapt the layers/parameters for your own process, run it with <code>--live</code> and confirm the self-check reports <code>ok=true</code> -- then its klink Ports are ready to feed straight into the routing backends (see <a href="../mcp-reference.html#d-ports">MCP Reference · Ports</a>). For the full geometry-first loop (draw geometry &rarr; mark Port/Anchor &rarr; route &rarr; verify), continue with the <a href="../tutorial-hallbar.html">Hall bar tutorial</a>; the text version of all four families' commands and real numbers lives in the demos.md entry linked from the <a href="../examples.html">examples gallery</a>.</p>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>Geometry-first: mark intent on geometry, let algorithms complete the routing, verify with structured evidence.</p></div>
+      <div><h3>Keep reading</h3><p><a href="../tutorials.html">Core ideas and tutorials</a></p><p><a href="../mcp-reference.html">MCP tool reference</a></p></div>
+      <div><h3>Install</h3><p><a href="../quickstart.html">Quickstart</a></p></div>
+    </div>
+  </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

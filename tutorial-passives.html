@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>图文教程：无源器件几何模板 - klink</title>
+  <meta name="description" content="四个参数化无源器件几何模板（IDC 电容、方形螺旋电感、SAW IDT 滤波器、BAW/FBAR 俯视图）的图文教程：每族一张默认参数实跑截图 + 一张改参数变体截图，配参数表和真实自检数字。">
+  <link rel="stylesheet" href="assets/styles.css">
+  <style>
+    /* Minimal figure styling, following the site's existing card/note language
+       (border var(--line), radius 8px) -- assets/styles.css has no <img>
+       usage yet, so this stays scoped to this page until it lands there. */
+    .tut-figure {
+      margin: 16px 0 26px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .tut-figure img {
+      width: 100%;
+      display: block;
+      background: #fff;
+    }
+    .tut-figure figcaption {
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      background: #f7fafb;
+    }
+    .tut-figure-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    @media (max-width: 760px) {
+      .tut-figure-row { grid-template-columns: 1fr; }
+    }
+    .stage-kicker {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 26px;
+      height: 26px;
+      padding: 0 8px;
+      border-radius: 6px;
+      background: #dff1ee;
+      color: #12654b;
+      font-weight: 800;
+      font-size: 13px;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body data-page="tutorials">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="主导航">
+        <a href="index.html" data-nav="home">首页</a>
+        <a href="quickstart.html" data-nav="quickstart">快速上手</a>
+        <a href="tutorials.html" data-nav="tutorials" class="active">教程</a>
+        <a href="workflows.html" data-nav="workflows">工作流</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP 参考</a>
+        <a href="examples.html" data-nav="examples">示例</a>
+        <a href="architecture.html" data-nav="architecture">架构</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="语言切换">
+          <a class="active" href="tutorial-passives.html">CN</a>
+          <a href="en/tutorial-passives.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="打开导航" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Step-by-step tutorial · passives</div>
+        <h1>图文教程：无源器件几何模板</h1>
+        <p>对应 <code>passives/</code> 类的四个 starter：IDC 叉指电容、方形螺旋电感、SAW IDT 滤波器、BAW/FBAR 俯视图（完整合约见仓库 <code>docs/PASSIVE_TEMPLATES_SPEC.md</code>）。四族共用一个铁律，全文只说一次：<strong>这些是几何模板，不是验证过的电学/声学设计</strong>——把数字改成你自己的工艺，用你自己的模型验证；SAW/BAW 两族尤其不做任何频率或材料声明。这四个是 <code>passives/</code> 类的 <strong>starter</strong>，<code>klink init</code> 后 <code>python example_template/passives/&lt;名&gt;.py</code> 就能跑（offline 默认写 GDS，<code>--live</code> 推 KLayout）；参见<a href="examples.html#passives">示例画廊 · 无源器件几何模板</a>了解其余 demo 的运行方式。</p>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#prereqs">前置条件</a>
+          <a href="#idc">① IDC 叉指电容</a>
+          <a href="#spiral">② 方形螺旋电感</a>
+          <a href="#saw">③ SAW IDT 滤波器</a>
+          <a href="#baw">④ BAW / FBAR 俯视图</a>
+          <a href="#next">下一步</a>
+        </nav>
+      </aside>
+
+      <article class="content">
+        <h2 id="prereqs" class="anchor-h">前置条件</h2>
+        <ul>
+          <li>安装 klink：<code>pip install klayout-klink</code>（一条命令装好 klink 和它的 Rust 内核，无需第三方科学库）。</li>
+          <li>KLayout 正在运行，并已加载 klink 插件。</li>
+          <li><code>klink init</code> 之后：<code>python example_template/passives/&lt;名&gt;.py</code> 离线运行，往 <code>test_outputs/</code> 写一个 GDS 并打印结构化自检 summary；加 <code>--live --port &lt;会话端口&gt;</code> 则改为推送到 KLayout 会话（仓库克隆里也可以直接用模块形式 <code>python -m examples_klink.public.passives.&lt;名&gt;</code> 跑同一份代码，命令行参数一致）。</li>
+        </ul>
+        <div class="note">下面每族的"默认参数"截图和"变体"截图，都是同一个模板文件的 <code>build_*()</code> 函数用两组不同参数各跑一次的真实结果——变体参数和 <code>tests/unit/test_passive_templates.py</code> 里的"扩展参数"用例完全一致，两张图对比就是在看同一份合约在参数变大之后长什么样。每族末尾的"Port 在哪 + 自检数字"，都是本教程实际重跑这两组参数、由模板自己的 <code>write_offline()</code> 自检重新算出来的数字，不是抄实现报告。</div>
+
+        <h2 id="idc" class="anchor-h"><span class="stage-kicker">1</span>IDC 叉指电容</h2>
+        <p>两条对置母线（bottom bus / top bus），中间是交替归属左右母线的叉指：每根指的宽度是 <code>finger_width</code>，相邻两指间距（同时也是指到对面母线的间隙）都是 <code>gap</code>，所以指距 = <code>finger_width + gap</code>。单一金属层。</p>
+        <table class="data-table">
+          <thead><tr><th>参数</th><th>含义</th><th>默认值</th></tr></thead>
+          <tbody>
+            <tr><td><code>finger_count</code></td><td>总指数（&gt;=2，交替归属两条母线）</td><td>10</td></tr>
+            <tr><td><code>finger_length</code></td><td>每根指从自己那条母线伸出的长度</td><td>20.0 µm</td></tr>
+            <tr><td><code>finger_width</code></td><td>指宽（也决定指距 = 指宽 + 间隙）</td><td>2.0 µm</td></tr>
+            <tr><td><code>gap</code></td><td>指与指、指与对面母线的间隙</td><td>1.5 µm</td></tr>
+            <tr><td><code>bus_width</code></td><td>母线厚度</td><td>4.0 µm</td></tr>
+          </tbody>
+        </table>
+        <pre><code>python example_template/passives/idc_capacitor.py --live --port &lt;会话端口&gt;</code></pre>
+        <div class="tut-figure-row">
+          <figure class="tut-figure">
+            <img src="assets/tutorials/passives/idc-default.png" alt="默认参数下的 IDC 叉指电容：10 根交替归属上下母线的叉指">
+            <figcaption>默认参数（10 指）实跑截图。</figcaption>
+          </figure>
+          <figure class="tut-figure">
+            <img src="assets/tutorials/passives/idc-variant.png" alt="变体参数下的 IDC 叉指电容：24 根更宽更长的叉指，整体明显变大">
+            <figcaption>变体：<code>finger_count</code> 10→24，同时 <code>finger_width</code> 2.0→3.0、<code>gap</code> 1.5→2.0、<code>finger_length</code> 20.0→35.0、<code>bus_width</code> 4.0→6.0（与单测的扩展参数用例一致）。</figcaption>
+          </figure>
+        </div>
+        <p><strong>Port 在哪：</strong> <code>P1</code> 在下母线外边缘中点（本次实跑 center_um=[16.75, -4.0]，朝向 270°），<code>P2</code> 在上母线外边缘中点（[16.75, 25.5]，朝向 90°），都在 <code>10/0</code> 层。<strong>自检数字（本次实跑）：</strong> 默认参数下合并区域数 <code>2</code>（<code>no_short=true</code>，两条母线各自的叉指网络没有短路），总金属面积 668.0 µm²；变体参数下同样 <code>2</code> 个合并区域、<code>no_short=true</code>，总金属面积增至 3936.0 µm²。</p>
+        <p class="note">几何模板，不是验证过的电学设计——把数字改成你自己的工艺，用你自己的模型验证电容值。</p>
+
+        <h2 id="spiral" class="anchor-h"><span class="stage-kicker">2</span>方形螺旋电感</h2>
+        <p>顶层金属上向外绕的方形螺旋，从内开口 <code>inner_size</code> 开始，每圈边长增加一个 pitch（<code>track_width + spacing</code>）。螺旋自己的内端被绕线困住、无法直接出线：一个过孔从内端一个小 pad 垂直下沉到 <code>metal_under</code> 层的一段下穿走线，穿出绕线范围外作为 <code>IN</code> 端口；<code>OUT</code> 就是螺旋在顶层金属上的外端。</p>
+        <table class="data-table">
+          <thead><tr><th>参数</th><th>含义</th><th>默认值</th></tr></thead>
+          <tbody>
+            <tr><td><code>turns</code></td><td>圈数（&gt;=1）</td><td>3</td></tr>
+            <tr><td><code>track_width</code></td><td>螺旋走线宽度</td><td>2.0 µm</td></tr>
+            <tr><td><code>spacing</code></td><td>相邻两圈间距（pitch = track_width + spacing）</td><td>1.5 µm</td></tr>
+            <tr><td><code>inner_size</code></td><td>内开口方形边长（第一段线长）</td><td>10.0 µm</td></tr>
+            <tr><td><code>underpass_width</code></td><td>下穿走线宽度</td><td>3.0 µm</td></tr>
+          </tbody>
+        </table>
+        <pre><code>python example_template/passives/spiral_inductor.py --live --port &lt;会话端口&gt;</code></pre>
+        <div class="tut-figure-row">
+          <figure class="tut-figure">
+            <img src="assets/tutorials/passives/spiral-default.png" alt="默认参数下的方形螺旋电感：3 圈绕线，内端经下穿走线引出">
+            <figcaption>默认参数（3 圈）实跑截图。</figcaption>
+          </figure>
+          <figure class="tut-figure">
+            <img src="assets/tutorials/passives/spiral-variant.png" alt="变体参数下的方形螺旋电感：6 圈更宽的绕线，整体明显更大更密">
+            <figcaption>变体：<code>turns</code> 3→6，同时 <code>track_width</code> 2.0→3.0、<code>spacing</code> 1.5→2.0、<code>inner_size</code> 10.0→15.0、<code>underpass_width</code> 3.0→4.0（与单测的扩展参数用例一致）。</figcaption>
+          </figure>
+        </div>
+        <p><strong>Port 在哪：</strong> <code>OUT</code> 在螺旋顶层金属的外端（本次实跑 center_um=[-10.5, -10.5]，朝向 270°，<code>11/0</code> 层），<code>IN</code> 在下穿走线的外端（[-12.5, 0.0]，朝向 180°，<code>12/0</code> 层）。<strong>自检数字（本次实跑）：</strong> 默认参数下顶层金属、下穿走线各自恰好 <code>1</code> 个合并区域（<code>no_self_short=true</code>，绕线连续无自短路），下穿走线跨过 <code>4</code> 段螺旋线段（&gt;= turns=3），过孔完全落在内端 pad 与下穿走线内部（<code>via_in_pad</code> / <code>via_in_underpass</code> 均为 <code>true</code>）；变体参数下同样两层各 <code>1</code> 个合并区域，下穿走线跨过段数增至 <code>7</code>（&gt;= turns=6），过孔位置检查同样通过。</p>
+        <p class="note">几何模板，不是验证过的电学设计——把数字改成你自己的工艺，用你自己的模型验证电感值和 Q。</p>
+
+        <h2 id="saw" class="anchor-h"><span class="stage-kicker">3</span>SAW IDT 滤波器</h2>
+        <p>两个完全相同的叉指换能器（发射 TX、接收 RX）沿声轴相对放置，可选在两侧各加一组短路光栅反射器。每个 IDT 本质上就是一个电学梳状结构（和 IDC 电容同款：两条母线 + 交替叉指），电极宽 = <code>pitch/4</code>（金属化率 0.5，指间隙同样是 <code>pitch/4</code>），交叠区长度 = <code>aperture</code>（本版本未建模变迹，均匀交叠，是将来的旋钮）。单一金属层。</p>
+        <table class="data-table">
+          <thead><tr><th>参数</th><th>含义</th><th>默认值</th></tr></thead>
+          <tbody>
+            <tr><td><code>pitch</code></td><td>电极周期（电极宽 = pitch/4）</td><td>4.0 µm</td></tr>
+            <tr><td><code>pairs</code></td><td>每个 IDT 的指对数（总指数 = 2×pairs）</td><td>12</td></tr>
+            <tr><td><code>aperture</code></td><td>叉指交叠长度（声学孔径）</td><td>40.0 µm</td></tr>
+            <tr><td><code>bus_width</code></td><td>母线厚度</td><td>6.0 µm</td></tr>
+            <tr><td><code>idt_gap</code></td><td>两个 IDT 沿声轴的边到边距离</td><td>30.0 µm</td></tr>
+            <tr><td><code>reflector_fingers</code></td><td>每组反射光栅的指数（0 = 不启用）</td><td>8</td></tr>
+            <tr><td><code>reflector_gap</code></td><td>IDT 到反射光栅的边到边距离</td><td>4.0 µm</td></tr>
+          </tbody>
+        </table>
+        <pre><code>python example_template/passives/saw_idt_filter.py --live --port &lt;会话端口&gt;</code></pre>
+        <div class="tut-figure-row">
+          <figure class="tut-figure">
+            <img src="assets/tutorials/passives/saw-default.png" alt="默认参数下的 SAW IDT 滤波器：左右两组带反射光栅的叉指换能器相对放置">
+            <figcaption>默认参数（pitch 4 µm、12 对指）实跑截图；每个 IDT 外侧各有一组反射光栅。</figcaption>
+          </figure>
+          <figure class="tut-figure">
+            <img src="assets/tutorials/passives/saw-variant.png" alt="变体参数下的 SAW IDT 滤波器：电极更宽、孔径更大、指对更多，整体明显放大">
+            <figcaption>变体：<code>pitch</code> 4.0→6.0，同时 <code>pairs</code> 12→20、<code>aperture</code> 40.0→60.0、<code>bus_width</code> 6.0→8.0、<code>idt_gap</code> 30.0→45.0、<code>reflector_fingers</code> 8→15、<code>reflector_gap</code> 4.0→6.0（与单测的扩展参数用例一致）。</figcaption>
+          </figure>
+        </div>
+        <p><strong>Port 在哪：</strong> 4 个电学 Port，均在各自母线外边缘中点、朝外，都在 <code>14/0</code> 层——本次实跑 <code>TX_N</code>=[23.5, -6.0]（270°）、<code>TX_P</code>=[23.5, 47.0]（90°）、<code>RX_N</code>=[100.5, -6.0]（270°）、<code>RX_P</code>=[100.5, 47.0]（90°）。<strong>自检数字（本次实跑）：</strong> 默认参数下每个 IDT（按 x 范围裁剪后）恰好 <code>2</code> 个合并区域（指间无短路），每组反射光栅恰好 <code>1</code> 个合并区域（短路光栅本就该连成一片），电极宽 1.0 µm（= pitch/4）；变体参数下同样每个 IDT 2 个、每组反射光栅 1 个合并区域，电极宽增至 1.5 µm（= 6.0/4）。</p>
+        <p class="note">几何模板，不是验证过的声学设计——不对频率或材料做任何声明；真实 SAW 响应取决于压电衬底的切向/取向，本俯视模板完全不建模。把数字改成你自己的工艺，用你自己的声学仿真验证。</p>
+
+        <h2 id="baw" class="anchor-h"><span class="stage-kicker">4</span>BAW / FBAR 俯视图</h2>
+        <p>薄膜体声波谐振器的俯视模板：<code>top_electrode</code> 是一个<strong>任意两条边都不平行</strong>的不规则五边形（抑制杂散模的变迹惯例），由一个固定、确定性、无随机数的顶点方案按目标 <code>active_area_um2</code> 整体缩放得到；<code>bottom_electrode</code> 是一个覆盖五边形包围盒、并在顶连接对侧继续延伸到自己 pad 的矩形（因此顶/底交叠面积就是整个五边形面积）；<code>top_connect</code> 从五边形最靠东的一条边引到探针 pad，<code>bottom_connect</code> 就是底电极自己往西的延伸。一个描述性的 <code>StackSpec</code> 以数据形式记录预期的垂直叠层（顶电极/压电层/底电极）——仅描述，不画膜层剖面，这只是一个俯视模板。</p>
+        <table class="data-table">
+          <thead><tr><th>参数</th><th>含义</th><th>默认值</th></tr></thead>
+          <tbody>
+            <tr><td><code>active_area_um2</code></td><td>目标五边形（有效膜层）面积</td><td>2000.0 µm²</td></tr>
+            <tr><td><code>connect_width_um</code></td><td>顶/底连接走线宽度</td><td>8.0 µm</td></tr>
+            <tr><td><code>pad_size_um</code></td><td>方形探针 pad 边长</td><td>30.0 µm</td></tr>
+            <tr><td><code>bottom_extension_um</code></td><td>底电极在顶连接对侧超出五边形的距离</td><td>60.0 µm</td></tr>
+            <tr><td><code>overlap_margin_um</code></td><td>底电极在其余三侧超出五边形包围盒的余量</td><td>6.0 µm</td></tr>
+            <tr><td><code>membrane_margin_um</code></td><td>可选 membrane_release 文档层的余量</td><td>15.0 µm</td></tr>
+          </tbody>
+        </table>
+        <pre><code>python example_template/passives/baw_fbar_planview.py --live --port &lt;会话端口&gt;</code></pre>
+        <div class="tut-figure-row">
+          <figure class="tut-figure">
+            <img src="assets/tutorials/passives/baw-default.png" alt="默认参数下的 BAW/FBAR 俯视图：五边形顶电极、覆盖它的矩形底电极、顶连接走线和两个探针 pad">
+            <figcaption>默认参数（目标面积 2000 µm²）实跑截图。</figcaption>
+          </figure>
+          <figure class="tut-figure">
+            <img src="assets/tutorials/passives/baw-variant.png" alt="变体参数下的 BAW/FBAR 俯视图：五边形明显更大，pad 和连接走线也相应变粗变长">
+            <figcaption>变体：<code>active_area_um2</code> 2000.0→6000.0，同时 <code>connect_width_um</code> 8.0→12.0、<code>pad_size_um</code> 30.0→40.0、<code>bottom_extension_um</code> 60.0→90.0、<code>overlap_margin_um</code> 6.0→10.0、<code>membrane_margin_um</code> 15.0→20.0（与单测的扩展参数用例一致；注意两张图都是 <code>zoom_fit</code>，实际尺寸差异要看左下角比例尺 20 µm → 40 µm）。</figcaption>
+          </figure>
+        </div>
+        <p><strong>五边形任意两边都不平行</strong>是这个模板的核心不变量，光看整体截图不容易确认，下面放大标注默认参数下距离"平行"最近的一对边——即便是最接近的一对，也仍然不平行：</p>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/passives/baw-apodization-annotated.png" alt="放大的五边形顶电极，橙色高亮标出两条方向最接近的边，标注两边夹角约12.5度，不平行">
+          <figcaption>五边形五条边里方向最接近的一对（本次实跑独立重新计算，非抄实现报告）：边 2 与边 3 夹角 12.5°——足够接近到肉眼要仔细看，但确认不平行，符合 spec §3.4 的不变量。</figcaption>
+        </figure>
+        <p><strong>Port 在哪：</strong> <code>TOP</code> 在顶连接探针 pad（本次实跑 center_um=[116.9, 5.44]，朝向 0°，<code>15/0</code> 层），<code>BOT</code> 在底电极延伸出的 pad（[-124.85, 0.0]，朝向 180°，<code>16/0</code> 层）。<strong>自检数字（本次实跑）：</strong> 默认参数下顶、底电极各自 <code>1</code> 个合并区域，五边形任意两边不平行 <code>true</code>，五边形面积 1999.996 µm²（目标 2000，误差 0%），顶/底交叠面积占五边形面积的 <code>100%</code>；变体参数下同样各 <code>1</code> 个合并区域、不平行为 <code>true</code>，面积 5999.991 µm²（目标 6000，1% 以内），交叠同样 100%。</p>
+        <p class="note">几何模板，不是验证过的声学设计——不对频率或材料做任何声明；本模板只是俯视图，不画膜层剖面/压电层几何。把数字改成你自己的工艺，用你自己的声学仿真验证谐振频率。</p>
+
+        <h2 id="next" class="anchor-h">下一步</h2>
+        <p>把某个模板文件复制一份改成自己的层号/参数，跑一遍 <code>--live</code> 确认自检 <code>ok=true</code> 之后，就可以直接用它标好的 klink Port 接入路由后端（参见 <a href="mcp-reference.html#d-ports">MCP 参考 · Port</a>）。想看 geometry-first 的完整闭环（画几何 → 标 Port/Anchor → 路由 → 验证），可以接着看<a href="tutorial-hallbar.html">Hall bar 图文教程</a>；四族命令和真实数字的文字版在 <a href="examples.html">示例画廊</a> 对应的 demos.md 词条里。</p>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>geometry-first：在几何上标意图，让算法补全布线，用结构化证据验证。</p></div>
+      <div><h3>继续阅读</h3><p><a href="tutorials.html">核心思路与教程</a></p><p><a href="mcp-reference.html">MCP 工具参考</a></p></div>
+      <div><h3>安装</h3><p><a href="quickstart.html">快速上手</a></p></div>
+    </div>
+  </footer>
+  <script src="assets/app.js"></script>
+</body>
+</html>

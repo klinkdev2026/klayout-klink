@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>分步教程：针卡 padframe - klink</title>
+  <meta name="description" content="用 klink 在 live KLayout 里一步步做出一个针卡优先的 padframe：合成电路基底、pad 环 harvest、net→pad 分配、一半在卡内一半在卡下的摆放、分区电网、信号 P&R，最后两种模式（有卡 / 无卡裸线头）各自 live LVS match=True，每一步配截图和可运行代码。">
+  <link rel="stylesheet" href="assets/styles.css">
+  <style>
+    /* Minimal figure styling, following the site's existing card/note language
+       (border var(--line), radius 8px) -- assets/styles.css has no <img>
+       usage yet, so this stays scoped to this page until it lands there. */
+    .tut-figure {
+      margin: 16px 0 26px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .tut-figure img {
+      width: 100%;
+      display: block;
+      background: #fff;
+    }
+    .tut-figure figcaption {
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      background: #f7fafb;
+    }
+    .tut-figure-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    @media (max-width: 760px) {
+      .tut-figure-row { grid-template-columns: 1fr; }
+    }
+    .stage-kicker {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 26px;
+      height: 26px;
+      padding: 0 8px;
+      border-radius: 6px;
+      background: #dff1ee;
+      color: #12654b;
+      font-weight: 800;
+      font-size: 13px;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body data-page="tutorials">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="主导航">
+        <a href="index.html" data-nav="home">首页</a>
+        <a href="quickstart.html" data-nav="quickstart">快速上手</a>
+        <a href="tutorials.html" data-nav="tutorials" class="active">教程</a>
+        <a href="workflows.html" data-nav="workflows">工作流</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP 参考</a>
+        <a href="examples.html" data-nav="examples">示例</a>
+        <a href="architecture.html" data-nav="architecture">架构</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="语言切换">
+          <a class="active" href="tutorial-padframe.html">CN</a>
+          <a href="en/tutorial-padframe.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="打开导航" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Step-by-step tutorial · structdevice</div>
+        <h1>分步教程：针卡优先的 padframe</h1>
+        <p>对应仓库里的 <a href="examples.html#padframe"><code>examples_klink/public/demos/padframe_pnr_lvs.py</code></a>。这是一个<strong>反序</strong>的硬件流程：探针卡 / pad 环<strong>先存在</strong>（位置很久前就冻结了），电路必须去迁就它——哪怕卡内部装不下整个器件块。这篇教程把它拆成 6 个阶段，每一步都在 live KLayout 里真的画出来、截图，并给出对应的 klink 代码，最后 <strong>card 与 <code>--no-card</code> 两种模式各自跑 live LVS，match=True 才算完</strong>。文中所有数据都是合成的（工艺、器件、针卡都是替身），不含任何真实厂商或探针卡型号。</p>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#prereqs">前置条件</a>
+          <a href="#stage-1">① 合成电路基底</a>
+          <a href="#stage-2">② pad 环 harvest</a>
+          <a href="#stage-3">③ net → pad 分配</a>
+          <a href="#stage-4">④ 一半卡内 / 一半卡下</a>
+          <a href="#stage-5">⑤ 信号 P&R + 分区电网</a>
+          <a href="#stage-6">⑥ 无卡模式：裸线头</a>
+          <a href="#verify">验证：两模式 LVS</a>
+          <a href="#next">下一步</a>
+        </nav>
+      </aside>
+
+      <article class="content">
+        <h2 id="prereqs" class="anchor-h">前置条件</h2>
+        <ul>
+          <li>安装 klink：<code>pip install klayout-klink</code>（一条命令装好 klink 和它的 Rust 内核）。</li>
+          <li>KLayout 正在运行，并已加载 klink 插件。</li>
+          <li>这个 demo 是 <strong>repo-only</strong>：需要克隆仓库运行（它 import 仓库里的合成器件模块，不在 pip wheel 里）。完整脚本是：
+<pre><code>git clone https://github.com/klinkdev2026/klayout-klink
+cd klayout-klink
+python -m examples_klink.public.demos.padframe_pnr_lvs --port &lt;session-port&gt;            # 有卡模式
+python -m examples_klink.public.demos.padframe_pnr_lvs --port &lt;session-port&gt; --no-card  # 无卡模式</code></pre></li>
+        </ul>
+        <div class="note">这篇教程把 <code>padframe_pnr_lvs.py</code> 内部一次性完成的构建拆成 6 个可观察阶段，方便讲清"卡先存在、电路后迁就"这条反序流每一步在做什么。生产环境里你还是直接跑那一个脚本——分阶段只是教学手段。它复用 <a href="examples.html#fitdevice">拟合器件 demo</a> 的公开 3 层工艺与合成拟合器件库，所以本身<strong>零器件几何</strong>；电路是一个开源逻辑综合器网出来、再映射到这些合成器件上的 4-bit 加法器（<code>173</code> 器件 / <code>96</code> net / <code>62</code> gate）。</div>
+
+        <h2 id="stage-1" class="anchor-h"><span class="stage-kicker">1</span>合成电路基底：lint + 层数顾问 + 平铺摆放</h2>
+        <p>先 <strong>lint</strong> 器件 netlist——在任何几何存在之前，就把手写 netlist 的结构错误（未知实例、终端接到两个 net、实例不在任何组里……）连同修复建议一起报出来。lint 通过后，<strong>层数顾问</strong>把每个候选层栈的代价摊开：层数越少越好（每多一层都是真实的一道沉积 / 光刻 / 通孔工序），选择权在你。add4 在公开 3 层栈上就能舒服布通，所以我们用它。</p>
+        <table class="data-table">
+          <thead><tr><th>候选层栈</th><th>路由层数</th><th>信号层</th><th>core 尺寸</th></tr></thead>
+          <tbody>
+            <tr><td><code>public-3L</code></td><td>3</td><td>2V + 1H</td><td>920 × 1208 µm = 1.111 mm²</td></tr>
+            <tr><td><code>example-7L</code></td><td>7</td><td>2V + 2H</td><td>920 × 984 µm = 0.905 mm²</td></tr>
+          </tbody>
+        </table>
+        <p>顾问只报<strong>算术</strong>，候选层栈本身是示例数据（你的 fab 实际能造什么）。这一步的截图里，器件块先按<strong>无带约束</strong>平铺（<code>8×8</code> 网格，行距 <code>190 µm</code>），用来量出 block 占位、给后面的卡定位/定尺寸：</p>
+        <pre><code>rep = lint_netlist(nl, device_terms=terms)          # 结构 lint，错误即修复指令
+assert rep["ok"]
+adv = layer_demand_report(nl, terms, [("public-3L", D.PUBLIC_PROCESS),
+                                      ("example-7L", PUBLIC_MULTILAYER)])
+rows, cols = derive_grid(len(nl["groups"]))          # 8 x 8
+flat = eng.place_grid(nl, rows, cols, profile=P, row_pitch=rp)   # 无带平铺</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/padframe/step-01-block.png" alt="8 行合成器件按网格平铺，每个 gate 是一列堆叠的器件，尚无卡、无布线">
+          <figcaption>Step 1 · lint 通过、选定 3 层栈后，器件块先按无带约束平铺（<code>place_grid</code>，8×8 网格）。这是量 block 占位、给卡定位的基准，此时还没有卡、没有布线。</figcaption>
+        </figure>
+
+        <h2 id="stage-2" class="anchor-h"><span class="stage-kicker">2</span>用户的针卡：造替身 → <code>pads_from_gds</code> harvest 回来</h2>
+        <p>这是反序的核心：<strong>卡先存在</strong>。为了让 demo 自包含，我们先<strong>写</strong>一个替身针卡 GDS（<code>106/0</code> 层上 20 个 pad 方块排成一圈，就当它是从抽屉里翻出来的旧卡），然后用 <code>pads_from_gds</code> 把它 <strong>harvest 回来</strong>。真实场景里你跳过 fabricate 这一步，直接 harvest 你自己的卡文件：</p>
+        <pre><code>from klink.routing.grid.pad_harvest import pads_from_gds
+
+# 真实流程从这一行直接开始：pads_from_gds(你的卡文件, 你的cell, 你的层)
+pads = pads_from_gds(CARD, "PROBE_CARD_20", "106/0", min_size_um=50.0)
+# -> [{"id": "PAD00", "box_um": [...]}, ...]  共 20 个 pad</code></pre>
+        <p>卡的几何是示例数据：pad <code>100×100 µm</code>，环内部够宽能容下 block，但高度只有 block 的一半——这正是后面第 ④ 步"一半卡内 / 一半卡下"的由来。harvest 出来的就是一张普通 pad 表 <code>[{"id", "box_um"}, ...]</code>，net 分配是<strong>之后</strong>人/agent 在它上面做的决定。</p>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/padframe/step-02-card.png" alt="20 个 pad 方块围成一圈的 pad 环，套在中间的器件块外面，左右各 5 个、上下各 5 个">
+          <figcaption>Step 2 · 从替身 GDS harvest 回来的 20-pad 环（<code>106/0</code> 层），左右各 5 个 + 上下各 5 个。环内部装不下整块器件的全高——注意底部 pad 行会横穿 block 下半部。</figcaption>
+        </figure>
+
+        <h2 id="stage-3" class="anchor-h"><span class="stage-kicker">3</span>net → pad 分配表</h2>
+        <p>在 harvest 出来的 pad 上叠一张<strong>纯表格</strong>：哪个 net 走哪个 pad。本例约定（你可自由改）：输入走<strong>左列 + 顶行</strong>，输出走<strong>右列</strong>，GND 在顶行（它的 tie rail 在 block 上方派生），VDD 在<strong>左下角 pad</strong>（沿左边留一条干净走廊到 block 下方的 rail）。<code>20</code> 个 pad 里用掉 <code>16</code> 个（全部 14 个主端口 + VDD + GND），剩 <code>4</code> 个冗余 pad 保持未用——这在任何旧卡上都很正常。</p>
+        <pre><code>def near(x, y):     # 离某个卡上点最近的 harvest pad
+    return min(pads, key=lambda p: (p["box_um"][0] - x) ** 2 + (p["box_um"][1] - y) ** 2)
+
+for cy, net in zip(side_y, ["A[0]", "A[1]", "A[2]", "A[3]", "B[0]"]):
+    near(ring_x1, cy)["net"] = net          # 左列：5 个输入
+for cy, net in zip(side_y, ["S[0]", "S[1]", "S[2]", "S[3]", "COUT"]):
+    near(ring_x2 - PS, cy)["net"] = net     # 右列：5 个输出
+for cx, net in zip(row_x, ["B[1]", "B[2]", "GND", "B[3]", "CIN"]):
+    near(cx, ring_y2 - PS)["net"] = net     # 顶行：输入 + GND
+near(row_x[0], ring_y1)["net"] = "VDD"      # 左下角：VDD</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/padframe/step-03-assign.png" alt="每个 pad 上标了 net 名字：左列 A[0..3]/B[0]，右列 S[0..3]/COUT，顶行 B/GND/CIN，左下角 VDD，底部四个标 PAD16..19 表示冗余未用">
+          <figcaption>Step 3 · 一张 net→pad 表叠在 pad 上：左列 5 输入、右列 5 输出、顶行输入 + GND、左下角 VDD。底部 <code>PAD16..PAD19</code> 保留原始 id，表示它们是冗余、未分配 net 的 pad。</figcaption>
+        </figure>
+
+        <h2 id="stage-4" class="anchor-h"><span class="stage-kicker">4</span>一半卡内 / 一半卡下的摆放</h2>
+        <p>卡的<strong>底部 pad 行横穿</strong>器件块。因为卡是固定的、能屈能伸的是 block——所以我们把那条水平带<strong>禁掉</strong>：<code>place_grid(forbid_y_bands=[band])</code> 会把任何会撞到这条带的器件行<strong>推到带下面</strong>去。前 <code>inner_rows</code> 行留在环内，其余继续排在环下，布线在底部 pad 之间穿过。这样一整块器件就"一半在 pad 环内 / 一半在环外"地被劈开，<strong>不需要任何新的摆放引擎</strong>。</p>
+        <pre><code>band = (ring_y1 - CLR, ring_y1 + PS + CLR)          # 底部 pad 行 + 间隙
+placement = eng.place_grid(nl, rows, cols, profile=P, row_pitch=rp,
+                           forbid_y_bands=[band])   # 撞带的行被推到带下方
+# 实测：85 个器件在环内，80 个在环下</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/padframe/step-04-halfinout.png" alt="器件块被底部 pad 行劈成上下两半：上半留在 pad 环内部，下半整体下移到环外，中间空出底部 pad 行占的水平带">
+          <figcaption>Step 4 · <code>forbid_y_bands</code> 把底部 pad 行占的水平带禁掉：<strong>85</strong> 个器件留在环内、<strong>80</strong> 个被推到环下（对比 Step 3，下半部整体下移，让开了底部 pad 行）。卡不动，是 block 让路。</figcaption>
+        </figure>
+
+        <h2 id="stage-5" class="anchor-h"><span class="stage-kicker">5</span>信号 P&R + 分区电网，然后成品</h2>
+        <p>最后一次调用 <code>route_and_draw_flexdr</code> 同时干三件事：<strong>信号布线</strong>（faithful FlexDR，在 track grid 上避开电网）、<strong>画</strong>器件 PCell + 走线 + 通孔、以及把 <code>io_pads</code> 里已分配的 pad 变成该 net 自己的固定金属 + 额外布线终端（未用 pad 变成硬避障）。同一条禁带还会<strong>劈开电网</strong>：<code>pdn_split_bands</code> 每个区域造一张 PDN，再用一条 <strong>spine strap</strong> 穿过底部 pad 行最宽的无 pad 缝隙把两区桥接——电源像信号一样在卡的 pad 之间穿线。</p>
+        <pre><code>with KLinkClient(port=PORT).connect() as c:
+    ok, info, _ = eng.route_and_draw_flexdr(
+        c, "PUB_PADFRAME_ADD4", nl, placement, profile=P, layers=layers,
+        vias=P.via_rules(), cut_layer=cut_layer, geom_path=D.GEOM, devices=DEVICES,
+        use_rust=True, io_pads=IO, pdn_split_bands=[band])
+    # -> routed 94/94, markers 0, 4.1s</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/padframe/step-05-routed.png" alt="完整成品：pad 环内外的器件块全部布线，绿色/橙色走线连到四周的 pad，VDD 从左下角一条竖直走廊下到电网">
+          <figcaption>Step 5 · 成品（<code>view.zoom_fit</code>）：<strong>routed 94/94 · markers 0</strong>。上下两半器件块都布通，信号连到四周已分配的 pad；VDD 从左下角 pad 沿左边走廊接到下方电网，GND 顶行 rail 在上方。</figcaption>
+        </figure>
+        <div class="tut-figure-row">
+          <figure class="tut-figure">
+            <img src="assets/tutorials/padframe/step-05-detail-vdd.png" alt="放大左下角：VDD pad 下方一条竖直的黄色 strap 走廊接到电网 tie rail，右侧是 GND rail 和器件">
+            <figcaption>Step 5b · 左下角局部：<code>VDD</code> pad 沿自己中心一条<strong>竖直 strap 走廊</strong>下到电网 tie rail——power pad 需要一条干净的竖直车道到它 net 的 rail，没有的话 <code>route_and_draw_flexdr</code> 会报一条指明冲突的错误。</figcaption>
+          </figure>
+          <figure class="tut-figure">
+            <img src="assets/tutorials/padframe/step-05-detail-thread.png" alt="放大底部 pad 行区域：走线和一条电网 spine strap 从底部三个冗余 pad 之间的缝隙穿过，连接环内和环下两个区域">
+            <figcaption>Step 5c · 底部 pad 行局部：信号走线和电网 <strong>spine strap</strong> 都从底部 pad（<code>PAD16..18</code>）之间的无 pad 缝隙穿过，把环内 PDN 和环下 PDN 桥接起来——电源和信号一样在卡的 pad 之间穿线。</figcaption>
+          </figure>
+        </div>
+
+        <h2 id="stage-6" class="anchor-h"><span class="stage-kicker">6</span>无卡模式：每个端口引成裸线头</h2>
+        <p>加 <code>--no-card</code>：<strong>完全没有 pad，也不画任何 pad</strong>。每个端口作为一条<strong>裸标注线端</strong>离开 block——<code>spread_ports</code> 造出线端目标（<code>draw=False</code>：不画盒子，走线自己的金属在那里结束，带上 net 名文字）。输入吸在<strong>西边</strong>、输出吸在<strong>东边</strong>，都吸附到器件行之间的<strong>路由通道中心</strong>（避免线端落在器件行带里逼着水平段挤进邻道）。电源根本不需要线头：PDN tie rail 已被引擎自动标注为 VDD/GND，在 rail 上任意处 bond/probe 即可。</p>
+        <pre><code>from klink.routing.grid.pad_harvest import spread_ports
+
+IO2 = {"pad_layer": "106/0", "text_size_um": 15.0,
+       "pads": (spread_ports(BB, INPUTS,  side="W", size_um=P.wire_width_um,
+                             clear_um=120.0, prefix="IN",  snap=chan)     # 输入在西
+                + spread_ports(BB, OUTPUTS, side="E", size_um=P.wire_width_um,
+                             clear_um=120.0, prefix="OUT", snap=chan))}   # 输出在东
+ok2, info2, _ = eng.route_and_draw_flexdr(
+    c, "PUB_PADFRAME_ADD4_NOCARD", nl, flat, profile=P, layers=layers, ...,
+    io_pads=IO2, pdn_split_bands=None)      # -> routed 94/94, markers 0, 3.6s</code></pre>
+        <div class="tut-figure-row">
+          <figure class="tut-figure">
+            <img src="assets/tutorials/padframe/step-06-nocard.png" alt="无卡版本：中间是器件块，没有 pad 环，输入标签 A/B/CIN 在左边、输出 S/COUT 在右边，都是裸的线端标注">
+            <figcaption>Step 6a · <code>--no-card</code> 成品：<strong>routed 94/94 · markers 0</strong>。没有 pad 环——输入（<code>A[*]/B[*]/CIN</code>）在西边、输出（<code>S[*]/COUT</code>）在东边，全是裸标注线端；电源在自动标注的 PDN tie rail 上。</figcaption>
+          </figure>
+          <figure class="tut-figure">
+            <img src="assets/tutorials/padframe/step-06-detail-stub.png" alt="放大西边：A[1]、CIN 等 net 名标在走线末端，走线到那里就结束，没有 pad 方块">
+            <figcaption>Step 6b · 西边局部：<code>A[1]</code>、<code>CIN</code> 等 net 名标在<strong>走线末端</strong>——线端就是端口，没有画任何 pad 盒子（<code>draw=False</code>）。这些标签告诉你之后自己的 pad 该接哪里。</figcaption>
+          </figure>
+        </div>
+
+        <h2 id="verify" class="anchor-h">验证：两种模式各自的 live LVS</h2>
+        <p>和别的教程一样，截图只是给人看的，不是完成依据。这个 demo 的完成门槛是<strong>两种模式各自 live LVS match=True</strong>，外加一条<strong>正向逐 pad 证明</strong>：每个已分配 pad/线头的金属必须和它 net 的器件终端落在<strong>同一条</strong>抽取网络上；每个未用 pad 必须不碰任何 net。本次实跑（8767 会话，Rust 内核）的真实数字：</p>
+        <table class="data-table">
+          <thead><tr><th>模式</th><th>routed</th><th>DRC markers</th><th>LVS ok</th><th>LVS match</th><th>器件</th><th>逐 pad 证明</th><th>用时</th></tr></thead>
+          <tbody>
+            <tr><td>card（有卡）</td><td><code>94/94</code></td><td><code>0</code></td><td><code>True</code></td><td><b><code>True</code></b></td><td><code>173</code></td><td>16 connected + 4 隔离</td><td><code>4.1s</code></td></tr>
+            <tr><td><code>--no-card</code></td><td><code>94/94</code></td><td><code>0</code></td><td><code>True</code></td><td><b><code>True</code></b></td><td><code>173</code></td><td>14 connected + 0 隔离</td><td><code>3.6s</code></td></tr>
+          </tbody>
+        </table>
+        <pre><code># card 模式
+[PUB_PADFRAME_ADD4]        LVS ok=True match=True devices=173
+[PUB_PADFRAME_ADD4]        pad proof ok=True connected=16 isolated=4
+# --no-card 模式
+[PUB_PADFRAME_ADD4_NOCARD] LVS ok=True match=True devices=173
+[PUB_PADFRAME_ADD4_NOCARD] stub proof ok=True connected=14 isolated=0</code></pre>
+        <p>两种模式的 <code>match</code> 都是 <code>True</code>、DRC markers 都是 <code>0</code>、逐 pad/线头证明全过——这才是"padframe 做完了"的依据。有卡模式 16 个 pad 全 CONNECTED、4 个冗余 pad 全隔离；无卡模式 14 个裸线头全 CONNECTED（电源不占线头，直接在 PDN rail 上）。</p>
+
+        <h2 id="next" class="anchor-h">下一步</h2>
+        <p>把 <code>padframe_pnr_lvs.py</code> 复制一份，改里面的<strong>pad 表</strong>（pad 尺寸、位置、net→pad 约定）就是你自己的卡；改 <code>PUBLIC_PROCESS</code> / <code>PUBLIC_MULTILAYER</code> 就是你自己的层栈——流程不变，klink 只出机制。想先搞清楚器件本身怎么从示例几何拟合成参数化 PCell、再进 P&R，看同批的<a href="tutorial-fit-device.html">分步教程：拟合器件 → P&R → LVS</a>。更多公开 demo 的实测数字见<a href="examples.html#padframe">示例页 · Probe-card padframe</a>。</p>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>geometry-first：在几何上标意图，让算法补全布线，用结构化证据验证。</p></div>
+      <div><h3>继续阅读</h3><p><a href="tutorials.html">核心思路与教程</a></p><p><a href="mcp-reference.html">MCP 工具参考</a></p></div>
+      <div><h3>安装</h3><p><a href="quickstart.html">快速上手</a></p></div>
+    </div>
+  </footer>
+  <script src="assets/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>分步教程：自定义器件——从范例几何拟合到 PCell 再到 P&amp;R/LVS - klink</title>
+  <meta name="description" content="用 klink 把你自己的器件接入数字 P&amp;R 流：从范例几何拟合出参数化边模型，注册成 KLayout PCell，画出参数变体，按网表摆放 173 个实例，FlexDR 详细布线 94/94，最后 live LVS match=True。每一步配截图和可运行代码，全部工艺数字 example-owned。">
+  <link rel="stylesheet" href="assets/styles.css">
+  <style>
+    /* Minimal figure styling, following the site's existing card/note language
+       (border var(--line), radius 8px) -- assets/styles.css has no <img>
+       usage yet, so this stays scoped to this page until it lands there. */
+    .tut-figure {
+      margin: 16px 0 26px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .tut-figure img {
+      width: 100%;
+      display: block;
+      background: #fff;
+    }
+    .tut-figure figcaption {
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      background: #f7fafb;
+    }
+    .tut-figure-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    @media (max-width: 760px) {
+      .tut-figure-row { grid-template-columns: 1fr; }
+    }
+    .stage-kicker {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 26px;
+      height: 26px;
+      padding: 0 8px;
+      border-radius: 6px;
+      background: #dff1ee;
+      color: #12654b;
+      font-weight: 800;
+      font-size: 13px;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body data-page="tutorials">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="主导航">
+        <a href="index.html" data-nav="home">首页</a>
+        <a href="quickstart.html" data-nav="quickstart">快速上手</a>
+        <a href="tutorials.html" data-nav="tutorials" class="active">教程</a>
+        <a href="workflows.html" data-nav="workflows">工作流</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP 参考</a>
+        <a href="examples.html" data-nav="examples">示例</a>
+        <a href="architecture.html" data-nav="architecture">架构</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="语言切换">
+          <a class="active" href="tutorial-fit-device.html">CN</a>
+          <a href="en/tutorial-fit-device.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="打开导航" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Step-by-step tutorial · structdevice · 数字 P&amp;R</div>
+        <h1>分步教程：自定义器件——从范例几何拟合到 PCell 再到 P&amp;R/LVS</h1>
+        <p>对应公开 gallery 里的 <a href="examples.html#fitdevice">fit-device demo</a>（repo-only）。前四篇教程画的都是“一个器件”；这一篇回答下一个问题：<strong>你自己的器件怎么接入数字 place &amp; route 流？</strong>整条链是：几个不同尺寸的范例几何（exemplar）→ 拟合出参数化边模型 → 注册成真 PCell → 按器件级网表摆放 173 个实例 → FlexDR 详细布线 → live LVS <code>match=True</code>。这也是 <strong>process purity</strong> 的活教材：器件形状、层号、线宽、间距全部写在这一个 example 文件里，klink 机制层零工艺常数——换成你自己的器件，就是换这份文件里的数字。</p>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#prereqs">前置条件</a>
+          <a href="#stage-1">① 范例几何：单器件出发</a>
+          <a href="#stage-2">② 拟合：从范例到参数化模型</a>
+          <a href="#stage-3">③ 注册成 PCell，画出变体</a>
+          <a href="#stage-4">④ 按网表摆放多实例</a>
+          <a href="#stage-5">⑤ 声明网络 + 详细布线</a>
+          <a href="#stage-6">⑥ live LVS</a>
+          <a href="#verify">验证，不是截图</a>
+          <a href="#next">下一步</a>
+        </nav>
+      </aside>
+
+      <article class="content">
+        <h2 id="prereqs" class="anchor-h">前置条件</h2>
+        <ul>
+          <li><strong>repo-only</strong>：这个 demo 读源码树，不在 pip wheel 里。先克隆仓库：<code>git clone https://github.com/klinkdev2026/klayout-klink &amp;&amp; cd klayout-klink</code>。</li>
+          <li>KLayout 正在运行，并已加载 klink 插件（把 <code>--port</code> 指向你的 live 会话）。</li>
+          <li>完整流程就是一条命令：<code>python -m examples_klink.public.demos.fit_device_pnr_lvs --port &lt;session-port&gt;</code>（加 <code>--draw-only</code> 只画器件、跳过 P&amp;R/LVS）。</li>
+        </ul>
+        <div class="note">这篇教程把 demo 一次跑完的流程拆成 6 个可观察的阶段，每一步都在 live KLayout 里真的执行、截图。demo 里的器件是<strong>合成的</strong>（数字干净、明显非真实工艺），所以整个 demo 零机密数据就能跑；把 <code>_device_boxes()</code> 换成你从自己手画 cell 里 harvest 出来的盒子，流程一行不改。</div>
+
+        <h2 id="stage-1" class="anchor-h"><span class="stage-kicker">1</span>范例几何：单器件出发</h2>
+        <p>一切从“你已经会画的那个器件”开始。范例（exemplar）就是<strong>同一个器件在几个不同参数点上的画法</strong>——每个范例是一组带角色名的盒子（role → 层 + bbox）。本例是一个背栅式合成器件，4 个角色、3 个工艺层：沟道（<code>103/0</code>）、源/漏（<code>104/0</code>，在 x 方向伸出沟道）、背栅板（<code>101/0</code>，盖住沟道并向左伸出作栅引出）。几何由两个参数驱动：<code>w_um</code>（沟道宽）和 <code>l_um</code>（源漏间隙）：</p>
+        <pre><code>SX, OUTER, CY, PL, PR = 2.5, 11.0, 2.0, 10.0, 8.0   # OUTER = 固定的源/漏外缘
+
+def _device_boxes(W, L):
+    return {
+        "channel":    ("103/0", [-W/2, -(CY + L/2), W/2, CY + L/2]),
+        "source":     ("104/0", [-(W/2 + SX), -OUTER, W/2 + SX, -L/2]),
+        "drain":      ("104/0", [-(W/2 + SX), L/2, W/2 + SX, OUTER]),
+        "gate_plate": ("101/0", [-(W/2 + PL), -(CY + L/2), W/2 + PR, CY + L/2]),
+    }
+
+EXEMPLAR_SIZES = [(10, 4), (50, 4), (10, 8), (50, 8)]   # 覆盖 W 和 L 两个轴</code></pre>
+        <p>4 个范例点刻意覆盖两个参数轴（W 变、L 变、两者都变）——拟合器是做回归的，范例必须让每个参数独立变化过，否则它会明确报错（“参数共线”）。真实场景里这些盒子来自你已有的版图：用 <code>shape.query</code> 从几个不同尺寸的手画器件 cell 里读出来即可。</p>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/fit-device/step-01-exemplars.png" alt="一行四个背栅器件范例，从左到右分别是 W=10 L=4、W=50 L=4、W=10 L=8、W=50 L=8，宽度和源漏间隙明显不同">
+          <figcaption>Step 1 · 4 个范例几何（W=10/50 × L=4/8）。橙色 = 背栅板（<code>101/0</code>），绿色 = 源/漏（<code>104/0</code>），中间致密网格 = 沟道（<code>103/0</code>）。W 驱动横向尺寸，L 驱动源漏间隙。</figcaption>
+        </figure>
+
+        <h2 id="stage-2" class="anchor-h"><span class="stage-kicker">2</span>拟合：从范例到参数化模型</h2>
+        <p>拟合器（<code>klink.domains.structdevice.pcell_fitter</code>）做的事是：对每个角色的每条盒边（<code>x1/y1/x2/y2</code>），把边坐标对参数做最小二乘回归，并<strong>分类</strong>——<code>linear</code>（被参数干净驱动）、<code>constant</code>（不随参数动）、<code>unexplained</code>（数据解释不了，需要你拍板：是新参数，还是钉成常数）。先 <code>analyze</code> 筛查、读 <code>decisions_needed</code>、确认模型，再 <code>fit_table</code> 出表：</p>
+        <pre><code>from klink.domains.structdevice import pcell_fitter as fitter
+
+exemplars = [{"params": {"w_um": W, "l_um": L},
+              "roles": {r: {"layer": ly, "box_um": bx}
+                        for r, (ly, bx) in _device_boxes(W, L).items()}}
+             for W, L in EXEMPLAR_SIZES]
+report = fitter.analyze(exemplars, ["w_um", "l_um"])
+print(report.summary())
+# parameters: ['w_um', 'l_um']
+# edges: 14 linear, 2 constant, 0 unexplained
+
+table = fitter.fit_table(
+    report, style="default",
+    sample_order=[{"w_um": W, "l_um": L} for W, L in EXEMPLAR_SIZES],
+    param_units={"w_um": "um", "l_um": "um"})</code></pre>
+        <p>本次实际筛查结果：16 条边里 <strong>14 条 linear、2 条 constant、0 条 unexplained</strong>。那 2 条常数边正是器件模型里“源/漏外缘固定在 ±11 µm”的约定——拟合器自己从数据里发现了它。产物是一张 <code>klink_fitted_device_pcell_v2</code> 拟合表：每条边一个 <code>base + Σ coef[p]·param[p]</code> 的线性法则（单位 dbu），比如沟道左边缘：</p>
+        <pre><code>"channel": {"layer": "103/0", "edges": {
+    "x1": {"kind": "parametric", "base": 0,      "coef": {"w_um": -500, "l_um": 0}},
+    ...
+}},
+"source":  {"layer": "104/0", "edges": {
+    "y1": {"kind": "parametric", "base": -11000, "coef": {"w_um": 0,    "l_um": 0}},  # 常数边
+    ...
+}}</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/fit-device/step-02-exemplar-detail-annotated.png" alt="W=10 L=4 范例的放大图，蓝色双向箭头标出沟道宽 w_um 和源漏间隙 l_um，橙色方框标出源极外缘是 coef=0 的常数边">
+          <figcaption>Step 2 · 拟合结果落在几何上：蓝色箭头 = 参数驱动的边（沟道宽 <code>w_um</code>、源漏间隙 <code>l_um</code>），橙色框 = 拟合器判为常数（<code>coef=0</code>）的源极外缘。有了这张表，器件可以画在<strong>任意</strong>参数值上，不只 4 个范例点。</figcaption>
+        </figure>
+
+        <h2 id="stage-3" class="anchor-h"><span class="stage-kicker">3</span>注册成 PCell，画出变体</h2>
+        <p>拟合表交给 KLayout 插件侧的 <code>pcell.register_fitted</code>，就注册出一个真 PCell（库名 <code>klink_structdevice</code>）：参数进、几何出，拟合表在注册时绑定，画出的实例只携带几何参数。改参数画 3 个变体，验证参数化是真的：</p>
+        <pre><code>c.call("pcell.register_fitted", {"name": "demobg", "fit_table": FIT})  # FIT = 拟合表 json 路径
+
+items = [{"pcell": "demobg", "library": "klink_structdevice",
+          "params": {"w_um": W, "l_um": L, "style": "default"},
+          "position_um": [i * 180.0, 0.0]}
+         for i, (W, L) in enumerate([(10, 8), (20, 8), (50, 3)])]
+c.instance_insert_pcell_many("FIT_VARIANTS", items)</code></pre>
+        <p>注意这 3 个尺寸里只有 <code>(10, 8)</code> 是范例点：<code>W=20</code> 是范例区间内的<strong>插值</strong>，<code>L=3</code> 在范例区间 [4, 8] 之外、是<strong>外推</strong>——线性模型对超出样本区间的参数不背书（工艺规则未知），但几何法则照常成立，后面的 LVS 会证明这三个尺寸都能用。</p>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/fit-device/step-03-variants.png" alt="三个由同一 PCell 画出的器件变体，分别标注 dev10_8 W=10 L=8、dev20_8 W=20 L=8、dev50_3 W=50 L=3，尺寸依次变宽、源漏间隙不同">
+          <figcaption>Step 3 · 同一个 <code>demobg</code> PCell 在三组参数下的实例：dev10_8（范例点）、dev20_8（插值）、dev50_3（外推）。几何随参数正确缩放——参数化是拟合出来的，不是硬编码的。</figcaption>
+        </figure>
+        <div class="note"><strong>器件库也是 example 数据。</strong>后面 P&amp;R 用的 <code>DEVICES</code> 表把每个器件键映射到 <code>{params, pcell, library, style, fit_table}</code>——器件是 <strong>N 元的</strong>（<code>params</code> 是任意 dict，没有 W/L 假设），klink 不预设任何一项；连每个器件的端子（G/S/D 的位置、朝向、层）都从拟合表算出、存进 example 自己的 <code>device_geom.json</code>。</div>
+
+        <h2 id="stage-4" class="anchor-h"><span class="stage-kicker">4</span>按网表摆放多实例</h2>
+        <p>现在把单器件放大成电路。输入是一份<strong>器件级网表</strong>（demo 内置 <code>add4.devnet.json</code>，一个 4-bit 加法器：62 个门、173 个器件实例、96 个网）；工艺栈用 example 自有的 <code>PUBLIC_PROCESS</code>（3 层布线 + 2 组过孔）。行列数、行距都从需求<strong>推导</strong>，不是魔法数：</p>
+        <pre><code>from dataclasses import replace
+from klink.routing.grid.process_profile import ProcessProfile
+from klink.routing.grid.floorplan import derive_grid, derive_row_pitch
+from klink.domains.structdevice import layout_engine as eng
+
+PUBLIC_PROCESS = ProcessProfile(          # 全部数字 example-owned；抄走改成你的工艺
+    routing_layers=("101/0", "104/0", "106/0"),
+    gate_layer="101/0", sd_layer="104/0", channel_layer="103/0",
+    vias=(("101/0", "102/0", "104/0"), ("104/0", "105/0", "106/0")),
+    layer_directions={"101/0": "V", "104/0": "H", "106/0": "V"},
+    wire_width_um=5.0, wire_clear_um=2.0, prl_spacing_um=10.0, prl_length_um=15.0,
+    via_pad_um=5.0, litho_tol_um=1.0, y_step_um=30.0, col_pitch_um=100.0, margin_um=60.0)
+
+P = replace(PUBLIC_PROCESS, wire_clear_um=5.0, grid_pitch_um=10.0,
+            col_pitch_um=100.0, y_step_um=35.0)     # 密度旋钮，同样 example-owned
+nl = json.loads(Path("examples_klink/public/demos/add4.devnet.json").read_text())
+raw = eng.load_device_geom(GEOM)          # 器件几何表（terms/pads/body），由拟合表生成
+_, _, terms = eng._geom_tables(raw)
+rows, cols = derive_grid(len(nl["groups"]))          # 62 门 -> 8 x 8
+rp = derive_row_pitch(nl, rows, cols, terms, y_step=P.y_step_um,
+                      width_um=P.wire_width_um, wire_clear_um=P.wire_clear_um,
+                      via_pad_um=P.via_pad_um, n_horiz_layers=3)   # -> 170.0 um
+placement = eng.place_grid(nl, rows, cols, profile=P, row_pitch=rp)   # 173 个实例</code></pre>
+        <p><code>derive_row_pitch</code> 把行距 = 器件叠高 + 布线通道，通道宽度按“峰值穿越网数 ÷ 布线层数”算出——层多通道就窄，版图就小。摆放本身就是一次 <code>instance.insert_pcell_many</code> 批量调用（见批量 RPC 铁律）。</p>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/fit-device/step-04-placement.png" alt="8 行 8 列的器件阵列，每列是一叠 2 到 3 个拟合 PCell 器件，行与行之间留有布线通道，尚无任何连线">
+          <figcaption>Step 4 · 173 个拟合 PCell 实例按 8×8 门阵列摆好（每门一列、器件竖叠，负载管在顶）。行间空白就是 <code>derive_row_pitch</code> 预留的布线通道，此时还没有任何连线。</figcaption>
+        </figure>
+
+        <h2 id="stage-5" class="anchor-h"><span class="stage-kicker">5</span>声明网络 + 详细布线</h2>
+        <p>连通性的<strong>意图</strong>来自网表：每个网声明“哪些器件端子属于同一个电气节点”。这份声明既是布线器的输入，也是第 ⑥ 步 LVS 对账的基准：</p>
+        <pre><code>declared = [{"net": n["net_id"], "terminals": n["terminals"]} for n in nl["nets"]]
+# 例：{"net": "$abc$217$new_n15", "terminals": ["X1.S", "X1.G", "X2.D", "X102.G"]}
+
+cut_layer = {tuple(sorted((lo, up))): P.cut_layer(lo, up) for (lo, _c, up) in P.vias}
+ok, info, _ = eng.route_and_draw_flexdr(
+    c, "DEMO_ADD4", nl, placement, profile=P, layers=list(P.routing_layers),
+    vias=P.via_rules(), cut_layer=cut_layer, geom_path=GEOM,
+    devices=DEVICES, use_rust=True)
+# FlexDR 3.7s ok=True routed=94/94 markers=0</code></pre>
+        <p>96 个网里，<code>VDD</code>/<code>GND</code> 走电源网格（PDN：<code>104/0</code> 轨 + <code>106/0</code> 带，本次 166 个 PDN 过孔），其余 <strong>94 个信号网</strong>由 FlexDR 详细布线器在 3 层上走线（本次 200 个信号过孔），端子接入点、过孔规则全部来自 profile 和 harvest 出的器件几何。<code>routed=94/94、markers=0</code>（0 个 DRC 违例）才继续；布不通时返回的是<strong>指令</strong>（哪个网、为什么、怎么改 floorplan 参数），不是裸报错。</p>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/fit-device/step-05-routed.png" alt="8x8 器件阵列全部布通的整体视图，行间通道里布满横向绿色走线和纵向橙色、灰色走线，四周有电源环">
+          <figcaption>Step 5a · 94/94 信号网全部布通：绿色横线（<code>104/0</code>）走行间通道，橙（<code>101/0</code>）、灰（<code>106/0</code>）竖线跨行，四周是 PDN 电源环。</figcaption>
+        </figure>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/fit-device/step-05-detail.png" alt="放大到两列器件：可见器件的栅板和源漏 pad、三个布线层的走线以及带十字网格的过孔叠层方块">
+          <figcaption>Step 5b · 局部放大（第一行两列器件）：走线从器件 pad 的接入点出发，跨层处是过孔叠层（上下两层落 pad + 中间 cut，小方块）。</figcaption>
+        </figure>
+
+        <h2 id="stage-6" class="anchor-h"><span class="stage-kicker">6</span>live LVS：声明 vs 提取</h2>
+        <p>最后一步不是“看起来连上了”，而是让 KLayout 原生的连通性提取当裁判：<code>lvs_check</code> 从画好的真实几何里提取网络（金属层内连通 + 过孔跨层），和第 ⑤ 步声明的网逐一对账，再做器件级 netlist 比对：</p>
+        <pre><code>from klink.domains.structdevice.orchestrators import lvs_check
+from klink.domains.structdevice.recipes import geom_terminal_provider
+
+# device_terms = 每个实例端子的绝对坐标（摆放偏移 + terms 里的端子中心；
+# 完整的一行 dict 推导见 demo 源码）
+res = lvs_check(c, "DEMO_ADD4", declared=declared, mode="lvsdb",
+                connectivity=P.connectivity_spec(),      # 由同一份 profile 推导
+                terminal_provider=geom_terminal_provider(raw),
+                placement=placement, device_terms=device_terms)
+# LVS ok=True match=True devices=173</code></pre>
+        <p><code>mode="lvsdb"</code> 还会写出一份几何联动的原生 <code>.lvsdb</code>——在 KLayout 的 Netlist Browser 里打开，可以在版图和网表之间双向交叉探查。注意 LVS 用的连通性规则（哪些层导电、哪些层是过孔）由 <code>P.connectivity_spec()</code> 从<strong>同一份</strong> profile 推导——布线器和裁判读同一份工艺声明，但裁判是 KLayout 原生提取器，不是布线器自己给自己打分。</p>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/fit-device/step-06-overview.png" alt="完成的 4-bit 加法器版图全景，左上角有 GND 标签、左下角有 VDD 标签，电源环包住整个 8x8 阵列">
+          <figcaption>Step 6 · 成品全景（<code>view.zoom_fit</code>）：LVS match=True 之后的 DEMO_ADD4。PDN 外环带 <code>GND</code>/<code>VDD</code> 文字标签——没有 pad 时，外环轨就是电源端口。</figcaption>
+        </figure>
+
+        <h2 id="verify" class="anchor-h">验证，不是截图</h2>
+        <p>和<a href="tutorials.html#verify">教程首页</a>说的一样，截图只是给人看的。这次在 live KLayout 里实际运行的完整输出：</p>
+        <pre><code>=== fitter screening ===
+parameters: ['w_um', 'l_um']
+edges: 14 linear, 2 constant, 0 unexplained
+drawn DEMO_DEVICES (synthetic fitted device)
+[public] FlexDR 3.7s ok=True routed=94/94 markers=0
+[public] LVS ok=True match=True devices=173
+RESULT: PASS (synthetic fitted device: fit -> P&amp;R -> LVS match)</code></pre>
+        <p>四道结构化质量门，缺一不可：拟合筛查 <code>0 unexplained</code>（每条边都有解释）；布线 <code>routed=94/94</code> 且 <code>markers=0</code>（全部布通且零 DRC 违例）；LVS <code>match=True</code>（173 个器件的提取网表和声明网表一致）。任何一道不过，demo 以非零退出码失败——不存在“差不多就算完成”。</p>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/fit-device/step-07-lvs-verify.png" alt="KLayout 的 Netlist Database Browser 打开 DEMO_ADD4.lvsdb，Cross Reference 页里 DEMO_ADD4 的 Nets 和 Devices 均显示为绿色（匹配）">
+          <figcaption>Step 6 · <code>match=True</code> 的人眼印证：<code>mode="lvsdb"</code> 写出的 <code>DEMO_ADD4.lvsdb</code> 在 KLayout 的 Netlist Database Browser 里打开，Cross Reference 页的网络与器件全部对上（绿色）。这就是上面 <code>LVS ok=True match=True</code> 那行数字背后的原生提取结果——数字是判定依据，这张图只是同一结论给人看的样子。</figcaption>
+        </figure>
+
+        <h2 id="next" class="anchor-h">下一步</h2>
+        <p>把这条流程变成你自己的：复制 <code>examples_klink/public/demos/fit_device_pnr_lvs.py</code>，换掉三样东西——<code>_device_boxes()</code>（改成从你手画的器件 cell 里 <code>shape.query</code> 出来的盒子）、<code>PUBLIC_PROCESS</code> 的层号/线宽/间距、以及网表。klink 机制层一行不用改。如果你是从零开始，建议先读第一批的<a href="tutorial-hallbar.html">Hall bar 入门教程</a>建立 geometry-first 的基本流程。下一篇教程讲 <a href="tutorial-padframe.html">probe-card padframe demo</a>：pad 环先固定、电路去迁就它的 P&amp;R。</p>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>geometry-first：在几何上标意图，让算法补全布线，用结构化证据验证。</p></div>
+      <div><h3>继续阅读</h3><p><a href="tutorials.html">核心思路与教程</a></p><p><a href="mcp-reference.html">MCP 工具参考</a></p></div>
+      <div><h3>安装</h3><p><a href="quickstart.html">快速上手</a></p></div>
+    </div>
+  </footer>
+  <script src="assets/app.js"></script>
+</body>
+</html>

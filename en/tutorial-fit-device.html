@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Step-by-step tutorial: a custom device — fit exemplar geometry into a PCell, then P&amp;R/LVS - klink</title>
+  <meta name="description" content="Bring your own device into klink's digital P&amp;R flow: fit a parametric edge model from exemplar geometry, register it as a KLayout PCell, draw parameter variants, place 173 instances from a netlist, run FlexDR detailed routing 94/94, and finish with live LVS match=True. Screenshots and runnable code for every step; every process number is example-owned.">
+  <link rel="stylesheet" href="../assets/styles.css">
+  <style>
+    /* Minimal figure styling, following the site's existing card/note language
+       (border var(--line), radius 8px) -- assets/styles.css has no <img>
+       usage yet, so this stays scoped to this page until it lands there. */
+    .tut-figure {
+      margin: 16px 0 26px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .tut-figure img {
+      width: 100%;
+      display: block;
+      background: #fff;
+    }
+    .tut-figure figcaption {
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      background: #f7fafb;
+    }
+    .tut-figure-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    @media (max-width: 760px) {
+      .tut-figure-row { grid-template-columns: 1fr; }
+    }
+    .stage-kicker {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 26px;
+      height: 26px;
+      padding: 0 8px;
+      border-radius: 6px;
+      background: #dff1ee;
+      color: #12654b;
+      font-weight: 800;
+      font-size: 13px;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body data-page="tutorials">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="index.html" data-nav="home">Home</a>
+        <a href="quickstart.html" data-nav="quickstart">Quickstart</a>
+        <a href="tutorials.html" data-nav="tutorials" class="active">Tutorials</a>
+        <a href="workflows.html" data-nav="workflows">Workflows</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP Reference</a>
+        <a href="examples.html" data-nav="examples">Examples</a>
+        <a href="architecture.html" data-nav="architecture">Architecture</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="Language switch">
+          <a href="../tutorial-fit-device.html">CN</a>
+          <a class="active" href="tutorial-fit-device.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Step-by-step tutorial · structdevice · digital P&amp;R</div>
+        <h1>Step-by-step: a custom device — from exemplar geometry to a PCell to P&amp;R/LVS</h1>
+        <p>This walks through the <a href="examples.html#fitdevice">fit-device demo</a> from the public gallery (repo-only). The first four tutorials each drew <em>one</em> device; this one answers the next question: <strong>how does YOUR device enter a digital place-&amp;-route flow?</strong> The chain is: a few exemplar drawings of the same device at different sizes → fit a parametric edge model → register a real PCell → place 173 instances from a device-level netlist → FlexDR detailed routing → live LVS <code>match=True</code>. It is also the living example of <strong>process purity</strong>: every device shape, layer number, wire width and spacing lives in this one example file — klink's mechanism layer ships zero process constants. Swapping in your own device means editing the numbers in this file, nothing else.</p>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#prereqs">Prerequisites</a>
+          <a href="#stage-1">① Exemplar geometry: start from one device</a>
+          <a href="#stage-2">② Fitting: exemplars → parametric model</a>
+          <a href="#stage-3">③ Register a PCell, draw variants</a>
+          <a href="#stage-4">④ Place many instances from a netlist</a>
+          <a href="#stage-5">⑤ Declare nets + detailed routing</a>
+          <a href="#stage-6">⑥ Live LVS</a>
+          <a href="#verify">Verify, don't just look</a>
+          <a href="#next">Next steps</a>
+        </nav>
+      </aside>
+
+      <article class="content">
+        <h2 id="prereqs" class="anchor-h">Prerequisites</h2>
+        <ul>
+          <li><strong>Repo-only</strong>: this demo reads the source tree and is not in the pip wheel. Clone the repository first: <code>git clone https://github.com/klinkdev2026/klayout-klink &amp;&amp; cd klayout-klink</code>.</li>
+          <li>KLayout running with the klink plugin loaded (point <code>--port</code> at your live session).</li>
+          <li>The whole flow is one command: <code>python -m examples_klink.public.demos.fit_device_pnr_lvs --port &lt;session-port&gt;</code> (add <code>--draw-only</code> to draw the devices and skip P&amp;R/LVS).</li>
+        </ul>
+        <div class="note">This tutorial splits the demo's single run into 6 observable stages, each really executed and screenshotted in a live KLayout. The device in the demo is <strong>synthetic</strong> (clean, obviously-not-real numbers), so the whole demo runs with zero confidential data; swap <code>_device_boxes()</code> for boxes harvested from your own hand-drawn cells and the flow doesn't change by a single line.</div>
+
+        <h2 id="stage-1" class="anchor-h"><span class="stage-kicker">1</span>Exemplar geometry: start from one device</h2>
+        <p>Everything starts from "the device you already know how to draw". An exemplar is <strong>the same device drawn at several parameter points</strong> — each exemplar is a set of role-named boxes (role → layer + bbox). Here it's a synthetic back-gate-style device with 4 roles on 3 process layers: channel (<code>103/0</code>), source/drain (<code>104/0</code>, protruding past the channel in x), and a back-gate plate (<code>101/0</code>, covering the channel and extending left for the gate lead). Two parameters drive the geometry: <code>w_um</code> (channel width) and <code>l_um</code> (source–drain gap):</p>
+        <pre><code>SX, OUTER, CY, PL, PR = 2.5, 11.0, 2.0, 10.0, 8.0   # OUTER = FIXED S/D outer edge
+
+def _device_boxes(W, L):
+    return {
+        "channel":    ("103/0", [-W/2, -(CY + L/2), W/2, CY + L/2]),
+        "source":     ("104/0", [-(W/2 + SX), -OUTER, W/2 + SX, -L/2]),
+        "drain":      ("104/0", [-(W/2 + SX), L/2, W/2 + SX, OUTER]),
+        "gate_plate": ("101/0", [-(W/2 + PL), -(CY + L/2), W/2 + PR, CY + L/2]),
+    }
+
+EXEMPLAR_SIZES = [(10, 4), (50, 4), (10, 8), (50, 8)]   # span both W and L</code></pre>
+        <p>The 4 exemplar points deliberately span both parameter axes (W varies, L varies, both vary) — the fitter is a regression, so the exemplars must vary each parameter independently, or it refuses with an explicit error ("collinear parameters"). In a real project these boxes come from your existing layouts: read them out of a few hand-drawn device cells at different sizes with <code>shape.query</code>.</p>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/fit-device/step-01-exemplars.png" alt="A row of four back-gate device exemplars, left to right W=10 L=4, W=50 L=4, W=10 L=8, W=50 L=8, with visibly different widths and source-drain gaps">
+          <figcaption>Step 1 · The 4 exemplars (W=10/50 × L=4/8). Orange = back-gate plate (<code>101/0</code>), green = source/drain (<code>104/0</code>), dense center hatch = channel (<code>103/0</code>). W drives the horizontal dimensions, L drives the source–drain gap.</figcaption>
+        </figure>
+
+        <h2 id="stage-2" class="anchor-h"><span class="stage-kicker">2</span>Fitting: exemplars → parametric model</h2>
+        <p>The fitter (<code>klink.domains.structdevice.pcell_fitter</code>) regresses every box edge (<code>x1/y1/x2/y2</code>) of every role against the parameters (least squares) and <strong>classifies</strong> each edge — <code>linear</code> (cleanly driven by the parameters), <code>constant</code> (doesn't move), or <code>unexplained</code> (the data doesn't justify a law; you decide: a new parameter, or pin it to a constant). The workflow is: <code>analyze</code> to screen, read <code>decisions_needed</code>, confirm the model, then <code>fit_table</code>:</p>
+        <pre><code>from klink.domains.structdevice import pcell_fitter as fitter
+
+exemplars = [{"params": {"w_um": W, "l_um": L},
+              "roles": {r: {"layer": ly, "box_um": bx}
+                        for r, (ly, bx) in _device_boxes(W, L).items()}}
+             for W, L in EXEMPLAR_SIZES]
+report = fitter.analyze(exemplars, ["w_um", "l_um"])
+print(report.summary())
+# parameters: ['w_um', 'l_um']
+# edges: 14 linear, 2 constant, 0 unexplained
+
+table = fitter.fit_table(
+    report, style="default",
+    sample_order=[{"w_um": W, "l_um": L} for W, L in EXEMPLAR_SIZES],
+    param_units={"w_um": "um", "l_um": "um"})</code></pre>
+        <p>This run's actual screening: of 16 edges, <strong>14 linear, 2 constant, 0 unexplained</strong>. The 2 constant edges are exactly the device model's "S/D outer edge fixed at ±11 µm" convention — the fitter discovered it from the data. The product is a <code>klink_fitted_device_pcell_v2</code> fit table: one linear law <code>base + Σ coef[p]·param[p]</code> per edge (in dbu), e.g. the channel's left edge:</p>
+        <pre><code>"channel": {"layer": "103/0", "edges": {
+    "x1": {"kind": "parametric", "base": 0,      "coef": {"w_um": -500, "l_um": 0}},
+    ...
+}},
+"source":  {"layer": "104/0", "edges": {
+    "y1": {"kind": "parametric", "base": -11000, "coef": {"w_um": 0,    "l_um": 0}},  # constant edge
+    ...
+}}</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/fit-device/step-02-exemplar-detail-annotated.png" alt="Zoomed view of the W=10 L=4 exemplar with blue double-headed arrows marking channel width w_um and source-drain gap l_um, and an orange box marking the source outer edge as a coef=0 constant edge">
+          <figcaption>Step 2 · The fit result laid over the geometry: blue arrows = parameter-driven edges (channel width <code>w_um</code>, source–drain gap <code>l_um</code>), orange box = the source outer edge the fitter classified as constant (<code>coef=0</code>). With this table the device draws at <strong>any</strong> parameter values, not just the 4 exemplar points.</figcaption>
+        </figure>
+
+        <h2 id="stage-3" class="anchor-h"><span class="stage-kicker">3</span>Register a PCell, draw variants</h2>
+        <p>Hand the fit table to <code>pcell.register_fitted</code> on the KLayout plugin side and you get a real PCell (library <code>klink_structdevice</code>): parameters in, geometry out. The table binds at registration, so a drawn instance carries only its geometry parameters. Draw 3 variants at different parameters to prove the parametrization is real:</p>
+        <pre><code>c.call("pcell.register_fitted", {"name": "demobg", "fit_table": FIT})  # FIT = fit-table json path
+
+items = [{"pcell": "demobg", "library": "klink_structdevice",
+          "params": {"w_um": W, "l_um": L, "style": "default"},
+          "position_um": [i * 180.0, 0.0]}
+         for i, (W, L) in enumerate([(10, 8), (20, 8), (50, 3)])]
+c.instance_insert_pcell_many("FIT_VARIANTS", items)</code></pre>
+        <p>Note that only <code>(10, 8)</code> is an exemplar point: <code>W=20</code> is an <strong>interpolation</strong> inside the sampled range, and <code>L=3</code> lies outside the sampled range [4, 8] — an <strong>extrapolation</strong>. The linear model doesn't vouch for parameters beyond the sample range (process rules are unknown there), but the geometric law still applies, and the LVS below proves all three sizes work.</p>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/fit-device/step-03-variants.png" alt="Three device variants drawn by the same PCell, labelled dev10_8 W=10 L=8, dev20_8 W=20 L=8, dev50_3 W=50 L=3, progressively wider with different source-drain gaps">
+          <figcaption>Step 3 · The same <code>demobg</code> PCell at three parameter sets: dev10_8 (exemplar point), dev20_8 (interpolation), dev50_3 (extrapolation). The geometry scales correctly with the parameters — the parametrization was fitted, not hard-coded.</figcaption>
+        </figure>
+        <div class="note"><strong>The device library is example data too.</strong> The <code>DEVICES</code> table used by P&amp;R below maps each device key to <code>{params, pcell, library, style, fit_table}</code> — devices are <strong>N-ary</strong> (<code>params</code> is an arbitrary dict; no W/L assumption), and klink presets none of it. Even each device's terminals (G/S/D position, orientation, layer) are computed from the fit table and stored in the example's own <code>device_geom.json</code>.</div>
+
+        <h2 id="stage-4" class="anchor-h"><span class="stage-kicker">4</span>Place many instances from a netlist</h2>
+        <p>Now scale the single device up to a circuit. The input is a <strong>device-level netlist</strong> (the demo bundles <code>add4.devnet.json</code>, a 4-bit adder: 62 gates, 173 device instances, 96 nets); the process stack is the example-owned <code>PUBLIC_PROCESS</code> (3 routing layers + 2 via pairs). Rows, columns and row pitch are <strong>derived from demand</strong>, not magic numbers:</p>
+        <pre><code>from dataclasses import replace
+from klink.routing.grid.process_profile import ProcessProfile
+from klink.routing.grid.floorplan import derive_grid, derive_row_pitch
+from klink.domains.structdevice import layout_engine as eng
+
+PUBLIC_PROCESS = ProcessProfile(          # every number example-owned; copy + edit for YOUR process
+    routing_layers=("101/0", "104/0", "106/0"),
+    gate_layer="101/0", sd_layer="104/0", channel_layer="103/0",
+    vias=(("101/0", "102/0", "104/0"), ("104/0", "105/0", "106/0")),
+    layer_directions={"101/0": "V", "104/0": "H", "106/0": "V"},
+    wire_width_um=5.0, wire_clear_um=2.0, prl_spacing_um=10.0, prl_length_um=15.0,
+    via_pad_um=5.0, litho_tol_um=1.0, y_step_um=30.0, col_pitch_um=100.0, margin_um=60.0)
+
+P = replace(PUBLIC_PROCESS, wire_clear_um=5.0, grid_pitch_um=10.0,
+            col_pitch_um=100.0, y_step_um=35.0)     # density knobs, also example-owned
+nl = json.loads(Path("examples_klink/public/demos/add4.devnet.json").read_text())
+raw = eng.load_device_geom(GEOM)          # device geometry table (terms/pads/body), generated from the fit table
+_, _, terms = eng._geom_tables(raw)
+rows, cols = derive_grid(len(nl["groups"]))          # 62 gates -> 8 x 8
+rp = derive_row_pitch(nl, rows, cols, terms, y_step=P.y_step_um,
+                      width_um=P.wire_width_um, wire_clear_um=P.wire_clear_um,
+                      via_pad_um=P.via_pad_um, n_horiz_layers=3)   # -> 170.0 um
+placement = eng.place_grid(nl, rows, cols, profile=P, row_pitch=rp)   # 173 instances</code></pre>
+        <p><code>derive_row_pitch</code> sets row pitch = device stack height + routing channel, with the channel sized as peak crossing demand ÷ number of routing layers — more layers, narrower channel, smaller layout. The placement itself is one batch <code>instance.insert_pcell_many</code> call (see the batch-RPC rule).</p>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/fit-device/step-04-placement.png" alt="An 8 by 8 array of devices, each column a stack of 2 to 3 fitted PCell devices, with routing channels left between rows and no wiring yet">
+          <figcaption>Step 4 · 173 fitted-PCell instances placed as an 8×8 gate grid (one column per gate, devices stacked vertically, load on top). The blank bands between rows are the routing channels <code>derive_row_pitch</code> reserved; nothing is wired yet.</figcaption>
+        </figure>
+
+        <h2 id="stage-5" class="anchor-h"><span class="stage-kicker">5</span>Declare nets + detailed routing</h2>
+        <p>The connectivity <strong>intent</strong> comes from the netlist: each net declares which device terminals belong to one electrical node. This declaration is both the router's input and the baseline LVS reconciles against in stage ⑥:</p>
+        <pre><code>declared = [{"net": n["net_id"], "terminals": n["terminals"]} for n in nl["nets"]]
+# e.g. {"net": "$abc$217$new_n15", "terminals": ["X1.S", "X1.G", "X2.D", "X102.G"]}
+
+cut_layer = {tuple(sorted((lo, up))): P.cut_layer(lo, up) for (lo, _c, up) in P.vias}
+ok, info, _ = eng.route_and_draw_flexdr(
+    c, "DEMO_ADD4", nl, placement, profile=P, layers=list(P.routing_layers),
+    vias=P.via_rules(), cut_layer=cut_layer, geom_path=GEOM,
+    devices=DEVICES, use_rust=True)
+# FlexDR 3.7s ok=True routed=94/94 markers=0</code></pre>
+        <p>Of the 96 nets, <code>VDD</code>/<code>GND</code> go to the power grid (PDN: <code>104/0</code> rails + <code>106/0</code> straps, 166 PDN vias this run); the remaining <strong>94 signal nets</strong> are routed by the FlexDR detailed router across the 3 layers (200 signal vias this run), with terminal access points and via rules all coming from the profile and the harvested device geometry. Only <code>routed=94/94</code> with <code>markers=0</code> (zero DRC violations) proceeds; a routing failure returns <strong>instructions</strong> (which net, why, which floorplan knob to change), not a bare error.</p>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/fit-device/step-05-routed.png" alt="Overview of the fully routed 8x8 device array, with horizontal green traces in the row channels, vertical orange and gray traces crossing rows, and a power ring around the block">
+          <figcaption>Step 5a · All 94/94 signal nets routed: green horizontal traces (<code>104/0</code>) run in the row channels, orange (<code>101/0</code>) and gray (<code>106/0</code>) verticals cross rows, and the PDN ring surrounds the block.</figcaption>
+        </figure>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/fit-device/step-05-detail.png" alt="Zoom on two device columns: gate plates and source-drain pads are visible, plus traces on three routing layers and small crosshatched via stack squares">
+          <figcaption>Step 5b · Detail (two columns of the first row): traces launch from the devices' pad access points; layer changes are via stacks (landing pads on both layers + the cut in between, the small squares).</figcaption>
+        </figure>
+
+        <h2 id="stage-6" class="anchor-h"><span class="stage-kicker">6</span>Live LVS: declared vs extracted</h2>
+        <p>The last step is not "it looks connected" — KLayout's native connectivity extraction is the referee. <code>lvs_check</code> extracts the nets from the real drawn geometry (in-layer continuity + vias across layers), reconciles them one by one against the declared nets from stage ⑤, then runs a device-level netlist compare:</p>
+        <pre><code>from klink.domains.structdevice.orchestrators import lvs_check
+from klink.domains.structdevice.recipes import geom_terminal_provider
+
+# device_terms = absolute terminal coordinates per instance (placement offset
+# + terminal centers from `terms`; see the demo source for the one-line dict)
+res = lvs_check(c, "DEMO_ADD4", declared=declared, mode="lvsdb",
+                connectivity=P.connectivity_spec(),      # derived from the SAME profile
+                terminal_provider=geom_terminal_provider(raw),
+                placement=placement, device_terms=device_terms)
+# LVS ok=True match=True devices=173</code></pre>
+        <p><code>mode="lvsdb"</code> also writes a geometry-linked native <code>.lvsdb</code> — open it in KLayout's Netlist Browser for two-way cross-probing between layout and netlist. Note the connectivity rules LVS uses (which layers conduct, which are vias) are derived by <code>P.connectivity_spec()</code> from the <strong>same</strong> profile — router and referee read one process declaration, but the referee is KLayout's native extractor, not the router grading itself.</p>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/fit-device/step-06-overview.png" alt="Overview of the finished 4-bit adder layout with a GND label at the top left and a VDD label at the bottom left, the power ring enclosing the whole 8x8 array">
+          <figcaption>Step 6 · Finished overview (<code>view.zoom_fit</code>): DEMO_ADD4 after LVS match=True. The outer PDN rails carry <code>GND</code>/<code>VDD</code> text labels — with no pads, the peripheral rails ARE the power ports.</figcaption>
+        </figure>
+
+        <h2 id="verify" class="anchor-h">Verify, don't just look</h2>
+        <p>As the <a href="tutorials.html#verify">tutorials index</a> says, screenshots are for humans. The complete output of this run against a live KLayout:</p>
+        <pre><code>=== fitter screening ===
+parameters: ['w_um', 'l_um']
+edges: 14 linear, 2 constant, 0 unexplained
+drawn DEMO_DEVICES (synthetic fitted device)
+[public] FlexDR 3.7s ok=True routed=94/94 markers=0
+[public] LVS ok=True match=True devices=173
+RESULT: PASS (synthetic fitted device: fit -> P&amp;R -> LVS match)</code></pre>
+        <p>Four structural quality gates, all required: fitter screening <code>0 unexplained</code> (every edge accounted for); routing <code>routed=94/94</code> with <code>markers=0</code> (everything routed, zero DRC violations); LVS <code>match=True</code> (the netlist extracted from the 173 drawn devices matches the declared one). If any gate fails, the demo exits non-zero — there is no "close enough counts as done".</p>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/fit-device/step-07-lvs-verify.png" alt="KLayout's Netlist Database Browser with DEMO_ADD4.lvsdb open; on the Cross Reference tab the Nets and Devices under DEMO_ADD4 both show green (matched)">
+          <figcaption>Step 6 · the human-facing side of <code>match=True</code>: the <code>DEMO_ADD4.lvsdb</code> written by <code>mode="lvsdb"</code>, opened in KLayout's Netlist Database Browser, with every net and device cross-referenced and matched (green). This is the native extraction behind the <code>LVS ok=True match=True</code> line above — the numbers are the verdict; this picture is just what that same verdict looks like to a person.</figcaption>
+        </figure>
+
+        <h2 id="next" class="anchor-h">Next steps</h2>
+        <p>Make the flow yours: copy <code>examples_klink/public/demos/fit_device_pnr_lvs.py</code> and swap three things — <code>_device_boxes()</code> (boxes read via <code>shape.query</code> from your own hand-drawn device cells), the layer numbers / widths / spacings in <code>PUBLIC_PROCESS</code>, and the netlist. klink's mechanism layer needs no edits. If you're starting from zero, read the first batch's <a href="tutorial-hallbar.html">Hall bar tutorial</a> first for the basic geometry-first loop. The next tutorial covers the <a href="tutorial-padframe.html">probe-card padframe demo</a>: the pad ring is fixed first and the circuit's P&amp;R has to meet it.</p>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>geometry-first: mark intent on geometry, let algorithms complete the routing, verify with structured evidence.</p></div>
+      <div><h3>Keep reading</h3><p><a href="tutorials.html">Core concepts &amp; tutorials</a></p><p><a href="mcp-reference.html">MCP reference</a></p></div>
+      <div><h3>Install</h3><p><a href="quickstart.html">Quickstart</a></p></div>
+    </div>
+  </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

@@ -82,7 +82,7 @@
       <div class="container">
         <div class="eyebrow">Step-by-step tutorial · nanodevice</div>
         <h1>Step-by-step: drawing a Hall bar device</h1>
-        <p>This walks through <code>example_template/hallbar.py</code> from the public gallery. We split its drawing pass into 7 stages, each one actually drawn in a live KLayout session, screenshotted, and paired with the klink RPC calls that produced it -- the exact geometry-first loop: draw geometry, mark Port/Anchor intent, let a routing algorithm complete the wiring, then verify with structured results.</p>
+        <p>This walks through <code>example_template/nanodevice/hallbar.py</code> from the public gallery (for the demo's function, requirements, and measured numbers, see <a href="examples.html#hallbar">Examples · Hall bar</a>). We split its drawing pass into 7 stages, each one actually drawn in a live KLayout session, screenshotted, and paired with the klink RPC calls that produced it -- the exact geometry-first loop: draw geometry, mark Port/Anchor intent, let a routing algorithm complete the wiring, then verify with structured results.</p>
       </div>
     </section>
 
@@ -107,7 +107,7 @@
         <ul>
           <li>Install klink: <code>pip install klayout-klink</code> (one command installs klink plus its Rust kernels -- no third-party scientific libraries needed).</li>
           <li>KLayout running with the klink plugin loaded (RPC port defaults to <code>8765</code>).</li>
-          <li>Scaffold a project and enter it: <code>klink init nano-demo &amp;&amp; cd nano-demo</code> -- the full script is <code>python example_template/hallbar.py --live --port &lt;session-port&gt;</code>. In a repo checkout the equivalent is <code>python -m examples_klink.public.demos.hallbar --live --port &lt;session-port&gt;</code>.</li>
+          <li>Scaffold a project and enter it: <code>klink init nano-demo &amp;&amp; cd nano-demo</code> -- the full script is <code>python example_template/nanodevice/hallbar.py --live --port &lt;session-port&gt;</code>. In a repo checkout the equivalent is <code>python -m examples_klink.public.demos.hallbar --live --port &lt;session-port&gt;</code>.</li>
         </ul>
         <div class="note">This tutorial breaks the single batched call inside <code>hallbar.py</code> into 7 observable stages so each step of what's drawn, marked, and why is visible on its own. In production you'd usually still write geometry with one <code>shape.insert_many</code> batch call (see the batch-RPC rule in this repo's CLAUDE.md) -- the staged version here is purely for teaching.</div>
 
@@ -138,7 +138,7 @@ with KLinkClient(port=PORT).connect() as c:
         </figure>
 
         <h2 id="stage-2" class="anchor-h"><span class="stage-kicker">2</span>Draw the mesa / channel</h2>
-        <p>The mesa is a centered rectangular conducting channel, sized from <code>HallBarSpec</code>'s <code>bar_length_um</code> / <code>bar_width_um</code> (144 × 8 µm by default). Full coordinate arithmetic lives in <code>example_template/hallbar.py</code>; here's just the write call:</p>
+        <p>The mesa is a centered rectangular conducting channel, sized from <code>HallBarSpec</code>'s <code>bar_length_um</code> / <code>bar_width_um</code> (144 × 8 µm by default). Full coordinate arithmetic lives in <code>example_template/nanodevice/hallbar.py</code>; here's just the write call:</p>
         <pre><code>c.shape_insert_boxes(cell, layer_index=device_li, boxes_um=[mesa_bbox_um])</code></pre>
         <figure class="tut-figure">
           <img src="../assets/tutorials/hallbar/step-02-mesa.png" alt="A centered, thin pink rectangle representing the Hall bar's conducting channel mesa">
@@ -224,7 +224,7 @@ commit_tapered_hybrid_many(c, cell, route_result, route_layer="12/0", clear=True
         <p><code>ok=true</code> with zero <code>obstacle_hits</code> and zero <code>sibling_overlaps</code> means all 6 fanout traces avoid each other and any obstacle layer -- that's what "routing is done" actually rests on, not "it looks connected."</p>
 
         <h2 id="next" class="anchor-h">Next steps</h2>
-        <p>Edit the <code>HallBarSpec</code> parameters in <code>example_template/hallbar.py</code> to your own sizes (contact count, pad spacing, layer numbers), rerun with <code>--live</code>, and confirm the routing report still says <code>ok=true</code>. From there, decide whether you need writefield obstacle avoidance (EBL scenarios) or a <code>drc.run</code> pass. For more on offline devices see <a href="tutorials.html#offline">Core concepts &amp; tutorials · Offline device tutorial</a>; the full Port/Anchor field reference is in the <a href="mcp-reference.html#d-ports">MCP reference</a>.</p>
+        <p>Edit the <code>HallBarSpec</code> parameters in <code>example_template/nanodevice/hallbar.py</code> to your own sizes (contact count, pad spacing, layer numbers), rerun with <code>--live</code>, and confirm the routing report still says <code>ok=true</code>. From there, decide whether you need writefield obstacle avoidance (EBL scenarios) or a <code>drc.run</code> pass. For more on offline devices see <a href="tutorials.html#offline">Core concepts &amp; tutorials · Offline device tutorial</a>; the full Port/Anchor field reference is in the <a href="mcp-reference.html#d-ports">MCP reference</a>.</p>
       </article>
     </div>
   </main>

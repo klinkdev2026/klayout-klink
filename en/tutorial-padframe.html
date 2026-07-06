@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Step-by-step tutorial: probe-card padframe - klink</title>
+  <meta name="description" content="Build a probe-card-first padframe in live KLayout with klink, one stage at a time: synthetic circuit base, pad-ring harvest, net->pad assignment, half-in/half-out placement, a region-split power grid, signal P&R, and finally both modes (with-card / no-card bare stubs) each passing live LVS with match=True -- a screenshot and runnable code for every step.">
+  <link rel="stylesheet" href="../assets/styles.css">
+  <style>
+    /* Minimal figure styling, following the site's existing card/note language
+       (border var(--line), radius 8px) -- assets/styles.css has no <img>
+       usage yet, so this stays scoped to this page until it lands there. */
+    .tut-figure {
+      margin: 16px 0 26px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .tut-figure img {
+      width: 100%;
+      display: block;
+      background: #fff;
+    }
+    .tut-figure figcaption {
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      background: #f7fafb;
+    }
+    .tut-figure-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    @media (max-width: 760px) {
+      .tut-figure-row { grid-template-columns: 1fr; }
+    }
+    .stage-kicker {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 26px;
+      height: 26px;
+      padding: 0 8px;
+      border-radius: 6px;
+      background: #dff1ee;
+      color: #12654b;
+      font-weight: 800;
+      font-size: 13px;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body data-page="tutorials">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="index.html" data-nav="home">Home</a>
+        <a href="quickstart.html" data-nav="quickstart">Quickstart</a>
+        <a href="tutorials.html" data-nav="tutorials" class="active">Tutorials</a>
+        <a href="workflows.html" data-nav="workflows">Workflows</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP Reference</a>
+        <a href="examples.html" data-nav="examples">Examples</a>
+        <a href="architecture.html" data-nav="architecture">Architecture</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="Language switch">
+          <a href="../tutorial-padframe.html">CN</a>
+          <a class="active" href="tutorial-padframe.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Step-by-step tutorial · structdevice</div>
+        <h1>Step-by-step: a probe-card-first padframe</h1>
+        <p>This walks through <a href="examples.html#padframe"><code>examples_klink/public/demos/padframe_pnr_lvs.py</code></a>. It encodes a <strong>reversed</strong> hardware flow: the probe card / pad ring <strong>exists first</strong> (its positions were frozen long ago) and the circuit must meet it -- even when the card's interior is too small for the whole device block. We split the demo into 6 stages, each actually drawn in a live KLayout session, screenshotted, and paired with the klink code that produced it. At the end, <strong>both the card and the <code>--no-card</code> mode each run a live LVS -- and it only counts when match=True</strong>. Every number here is synthetic (the process, the devices, and the card are all stand-ins); nothing names a real vendor or probe-card part.</p>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#prereqs">Prerequisites</a>
+          <a href="#stage-1">① Synthetic circuit base</a>
+          <a href="#stage-2">② Harvest the pad ring</a>
+          <a href="#stage-3">③ net → pad assignment</a>
+          <a href="#stage-4">④ Half-in / half-out</a>
+          <a href="#stage-5">⑤ Signal P&R + split PDN</a>
+          <a href="#stage-6">⑥ No-card mode: bare stubs</a>
+          <a href="#verify">Verify: both modes' LVS</a>
+          <a href="#next">Next steps</a>
+        </nav>
+      </aside>
+
+      <article class="content">
+        <h2 id="prereqs" class="anchor-h">Prerequisites</h2>
+        <ul>
+          <li>Install klink: <code>pip install klayout-klink</code> (one command installs klink plus its Rust kernels).</li>
+          <li>KLayout running with the klink plugin loaded.</li>
+          <li>This demo is <strong>repo-only</strong>: it needs a repository clone to run (it imports the repo's synthetic device module, which is not in the pip wheel). The full script is:
+<pre><code>git clone https://github.com/klinkdev2026/klayout-klink
+cd klayout-klink
+python -m examples_klink.public.demos.padframe_pnr_lvs --port &lt;session-port&gt;            # card mode
+python -m examples_klink.public.demos.padframe_pnr_lvs --port &lt;session-port&gt; --no-card  # no-card mode</code></pre></li>
+        </ul>
+        <div class="note">This tutorial breaks the single build inside <code>padframe_pnr_lvs.py</code> into 6 observable stages so each step of this reversed "card first, circuit yields" flow is visible on its own. In production you just run the one script -- the staged version is purely for teaching. It reuses the public 3-layer process and synthetic fitted-device library from the <a href="examples.html#fitdevice">fit-a-device demo</a>, so it owns <strong>zero device geometry</strong> of its own; the circuit is a 4-bit adder netted by an open logic synthesizer and remapped onto those synthetic devices (<code>173</code> devices / <code>96</code> nets / <code>62</code> gates).</div>
+
+        <h2 id="stage-1" class="anchor-h"><span class="stage-kicker">1</span>Synthetic circuit base: lint + layer advisor + flat placement</h2>
+        <p>First <strong>lint</strong> the device netlist -- before any geometry exists, every structural mistake in a hand-written netlist (unknown instance, a terminal on two nets, an instance in no group, ...) is reported with its fix. Once lint passes, the <strong>layer-count advisor</strong> spreads out what each candidate stack would cost: fewer layers is always better (every extra layer is a real deposition / litho / via step) and the choice is yours. add4 routes comfortably on the public 3-layer stack, so that's what we use.</p>
+        <table class="data-table">
+          <thead><tr><th>Candidate stack</th><th>Routing layers</th><th>Signal layers</th><th>Core size</th></tr></thead>
+          <tbody>
+            <tr><td><code>public-3L</code></td><td>3</td><td>2V + 1H</td><td>920 × 1208 µm = 1.111 mm²</td></tr>
+            <tr><td><code>example-7L</code></td><td>7</td><td>2V + 2H</td><td>920 × 984 µm = 0.905 mm²</td></tr>
+          </tbody>
+        </table>
+        <p>The advisor only reports the <strong>arithmetic</strong>; the candidate stacks themselves are example data (what your fab can actually build). In this stage's screenshot the device block is first placed flat with <strong>no band constraint</strong> (an <code>8×8</code> grid, row pitch <code>190 µm</code>) -- used to measure the block footprint and size/position the card that comes next:</p>
+        <pre><code>rep = lint_netlist(nl, device_terms=terms)          # structural lint; errors are fix-instructions
+assert rep["ok"]
+adv = layer_demand_report(nl, terms, [("public-3L", D.PUBLIC_PROCESS),
+                                      ("example-7L", PUBLIC_MULTILAYER)])
+rows, cols = derive_grid(len(nl["groups"]))          # 8 x 8
+flat = eng.place_grid(nl, rows, cols, profile=P, row_pitch=rp)   # flat, no bands</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/padframe/step-01-block.png" alt="8 rows of synthetic devices placed on a grid, each gate a column of stacked devices, no card and no routing yet">
+          <figcaption>Step 1 · After lint passes and the 3-layer stack is chosen, the device block is placed flat with no bands (<code>place_grid</code>, 8×8 grid). This is the baseline for measuring the block footprint and positioning the card -- no card, no routing yet.</figcaption>
+        </figure>
+
+        <h2 id="stage-2" class="anchor-h"><span class="stage-kicker">2</span>The user's probe card: fabricate a stand-in → harvest it back with <code>pads_from_gds</code></h2>
+        <p>This is the crux of the reversed order: <strong>the card exists first</strong>. To keep the demo self-contained we first <strong>write</strong> a stand-in probe-card GDS (20 pad squares in a ring on layer <code>106/0</code> -- pretend it came out of a drawer) and then <strong>harvest it back</strong> with <code>pads_from_gds</code>. In a real flow you skip the fabricate part and harvest your own card file directly:</p>
+        <pre><code>from klink.routing.grid.pad_harvest import pads_from_gds
+
+# Your real flow starts right here: pads_from_gds(YOUR_FILE, YOUR_CELL, YOUR_LAYER)
+pads = pads_from_gds(CARD, "PROBE_CARD_20", "106/0", min_size_um=50.0)
+# -> [{"id": "PAD00", "box_um": [...]}, ...]  20 pads</code></pre>
+        <p>The card geometry is example data: pad <code>100×100 µm</code>; the ring interior is wide enough for the block but only <strong>half its height</strong> -- exactly what drives the "half-in / half-out" case in stage ④. What you harvest is a plain pad table <code>[{"id", "box_um"}, ...]</code>; net assignment is a decision made <strong>on top</strong>, by a human or agent, afterwards.</p>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/padframe/step-02-card.png" alt="20 pad squares arranged in a ring around the central device block, 5 per side">
+          <figcaption>Step 2 · The 20-pad ring harvested back from the stand-in GDS (layer <code>106/0</code>): 5 left + 5 right + 5 top + 5 bottom. The interior can't fit the block's full height -- note the bottom pad row will cross the lower half of the block.</figcaption>
+        </figure>
+
+        <h2 id="stage-3" class="anchor-h"><span class="stage-kicker">3</span>net → pad assignment table</h2>
+        <p>Lay a <strong>plain table</strong> on top of the harvested pads: which net goes to which pad. The conventions here (edit freely): inputs on the <strong>left column + top row</strong>, outputs on the <strong>right column</strong>, GND on the top row (its tie rail derives above the block), VDD on the <strong>bottom-left corner pad</strong> (a clear corridor down the left margin to its rail below the block). <code>16</code> of the <code>20</code> pads are used (all 14 primary ports + VDD + GND); the remaining <code>4</code> redundant pads stay unused -- as on any legacy card.</p>
+        <pre><code>def near(x, y):     # the harvested pad closest to a card point
+    return min(pads, key=lambda p: (p["box_um"][0] - x) ** 2 + (p["box_um"][1] - y) ** 2)
+
+for cy, net in zip(side_y, ["A[0]", "A[1]", "A[2]", "A[3]", "B[0]"]):
+    near(ring_x1, cy)["net"] = net          # left column: 5 inputs
+for cy, net in zip(side_y, ["S[0]", "S[1]", "S[2]", "S[3]", "COUT"]):
+    near(ring_x2 - PS, cy)["net"] = net     # right column: 5 outputs
+for cx, net in zip(row_x, ["B[1]", "B[2]", "GND", "B[3]", "CIN"]):
+    near(cx, ring_y2 - PS)["net"] = net     # top row: inputs + GND
+near(row_x[0], ring_y1)["net"] = "VDD"      # bottom-left corner: VDD</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/padframe/step-03-assign.png" alt="Each pad labelled with a net name: left column A[0..3]/B[0], right column S[0..3]/COUT, top row B/GND/CIN, bottom-left VDD, and the bottom four labelled PAD16..19 as redundant unused">
+          <figcaption>Step 3 · A net→pad table over the pads: 5 inputs on the left column, 5 outputs on the right, inputs + GND on the top row, VDD bottom-left. The bottom <code>PAD16..PAD19</code> keep their raw ids, marking them redundant pads with no net assigned.</figcaption>
+        </figure>
+
+        <h2 id="stage-4" class="anchor-h"><span class="stage-kicker">4</span>Half-in / half-out placement</h2>
+        <p>The card's <strong>bottom pad row crosses</strong> the device block. Since the card is fixed and the block is what yields, we <strong>forbid</strong> that horizontal band: <code>place_grid(forbid_y_bands=[band])</code> pushes any device row that would hit it <strong>below the band</strong>. The first <code>inner_rows</code> rows stay inside the ring; the rest continue underneath, and routes thread between the bottom pads. This splits the whole block "half inside the pad ring, half outside" <strong>without any new placement engine</strong>.</p>
+        <pre><code>band = (ring_y1 - CLR, ring_y1 + PS + CLR)          # bottom pad row + clearance
+placement = eng.place_grid(nl, rows, cols, profile=P, row_pitch=rp,
+                           forbid_y_bands=[band])   # rows hitting the band go below it
+# measured: 85 devices inside the ring, 80 below it</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/padframe/step-04-halfinout.png" alt="The device block split into an upper half inside the pad ring and a lower half shifted down outside the ring, leaving a horizontal gap where the bottom pad row sits">
+          <figcaption>Step 4 · <code>forbid_y_bands</code> forbids the horizontal band the bottom pad row occupies: <strong>85</strong> devices stay inside the ring and <strong>80</strong> are pushed below it (compare to Step 3 -- the lower half shifts down as one, clearing the bottom pad row). The card stays put; the block yields.</figcaption>
+        </figure>
+
+        <h2 id="stage-5" class="anchor-h"><span class="stage-kicker">5</span>Signal P&R + a region-split power grid, then the finished chip</h2>
+        <p>One final call to <code>route_and_draw_flexdr</code> does three things at once: <strong>signal routing</strong> (faithful FlexDR on the track grid, avoiding the power grid), <strong>drawing</strong> the device PCells + traces + vias, and turning the assigned pads in <code>io_pads</code> into each net's own fixed metal + an extra route terminal (unused pads become hard keep-outs). The same forbidden band also <strong>splits the power grid</strong>: <code>pdn_split_bands</code> builds one PDN per region and bridges them with a single <strong>spine strap</strong> dropped through the widest pad-free gap of the bottom row -- power threads between the card's pads exactly like the signals do.</p>
+        <pre><code>with KLinkClient(port=PORT).connect() as c:
+    ok, info, _ = eng.route_and_draw_flexdr(
+        c, "PUB_PADFRAME_ADD4", nl, placement, profile=P, layers=layers,
+        vias=P.via_rules(), cut_layer=cut_layer, geom_path=D.GEOM, devices=DEVICES,
+        use_rust=True, io_pads=IO, pdn_split_bands=[band])
+    # -> routed 94/94, markers 0, 4.1s</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/padframe/step-05-routed.png" alt="The finished chip: the device block above and below the pad ring is fully routed, green/orange traces connect to the pads around it, VDD drops from the bottom-left corner down a vertical corridor to the power grid">
+          <figcaption>Step 5 · Finished (<code>view.zoom_fit</code>): <strong>routed 94/94 · markers 0</strong>. Both halves of the block are routed; signals reach the assigned pads around the ring; VDD runs from the bottom-left pad down the left corridor into the power grid, with the GND top-row rail above.</figcaption>
+        </figure>
+        <div class="tut-figure-row">
+          <figure class="tut-figure">
+            <img src="../assets/tutorials/padframe/step-05-detail-vdd.png" alt="Zoom on the bottom-left: a vertical yellow strap corridor runs from the VDD pad down to a power-grid tie rail, with the GND rail and devices to the right">
+            <figcaption>Step 5b · Bottom-left detail: the <code>VDD</code> pad drops a <strong>vertical strap corridor</strong> down its own centre to a power-grid tie rail -- a power pad needs a clean vertical lane to its net's rail; without one, <code>route_and_draw_flexdr</code> raises an error naming the conflict.</figcaption>
+          </figure>
+          <figure class="tut-figure">
+            <img src="../assets/tutorials/padframe/step-05-detail-thread.png" alt="Zoom on the bottom pad row: traces and one power-grid spine strap thread through the gap between the bottom redundant pads, bridging the in-ring and below-ring regions">
+            <figcaption>Step 5c · Bottom pad-row detail: both signal traces and the power-grid <strong>spine strap</strong> thread through the pad-free gap between the bottom pads (<code>PAD16..18</code>), bridging the in-ring PDN and the below-ring PDN -- power threads between the card's pads just like the signals.</figcaption>
+          </figure>
+        </div>
+
+        <h2 id="stage-6" class="anchor-h"><span class="stage-kicker">6</span>No-card mode: every port becomes a bare stub</h2>
+        <p>Add <code>--no-card</code>: <strong>no pads at all, and none are drawn</strong>. Every port leaves the block as a <strong>bare labelled trace</strong> -- <code>spread_ports</code> makes wire-end targets (<code>draw=False</code>: no box drawn; the route's own metal ends there, tagged with the net-name text). Inputs snap to the <strong>west</strong> edge, outputs to the <strong>east</strong>, both snapping to the <strong>routing-channel centres</strong> between device rows (so a stub never lands inside a device-row band and forces its horizontal run into a neighbouring channel). Power needs no stub at all: the PDN tie rails are auto-labelled VDD/GND -- bond/probe anywhere on the rail.</p>
+        <pre><code>from klink.routing.grid.pad_harvest import spread_ports
+
+IO2 = {"pad_layer": "106/0", "text_size_um": 15.0,
+       "pads": (spread_ports(BB, INPUTS,  side="W", size_um=P.wire_width_um,
+                             clear_um=120.0, prefix="IN",  snap=chan)     # inputs west
+                + spread_ports(BB, OUTPUTS, side="E", size_um=P.wire_width_um,
+                             clear_um=120.0, prefix="OUT", snap=chan))}   # outputs east
+ok2, info2, _ = eng.route_and_draw_flexdr(
+    c, "PUB_PADFRAME_ADD4_NOCARD", nl, flat, profile=P, layers=layers, ...,
+    io_pads=IO2, pdn_split_bands=None)      # -> routed 94/94, markers 0, 3.6s</code></pre>
+        <div class="tut-figure-row">
+          <figure class="tut-figure">
+            <img src="../assets/tutorials/padframe/step-06-nocard.png" alt="No-card version: the device block in the middle with no pad ring, input labels A/B/CIN on the left, output labels S/COUT on the right, all bare wire-end labels">
+            <figcaption>Step 6a · <code>--no-card</code> finished: <strong>routed 94/94 · markers 0</strong>. No pad ring -- inputs (<code>A[*]/B[*]/CIN</code>) on the west, outputs (<code>S[*]/COUT</code>) on the east, all bare labelled stubs; power sits on the auto-labelled PDN tie rails.</figcaption>
+          </figure>
+          <figure class="tut-figure">
+            <img src="../assets/tutorials/padframe/step-06-detail-stub.png" alt="Zoom on the west edge: net names like A[1] and CIN sit at the end of a trace, where the route simply ends, with no pad box">
+            <figcaption>Step 6b · West-edge detail: net names like <code>A[1]</code> and <code>CIN</code> sit at the <strong>trace end</strong> -- the wire end is the port, no pad box is drawn (<code>draw=False</code>). The labels tell you where to hook up your own pads later.</figcaption>
+          </figure>
+        </div>
+
+        <h2 id="verify" class="anchor-h">Verify: each mode's own live LVS</h2>
+        <p>As in every tutorial here, screenshots are for people, not proof of done. This demo's bar is <strong>a live LVS match=True in each mode</strong>, plus a <strong>positive per-pad proof</strong>: every assigned pad/stub's metal must sit on the <strong>same</strong> extracted net as its net's device terminals, and every unused pad must touch no net. The real numbers from this run (session 8767, Rust kernel):</p>
+        <table class="data-table">
+          <thead><tr><th>Mode</th><th>routed</th><th>DRC markers</th><th>LVS ok</th><th>LVS match</th><th>devices</th><th>per-pad proof</th><th>time</th></tr></thead>
+          <tbody>
+            <tr><td>card (with card)</td><td><code>94/94</code></td><td><code>0</code></td><td><code>True</code></td><td><b><code>True</code></b></td><td><code>173</code></td><td>16 connected + 4 isolated</td><td><code>4.1s</code></td></tr>
+            <tr><td><code>--no-card</code></td><td><code>94/94</code></td><td><code>0</code></td><td><code>True</code></td><td><b><code>True</code></b></td><td><code>173</code></td><td>14 connected + 0 isolated</td><td><code>3.6s</code></td></tr>
+          </tbody>
+        </table>
+        <pre><code># card mode
+[PUB_PADFRAME_ADD4]        LVS ok=True match=True devices=173
+[PUB_PADFRAME_ADD4]        pad proof ok=True connected=16 isolated=4
+# --no-card mode
+[PUB_PADFRAME_ADD4_NOCARD] LVS ok=True match=True devices=173
+[PUB_PADFRAME_ADD4_NOCARD] stub proof ok=True connected=14 isolated=0</code></pre>
+        <p>Both modes' <code>match</code> is <code>True</code>, both have <code>0</code> DRC markers, and both pass the per-pad/stub proof -- that's what "the padframe is done" rests on. Card mode: all 16 assigned pads CONNECTED, all 4 redundant pads isolated. No-card mode: all 14 bare stubs CONNECTED (power takes no stub -- it lives on the PDN rails).</p>
+
+        <h2 id="next" class="anchor-h">Next steps</h2>
+        <p>Copy <code>padframe_pnr_lvs.py</code> and edit its <strong>pad table</strong> (pad size, positions, the net→pad convention) to describe your own card; edit <code>PUBLIC_PROCESS</code> / <code>PUBLIC_MULTILAYER</code> for your own stack -- the flow is unchanged, klink ships only the mechanism. To first understand how the device itself is fitted from example geometry into a parametric PCell before P&R, see the companion <a href="tutorial-fit-device.html">Step-by-step: fit a device → P&R → LVS</a>. For measured numbers on all the public demos, see the <a href="examples.html#padframe">Examples page · Probe-card padframe</a>.</p>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>geometry-first: mark intent on geometry, let algorithms complete the wiring, verify with structured evidence.</p></div>
+      <div><h3>Keep reading</h3><p><a href="tutorials.html">Core concepts &amp; tutorials</a></p><p><a href="mcp-reference.html">MCP tool reference</a></p></div>
+      <div><h3>Install</h3><p><a href="quickstart.html">Quickstart</a></p></div>
+    </div>
+  </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

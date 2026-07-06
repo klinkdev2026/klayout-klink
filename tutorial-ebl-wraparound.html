@@ -82,7 +82,7 @@
       <div class="container">
         <div class="eyebrow">Step-by-step tutorial · nanodevice · EBL</div>
         <h1>分步教程：画一个 EBL wraparound 纳米器件</h1>
-        <p>对应仓库里的 <code>example_template/ebl_wraparound.py</code>。这是<a href="tutorial-hallbar.html">Hall bar 教程</a>之后的第二篇：同样是纯离线合成器件、同样用 Port/Anchor 标记意图，但这次引入了 Hall bar 教程结尾留下的悬念——<strong>写场（writefield）避障</strong>。电子束光刻按矩形写场分块曝光，拼接处会有对准误差，因此走线只能在预先规划好的"允许穿越窗口"里跨越写场边界，klink 把这个约束表达成一批 keepout 几何和 corridor Anchor，而不是靠算法临时猜。</p>
+        <p>对应仓库里的 <code>example_template/nanodevice/ebl_wraparound.py</code>（demo 功能/依赖/实测数字见<a href="examples.html#ebl">示例 · EBL wraparound</a>）。这是<a href="tutorial-hallbar.html">Hall bar 教程</a>之后的第二篇：同样是纯离线合成器件、同样用 Port/Anchor 标记意图，但这次引入了 Hall bar 教程结尾留下的悬念——<strong>写场（writefield）避障</strong>。电子束光刻按矩形写场分块曝光，拼接处会有对准误差，因此走线只能在预先规划好的"允许穿越窗口"里跨越写场边界，klink 把这个约束表达成一批 keepout 几何和 corridor Anchor，而不是靠算法临时猜。</p>
       </div>
     </section>
 
@@ -107,12 +107,12 @@
         <ul>
           <li>安装 klink：<code>pip install klayout-klink</code>（一条命令装好 klink 和它的 Rust 内核，无需第三方科学库）。</li>
           <li>KLayout 正在运行，并已加载 klink 插件（RPC 端口默认 <code>8765</code>）。</li>
-          <li>建一个项目并进入：<code>klink init nano-demo &amp;&amp; cd nano-demo</code>——完整脚本就是 <code>python example_template/ebl_wraparound.py --live</code>（想留住生成的 cell 便于查看再加 <code>--keep</code>）。仓库 checkout 里等价的是 <code>python -m examples_klink.public.demos.ebl_wraparound --live --keep</code>。</li>
+          <li>建一个项目并进入：<code>klink init nano-demo &amp;&amp; cd nano-demo</code>——完整脚本就是 <code>python example_template/nanodevice/ebl_wraparound.py --live</code>（想留住生成的 cell 便于查看再加 <code>--keep</code>）。仓库 checkout 里等价的是 <code>python -m examples_klink.public.demos.ebl_wraparound --live --keep</code>。</li>
         </ul>
         <div class="note">这篇教程把 <code>build_wraparound_demo()</code> 内部一次性完成的批量调用拆成 7 个可观察的阶段。构造顺序是固定的：4 个对准十字（每个 3 个 item）→ flake 多边形 → keepout 框 + 文字 → 8 组接触（每组 7 个 item，顺序固定为 contact box / M1 走线 / via / M2 绕行走线 / 锥形过渡 / pad / 标签）→ 拼接 patch → writefield keepout 框。教程按这个真实顺序对 <code>shape_items</code> 做切片，没有引入教程专属的绘制逻辑。</div>
 
         <h2 id="stage-1" class="anchor-h"><span class="stage-kicker">1</span>建 cell + 层规划</h2>
-        <p>这个器件的所有层都是 example-owned（<code>example_template/ebl_wraparound.py</code> 里的 <code>WRAP_LAYERS</code>），klink 本身不带任何工艺层。真实脚本用一个通用的 <code>_ensure_layers</code> helper 扫一遍 <code>shape_items</code> 里出现过的每个 <code>(layer, datatype)</code>，自动建齐——包括 klink 保留的写场 keepout 层 <code>900/0</code>（它是从 writefield 障碍框的 shape item 里自然出现的，不用单独声明）：</p>
+        <p>这个器件的所有层都是 example-owned（<code>example_template/nanodevice/ebl_wraparound.py</code> 里的 <code>WRAP_LAYERS</code>），klink 本身不带任何工艺层。真实脚本用一个通用的 <code>_ensure_layers</code> helper 扫一遍 <code>shape_items</code> 里出现过的每个 <code>(layer, datatype)</code>，自动建齐——包括 klink 保留的写场 keepout 层 <code>900/0</code>（它是从 writefield 障碍框的 shape item 里自然出现的，不用单独声明）：</p>
         <table class="data-table">
           <thead><tr><th>层</th><th>用途</th></tr></thead>
           <tbody>

@@ -82,7 +82,7 @@
       <div class="container">
         <div class="eyebrow">Step-by-step tutorial · nanodevice · 批量 RPC</div>
         <h1>分步教程：画一个神经电极阵列 harness</h1>
-        <p>对应仓库里的 <code>example_template/neural_electrode.py</code>。这是<a href="tutorial-hallbar.html">Hall bar</a>和<a href="tutorial-ebl-wraparound.html">EBL wraparound</a>两篇教程之后的第三篇：还是同一套 Port/Anchor/geometry-first 流程，但这次的主角是<strong>参数化生成 + 批量 RPC</strong>——一个 <code>--elec-rows</code> 参数就能改变电极阵列的行数，而全芯片近万微米跨度里，394 个几何对象只用 3 次分阶段的 <code>shape.insert_many</code> 调用写完（生产环境是 1 次）。</p>
+        <p>对应仓库里的 <code>example_template/nanodevice/neural_electrode.py</code>（demo 功能/依赖/实测数字见<a href="examples.html#neural">示例 · Neural electrode</a>）。这是<a href="tutorial-hallbar.html">Hall bar</a>和<a href="tutorial-ebl-wraparound.html">EBL wraparound</a>两篇教程之后的第三篇：还是同一套 Port/Anchor/geometry-first 流程，但这次的主角是<strong>参数化生成 + 批量 RPC</strong>——一个 <code>--elec-rows</code> 参数就能改变电极阵列的行数，而全芯片近万微米跨度里，394 个几何对象只用 3 次分阶段的 <code>shape.insert_many</code> 调用写完（生产环境是 1 次）。</p>
       </div>
     </section>
 
@@ -107,13 +107,13 @@
         <ul>
           <li>安装 klink：<code>pip install klayout-klink</code>（一条命令装好 klink 和它的 Rust 内核，无需第三方科学库）。</li>
           <li>KLayout 正在运行，并已加载 klink 插件（RPC 端口默认 <code>8765</code>）。</li>
-          <li>建一个项目并进入：<code>klink init nano-demo &amp;&amp; cd nano-demo</code>——完整脚本就是 <code>python example_template/neural_electrode.py --port &lt;session-port&gt; --elec-rows 4</code>。仓库 checkout 里等价的是 <code>python -m examples_klink.public.demos.neural_electrode --port &lt;session-port&gt; --elec-rows 4</code>。</li>
+          <li>建一个项目并进入：<code>klink init nano-demo &amp;&amp; cd nano-demo</code>——完整脚本就是 <code>python example_template/nanodevice/neural_electrode.py --port &lt;session-port&gt; --elec-rows 4</code>。仓库 checkout 里等价的是 <code>python -m examples_klink.public.demos.neural_electrode --port &lt;session-port&gt; --elec-rows 4</code>。</li>
         </ul>
         <div class="note">这篇教程把 <code>generate_harnesspcell()</code> 内部一次性完成的批量调用拆成 7 个可观察的阶段，方便讲清每一步在画什么、标什么、为什么。生产环境里它就是<strong>一次</strong> <code>shape.insert_many</code> 批量写入全部 394 个 shape（见 CLAUDE.md 的批量 RPC 铁律）——分阶段只是教学手段，不是推荐用法。</div>
         <div class="note">单位说明：取景和截图都直接用微米——<code>view.zoom_box(bbox_um=[x1,y1,x2,y2])</code> 和 <code>view.screenshot(bbox_um=..., width_px=..., height_px=...)</code> 的坐标参数都是 <code>bbox_um</code>，单位微米（klink 的标准用户单位）。<code>view.viewport</code> 同时返回 <code>bbox_um</code>（微米）和 <code>bbox_dbu</code>（数据库单位）两种坐标，按需取用。</div>
 
         <h2 id="stage-1" class="anchor-h"><span class="stage-kicker">1</span>建 cell + 层规划</h2>
-        <p>这个器件的所有层都是 example-owned（<code>example_template/neural_electrode.py</code> 里硬编码的层号），klink 本身不带任何工艺层。先建 cell，把 Port/Anchor 的标记层指定一遍，再把 7 个工艺层加上 klink 保留的 3 个标记层全部 <code>ensure</code> 出来：</p>
+        <p>这个器件的所有层都是 example-owned（<code>example_template/nanodevice/neural_electrode.py</code> 里硬编码的层号），klink 本身不带任何工艺层。先建 cell，把 Port/Anchor 的标记层指定一遍，再把 7 个工艺层加上 klink 保留的 3 个标记层全部 <code>ensure</code> 出来：</p>
         <table class="data-table">
           <thead><tr><th>层</th><th>用途</th></tr></thead>
           <tbody>

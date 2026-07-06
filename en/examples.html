@@ -53,6 +53,7 @@
           <a href="#multilayer">6 · Multilayer P&amp;R at scale</a>
           <a href="#padframe">7 · Probe-card padframe</a>
           <a href="#mzi">8 · gdsfactory MZI takeover</a>
+          <a href="#passives">Passive-device geometry templates</a>
           <a href="#features">Feature examples</a>
           <a href="#boundaries">Public boundaries</a>
         </nav>
@@ -60,7 +61,7 @@
 
       <article class="content">
         <h2 id="how" class="anchor-h">How you run them depends on how you installed</h2>
-        <p>4 demos are <strong>starters bundled in the wheel</strong>: <code>klink init &lt;proj&gt;</code> scaffolds them into <code>&lt;proj&gt;/example_template/</code> and a pip user runs <code>python example_template/&lt;name&gt;.py</code> — <strong>ebl_wraparound, hallbar, neural_electrode, gf_mzi_module</strong> (the 4 cards below give this command directly). The other 4 (<strong>fit_device_pnr_lvs, chat_to_netlist_pnr, multilayer_pnr_lvs, padframe_pnr_lvs</strong>) are <strong>repo-only</strong>: they read the source tree / a bundled netlist, so they only run from a clone, not from a pip install; the 4 cards below keep the repo <code>python -m …</code> form and are marked repo-only.</p>
+        <p>8 demos are <strong>starters bundled in the wheel</strong>, grouped into <code>nanodevice/</code>, <code>photonics/</code>, and <code>passives/</code> categories: <code>klink init &lt;proj&gt;</code> scaffolds them into <code>&lt;proj&gt;/example_template/&lt;category&gt;/</code> and a pip user runs <code>python example_template/&lt;category&gt;/&lt;name&gt;.py</code> — <strong>ebl_wraparound, hallbar, neural_electrode</strong> under <code>nanodevice/</code>, <strong>gf_mzi_module</strong> under <code>photonics/</code>, and <strong>idc_capacitor, spiral_inductor, saw_idt_filter, baw_fbar_planview</strong> under <code>passives/</code> (the cards below give this command directly). The other 4 (<strong>fit_device_pnr_lvs, chat_to_netlist_pnr, multilayer_pnr_lvs, padframe_pnr_lvs</strong>) are <strong>repo-only</strong>: they read the source tree / a bundled netlist, so they only run from a clone, not from a pip install; the 4 cards below keep the repo <code>python -m …</code> form and are marked repo-only.</p>
         <div class="note">Running the demos <strong>needs no MCP</strong>. Each is a plain <code>python -m …</code> script talking to KLayout over the plugin port. MCP is the layer that lets your <em>agent</em> call klink as resident tools. Both paths use the same <code>pip install klayout-klink</code>.<br>A KLayout "port" is just a session — any port works; none has a special role. Use an empty or test-owned session, not your manual working tab.</div>
 
         <h2 id="overview" class="anchor-h">The 8 demos at a glance</h2>
@@ -81,7 +82,7 @@
         <div class="demo-card">
           <h2 id="ebl" class="anchor-h">1 · EBL nanodevice wraparound <span class="tier offline">fully offline</span></h2>
           <p>A parametric electron-beam-lithography wraparound generator. Offline it prints the generated bundle; <code>--live</code> writes to a KLayout session. The fastest path to a first result <strong>with no external geometry</strong>.</p>
-          <pre><code>python example_template/ebl_wraparound.py          # [--live] [--keep]
+          <pre><code>python example_template/nanodevice/ebl_wraparound.py          # [--live] [--keep]
 # from a repo clone you can also run: python -m examples_klink.public.demos.ebl_wraparound</code></pre>
           <div class="metric-row">
             <div class="metric"><b>40</b><span>electrodes</span></div>
@@ -91,20 +92,22 @@
             <div class="metric"><b>0</b><span>overlaps</span></div>
           </div>
           <p><strong>Reusable core:</strong> <code>klink.domains.nanodevice.devices.wraparound.build_wraparound_demo</code>. Copy the demo and edit electrode count / pitch / writefield params — the flow does not change.</p>
+          <a class="card-more" href="tutorial-ebl-wraparound.html">📖 Step-by-step walkthrough →</a>
         </div>
 
         <div class="demo-card">
           <h2 id="hallbar" class="anchor-h">2 · Hall bar nanodevice <span class="tier offline">offline (--live)</span></h2>
           <p>A parametric Hall-bar generator. Offline it prints the semantic bundle + routed result; <code>--live</code> writes a disposable KLayout cell (deleted unless <code>--keep</code>). It demonstrates the "device generator + delegate to the generic router" loop behind <a href="mcp-reference.html#d-nanodevice"><code>nanodevice.hallbar</code></a>.</p>
-          <pre><code>python example_template/hallbar.py                 # [--live] [--keep]
+          <pre><code>python example_template/nanodevice/hallbar.py                 # [--live] [--keep]
 # from a repo clone you can also run: python -m examples_klink.public.demos.hallbar</code></pre>
           <p><strong>Reusable core:</strong> tapered-hybrid router + <code>port.mark</code> / <code>anchor.mark</code>. From a <code>HallBarSpec</code> (bar length/width, contact count, pad dims, pitch, gaps) it computes the whole device geometry, then delegates contact→pad routing to the generic router.</p>
+          <a class="card-more" href="tutorial-hallbar.html">📖 Step-by-step walkthrough →</a>
         </div>
 
         <div class="demo-card">
           <h2 id="neural" class="anchor-h">3 · Neural-electrode harness <span class="tier live">live KLayout</span></h2>
           <p>A self-contained probe generator: defines pad/via geometry and Port/Anchor resources, then calls the tapered-hybrid router. <strong>No GDS, just live Port/Anchor PCells.</strong> Use an empty or test-owned session.</p>
-          <pre><code>python example_template/neural_electrode.py --port &lt;session-port&gt; --elec-rows 4
+          <pre><code>python example_template/nanodevice/neural_electrode.py --port &lt;session-port&gt; --elec-rows 4
 # from a repo clone you can also run: python -m examples_klink.public.demos.neural_electrode --port &lt;session-port&gt; --elec-rows 4</code></pre>
           <div class="metric-row">
             <div class="metric"><b>48</b><span>ports</span></div>
@@ -112,6 +115,7 @@
             <div class="metric"><b>0</b><span>sibling-overlap</span></div>
             <div class="metric"><b>0</b><span>obstacle-hit</span></div>
           </div>
+          <a class="card-more" href="tutorial-neural-electrode.html">📖 Step-by-step walkthrough →</a>
         </div>
 
         <div class="demo-card">
@@ -125,6 +129,7 @@ python -m examples_klink.public.demos.fit_device_pnr_lvs --port &lt;session-port
             <div class="metric"><b>173</b><span>devices</span></div>
           </div>
           <p><strong>Reusable core:</strong> <code>map_logic_to_devices(...)</code> → place → FlexDR → live LVS.</p>
+          <a class="card-more" href="tutorial-fit-device.html">📖 Step-by-step walkthrough →</a>
         </div>
 
         <div class="demo-card">
@@ -169,14 +174,15 @@ python -m examples_klink.public.demos.padframe_pnr_lvs --port &lt;session-port&g
             <div class="metric"><b>16 + 4</b><span>connected + redundant isolated</span></div>
           </div>
           <p><code>--no-card</code> drops the card: every port leaves as a bare labelled wire-end trace at the periphery (inputs west, outputs east), power on the auto-labelled PDN tie rails — routed 94/94, LVS match=True, all 14 stubs CONNECTED. Copy this file and edit the pad table for your own card.</p>
+          <a class="card-more" href="tutorial-padframe.html">📖 Step-by-step walkthrough →</a>
         </div>
 
         <div class="demo-card">
           <h2 id="mzi" class="anchor-h">8 · gdsfactory takeover → editable photonic module <span class="tier photonics">live KLayout + gdsfactory</span></h2>
           <p>A complete thermo-optic MZI — tilted fiber GC → 1×2 MMI splitter → two thermal phase-shifter arms (bottom mirrored) → 2×2 MMI combiner → offset output GCs, plus heater pad rows and a fiber-loopback pair — written as an <strong>ordinary gdsfactory script</strong>, then taken over by a single <code>import_gf_component</code> call. One persisted net table then holds <strong>every kind</strong> of net: the script's own optics (re-drawn by klink), the offset output bank restyled to <code>sbend</code>, the tilted GC a Manhattan router can't reach (<code>all_angle</code>), the loopback pair (<code>dubins</code> arcs), and the heater→pad <strong>electrical</strong> nets on metal. A single <code>photonics.reroute</code> redraws all of them — so after you <strong>drag any component in the GUI, one reroute re-routes optics and metal together</strong>.</p>
-          <pre><code>python example_template/gf_mzi_module.py --port &lt;session-port&gt;
+          <pre><code>python example_template/photonics/gf_mzi_module.py --port &lt;session-port&gt;
 # … drag a component in KLayout …
-python example_template/gf_mzi_module.py --port &lt;session-port&gt; --reroute
+python example_template/photonics/gf_mzi_module.py --port &lt;session-port&gt; --reroute
 # from a repo clone you can also run: python -m examples_klink.public.demos.gf_mzi_module --port &lt;session-port&gt; [--reroute]</code></pre>
           <div class="metric-row">
             <div class="metric"><b>6</b><span>optical nets</span></div>
@@ -186,6 +192,20 @@ python example_template/gf_mzi_module.py --port &lt;session-port&gt; --reroute
           </div>
           <div class="warning"><strong>The drag → reroute loop is the point.</strong> <code>--reroute</code> re-routes from the dragged positions <strong>without rebuilding</strong>, keeping your edit. Re-running with no flag rebuilds from the gdsfactory source and snaps every component back to its original spot, undoing the drag — a common first-time surprise, so the flag is the fix. (An agent with the MCP tools calls <code>photonics.reroute</code> directly.)</div>
           <p><strong>Requirements:</strong> gdsfactory in the <strong>same interpreter</strong> that runs it. The demos are pinned to the tested line — <code>pip install "klayout-klink[photonics]"</code> gets a known-good gdsfactory. If gdsfactory already lives in another venv, add klink into <strong>that</strong> venv and run from there; do not sys.path-hack the repo into a foreign interpreter (that path leads to version mismatch and 1000×-off geometry).</p>
+          <a class="card-more" href="tutorial-gf-mzi.html">📖 Step-by-step walkthrough →</a>
+        </div>
+
+        <div class="demo-card">
+          <h2 id="passives" class="anchor-h">Passive-device geometry templates <span class="tier offline">offline (--live)</span></h2>
+          <p>Four parametric passive-device geometry templates, <strong>starters</strong> in the <code>passives/</code> category: after <code>klink init</code>, run <code>python example_template/passives/&lt;name&gt;.py</code>. Offline by default, each writes a GDS under <code>test_outputs/</code> and prints a structured self-check summary; <code>--live [--port &lt;session-port&gt;]</code> pushes a disposable cell to a KLayout session instead. Every family marks klink Ports (<code>999/99</code>) on its electrical terminals, so the routing backends work on them out of the box. <strong>Each is a geometry template, NOT a validated electrical/acoustic design</strong> — tune the numbers for your process and verify with your own models (SAW/BAW make no frequency or material claims).</p>
+          <ul>
+            <li><strong>IDC capacitor</strong> — <code>python example_template/passives/idc_capacitor.py</code> (defaults, 10 fingers: 2 merged regions, no short, 2 ports)</li>
+            <li><strong>Square spiral inductor</strong> — <code>python example_template/passives/spiral_inductor.py</code> (defaults, 3 turns: 1 merged region per metal layer, underpass crosses 4 segments, 2 ports)</li>
+            <li><strong>SAW IDT filter</strong> — <code>python example_template/passives/saw_idt_filter.py</code> (defaults, 12 pairs: 2 merged regions per IDT, 1 per reflector grating, 4 ports)</li>
+            <li><strong>BAW / FBAR plan view</strong> — <code>python example_template/passives/baw_fbar_planview.py</code> (defaults, 2000 µm² target: no two edges parallel, area error &lt;1%, 2 ports)</li>
+          </ul>
+          <p>Every command supports <code>[--live --port &lt;session-port&gt;]</code>.</p>
+          <a class="card-more" href="tutorial-passives.html">📖 Step-by-step walkthrough →</a>
         </div>
 
         <h2 id="features" class="anchor-h">Feature examples</h2>

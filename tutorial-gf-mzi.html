@@ -82,7 +82,7 @@
       <div class="container">
         <div class="eyebrow">Step-by-step tutorial · silicon photonics · gdsfactory 桥接</div>
         <h1>分步教程：gdsfactory MZI 接管与"拖动 → 重布线"</h1>
-        <p>对应仓库里的 <code>example_template/gf_mzi_module.py</code>。这是<a href="tutorial-hallbar.html">Hall bar</a>、<a href="tutorial-ebl-wraparound.html">EBL wraparound</a>、<a href="tutorial-neural-electrode.html">神经电极阵列</a>三篇教程之后的第四篇，也是第一批收官篇：前三篇都是"在 KLayout 里画",这一篇换成"在 gdsfactory 里画,让 klink 接管"——一个普通的 gdsfactory 热光 MZI 脚本，被<strong>一次</strong> <code>import_gf_component</code> 调用接管进 klink 的交互循环，之后你在 KLayout GUI 里拖动任意组件，<strong>不重建、只重布线</strong>，一次 <code>photonics.reroute</code>（或脚本的 <code>--reroute</code> flag）就把光学和电学一起重新接上。这一套"拖动 → 重布线"闭环，是硅光用户日常迭代版图的核心工作流。</p>
+        <p>对应仓库里的 <code>example_template/photonics/gf_mzi_module.py</code>（demo 功能/依赖/实测数字见<a href="examples.html#mzi">示例 · gdsfactory MZI 接管</a>）。这是<a href="tutorial-hallbar.html">Hall bar</a>、<a href="tutorial-ebl-wraparound.html">EBL wraparound</a>、<a href="tutorial-neural-electrode.html">神经电极阵列</a>三篇教程之后的第四篇，也是第一批收官篇：前三篇都是"在 KLayout 里画",这一篇换成"在 gdsfactory 里画,让 klink 接管"——一个普通的 gdsfactory 热光 MZI 脚本，被<strong>一次</strong> <code>import_gf_component</code> 调用接管进 klink 的交互循环，之后你在 KLayout GUI 里拖动任意组件，<strong>不重建、只重布线</strong>，一次 <code>photonics.reroute</code>（或脚本的 <code>--reroute</code> flag）就把光学和电学一起重新接上。这一套"拖动 → 重布线"闭环，是硅光用户日常迭代版图的核心工作流。</p>
       </div>
     </section>
 
@@ -111,7 +111,7 @@
               <li>gdsfactory 已经在另一个 venv 里：<code>&lt;that-venv&gt;/python -m pip install klayout-klink</code>（klink 是纯 Python），再从那个 venv 跑这篇教程的脚本。</li>
             </ol>
           </li>
-          <li>建一个项目并进入：<code>klink init my-chip &amp;&amp; cd my-chip</code>——完整脚本就是 <code>python example_template/gf_mzi_module.py --port &lt;session-port&gt;</code>。仓库 checkout 里等价的是 <code>python -m examples_klink.public.demos.gf_mzi_module --port &lt;session-port&gt;</code>。</li>
+          <li>建一个项目并进入：<code>klink init my-chip &amp;&amp; cd my-chip</code>——完整脚本就是 <code>python example_template/photonics/gf_mzi_module.py --port &lt;session-port&gt;</code>。仓库 checkout 里等价的是 <code>python -m examples_klink.public.demos.gf_mzi_module --port &lt;session-port&gt;</code>。</li>
         </ul>
         <div class="note">不要把仓库 <code>sys.path</code> 硬塞进一个随便的解释器再去 monkey-patch klink 内部来绕过 gdsfactory 版本差异——<code>gf.Port</code> 的 <code>center</code> 单位契约在不同 gdsfactory 版本间变过，这条捷径的真实后果是 1000× 走样的几何。<code>[photonics]</code> 装的是一个经过 CI 测试的版本，如果你必须用别的 gdsfactory 版本，预期要跟着调整脚本，而不是改 klink。</div>
 

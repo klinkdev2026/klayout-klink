@@ -82,7 +82,7 @@
       <div class="container">
         <div class="eyebrow">Step-by-step tutorial · nanodevice · batch RPC</div>
         <h1>Step-by-step: drawing a neural electrode harness</h1>
-        <p>This walks through <code>example_template/neural_electrode.py</code> from the public gallery. It's the third in the series, after <a href="tutorial-hallbar.html">Hall bar</a> and <a href="tutorial-ebl-wraparound.html">EBL wraparound</a>: same Port/Anchor/geometry-first loop, but this time the headline feature is <strong>parametric generation + batch RPCs</strong> -- one <code>--elec-rows</code> argument changes the electrode array's row count, and across a chip that spans nearly ten thousand microns, 394 geometry objects get written with just 3 staged <code>shape.insert_many</code> calls (1 call in production).</p>
+        <p>This walks through <code>example_template/nanodevice/neural_electrode.py</code> from the public gallery (for the demo's function, requirements, and measured numbers, see <a href="examples.html#neural">Examples · Neural electrode</a>). It's the third in the series, after <a href="tutorial-hallbar.html">Hall bar</a> and <a href="tutorial-ebl-wraparound.html">EBL wraparound</a>: same Port/Anchor/geometry-first loop, but this time the headline feature is <strong>parametric generation + batch RPCs</strong> -- one <code>--elec-rows</code> argument changes the electrode array's row count, and across a chip that spans nearly ten thousand microns, 394 geometry objects get written with just 3 staged <code>shape.insert_many</code> calls (1 call in production).</p>
       </div>
     </section>
 
@@ -107,13 +107,13 @@
         <ul>
           <li>Install klink: <code>pip install klayout-klink</code> (one command installs klink plus its Rust kernels -- no third-party scientific libraries needed).</li>
           <li>KLayout running with the klink plugin loaded (RPC port defaults to <code>8765</code>).</li>
-          <li>Scaffold a project and enter it: <code>klink init nano-demo &amp;&amp; cd nano-demo</code> -- the full script is <code>python example_template/neural_electrode.py --port &lt;session-port&gt; --elec-rows 4</code>. In a repo checkout the equivalent is <code>python -m examples_klink.public.demos.neural_electrode --port &lt;session-port&gt; --elec-rows 4</code>.</li>
+          <li>Scaffold a project and enter it: <code>klink init nano-demo &amp;&amp; cd nano-demo</code> -- the full script is <code>python example_template/nanodevice/neural_electrode.py --port &lt;session-port&gt; --elec-rows 4</code>. In a repo checkout the equivalent is <code>python -m examples_klink.public.demos.neural_electrode --port &lt;session-port&gt; --elec-rows 4</code>.</li>
         </ul>
         <div class="note">This tutorial breaks the single batched call inside <code>generate_harnesspcell()</code> into 7 observable stages so each step of what's drawn, marked, and why is visible on its own. In production it's <strong>one</strong> <code>shape.insert_many</code> call writing all 394 shapes (see the batch-RPC rule in this repo's CLAUDE.md) -- the staged version here is purely for teaching, not a recommended pattern.</div>
         <div class="note">Units: framing and screenshots both take microns directly -- <code>view.zoom_box(bbox_um=[x1,y1,x2,y2])</code> and <code>view.screenshot(bbox_um=..., width_px=..., height_px=...)</code> both take a <code>bbox_um</code> coordinate argument, in microns (klink's standard user-facing unit). <code>view.viewport</code> reports both <code>bbox_um</code> (microns) and <code>bbox_dbu</code> (database units) so you can use whichever you need.</div>
 
         <h2 id="stage-1" class="anchor-h"><span class="stage-kicker">1</span>Create the cell + plan the layers</h2>
-        <p>Every layer this device uses is example-owned (hardcoded layer numbers in <code>example_template/neural_electrode.py</code>) -- klink itself ships no process layers. Create the cell, set the Port/Anchor marker layers once, then <code>ensure</code> the 7 process layers plus klink's 3 reserved marker layers:</p>
+        <p>Every layer this device uses is example-owned (hardcoded layer numbers in <code>example_template/nanodevice/neural_electrode.py</code>) -- klink itself ships no process layers. Create the cell, set the Port/Anchor marker layers once, then <code>ensure</code> the 7 process layers plus klink's 3 reserved marker layers:</p>
         <table class="data-table">
           <thead><tr><th>Layer</th><th>Purpose</th></tr></thead>
           <tbody>

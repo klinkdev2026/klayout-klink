@@ -153,7 +153,7 @@ klink update mychip</code></pre>
         <p>新领域=一个为它塑形的 <code>pdk.py</code> + 一个 <code>custom_devices/</code> 脚本（import 你的工艺、显式调 klink API）。复制最近的目录条目改写即可，<strong>你从不编辑 klink 来加领域</strong>。</p>
 
         <h2 id="walkthroughs" class="anchor-h">图文分步教程</h2>
-        <p>下面四篇把对应示例脚本拆成可观察的阶段：每一步在 live KLayout 里真的画出来、截图，并配上产生它的 klink 调用，最后用结构化报告（而不是截图）判定完成。建议按顺序读——后一篇会复用前一篇建立的概念。</p>
+        <p>下面是 7 篇分步图文教程——5 个 starter 示例（<code>example_template/</code> 里可以直接跑）加 2 个 repo-only 示例（需要仓库克隆）：<strong>教程与示例是同一个实体的两个视图</strong>，每篇教程对应一个示例脚本，把它拆成可观察的阶段，每一步在 live KLayout 里真的画出来、截图，并配上产生它的 klink 调用，最后用结构化报告（而不是截图）判定完成；教程结尾就是那条能直接复制运行的一键命令。建议按顺序读——后一篇会复用前一篇建立的概念。逐个 demo 的功能/依赖/实测数字见 <a href="examples.html">示例</a>。</p>
         <div class="grid two">
           <a class="card" href="tutorial-hallbar.html">
             <span class="feature-kicker">入门 · nanodevice</span>
@@ -179,14 +179,32 @@ klink update mychip</code></pre>
             <p>一次 <code>import_gf_component</code> 接管普通 gdsfactory 热光 MZI 脚本；GUI 里拖动任意组件后，同一个 <code>photonics.reroute</code> 调用只重新布线、不重建器件。需要 gdsfactory。</p>
             <span class="card-more">看分步教程 →</span>
           </a>
+          <a class="card" href="tutorial-fit-device.html">
+            <span class="feature-kicker">structdevice · 数字 P&amp;R</span>
+            <h3>自定义器件：拟合 → PCell → P&amp;R → LVS</h3>
+            <p>从几个不同尺寸的范例几何拟合出参数化边模型，注册成真 PCell，按网表摆放 173 个实例，FlexDR 详细布线，最后 live LVS match=True。repo-only，需 live KLayout。</p>
+            <span class="card-more">看分步教程 →</span>
+          </a>
+          <a class="card" href="tutorial-padframe.html">
+            <span class="feature-kicker green">structdevice · padframe</span>
+            <h3>针卡优先的 padframe</h3>
+            <p>探针卡 / pad 环先固定，电路必须迁就它：pad 环 harvest、net→pad 分配、一半卡内一半卡下的摆放、分区电网，最后 card 与 <code>--no-card</code> 裸线头两种模式各自 live LVS match=True。repo-only，需 live KLayout。</p>
+            <span class="card-more">看分步教程 →</span>
+          </a>
+          <a class="card" href="tutorial-passives.html">
+            <span class="feature-kicker amber">passives · 几何模板</span>
+            <h3>无源器件几何模板</h3>
+            <p>IDC 叉指电容、方形螺旋电感、SAW IDT 滤波器、BAW/FBAR 俯视图四族参数化几何模板，每族默认参数 + 变体参数各一张实跑截图。<code>passives/</code> 类 starter，离线可跑，<code>--live</code> 推 KLayout。</p>
+            <span class="card-more">看分步教程 →</span>
+          </a>
         </div>
 
         <h2 id="offline" class="anchor-h">离线器件教程</h2>
         <p>从完全离线的 EBL wraparound 或 Hall bar 开始最稳——它们展示“机制层不含工艺事实”：示例自带尺寸、层号和 writefield 规则，再调 <code>klink.domains.nanodevice</code>。</p>
         <pre><code>klink init nano-demo
 cd nano-demo
-python example_template/ebl_wraparound.py
-python example_template/hallbar.py</code></pre>
+python example_template/nanodevice/ebl_wraparound.py
+python example_template/nanodevice/hallbar.py</code></pre>
         <p>在仓库 checkout 里也可直接跑公开 gallery：</p>
         <pre><code>python -m examples_klink.public.demos.ebl_wraparound
 python -m examples_klink.public.demos.hallbar</code></pre>
@@ -197,10 +215,10 @@ python -m examples_klink.public.demos.hallbar</code></pre>
         <p>安装始终是<strong>一条命令</strong>：<code>pip install klayout-klink</code> 就装好 klink 全部。这个示例额外需要<strong>同一个解释器</strong>里有 gdsfactory（klink 是 RPC client，几何由 gdsfactory 在客户端构建）——klink 不打包第三方库，缺了会提示你确切的 <code>pip install</code>。<code>[photonics]</code> 不是“按领域安装”，只是把一个测试过的 gdsfactory 一并装上的便捷写法：</p>
         <pre><code>pip install "klayout-klink[photonics]"    # = klink + 一个已测试的 gdsfactory
 klink init my-chip &amp;&amp; cd my-chip
-python example_template/gf_mzi_module.py --port &lt;session-port&gt;
+python example_template/photonics/gf_mzi_module.py --port &lt;session-port&gt;
 # 仓库克隆里也可以: python -m examples_klink.public.demos.gf_mzi_module --port &lt;session-port&gt;</code></pre>
         <p>接管后，在 KLayout GUI 里拖动组件，一次 <code>photonics.reroute</code> 同时重路由光学和金属——细节见 <a href="workflows.html#klive">工作流 · 8082 klive 显示</a> 与 <a href="mcp-reference.html#d-photonics">MCP 参考 · 硅光</a>。从普通 shell 重新布线用 <code>--reroute</code> flag，它只从拖动后的位置重路由、<strong>不重建</strong>：</p>
-        <pre><code>python example_template/gf_mzi_module.py --port &lt;session-port&gt; --reroute</code></pre>
+        <pre><code>python example_template/photonics/gf_mzi_module.py --port &lt;session-port&gt; --reroute</code></pre>
         <p>换成你的 PDK 时，层、stub 规则、cross-section 都来自你的脚本或 <code>pdk.py</code>。</p>
 
         <h2 id="digital" class="anchor-h">P&amp;R 到 LVS</h2>

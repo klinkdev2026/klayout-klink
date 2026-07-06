@@ -153,7 +153,7 @@ klink update mychip</code></pre>
         <p>A new domain is just a <code>pdk.py</code> shaped for it + a <code>custom_devices/</code> script that imports your process and calls klink explicitly. Copy the closest catalog entry and adapt — <strong>you never edit klink to add a domain</strong>.</p>
 
         <h2 id="walkthroughs" class="anchor-h">Step-by-step tutorials</h2>
-        <p>These four tutorials break the corresponding demo script into observable stages: every step is actually drawn in a live KLayout session, screenshotted, and paired with the klink calls that produced it, then verified with a structured report -- not a screenshot. Read them in order; each one builds on concepts from the one before it.</p>
+        <p>These are 7 step-by-step walkthroughs -- the 5 starter demos runnable directly from <code>example_template/</code>, plus 2 repo-only examples (need a repo clone): <strong>a tutorial and its demo are two views of the same thing</strong>. Each tutorial corresponds to one demo script and breaks it into observable stages: every step is actually drawn in a live KLayout session, screenshotted, and paired with the klink calls that produced it, then verified with a structured report -- not a screenshot. The tutorial ends with the same one-line command you can copy and run. Read them in order; each one builds on concepts from the one before it. For what each demo does, its requirements, and measured numbers, see <a href="examples.html">Examples</a>.</p>
         <div class="grid two">
           <a class="card" href="tutorial-hallbar.html">
             <span class="feature-kicker">Getting started · nanodevice</span>
@@ -179,14 +179,32 @@ klink update mychip</code></pre>
             <p>One <code>import_gf_component</code> call takes over an ordinary gdsfactory thermo-optic MZI script; after dragging any component in the GUI, the same <code>photonics.reroute</code> call only re-routes -- it never rebuilds a device. Needs gdsfactory.</p>
             <span class="card-more">Read the tutorial →</span>
           </a>
+          <a class="card" href="tutorial-fit-device.html">
+            <span class="feature-kicker">structdevice · digital P&amp;R</span>
+            <h3>Custom device: fit → PCell → P&amp;R → LVS</h3>
+            <p>Fit a parametric edge model from a few exemplar drawings at different sizes, register a real PCell, place 173 instances from a netlist, run FlexDR detailed routing, and finish with live LVS match=True. Repo-only, needs live KLayout.</p>
+            <span class="card-more">Read the tutorial →</span>
+          </a>
+          <a class="card" href="tutorial-padframe.html">
+            <span class="feature-kicker green">structdevice · padframe</span>
+            <h3>A probe-card-first padframe</h3>
+            <p>The probe card / pad ring exists first and the circuit must meet it: harvest the pad ring, assign net→pad, place half-in/half-out, split the power grid by region, and finish with both the card and <code>--no-card</code> bare-stub modes each passing live LVS match=True. Repo-only, needs live KLayout.</p>
+            <span class="card-more">Read the tutorial →</span>
+          </a>
+          <a class="card" href="tutorial-passives.html">
+            <span class="feature-kicker amber">passives · geometry templates</span>
+            <h3>Passive-device geometry templates</h3>
+            <p>Four parametric geometry templates -- IDC capacitor, square spiral inductor, SAW IDT filter, BAW/FBAR plan view -- each with a default-parameter and a variant-parameter live screenshot. A <code>passives/</code>-category starter, runs offline, <code>--live</code> pushes to KLayout.</p>
+            <span class="card-more">Read the tutorial →</span>
+          </a>
         </div>
 
         <h2 id="offline" class="anchor-h">Offline device tutorial</h2>
         <p>Starting from the fully offline EBL wraparound or Hall bar is safest — they show "the mechanism layer holds no process facts": the example carries sizes, layer numbers and writefield rules, then calls <code>klink.domains.nanodevice</code>.</p>
         <pre><code>klink init nano-demo
 cd nano-demo
-python example_template/ebl_wraparound.py
-python example_template/hallbar.py</code></pre>
+python example_template/nanodevice/ebl_wraparound.py
+python example_template/nanodevice/hallbar.py</code></pre>
         <p>From a repo checkout you can also run the public gallery directly:</p>
         <pre><code>python -m examples_klink.public.demos.ebl_wraparound
 python -m examples_klink.public.demos.hallbar</code></pre>
@@ -197,10 +215,10 @@ python -m examples_klink.public.demos.hallbar</code></pre>
         <p>Install is always <strong>one command</strong>: <code>pip install klayout-klink</code> installs all of klink. This example additionally needs gdsfactory in the <strong>same interpreter</strong> (klink is an RPC client; the geometry is built client-side by gdsfactory) — klink bundles no third-party libs and names the exact <code>pip install</code> when one is missing. <code>[photonics]</code> is not a "per-domain install", just a convenience that also pulls a tested gdsfactory:</p>
         <pre><code>pip install "klayout-klink[photonics]"    # = klink + a tested gdsfactory
 klink init my-chip &amp;&amp; cd my-chip
-python example_template/gf_mzi_module.py --port &lt;session-port&gt;
+python example_template/photonics/gf_mzi_module.py --port &lt;session-port&gt;
 # from a repo checkout you can also run: python -m examples_klink.public.demos.gf_mzi_module --port &lt;session-port&gt;</code></pre>
         <p>After takeover, drag a component in the GUI and one <code>photonics.reroute</code> re-routes optics and metal together — see <a href="workflows.html#klive">Workflows · 8082 klive display</a> and <a href="mcp-reference.html#d-photonics">MCP Reference · Photonics</a>. From a plain shell, re-route with the <code>--reroute</code> flag, which re-routes from the dragged positions <strong>without rebuilding</strong>:</p>
-        <pre><code>python example_template/gf_mzi_module.py --port &lt;session-port&gt; --reroute</code></pre>
+        <pre><code>python example_template/photonics/gf_mzi_module.py --port &lt;session-port&gt; --reroute</code></pre>
         <p>For your own PDK, layers, stub rules and cross-section come from your script or <code>pdk.py</code>.</p>
 
         <h2 id="digital" class="anchor-h">P&amp;R to LVS</h2>

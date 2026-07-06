@@ -82,7 +82,7 @@
       <div class="container">
         <div class="eyebrow">Step-by-step tutorial · nanodevice</div>
         <h1>分步教程：画一个 Hall bar 器件</h1>
-        <p>对应仓库里的 <code>example_template/hallbar.py</code>。这篇教程把它的绘制过程拆成 7 个阶段，每一步都在 live KLayout 里真的画出来、截图，并给出对应的 klink RPC 代码——展示的正是 geometry-first 的核心流程：先画几何，再标 Port/Anchor 意图，再让路由算法补全布线，最后用结构化结果验证。</p>
+        <p>对应仓库里的 <code>example_template/nanodevice/hallbar.py</code>（demo 功能/依赖/实测数字见<a href="examples.html#hallbar">示例 · Hall bar</a>）。这篇教程把它的绘制过程拆成 7 个阶段，每一步都在 live KLayout 里真的画出来、截图，并给出对应的 klink RPC 代码——展示的正是 geometry-first 的核心流程：先画几何，再标 Port/Anchor 意图，再让路由算法补全布线，最后用结构化结果验证。</p>
       </div>
     </section>
 
@@ -107,7 +107,7 @@
         <ul>
           <li>安装 klink：<code>pip install klayout-klink</code>（一条命令装好 klink 和它的 Rust 内核，无需第三方科学库）。</li>
           <li>KLayout 正在运行，并已加载 klink 插件（RPC 端口默认 <code>8765</code>）。</li>
-          <li>建一个项目并进入：<code>klink init nano-demo &amp;&amp; cd nano-demo</code>——完整脚本就是 <code>python example_template/hallbar.py --live --port &lt;session-port&gt;</code>。仓库 checkout 里等价的是 <code>python -m examples_klink.public.demos.hallbar --live --port &lt;session-port&gt;</code>。</li>
+          <li>建一个项目并进入：<code>klink init nano-demo &amp;&amp; cd nano-demo</code>——完整脚本就是 <code>python example_template/nanodevice/hallbar.py --live --port &lt;session-port&gt;</code>。仓库 checkout 里等价的是 <code>python -m examples_klink.public.demos.hallbar --live --port &lt;session-port&gt;</code>。</li>
         </ul>
         <div class="note">这篇教程把 <code>hallbar.py</code> 内部一次性完成的批量调用拆成 7 个可观察的阶段，方便讲清每一步在画什么、标什么、为什么。生产环境里你通常还是用一次 <code>shape.insert_many</code> 批量写入（见 CLAUDE.md 的批量 RPC 铁律）——分阶段只是教学手段。</div>
 
@@ -138,7 +138,7 @@ with KLinkClient(port=PORT).connect() as c:
         </figure>
 
         <h2 id="stage-2" class="anchor-h"><span class="stage-kicker">2</span>画 mesa / 沟道</h2>
-        <p>mesa 是一条居中的矩形导电沟道，尺寸由 <code>HallBarSpec</code> 的 <code>bar_length_um</code> / <code>bar_width_um</code> 决定（默认 144 × 8 µm）。完整坐标算术见 <code>example_template/hallbar.py</code>；这里只展示写入调用：</p>
+        <p>mesa 是一条居中的矩形导电沟道，尺寸由 <code>HallBarSpec</code> 的 <code>bar_length_um</code> / <code>bar_width_um</code> 决定（默认 144 × 8 µm）。完整坐标算术见 <code>example_template/nanodevice/hallbar.py</code>；这里只展示写入调用：</p>
         <pre><code>c.shape_insert_boxes(cell, layer_index=device_li, boxes_um=[mesa_bbox_um])</code></pre>
         <figure class="tut-figure">
           <img src="assets/tutorials/hallbar/step-02-mesa.png" alt="居中的细长粉色矩形，代表 Hall bar 的导电沟道 mesa">
@@ -224,7 +224,7 @@ commit_tapered_hybrid_many(c, cell, route_result, route_layer="12/0", clear=True
         <p><code>ok=true</code> 且 <code>obstacle_hits</code> / <code>sibling_overlaps</code> 均为 0，说明 6 条 fanout 走线互不重叠、没有撞到任何避障层——这才是"布线做完了"的依据，而不是"看起来连上了"。</p>
 
         <h2 id="next" class="anchor-h">下一步</h2>
-        <p>把 <code>example_template/hallbar.py</code> 里的 <code>HallBarSpec</code> 参数改成你自己的尺寸（接触数量、pad 间距、层号），跑一遍 <code>--live</code> 确认路由报告 <code>ok=true</code>，再决定要不要接入 writefield 避障（EBL 场景）或加测 <code>drc.run</code>。更多离线器件背景见<a href="tutorials.html#offline">核心思路教程 · 离线器件教程</a>，Port/Anchor 的完整字段说明见<a href="mcp-reference.html#d-ports">MCP 参考</a>。</p>
+        <p>把 <code>example_template/nanodevice/hallbar.py</code> 里的 <code>HallBarSpec</code> 参数改成你自己的尺寸（接触数量、pad 间距、层号），跑一遍 <code>--live</code> 确认路由报告 <code>ok=true</code>，再决定要不要接入 writefield 避障（EBL 场景）或加测 <code>drc.run</code>。更多离线器件背景见<a href="tutorials.html#offline">核心思路教程 · 离线器件教程</a>，Port/Anchor 的完整字段说明见<a href="mcp-reference.html#d-ports">MCP 参考</a>。</p>
       </article>
     </div>
   </main>
