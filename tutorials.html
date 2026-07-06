@@ -206,8 +206,8 @@ cd nano-demo
 python example_template/nanodevice/ebl_wraparound.py
 python example_template/nanodevice/hallbar.py</code></pre>
         <p>在仓库 checkout 里也可直接跑公开 gallery：</p>
-        <pre><code>python -m examples_klink.public.demos.ebl_wraparound
-python -m examples_klink.public.demos.hallbar</code></pre>
+        <pre><code>python -m examples_klink.public.demos.nanodevice.ebl_wraparound
+python -m examples_klink.public.demos.nanodevice.hallbar</code></pre>
         <p>复制到你的项目后，<strong>先改参数、不改 <code>klink/</code></strong>；参数稳定后再整理成 <code>custom_devices/&lt;device&gt;.py</code>。逐个 demo 详解见 <a href="examples.html">示例</a>。</p>
 
         <h2 id="photonics" class="anchor-h">硅光示例（gdsfactory 桥接）</h2>
@@ -216,7 +216,7 @@ python -m examples_klink.public.demos.hallbar</code></pre>
         <pre><code>pip install "klayout-klink[photonics]"    # = klink + 一个已测试的 gdsfactory
 klink init my-chip &amp;&amp; cd my-chip
 python example_template/photonics/gf_mzi_module.py --port &lt;session-port&gt;
-# 仓库克隆里也可以: python -m examples_klink.public.demos.gf_mzi_module --port &lt;session-port&gt;</code></pre>
+# 仓库克隆里也可以: python -m examples_klink.public.demos.photonics.gf_mzi_module --port &lt;session-port&gt;</code></pre>
         <p>接管后，在 KLayout GUI 里拖动组件，一次 <code>photonics.reroute</code> 同时重路由光学和金属——细节见 <a href="workflows.html#klive">工作流 · 8082 klive 显示</a> 与 <a href="mcp-reference.html#d-photonics">MCP 参考 · 硅光</a>。从普通 shell 重新布线用 <code>--reroute</code> flag，它只从拖动后的位置重路由、<strong>不重建</strong>：</p>
         <pre><code>python example_template/photonics/gf_mzi_module.py --port &lt;session-port&gt; --reroute</code></pre>
         <p>换成你的 PDK 时，层、stub 规则、cross-section 都来自你的脚本或 <code>pdk.py</code>。</p>
@@ -224,7 +224,7 @@ python example_template/photonics/gf_mzi_module.py --port &lt;session-port&gt;
         <h2 id="digital" class="anchor-h">P&amp;R 到 LVS</h2>
         <p>公开 release 的 digital path 是自包含或用户自带几何两种模式。fit-device demo 用合成 exemplar 跑通 device fit、placement、routing 和 live LVS。</p>
         <pre><code># repo-only：需要仓库克隆运行，不在 pip wheel 里
-python -m examples_klink.public.demos.fit_device_pnr_lvs --port &lt;session-port&gt;</code></pre>
+python -m examples_klink.public.demos.digital.fit_device_pnr_lvs --port &lt;session-port&gt;</code></pre>
         <p>器件无关的自定义器件流由 <a href="mcp-reference.html#d-structdevice"><code>structdevice.*</code></a> 一族提供：给器件级网表 → <code>build_from_netlist</code> 自动 floorplan/route/draw/LVS；或 SEND 驱动的 <code>declare_nets</code> → <code>connect_nets</code> → <code>lvs_check</code> → <code>spec_write</code>。任何 LVS mismatch 都会撤销全部改动。</p>
 
         <h2 id="verify" class="anchor-h">验证习惯</h2>

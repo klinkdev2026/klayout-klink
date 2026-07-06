@@ -109,8 +109,8 @@
           <li>这个 demo 是 <strong>repo-only</strong>：需要克隆仓库运行（它 import 仓库里的合成器件模块，不在 pip wheel 里）。完整脚本是：
 <pre><code>git clone https://github.com/klinkdev2026/klayout-klink
 cd klayout-klink
-python -m examples_klink.public.demos.padframe_pnr_lvs --port &lt;session-port&gt;            # 有卡模式
-python -m examples_klink.public.demos.padframe_pnr_lvs --port &lt;session-port&gt; --no-card  # 无卡模式</code></pre></li>
+python -m examples_klink.public.demos.digital.padframe_pnr_lvs --port &lt;session-port&gt;            # 有卡模式
+python -m examples_klink.public.demos.digital.padframe_pnr_lvs --port &lt;session-port&gt; --no-card  # 无卡模式</code></pre></li>
         </ul>
         <div class="note">这篇教程把 <code>padframe_pnr_lvs.py</code> 内部一次性完成的构建拆成 6 个可观察阶段，方便讲清"卡先存在、电路后迁就"这条反序流每一步在做什么。生产环境里你还是直接跑那一个脚本——分阶段只是教学手段。它复用 <a href="examples.html#fitdevice">拟合器件 demo</a> 的公开 3 层工艺与合成拟合器件库，所以本身<strong>零器件几何</strong>；电路是一个开源逻辑综合器网出来、再映射到这些合成器件上的 4-bit 加法器（<code>173</code> 器件 / <code>96</code> net / <code>62</code> gate）。</div>
 

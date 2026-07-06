@@ -111,7 +111,7 @@
               <li>gdsfactory already lives in another venv: <code>&lt;that-venv&gt;/python -m pip install klayout-klink</code> (klink is pure Python), then run this tutorial's script from that venv.</li>
             </ol>
           </li>
-          <li>Scaffold a project and enter it: <code>klink init my-chip &amp;&amp; cd my-chip</code> -- the full script is <code>python example_template/photonics/gf_mzi_module.py --port &lt;session-port&gt;</code>. In a repo checkout the equivalent is <code>python -m examples_klink.public.demos.gf_mzi_module --port &lt;session-port&gt;</code>.</li>
+          <li>Scaffold a project and enter it: <code>klink init my-chip &amp;&amp; cd my-chip</code> -- the full script is <code>python example_template/photonics/gf_mzi_module.py --port &lt;session-port&gt;</code>. In a repo checkout the equivalent is <code>python -m examples_klink.public.demos.photonics.gf_mzi_module --port &lt;session-port&gt;</code>.</li>
         </ul>
         <div class="note">Do not sys.path-hack the repo into a random interpreter and monkey-patch klink internals to paper over a gdsfactory version gap -- <code>gf.Port</code>'s <code>center</code> unit contract has changed across gdsfactory versions, and that shortcut's real consequence is 1000x-off geometry. <code>[photonics]</code> installs a CI-tested version; if you must use a different gdsfactory, expect to adjust the script, not klink.</div>
 
@@ -120,7 +120,7 @@
         <p>The actual takeover is <strong>one call</strong>:</p>
         <pre><code>from klink import KLinkClient
 from klink.domains.photonics.gf_import import import_gf_component
-from examples_klink.public.demos.gf_mzi_module import build_user_module, CELL, OPTICAL_LAYER
+from examples_klink.public.demos.photonics.gf_mzi_module import build_user_module, CELL, OPTICAL_LAYER
 
 component = build_user_module()   # plain gdsfactory, no KLayout involved yet
 with KLinkClient(port=PORT).connect() as client:

@@ -107,7 +107,7 @@
         <ul>
           <li>安装 klink：<code>pip install klayout-klink</code>（一条命令装好 klink 和它的 Rust 内核，无需第三方科学库）。</li>
           <li>KLayout 正在运行，并已加载 klink 插件（RPC 端口默认 <code>8765</code>）。</li>
-          <li>建一个项目并进入：<code>klink init nano-demo &amp;&amp; cd nano-demo</code>——完整脚本就是 <code>python example_template/nanodevice/neural_electrode.py --port &lt;session-port&gt; --elec-rows 4</code>。仓库 checkout 里等价的是 <code>python -m examples_klink.public.demos.neural_electrode --port &lt;session-port&gt; --elec-rows 4</code>。</li>
+          <li>建一个项目并进入：<code>klink init nano-demo &amp;&amp; cd nano-demo</code>——完整脚本就是 <code>python example_template/nanodevice/neural_electrode.py --port &lt;session-port&gt; --elec-rows 4</code>。仓库 checkout 里等价的是 <code>python -m examples_klink.public.demos.nanodevice.neural_electrode --port &lt;session-port&gt; --elec-rows 4</code>。</li>
         </ul>
         <div class="note">这篇教程把 <code>generate_harnesspcell()</code> 内部一次性完成的批量调用拆成 7 个可观察的阶段，方便讲清每一步在画什么、标什么、为什么。生产环境里它就是<strong>一次</strong> <code>shape.insert_many</code> 批量写入全部 394 个 shape（见 CLAUDE.md 的批量 RPC 铁律）——分阶段只是教学手段，不是推荐用法。</div>
         <div class="note">单位说明：取景和截图都直接用微米——<code>view.zoom_box(bbox_um=[x1,y1,x2,y2])</code> 和 <code>view.screenshot(bbox_um=..., width_px=..., height_px=...)</code> 的坐标参数都是 <code>bbox_um</code>，单位微米（klink 的标准用户单位）。<code>view.viewport</code> 同时返回 <code>bbox_um</code>（微米）和 <code>bbox_dbu</code>（数据库单位）两种坐标，按需取用。</div>
@@ -272,7 +272,7 @@ detail = c.screenshot(mode="base64", bbox_um=[2370.0, -70.0, 2510.0, 70.0],
         <p><code>ok=true</code>，两个 route_layer 分组的 <code>sibling_overlap_count</code>/<code>obstacle_hit_count</code> 全部为 0，说明 24 条走线（12 在 <code>1/0</code>，12 在 <code>3/0</code>）互不重叠、没有相互撞线；<code>pair_count=24</code> 等于 <code>net_count</code>，说明每个 net 都恰好配对成功，没有落单的 Port。这三个数字合在一起，才是"这版参数化 harness 布线正确"的依据，而不是"看起来接上了"。</p>
 
         <h2 id="next" class="anchor-h">下一步</h2>
-        <p>把 <code>--elec-rows</code> 改成你自己的行数（比如 2 或 6），对照上面 Stage 4 的公式表核实 shape 数量是否符合预期，再确认 <code>route_result.ok</code> 依旧是 <code>true</code>。如果还没看过前两篇，建议按顺序读：<a href="tutorial-hallbar.html">《分步教程：Hall bar 器件》</a>（geometry-first 入门：先标 Port/Anchor 意图再路由）和<a href="tutorial-ebl-wraparound.html">《分步教程：EBL wraparound 纳米器件》</a>（写场避障：<code>kind="corridor"</code> 窗口第一次出现）——这篇教程的走廊 Anchor 正是从那篇借来的同一个 <code>kind</code>，用在了完全不同的"强制汇聚"场景里。下一篇预告是硅光方向的 <code>gf_mzi_module</code> 教程（<code>python -m examples_klink.public.demos.gf_mzi_module --port &lt;session-port&gt;</code>），会换到 gdsfactory 桥接和 MZI 器件。Port/Anchor 的完整字段说明见 <a href="mcp-reference.html#d-ports">MCP 参考</a>，批量 RPC 的完整设计边界见仓库 CLAUDE.md 的"Use batch RPCs for generated layouts"一节。</p>
+        <p>把 <code>--elec-rows</code> 改成你自己的行数（比如 2 或 6），对照上面 Stage 4 的公式表核实 shape 数量是否符合预期，再确认 <code>route_result.ok</code> 依旧是 <code>true</code>。如果还没看过前两篇，建议按顺序读：<a href="tutorial-hallbar.html">《分步教程：Hall bar 器件》</a>（geometry-first 入门：先标 Port/Anchor 意图再路由）和<a href="tutorial-ebl-wraparound.html">《分步教程：EBL wraparound 纳米器件》</a>（写场避障：<code>kind="corridor"</code> 窗口第一次出现）——这篇教程的走廊 Anchor 正是从那篇借来的同一个 <code>kind</code>，用在了完全不同的"强制汇聚"场景里。下一篇预告是硅光方向的 <code>gf_mzi_module</code> 教程（<code>python -m examples_klink.public.demos.photonics.gf_mzi_module --port &lt;session-port&gt;</code>），会换到 gdsfactory 桥接和 MZI 器件。Port/Anchor 的完整字段说明见 <a href="mcp-reference.html#d-ports">MCP 参考</a>，批量 RPC 的完整设计边界见仓库 CLAUDE.md 的"Use batch RPCs for generated layouts"一节。</p>
       </article>
     </div>
   </main>

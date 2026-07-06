@@ -109,8 +109,8 @@
           <li>This demo is <strong>repo-only</strong>: it needs a repository clone to run (it imports the repo's synthetic device module, which is not in the pip wheel). The full script is:
 <pre><code>git clone https://github.com/klinkdev2026/klayout-klink
 cd klayout-klink
-python -m examples_klink.public.demos.padframe_pnr_lvs --port &lt;session-port&gt;            # card mode
-python -m examples_klink.public.demos.padframe_pnr_lvs --port &lt;session-port&gt; --no-card  # no-card mode</code></pre></li>
+python -m examples_klink.public.demos.digital.padframe_pnr_lvs --port &lt;session-port&gt;            # card mode
+python -m examples_klink.public.demos.digital.padframe_pnr_lvs --port &lt;session-port&gt; --no-card  # no-card mode</code></pre></li>
         </ul>
         <div class="note">This tutorial breaks the single build inside <code>padframe_pnr_lvs.py</code> into 6 observable stages so each step of this reversed "card first, circuit yields" flow is visible on its own. In production you just run the one script -- the staged version is purely for teaching. It reuses the public 3-layer process and synthetic fitted-device library from the <a href="examples.html#fitdevice">fit-a-device demo</a>, so it owns <strong>zero device geometry</strong> of its own; the circuit is a 4-bit adder netted by an open logic synthesizer and remapped onto those synthetic devices (<code>173</code> devices / <code>96</code> nets / <code>62</code> gates).</div>
 

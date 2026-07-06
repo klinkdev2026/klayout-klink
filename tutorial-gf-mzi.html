@@ -111,7 +111,7 @@
               <li>gdsfactory 已经在另一个 venv 里：<code>&lt;that-venv&gt;/python -m pip install klayout-klink</code>（klink 是纯 Python），再从那个 venv 跑这篇教程的脚本。</li>
             </ol>
           </li>
-          <li>建一个项目并进入：<code>klink init my-chip &amp;&amp; cd my-chip</code>——完整脚本就是 <code>python example_template/photonics/gf_mzi_module.py --port &lt;session-port&gt;</code>。仓库 checkout 里等价的是 <code>python -m examples_klink.public.demos.gf_mzi_module --port &lt;session-port&gt;</code>。</li>
+          <li>建一个项目并进入：<code>klink init my-chip &amp;&amp; cd my-chip</code>——完整脚本就是 <code>python example_template/photonics/gf_mzi_module.py --port &lt;session-port&gt;</code>。仓库 checkout 里等价的是 <code>python -m examples_klink.public.demos.photonics.gf_mzi_module --port &lt;session-port&gt;</code>。</li>
         </ul>
         <div class="note">不要把仓库 <code>sys.path</code> 硬塞进一个随便的解释器再去 monkey-patch klink 内部来绕过 gdsfactory 版本差异——<code>gf.Port</code> 的 <code>center</code> 单位契约在不同 gdsfactory 版本间变过，这条捷径的真实后果是 1000× 走样的几何。<code>[photonics]</code> 装的是一个经过 CI 测试的版本，如果你必须用别的 gdsfactory 版本，预期要跟着调整脚本，而不是改 klink。</div>
 
@@ -120,7 +120,7 @@
         <p>真正的接管只有<strong>一次调用</strong>：</p>
         <pre><code>from klink import KLinkClient
 from klink.domains.photonics.gf_import import import_gf_component
-from examples_klink.public.demos.gf_mzi_module import build_user_module, CELL, OPTICAL_LAYER
+from examples_klink.public.demos.photonics.gf_mzi_module import build_user_module, CELL, OPTICAL_LAYER
 
 component = build_user_module()   # 纯 gdsfactory，还没有 KLayout 参与
 with KLinkClient(port=PORT).connect() as client:

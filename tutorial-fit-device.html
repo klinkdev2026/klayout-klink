@@ -106,7 +106,7 @@
         <ul>
           <li><strong>repo-only</strong>：这个 demo 读源码树，不在 pip wheel 里。先克隆仓库：<code>git clone https://github.com/klinkdev2026/klayout-klink &amp;&amp; cd klayout-klink</code>。</li>
           <li>KLayout 正在运行，并已加载 klink 插件（把 <code>--port</code> 指向你的 live 会话）。</li>
-          <li>完整流程就是一条命令：<code>python -m examples_klink.public.demos.fit_device_pnr_lvs --port &lt;session-port&gt;</code>（加 <code>--draw-only</code> 只画器件、跳过 P&amp;R/LVS）。</li>
+          <li>完整流程就是一条命令：<code>python -m examples_klink.public.demos.digital.fit_device_pnr_lvs --port &lt;session-port&gt;</code>（加 <code>--draw-only</code> 只画器件、跳过 P&amp;R/LVS）。</li>
         </ul>
         <div class="note">这篇教程把 demo 一次跑完的流程拆成 6 个可观察的阶段，每一步都在 live KLayout 里真的执行、截图。demo 里的器件是<strong>合成的</strong>（数字干净、明显非真实工艺），所以整个 demo 零机密数据就能跑；把 <code>_device_boxes()</code> 换成你从自己手画 cell 里 harvest 出来的盒子，流程一行不改。</div>
 

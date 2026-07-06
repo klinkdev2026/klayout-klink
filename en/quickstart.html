@@ -107,13 +107,13 @@ with KLinkClient(port=8766) as c:
 cd my-chip
 python example_template/nanodevice/ebl_wraparound.py</code></pre>
         <p>In a public source or release checkout, the gallery module path also works:</p>
-        <pre><code>python -m examples_klink.public.demos.ebl_wraparound</code></pre>
+        <pre><code>python -m examples_klink.public.demos.nanodevice.ebl_wraparound</code></pre>
         <p>Recorded public output summary: `"ok": true`, 40 electrodes, 12 patches, writefield 16 fields / 11 windows / 20 crossings, 0 violations, 0 overlaps.</p>
 
         <h3>Live KLayout: neural electrode harness</h3>
         <pre><code>python example_template/nanodevice/neural_electrode.py --port &lt;session-port&gt; --elec-rows 4</code></pre>
         <p>Source or release checkout path:</p>
-        <pre><code>python -m examples_klink.public.demos.neural_electrode --port &lt;session-port&gt; --elec-rows 4</code></pre>
+        <pre><code>python -m examples_klink.public.demos.nanodevice.neural_electrode --port &lt;session-port&gt; --elec-rows 4</code></pre>
         <p>Recorded public output summary: 48 ports, 24 routed nets, sibling-overlap 0, obstacle-hit 0.</p>
         <div class="warning">A KLayout port is just a session. Use an empty or test-owned window for demos, not your manual working layout.</div>
 

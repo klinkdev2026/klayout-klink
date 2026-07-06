@@ -107,7 +107,7 @@
         <ul>
           <li>安装 klink：<code>pip install klayout-klink</code>（一条命令装好 klink 和它的 Rust 内核，无需第三方科学库）。</li>
           <li>KLayout 正在运行，并已加载 klink 插件（RPC 端口默认 <code>8765</code>）。</li>
-          <li>建一个项目并进入：<code>klink init nano-demo &amp;&amp; cd nano-demo</code>——完整脚本就是 <code>python example_template/nanodevice/hallbar.py --live --port &lt;session-port&gt;</code>。仓库 checkout 里等价的是 <code>python -m examples_klink.public.demos.hallbar --live --port &lt;session-port&gt;</code>。</li>
+          <li>建一个项目并进入：<code>klink init nano-demo &amp;&amp; cd nano-demo</code>——完整脚本就是 <code>python example_template/nanodevice/hallbar.py --live --port &lt;session-port&gt;</code>。仓库 checkout 里等价的是 <code>python -m examples_klink.public.demos.nanodevice.hallbar --live --port &lt;session-port&gt;</code>。</li>
         </ul>
         <div class="note">这篇教程把 <code>hallbar.py</code> 内部一次性完成的批量调用拆成 7 个可观察的阶段，方便讲清每一步在画什么、标什么、为什么。生产环境里你通常还是用一次 <code>shape.insert_many</code> 批量写入（见 CLAUDE.md 的批量 RPC 铁律）——分阶段只是教学手段。</div>
 

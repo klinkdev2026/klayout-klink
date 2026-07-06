@@ -206,8 +206,8 @@ cd nano-demo
 python example_template/nanodevice/ebl_wraparound.py
 python example_template/nanodevice/hallbar.py</code></pre>
         <p>From a repo checkout you can also run the public gallery directly:</p>
-        <pre><code>python -m examples_klink.public.demos.ebl_wraparound
-python -m examples_klink.public.demos.hallbar</code></pre>
+        <pre><code>python -m examples_klink.public.demos.nanodevice.ebl_wraparound
+python -m examples_klink.public.demos.nanodevice.hallbar</code></pre>
         <p>After copying into your project, <strong>edit params first, don't touch <code>klink/</code></strong>; once stable, tidy it into <code>custom_devices/&lt;device&gt;.py</code>. Per-demo detail on <a href="examples.html">Examples</a>.</p>
 
         <h2 id="photonics" class="anchor-h">Silicon-photonics example (gdsfactory bridge)</h2>
@@ -216,7 +216,7 @@ python -m examples_klink.public.demos.hallbar</code></pre>
         <pre><code>pip install "klayout-klink[photonics]"    # = klink + a tested gdsfactory
 klink init my-chip &amp;&amp; cd my-chip
 python example_template/photonics/gf_mzi_module.py --port &lt;session-port&gt;
-# from a repo checkout you can also run: python -m examples_klink.public.demos.gf_mzi_module --port &lt;session-port&gt;</code></pre>
+# from a repo checkout you can also run: python -m examples_klink.public.demos.photonics.gf_mzi_module --port &lt;session-port&gt;</code></pre>
         <p>After takeover, drag a component in the GUI and one <code>photonics.reroute</code> re-routes optics and metal together — see <a href="workflows.html#klive">Workflows · 8082 klive display</a> and <a href="mcp-reference.html#d-photonics">MCP Reference · Photonics</a>. From a plain shell, re-route with the <code>--reroute</code> flag, which re-routes from the dragged positions <strong>without rebuilding</strong>:</p>
         <pre><code>python example_template/photonics/gf_mzi_module.py --port &lt;session-port&gt; --reroute</code></pre>
         <p>For your own PDK, layers, stub rules and cross-section come from your script or <code>pdk.py</code>.</p>
@@ -224,7 +224,7 @@ python example_template/photonics/gf_mzi_module.py --port &lt;session-port&gt;
         <h2 id="digital" class="anchor-h">P&amp;R to LVS</h2>
         <p>The public release digital path is either self-contained or your-own-geometry. The fit-device demo runs device fit, placement, routing and live LVS on synthetic exemplars.</p>
         <pre><code># repo-only: needs a repo clone to run, not part of the pip wheel
-python -m examples_klink.public.demos.fit_device_pnr_lvs --port &lt;session-port&gt;</code></pre>
+python -m examples_klink.public.demos.digital.fit_device_pnr_lvs --port &lt;session-port&gt;</code></pre>
         <p>The device-agnostic custom-device flow is the <a href="mcp-reference.html#d-structdevice"><code>structdevice.*</code></a> family: give a device-level netlist → <code>build_from_netlist</code> auto floorplan/route/draw/LVS; or the SEND-driven <code>declare_nets</code> → <code>connect_nets</code> → <code>lvs_check</code> → <code>spec_write</code>. Any LVS mismatch undoes every mutation.</p>
 
         <h2 id="verify" class="anchor-h">Verification habits</h2>

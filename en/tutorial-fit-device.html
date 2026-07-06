@@ -106,7 +106,7 @@
         <ul>
           <li><strong>Repo-only</strong>: this demo reads the source tree and is not in the pip wheel. Clone the repository first: <code>git clone https://github.com/klinkdev2026/klayout-klink &amp;&amp; cd klayout-klink</code>.</li>
           <li>KLayout running with the klink plugin loaded (point <code>--port</code> at your live session).</li>
-          <li>The whole flow is one command: <code>python -m examples_klink.public.demos.fit_device_pnr_lvs --port &lt;session-port&gt;</code> (add <code>--draw-only</code> to draw the devices and skip P&amp;R/LVS).</li>
+          <li>The whole flow is one command: <code>python -m examples_klink.public.demos.digital.fit_device_pnr_lvs --port &lt;session-port&gt;</code> (add <code>--draw-only</code> to draw the devices and skip P&amp;R/LVS).</li>
         </ul>
         <div class="note">This tutorial splits the demo's single run into 6 observable stages, each really executed and screenshotted in a live KLayout. The device in the demo is <strong>synthetic</strong> (clean, obviously-not-real numbers), so the whole demo runs with zero confidential data; swap <code>_device_boxes()</code> for boxes harvested from your own hand-drawn cells and the flow doesn't change by a single line.</div>
 

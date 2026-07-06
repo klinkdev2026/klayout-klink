@@ -112,14 +112,14 @@ with KLinkClient(port=8766) as c:
 cd my-chip
 python example_template/nanodevice/ebl_wraparound.py</code></pre>
         <p>如果你是在公开源码/release checkout 里，也可以运行公开 gallery 的模块路径：</p>
-        <pre><code>python -m examples_klink.public.demos.ebl_wraparound</code></pre>
+        <pre><code>python -m examples_klink.public.demos.nanodevice.ebl_wraparound</code></pre>
         <p>release 文档记录的实测摘要：`"ok": true`，40 electrodes，12 patches，writefield 16 fields / 11 windows / 20 crossings，0 violations，0 overlaps。</p>
 
         <h3>live KLayout：neural electrode harness</h3>
         <p>这个 demo 需要 KLayout + 插件，但不需要你的 GDS：</p>
         <pre><code>python example_template/nanodevice/neural_electrode.py --port &lt;session-port&gt; --elec-rows 4</code></pre>
         <p>源码/release checkout 中对应路径：</p>
-        <pre><code>python -m examples_klink.public.demos.neural_electrode --port &lt;session-port&gt; --elec-rows 4</code></pre>
+        <pre><code>python -m examples_klink.public.demos.nanodevice.neural_electrode --port &lt;session-port&gt; --elec-rows 4</code></pre>
         <p>release 文档记录的实测摘要：48 ports，24 nets routed，sibling-overlap 0，obstacle-hit 0。</p>
         <div class="warning">
           KLayout 的 port 只是 session 端口，没有特殊角色。跑 demo 时请用空白或测试窗口，不要指向正在手工编辑的重要 layout。

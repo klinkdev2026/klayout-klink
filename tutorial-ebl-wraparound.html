@@ -107,7 +107,7 @@
         <ul>
           <li>安装 klink：<code>pip install klayout-klink</code>（一条命令装好 klink 和它的 Rust 内核，无需第三方科学库）。</li>
           <li>KLayout 正在运行，并已加载 klink 插件（RPC 端口默认 <code>8765</code>）。</li>
-          <li>建一个项目并进入：<code>klink init nano-demo &amp;&amp; cd nano-demo</code>——完整脚本就是 <code>python example_template/nanodevice/ebl_wraparound.py --live</code>（想留住生成的 cell 便于查看再加 <code>--keep</code>）。仓库 checkout 里等价的是 <code>python -m examples_klink.public.demos.ebl_wraparound --live --keep</code>。</li>
+          <li>建一个项目并进入：<code>klink init nano-demo &amp;&amp; cd nano-demo</code>——完整脚本就是 <code>python example_template/nanodevice/ebl_wraparound.py --live</code>（想留住生成的 cell 便于查看再加 <code>--keep</code>）。仓库 checkout 里等价的是 <code>python -m examples_klink.public.demos.nanodevice.ebl_wraparound --live --keep</code>。</li>
         </ul>
         <div class="note">这篇教程把 <code>build_wraparound_demo()</code> 内部一次性完成的批量调用拆成 7 个可观察的阶段。构造顺序是固定的：4 个对准十字（每个 3 个 item）→ flake 多边形 → keepout 框 + 文字 → 8 组接触（每组 7 个 item，顺序固定为 contact box / M1 走线 / via / M2 绕行走线 / 锥形过渡 / pad / 标签）→ 拼接 patch → writefield keepout 框。教程按这个真实顺序对 <code>shape_items</code> 做切片，没有引入教程专属的绘制逻辑。</div>
 
