@@ -6,7 +6,7 @@
 
 klink 是一个面向 [KLayout](https://www.klayout.de/) 的 AI-native 控制面。它把正在运行的 KLayout GUI 变成一个可由外部 Python 进程、MCP 客户端和 AI agent 稳定操控的版图编辑内核。
 
-📖 **文档网站**（中文/English）：
+📖 **文档网站**（中文；English 见 `/en/`）：
 <https://klinkdev2026.github.io/klayout-klink/>
 
 项目分为三层：

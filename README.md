@@ -8,8 +8,8 @@ klink is an AI-native control plane for [KLayout](https://www.klayout.de/).
 It turns a running KLayout GUI into a scriptable layout kernel that can be
 controlled from external Python processes, MCP clients, and AI agents.
 
-📖 **Documentation site** (English/中文):
-<https://klinkdev2026.github.io/klayout-klink/>
+📖 **Documentation site** (English; 中文 at the site root):
+<https://klinkdev2026.github.io/klayout-klink/en/>
 
 The project is split into three layers:
 
