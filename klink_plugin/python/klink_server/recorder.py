@@ -31,8 +31,9 @@ v1 translates (in order, as events arrive):
   instance.insert / instance.insert_pcell / instance.delete.
 * selection_changed -> selection.clear (v1: set-selection omitted -
   replaying a selection is rarely interesting; emitted as comment).
-* viewport_changed -> view.zoom_box (coalesced: only the last
-  viewport in a burst is emitted, so scroll/pan noise is harmless).
+* viewport_changed -> intentionally NOT recorded. Pan/zoom is VIEW
+  state, not LAYOUT state; replay scripts exist to rebuild geometry,
+  not to reproduce where the camera was pointed. See `_on_viewport`.
 
 Output file is a single self-contained script that boots a
 KLinkClient and replays every action in order. Comments carry the
@@ -77,8 +78,6 @@ class Recorder:
 
         # State for delta computation.
         self._last_layer_set: set = set()
-        self._pending_viewport: Optional[dict] = None
-        self._pending_viewport_t: Optional[float] = None
 
         # Bootstrap snapshot captured at start(). The replay script
         # re-creates these cells / layers UP FRONT so that replaying on
@@ -125,8 +124,6 @@ class Recorder:
             self._output_path = output_path
             self._actions = []
             self._event_count = 0
-            self._pending_viewport = None
-            self._pending_viewport_t = None
             self._show_file_path = None
             self._show_file_emitted = False
             # Snapshot current layer list so future layer_list_changed
@@ -165,7 +162,6 @@ class Recorder:
                 info = self.status()
                 info["wrote"] = False
                 return info
-            self._flush_pending_viewport()
             self._recording = False
             elapsed = (time.monotonic() - (self._started_at or time.monotonic()))
             path = output_path or self._output_path or self._default_path()
@@ -381,28 +377,18 @@ class Recorder:
                          pya=recorder_pya.selection_comment(count, items))
 
     def _on_viewport(self, data: dict, t: float, caused: str) -> None:
-        # v1: viewport recording is DISABLED. Two reasons:
-        #   1. The `bbox_dbu` field in viewport_changed actually holds
-        #      floating-point um values, not dbu integers, so feeding
-        #      them straight to view.zoom_box mis-scales the replay.
-        #   2. Screen aspect ratio differs between record and replay, so
-        #      an exact viewport reproduction rarely matters for human
-        #      intent. If someone does care, future versions can emit
-        #      a `c.show_cell(...)` hint instead.
-        # Intentional no-op. We still drop any pending viewport that
-        # was accumulated by an earlier version of the state so stop()
-        # has nothing to flush.
-        self._pending_viewport = None
-        self._pending_viewport_t = None
+        # Intentional no-op, by design (not a bug): pan/zoom is VIEW
+        # state, not LAYOUT state. The recorder's replay scripts exist
+        # to rebuild the geometry the user drew/edited; reproducing
+        # where the camera happened to be pointed while they did it
+        # would only add noise to that replay, so viewport_changed
+        # events are dropped here on purpose.
+        pass
 
     # ------------------------------------------------------------------
     # action accumulator
     # ------------------------------------------------------------------
     def _append(self, t: float, caused: str, code: str, pya: str = "") -> None:
-        # If there's a pending viewport and a non-viewport event is
-        # landing, flush the viewport first so ordering stays honest.
-        if self._pending_viewport is not None:
-            self._flush_pending_viewport()
         # Consume a menu-hint (user-intent annotation) exactly once per
         # command burst. Because consume_hint() clears the cache on
         # read, the FIRST sub-action of a command (e.g., the first
@@ -427,26 +413,6 @@ class Recorder:
             "code": code,
             "pya": pya or "",
             "hint": hint,
-        })
-
-    def _flush_pending_viewport(self) -> None:
-        if self._pending_viewport is None:
-            return
-        bbox = self._pending_viewport.get("bbox_dbu")
-        t = self._pending_viewport_t or 0.0
-        self._pending_viewport = None
-        self._pending_viewport_t = None
-        if not bbox or len(bbox) != 4:
-            return
-        # bbox_dbu in viewport_changed is floats (um, not integer dbu);
-        # view.zoom_box also takes a free-form list so we pass straight
-        # through. Skip if degenerate.
-        if bbox[0] == bbox[2] or bbox[1] == bbox[3]:
-            return
-        self._actions.append({
-            "t": t,
-            "caused": "viewport",
-            "code": f"c.zoom_box({list(bbox)!r})",
         })
 
     # ------------------------------------------------------------------

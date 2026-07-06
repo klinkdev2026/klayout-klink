@@ -43,12 +43,13 @@ dependencies = [
 [project.optional-dependencies]
 # Photonics demos build geometry with gdsfactory IN THE SAME interpreter that
 # runs the example (klink is an RPC client; gf builds the layout client-side).
-# gdsfactory's port unit contract and routing API move fast, so pin to the
-# tested line: the shipped photonics demos are verified against gdsfactory
-# 9.40.x. `pip install "klayout-klink[photonics]"` gets a known-good gf into
-# the klink interpreter in one step. The upper bound stops pip from pulling
-# gdsfactory 10, which drops APIs the demos use (e.g. route_single).
-photonics = ["gdsfactory>=9.40,<10"]
+# gdsfactory's port unit contract and routing API move fast, so pin to a
+# verified floor: the full unit suite is green against every published 9.x
+# release from 9.0.3 through the current 9.x line (gdsfactory's gf.Port
+# unit-drift class of bug, the reason this pin exists, is handled
+# version-uniformly across that whole range). The upper bound stops pip from
+# pulling gdsfactory 10, which drops APIs the demos use (e.g. route_single).
+photonics = ["gdsfactory>=9.0,<10"]
 
 [project.scripts]
 klink = "klink.cli:main"

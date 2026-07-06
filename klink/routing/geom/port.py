@@ -220,6 +220,20 @@ def port_to_gf(port_dict: dict):
     except Exception:
         layer_info = None
 
+    # kfactory's `layer=` kwarg wants an INTEGER LAYER INDEX into the active
+    # KCLayout, never the raw (layer, datatype) tuple/number -- passing the
+    # bare GDS layer number there resolves to whatever unrelated layer
+    # happens to sit at that index in the active PDK and silently mislabels
+    # the port. `gf.kcl.layer(layer, datatype)` is the version-stable way to
+    # get (or register) the correct index for our (layer, datatype), and is
+    # used as the `layer=` value on every path below -- including when
+    # `layer_info=` is honored, so a later fallback to `layer=` (whichever
+    # branch triggers it) still points at the right layer.
+    try:
+        layer_index = gf.kcl.layer(int(layer[0]), int(layer[1]))
+    except Exception:
+        layer_index = layer[0]
+
     kwargs = {
         "name": port_dict.get("name", "P0"),
         "center": tuple(center),
@@ -230,10 +244,22 @@ def port_to_gf(port_dict: dict):
     if layer_info is not None:
         kwargs["layer_info"] = layer_info
     else:
-        # kfactory wants an INTEGER layer index, never a (layer, datatype)
-        # tuple -- passing a tuple raises deep inside Layout.get_info.
-        kwargs["layer"] = layer[0]
-    port = gf.Port(**kwargs)
+        kwargs["layer"] = layer_index
+
+    try:
+        port = gf.Port(**kwargs)
+    except TypeError:
+        # Version-proof the CONSTRUCTOR SIGNATURE, same class of problem as
+        # the dcenter fix below. kfactory 0.23.2 (gdsfactory 8.x) dropped the
+        # `layer_info` kwarg from `Port.__init__` -- there only a plain
+        # integer `layer` (the KCLayout layer INDEX, see above)
+        # is accepted there; kfactory's newer line (gdsfactory 9.x+) accepts
+        # both. Retry with `layer_info` stripped and `layer_index` in its
+        # place. On versions where the first call already succeeded this
+        # branch never runs, so nothing that currently passes regresses.
+        kwargs.pop("layer_info", None)
+        kwargs["layer"] = layer_index
+        port = gf.Port(**kwargs)
 
     # Version-proof the POSITION. `gf.Port(center=...)` is interpreted in the
     # port's ACTIVE unit, and that contract is NOT stable across gdsfactory /
@@ -262,3 +288,29 @@ def ports_to_gf(port_dicts: list) -> list:
         if gf_port is not None:
             result.append(gf_port)
     return result
+
+
+# ---------------------------------------------------------------------------
+# Version-proof gf.Port readers -- same principle as the `dcenter` write
+# above, applied to READING a `gf.Port` (or gf route port) back out. `.center`
+# and `.width` are NOT reliably um across kfactory versions (kfactory 0.23.2 /
+# gdsfactory 8.x returns raw dbu for `.center`; `.dcenter`/`.dwidth` are the
+# um accessors on every version). Every read of a live gf.Port's position or
+# width anywhere in the gdsfactory bridge should go through these two
+# functions instead of touching `.center`/`.width` directly.
+# ---------------------------------------------------------------------------
+
+def gf_port_center_um(port) -> tuple:
+    """Return a gf.Port's center as (x_um, y_um), version-proof."""
+    center = getattr(port, "dcenter", None)
+    if center is None:
+        center = port.center
+    return (float(center[0]), float(center[1]))
+
+
+def gf_port_width_um(port) -> float:
+    """Return a gf.Port's width in um, version-proof."""
+    width = getattr(port, "dwidth", None)
+    if width is None:
+        width = port.width
+    return float(width)

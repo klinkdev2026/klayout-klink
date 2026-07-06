@@ -2276,7 +2276,7 @@
   },
   {
     "name": "view.screenshot",
-    "description": "Render a PNG screenshot of the active layout view. Two modes: 'base64' embeds the PNG in the response as a data URL (great for LLMs with vision support); 'path' saves to disk and returns the absolute path (use for large images). Width/height are in pixels; defaults match what the user sees on screen. You can also clip to a bbox_dbu region.",
+    "description": "Render a PNG screenshot of the active layout view. Two modes: 'base64' embeds the PNG in the response as a data URL (great for LLMs with vision support); 'path' saves to disk and returns the absolute path (use for large images). Width/height are in pixels; defaults match what the user sees on screen. You can also clip to a region via `bbox_um=[x1,y1,x2,y2]` in microns (preferred) or `bbox_dbu` in integer database units; the clip box is rendered exactly (no viewport aspect-ratio expansion), so match width_px/height_px to its aspect ratio for a linear micron-to-pixel mapping.",
     "params": {
       "type": "object",
       "properties": {
@@ -2298,11 +2298,17 @@
           "minimum": 16,
           "maximum": 8192
         },
+        "bbox_um": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "description": "Optional clipping rectangle [x1,y1,x2,y2] in microns. Default: current viewport."
+        },
         "bbox_dbu": {
           "type": "array",
           "minItems": 4,
           "maxItems": 4,
-          "description": "Optional clipping rectangle in dbu. Default: current viewport."
+          "description": "Optional clipping rectangle in integer database units (converted via the active layout's dbu)."
         },
         "path": {
           "type": "string",
@@ -2361,17 +2367,21 @@
   },
   {
     "name": "view.zoom_box",
-    "description": "Zoom the viewport to show exactly the given bbox (dbu).",
+    "description": "Zoom the viewport to show exactly the given bbox. Provide `bbox_um=[x1,y1,x2,y2]` in microns (preferred - klink's standard user-facing unit, matching boxes_um/points_um/center_um used elsewhere) or `bbox_dbu=[x1,y1,x2,y2]` in integer database units (converted using the active layout's dbu). Provide exactly one of the two.",
     "params": {
       "type": "object",
-      "required": [
-        "bbox_dbu"
-      ],
       "properties": {
+        "bbox_um": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "description": "[x1,y1,x2,y2] in microns."
+        },
         "bbox_dbu": {
           "type": "array",
           "minItems": 4,
-          "maxItems": 4
+          "maxItems": 4,
+          "description": "[x1,y1,x2,y2] in integer database units."
         }
       }
     },
@@ -2380,6 +2390,10 @@
       "properties": {
         "ok": {
           "type": "boolean"
+        },
+        "bbox_um": {
+          "type": "array",
+          "description": "The zoomed-to bbox, in microns."
         }
       }
     },
@@ -2390,13 +2404,16 @@
   },
   {
     "name": "view.viewport",
-    "description": "Report the current viewport: visible bbox in dbu, pixel size of the view widget, and cellview index. Call this to align an external coordinate with what the user sees.",
+    "description": "Report the current viewport: visible bbox in microns (`bbox_um`, klink's standard unit) and in integer database units (`bbox_dbu`, converted via the active layout's dbu), pixel size of the view widget, and cellview index. Call this to align an external coordinate with what the user sees.",
     "params": {
       "type": "object"
     },
     "returns": {
       "type": "object",
       "properties": {
+        "bbox_um": {
+          "type": "array"
+        },
         "bbox_dbu": {
           "type": "array"
         },
@@ -2414,6 +2431,90 @@
     "tags": [
       "view",
       "read"
+    ]
+  },
+  {
+    "name": "view.new_tab",
+    "description": "Open a new, empty layout tab with a fresh top cell and make it the current tab (pya MainWindow.create_layout mode 1). Returns `index` (the new tab) and `previous_current_index` so scratch-tab workflows can restore the user's tab afterwards via view.activate_tab. `previous_current_index` is -1 when there was no tab open at all before this call -- in that case there is nothing to restore, so skip the view.activate_tab restore step. Use this instead of exec.python.",
+    "params": {
+      "type": "object",
+      "properties": {
+        "cell_name": {
+          "type": "string",
+          "default": "TOP",
+          "description": "Top cell to create and display in the new tab."
+        },
+        "dbu": {
+          "type": "number",
+          "default": 0.001,
+          "description": "Database unit of the new layout, in microns."
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "index": {
+          "type": "integer"
+        },
+        "previous_current_index": {
+          "type": "integer",
+          "description": "The tab index that was current before this call, to pass back to view.activate_tab afterwards. -1 means there was no tab open at all before this call, so there is no previous tab to restore."
+        },
+        "title": {
+          "type": "string"
+        },
+        "cell": {
+          "type": "string"
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "view"
+    ]
+  },
+  {
+    "name": "view.hier_levels",
+    "description": "Read or set the view's displayed hierarchy depth (pya min_hier_levels/max_hier_levels). With no params, reports the current levels. Pass `min` and/or `max` to change them; the view is refreshed via update_content() so following screenshots see the change. If dense child-cell instances render as name-label boxes instead of geometry, max is too shallow - raise it (the KLayout default is 1).",
+    "params": {
+      "type": "object",
+      "properties": {
+        "min": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Minimum hierarchy level to draw."
+        },
+        "max": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Maximum hierarchy level to draw."
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "min_hier_levels": {
+          "type": "integer"
+        },
+        "max_hier_levels": {
+          "type": "integer"
+        },
+        "changed": {
+          "type": "boolean"
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "view"
     ]
   },
   {
@@ -3214,6 +3315,154 @@
     },
     "returns": {
       "type": "object"
+    },
+    "mutates": true,
+    "tags": [
+      "port",
+      "write"
+    ]
+  },
+  {
+    "name": "port.mark_many",
+    "description": "Create many klink_Port PCell instances in one cell in a single RPC and one undo transaction. `items` is a list of per-port objects accepting the same fields as port.mark's params (name, label, center_um/center_dbu, orientation, width_um, port_type, net, target_layer, show_label, access_mode, slide_allowed, slide_edge); each item must set center_um or center_dbu. Any of layer, label, orientation, width_um, port_type, net, target_layer, show_label, access_mode, slide_allowed, slide_edge may also be given ONCE at the top level as a default every item inherits unless it overrides it. Every item is validated BEFORE any port is inserted -- if one item is invalid (missing center, duplicate name), nothing is created and the error names the offending items[i] index.",
+    "params": {
+      "type": "object",
+      "required": [
+        "cell",
+        "items"
+      ],
+      "properties": {
+        "cell": {
+          "description": "Target cell name or cell_index"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "center_um": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "center_dbu": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "orientation": {
+                "type": "number"
+              },
+              "width_um": {
+                "type": "number"
+              },
+              "port_type": {
+                "type": "string"
+              },
+              "net": {
+                "type": "string"
+              },
+              "layer": {
+                "type": "string"
+              },
+              "target_layer": {
+                "type": "string"
+              },
+              "show_label": {
+                "type": "boolean"
+              },
+              "access_mode": {
+                "type": "string",
+                "enum": [
+                  "point",
+                  "edge"
+                ]
+              },
+              "slide_allowed": {
+                "type": "boolean"
+              },
+              "slide_edge": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "layer": {
+          "type": "string",
+          "description": "Default marker layer for items that omit it."
+        },
+        "label": {
+          "type": "string",
+          "description": "Default label for items that omit it."
+        },
+        "orientation": {
+          "type": "number",
+          "default": 0,
+          "description": "Default orientation for items that omit it."
+        },
+        "width_um": {
+          "type": "number",
+          "default": 5.0,
+          "description": "Default width_um for items that omit it."
+        },
+        "port_type": {
+          "type": "string",
+          "default": "electrical",
+          "description": "Default port_type for items that omit it."
+        },
+        "net": {
+          "type": "string",
+          "description": "Default net for items that omit it."
+        },
+        "target_layer": {
+          "type": "string",
+          "default": "1/0",
+          "description": "Default target_layer for items that omit it."
+        },
+        "show_label": {
+          "type": "boolean",
+          "default": true,
+          "description": "Default show_label for items that omit it."
+        },
+        "access_mode": {
+          "type": "string",
+          "enum": [
+            "point",
+            "edge"
+          ],
+          "default": "point",
+          "description": "Default access_mode for items that omit it."
+        },
+        "slide_allowed": {
+          "type": "boolean",
+          "default": false,
+          "description": "Default slide_allowed for items that omit it."
+        },
+        "slide_edge": {
+          "type": "string",
+          "description": "Default slide_edge for items that omit it."
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "cell": {
+          "type": "string"
+        },
+        "count": {
+          "type": "integer"
+        },
+        "ports": {
+          "type": "array"
+        }
+      }
     },
     "mutates": true,
     "tags": [

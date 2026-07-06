@@ -6,6 +6,7 @@ import math
 from typing import Any
 
 from klink.routing.backends.gdsfactory.gdsfactory_backend import _load_gdsfactory, _parse_layer
+from klink.routing.geom.port import gf_port_center_um, gf_port_width_um
 
 
 def _transform_point(point: list[float], origin: list[float], rotation: float) -> list[float]:
@@ -82,14 +83,15 @@ def gdsfactory_component_marker_to_shapes_and_ports(
 
     ports: list[dict] = []
     for port in component.ports:
-        center = _transform_point([float(port.center[0]), float(port.center[1])], origin, rotation)
+        px, py = gf_port_center_um(port)
+        center = _transform_point([px, py], origin, rotation)
         name = "%s.%s" % (marker_id, port.name)
         ports.append(
             {
                 "name": name,
                 "center_um": center,
                 "orientation": (float(port.orientation) + rotation) % 360.0,
-                "width_um": float(port.width),
+                "width_um": gf_port_width_um(port),
                 "target_layer": target_layer,
                 "port_type": str(port.port_type or "optical"),
                 "net": str(port_nets.get(port.name, "")),

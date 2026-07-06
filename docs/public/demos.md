@@ -46,6 +46,69 @@ A parametric Hall-bar generator. Offline it prints the semantic bundle plus the
 routed result; `--live` writes a disposable KLayout cell (deleted unless
 `--keep`).
 
+## Passive-device geometry templates (offline; `--live` needs KLayout)
+
+Four parametric passive-device templates under `examples_klink/public/passives/`
+— repo examples (not starters in the wheel): run them from a clone. Offline
+(the default) each writes a GDS under `test_outputs/` and prints a structured
+self-check summary; `--live [--port <session-port>]` pushes a disposable cell
+to a KLayout session instead. Every family marks klink Ports (999/99) on its
+electrical terminals, so the routing backends work on them out of the box.
+Each is a **geometry template, NOT a validated electrical/acoustic design** —
+tune the numbers for your process and verify with your own models (SAW/BAW
+make no frequency or material claims).
+
+### IDC — interdigitated capacitor
+
+```bash
+python -m examples_klink.public.passives.idc_capacitor        # [--live --port <session-port>]
+```
+
+Two opposing bus bars with alternating fingers: pitch = finger width + gap,
+and every finger stops `gap` short of the opposite bus. Measured output
+(defaults, 10 fingers): merged regions **2** (no short), total width 33.5 µm,
+2 ports (`P1`/`P2`).
+
+### Square spiral inductor
+
+```bash
+python -m examples_klink.public.passives.spiral_inductor      # [--live --port <session-port>]
+```
+
+An outward-wound square spiral on the top metal; the trapped inner end
+escapes through a via + crossunder strip running beneath the turns. Measured
+output (defaults, 3 turns): **1 merged region per metal layer** (continuous
+track, no self-short), underpass crosses 4 track segments, via fully inside
+both the inner-end pad and the underpass, 2 ports (`OUT`/`IN`).
+
+### SAW IDT filter
+
+```bash
+python -m examples_klink.public.passives.saw_idt_filter       # [--live --port <session-port>]
+```
+
+Two identical IDTs facing each other along the acoustic axis (electrode
+width = pitch/4, metallization ratio 0.5; uniform overlap — apodization not
+modeled), with optional shorted-grating reflectors outside each IDT.
+Measured output (defaults, 12 pairs at pitch 4 µm): **2 merged regions per
+IDT** (no finger short), **1 per reflector grating**, electrode width
+1.0 µm, 4 ports (`TX_P`/`TX_N`/`RX_P`/`RX_N`).
+
+### BAW / FBAR plan view
+
+```bash
+python -m examples_klink.public.passives.baw_fbar_planview    # [--live --port <session-port>]
+```
+
+Plan view of a membrane-type resonator: the top electrode is an irregular
+pentagon with **no two edges parallel** (the spurious-mode apodization
+convention), deterministically scaled to the target active area; the bottom
+electrode extends past it to its own pad on the opposite side, and a
+descriptive `StackSpec` documents the intended vertical stack as data (plan
+view only — no film stack is drawn). Measured output (defaults, 2000 µm²
+target): no-two-edges-parallel **true**, pentagon area 1999.996 µm² (within
+1%), top/bottom overlap = 100% of the pentagon, 2 ports (`TOP`/`BOT`).
+
 ## Runs live (KLayout + plugin, still no GDS)
 
 ### Neural-electrode harness

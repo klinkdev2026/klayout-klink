@@ -33,7 +33,7 @@ from __future__ import annotations
 
 from typing import Any, Sequence
 
-from klink.routing.geom.port import port_to_gf
+from klink.routing.geom.port import gf_port_center_um, port_to_gf
 
 #: Scratch layer for obstacle polygons inside the routing component. Reserved
 #: by klink's gf bridge (like 999/99 port markers); excluded from writeback.
@@ -209,9 +209,11 @@ class _RouteCtx:
             if not points:
                 # S-bend routes carry no backbone; the straight chord between
                 # the two ports is the honest stand-in for crossing checks.
+                # gf_port_center_um is the version-proof reader (kfactory
+                # 0.23.2 / gdsfactory 8.x returns `.center` in raw dbu).
                 points = [
-                    [float(source.center[0]), float(source.center[1])],
-                    [float(target.center[0]), float(target.center[1])],
+                    list(gf_port_center_um(source)),
+                    list(gf_port_center_um(target)),
                 ]
             # Route objects disagree on the unit (dbu vs um) and presence of
             # `length`; the backbone polyline is the one honest measure.
@@ -576,8 +578,9 @@ def route_gf_astar(
     xs: list[float] = []
     ys: list[float] = []
     for port in ctx.ports1 + ctx.ports2:
-        xs.append(float(port.center[0]))
-        ys.append(float(port.center[1]))
+        px, py = gf_port_center_um(port)
+        xs.append(px)
+        ys.append(py)
     for bbox in (obstacle_bboxes_um or []):
         xs.extend((float(bbox[0]), float(bbox[2])))
         ys.extend((float(bbox[1]), float(bbox[3])))

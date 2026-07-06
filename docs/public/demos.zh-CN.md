@@ -39,6 +39,61 @@ python -m examples_klink.public.demos.hallbar                 # [--live] [--keep
 参数化 Hall bar 生成器。离线打印语义 bundle 加布线结果;`--live` 写一个用完
 即弃的 KLayout cell(除非 `--keep`,否则删除)。
 
+## 无源器件几何模板(离线可跑;`--live` 需 KLayout)
+
+四个参数化无源器件模板,在 `examples_klink/public/passives/` 下——仓库示例
+(不随 wheel 打包成 starter):从仓库克隆里跑。默认离线,各自往
+`test_outputs/` 写一个 GDS 并打印结构化自检 summary;`--live [--port <会话端口>]`
+则往 KLayout 会话推一个用完即弃的 cell。每族都在电学端子上打 klink Port
+(999/99),路由后端开箱即用。每个都是**几何模板,不是验证过的电学/声学设计**
+——把数字改成你自己的工艺,用你自己的模型验证(SAW/BAW 不做任何频率或
+材料声明)。
+
+### IDC 叉指电容
+
+```bash
+python -m examples_klink.public.passives.idc_capacitor        # [--live --port <会话端口>]
+```
+
+两条对置母线加交替叉指:指距 = 指宽 + 间隙,每根指距对面母线留 `gap` 的
+间隙。实测输出(默认参数,10 指):合并区域 **2**(无短路),总宽 33.5 µm,
+2 个端口(`P1`/`P2`)。
+
+### 方形螺旋电感
+
+```bash
+python -m examples_klink.public.passives.spiral_inductor      # [--live --port <会话端口>]
+```
+
+顶层金属上向外绕的方形螺旋;被绕线困住的内端经过通孔 + 从各圈下方穿出的
+下穿走线引出。实测输出(默认参数,3 圈):**每层金属恰好 1 个合并区域**
+(走线连续、无自短路),下穿走线跨过 4 段螺旋线,通孔完全落在内端 pad 和
+下穿走线内,2 个端口(`OUT`/`IN`)。
+
+### SAW IDT 滤波器
+
+```bash
+python -m examples_klink.public.passives.saw_idt_filter       # [--live --port <会话端口>]
+```
+
+两个相同的 IDT 沿声轴相对(电极宽 = pitch/4,金属化率 0.5;均匀交叠——
+未建模变迹,是将来的旋钮),每侧可选短路光栅反射器。实测输出(默认参数,
+12 对指、pitch 4 µm):**每个 IDT 恰好 2 个合并区域**(指间无短路),
+**每个反射光栅 1 个**,电极宽 1.0 µm,4 个端口(`TX_P`/`TX_N`/`RX_P`/`RX_N`)。
+
+### BAW / FBAR 俯视图
+
+```bash
+python -m examples_klink.public.passives.baw_fbar_planview    # [--live --port <会话端口>]
+```
+
+薄膜型谐振器的俯视模板:顶电极是一个**任意两边都不平行**的不规则五边形
+(抑制杂散模的变迹惯例),按目标有效面积确定性缩放;底电极越过五边形、在
+顶连接的对侧引到自己的 pad;一个描述性的 `StackSpec` 以数据形式记录预期的
+垂直叠层(仅俯视——不画膜层剖面)。实测输出(默认参数,目标 2000 µm²):
+任意两边不平行 **true**,五边形面积 1999.996 µm²(1% 以内),顶/底交叠 =
+五边形面积的 100%,2 个端口(`TOP`/`BOT`)。
+
 ## Live 跑(KLayout + 插件,仍无需 GDS)
 
 ### 神经电极 harness

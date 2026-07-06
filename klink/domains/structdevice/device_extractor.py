@@ -24,6 +24,8 @@ def register_device_extractors(
     *,
     device_terminals: Mapping[str, Sequence[str]],
     terminal_layers: Mapping[str, Any],
+    layout: Any = None,
+    top_cell: Any = None,
 ) -> list[DeviceExtractorRegistration]:
     """Register GenericDeviceExtractor instances for declared device cells.
 
@@ -32,16 +34,28 @@ def register_device_extractors(
     name, or directly by terminal name when all cells share the same layer map.
     Layer values may be KLayout Regions, integer layer indexes, ``LayerInfo``
     objects, or ``(layer, datatype)`` tuples.
+
+    ``layout`` / ``top_cell`` are the source layout and top cell behind the
+    RecursiveShapeIterator the ``l2n`` was built from. On klayout >= 0.29 they
+    can be omitted (recovered via ``original_layout``/``original_top_cell``);
+    older klayout exposes no original-layout accessors, so there they are
+    required.
     """
 
     pya = _pya()
     if not hasattr(l2n, "extract_devices"):
         raise DeviceExtractorError("l2n must be a klayout.db.LayoutToNetlist-like object")
 
-    layout = l2n.original_layout()
-    top_cell = l2n.original_top_cell()
+    if layout is None and hasattr(l2n, "original_layout"):
+        layout = l2n.original_layout()
+    if top_cell is None and hasattr(l2n, "original_top_cell"):
+        top_cell = l2n.original_top_cell()
     if layout is None or top_cell is None:
-        raise DeviceExtractorError("l2n must expose original_layout and original_top_cell")
+        raise DeviceExtractorError(
+            "pass layout= and top_cell= (the layout and top cell behind the "
+            "RecursiveShapeIterator this l2n was built from); this klayout "
+            "version's LayoutToNetlist exposes no original_layout/original_top_cell"
+        )
 
     registrations: list[DeviceExtractorRegistration] = []
     for cell_name in sorted(device_terminals):

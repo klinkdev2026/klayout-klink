@@ -4,12 +4,24 @@ View control methods.
 `view.screenshot`  : render the active view to PNG, return base64 or
                      save to disk
 `view.zoom_fit`    : fit the whole layout into the viewport
-`view.zoom_box`    : zoom to a specific bbox (dbu)
-`view.viewport`    : return the current viewport bbox (dbu) + pixel size
+`view.zoom_box`    : zoom to a specific bbox (microns, preferred; or
+                     integer database units)
+`view.viewport`    : return the current viewport bbox (microns and
+                     integer database units) + pixel size
 
 Screenshots are rendered by pya's `LayoutView.save_image_with_options`
 (synchronous; runs in the Qt main thread). For M2 we ship a single
 PNG path; SVG / vector export can be added later on demand.
+
+Unit note: `pya.LayoutView.zoom_box()` / `.box()` and
+`save_image_with_options`'s target_box are DBox-typed APIs - they work
+in MICRONS, not database units. This module is the one place that
+talks to those calls; every bbox it accepts or reports is
+converted through `_dbox_from_um` / `_dbox_from_real_dbu` /
+`_real_dbu_from_dbox` so the conversion happens in exactly one spot.
+Do not pass an integer `pya.Box` (dbu) to either call - the implicit
+Box -> DBox conversion reinterprets the raw dbu integers as microns
+without dividing by dbu, which silently mis-scales the viewport.
 """
 
 from __future__ import annotations
@@ -23,8 +35,7 @@ import pya
 
 from ..registry import method
 from ..errors import RpcError, ErrorCode
-from .cell_m import _active_layout, _resolve_cell
-from .shape_m import _box_from_param
+from .cell_m import _active_layout, _create_default_layout, _resolve_cell
 
 
 @method(
@@ -142,7 +153,11 @@ def view_activate_tab(params, ctx):
         "for LLMs with vision support); 'path' saves to disk and returns "
         "the absolute path (use for large images). Width/height are in "
         "pixels; defaults match what the user sees on screen. You can "
-        "also clip to a bbox_dbu region."
+        "also clip to a region via `bbox_um=[x1,y1,x2,y2]` in microns "
+        "(preferred) or `bbox_dbu` in integer database units; the clip "
+        "box is rendered exactly (no viewport aspect-ratio expansion), "
+        "so match width_px/height_px to its aspect ratio for a linear "
+        "micron-to-pixel mapping."
     ),
     params_schema={
         "type": "object",
@@ -150,9 +165,13 @@ def view_activate_tab(params, ctx):
             "mode": {"type": "string", "enum": ["base64", "path"], "default": "base64"},
             "width_px": {"type": "integer", "minimum": 16, "maximum": 8192},
             "height_px": {"type": "integer", "minimum": 16, "maximum": 8192},
+            "bbox_um": {
+                "type": "array", "minItems": 4, "maxItems": 4,
+                "description": "Optional clipping rectangle [x1,y1,x2,y2] in microns. Default: current viewport.",
+            },
             "bbox_dbu": {
                 "type": "array", "minItems": 4, "maxItems": 4,
-                "description": "Optional clipping rectangle in dbu. Default: current viewport.",
+                "description": "Optional clipping rectangle in integer database units (converted via the active layout's dbu).",
             },
             "path": {
                 "type": "string",
@@ -174,7 +193,7 @@ def view_activate_tab(params, ctx):
     tags=["view", "read"],
 )
 def view_screenshot(params, ctx):
-    view, _, _ = _active_layout()
+    view, _, ly = _active_layout()
 
     mode = params.get("mode", "base64")
     if mode not in ("base64", "path"):
@@ -199,7 +218,7 @@ def view_screenshot(params, ctx):
         tmp_fd, target_path = tempfile.mkstemp(prefix="klink_shot_", suffix=".png")
         os.close(tmp_fd)
 
-    bbox = _box_from_param(params.get("bbox_dbu"))
+    bbox = _resolve_optional_bbox(params, ly.dbu)
 
     try:
         if bbox is not None:
@@ -267,40 +286,150 @@ def view_zoom_fit(params, ctx):
     return {"ok": True}
 
 
+def _dbox_from_um(bbox) -> "pya.DBox":
+    """Build a pya.DBox (microns) from a `bbox_um=[x1,y1,x2,y2]` list."""
+    if not (isinstance(bbox, list) and len(bbox) == 4):
+        raise RpcError(
+            ErrorCode.BAD_PARAMS,
+            "bbox_um must be [x1, y1, x2, y2] in microns",
+        )
+    try:
+        x1, y1, x2, y2 = (float(v) for v in bbox)
+    except (TypeError, ValueError):
+        raise RpcError(ErrorCode.BAD_PARAMS, "bbox_um values must be numbers")
+    return pya.DBox(x1, y1, x2, y2)
+
+
+def _dbox_from_real_dbu(bbox, dbu: float) -> "pya.DBox":
+    """Build a pya.DBox (microns) from a `bbox_dbu=[x1,y1,x2,y2]` list of
+    REAL integer database units, converted through the active layout's
+    dbu. This is the honest dbu semantics used elsewhere in klink
+    (shape.*'s `bbox_dbu`) - an integer count of database-unit steps,
+    NOT a value already in microns.
+    """
+    if not (isinstance(bbox, list) and len(bbox) == 4):
+        raise RpcError(
+            ErrorCode.BAD_PARAMS,
+            "bbox_dbu must be [x1, y1, x2, y2] in integer database units",
+        )
+    try:
+        x1, y1, x2, y2 = (int(v) for v in bbox)
+    except (TypeError, ValueError):
+        raise RpcError(ErrorCode.BAD_PARAMS, "bbox_dbu values must be integers")
+    return pya.DBox(x1 * dbu, y1 * dbu, x2 * dbu, y2 * dbu)
+
+
+def _resolve_zoom_target(params: dict, dbu: float) -> "pya.DBox":
+    """Resolve view.zoom_box's params into the pya.DBox (microns) that
+    `pya.LayoutView.zoom_box()` actually expects. Exactly one of
+    `bbox_um` / `bbox_dbu` must be given.
+    """
+    has_um = params.get("bbox_um") is not None
+    has_dbu = params.get("bbox_dbu") is not None
+    if has_um and has_dbu:
+        raise RpcError(
+            ErrorCode.BAD_PARAMS,
+            "provide exactly one of bbox_um or bbox_dbu, not both",
+            hint="prefer bbox_um=[x1,y1,x2,y2] in microns - klink's "
+                 "standard user-facing unit, matching boxes_um/points_um/"
+                 "center_um used elsewhere",
+        )
+    if has_um:
+        return _dbox_from_um(params["bbox_um"])
+    if has_dbu:
+        return _dbox_from_real_dbu(params["bbox_dbu"], dbu)
+    raise RpcError(
+        ErrorCode.BAD_PARAMS,
+        "provide bbox_um or bbox_dbu",
+        hint="example: bbox_um=[0, 0, 10, 10] zooms to a 10x10 micron "
+             "box at the origin",
+    )
+
+
 @method(
     "view.zoom_box",
-    description="Zoom the viewport to show exactly the given bbox (dbu).",
+    description=(
+        "Zoom the viewport to show exactly the given bbox. Provide "
+        "`bbox_um=[x1,y1,x2,y2]` in microns (preferred - klink's "
+        "standard user-facing unit, matching boxes_um/points_um/"
+        "center_um used elsewhere) or `bbox_dbu=[x1,y1,x2,y2]` in "
+        "integer database units (converted using the active layout's "
+        "dbu). Provide exactly one of the two."
+    ),
     params_schema={
         "type": "object",
-        "required": ["bbox_dbu"],
         "properties": {
-            "bbox_dbu": {"type": "array", "minItems": 4, "maxItems": 4},
+            "bbox_um": {
+                "type": "array", "minItems": 4, "maxItems": 4,
+                "description": "[x1,y1,x2,y2] in microns.",
+            },
+            "bbox_dbu": {
+                "type": "array", "minItems": 4, "maxItems": 4,
+                "description": "[x1,y1,x2,y2] in integer database units.",
+            },
         },
     },
-    returns_schema={"type": "object", "properties": {"ok": {"type": "boolean"}}},
+    returns_schema={
+        "type": "object",
+        "properties": {
+            "ok": {"type": "boolean"},
+            "bbox_um": {"type": "array", "description": "The zoomed-to bbox, in microns."},
+        },
+    },
     mutates=True,
     tags=["view"],
 )
 def view_zoom_box(params, ctx):
-    view, _, _ = _active_layout()
-    bbox = _box_from_param(params.get("bbox_dbu"))
-    if bbox is None:
-        raise RpcError(ErrorCode.BAD_PARAMS, "bbox_dbu is required")
-    view.zoom_box(bbox)
-    return {"ok": True}
+    view, _, ly = _active_layout()
+    dbox = _resolve_zoom_target(params, ly.dbu)
+    view.zoom_box(dbox)
+    return {"ok": True, "bbox_um": [dbox.left, dbox.bottom, dbox.right, dbox.top]}
+
+
+def _resolve_optional_bbox(params: dict, dbu: float):
+    """Resolve an optional `bbox_um` / `bbox_dbu` param pair into the
+    pya.DBox (microns) that DBox-typed pya APIs (e.g.
+    `save_image_with_options`'s target_box) expect, or None when neither
+    is given. At most one of the two may be given."""
+    has_um = params.get("bbox_um") is not None
+    has_dbu = params.get("bbox_dbu") is not None
+    if has_um and has_dbu:
+        raise RpcError(
+            ErrorCode.BAD_PARAMS,
+            "provide at most one of bbox_um or bbox_dbu, not both",
+            hint="prefer bbox_um=[x1,y1,x2,y2] in microns - klink's "
+                 "standard user-facing unit",
+        )
+    if has_um:
+        return _dbox_from_um(params["bbox_um"])
+    if has_dbu:
+        return _dbox_from_real_dbu(params["bbox_dbu"], dbu)
+    return None
+
+
+def _real_dbu_from_dbox(bb, dbu: float) -> list:
+    """Convert a pya.DBox (microns) into a `[x1,y1,x2,y2]` list of REAL
+    integer database units, using the given layout dbu."""
+    return [
+        int(round(bb.left / dbu)), int(round(bb.bottom / dbu)),
+        int(round(bb.right / dbu)), int(round(bb.top / dbu)),
+    ]
 
 
 @method(
     "view.viewport",
     description=(
-        "Report the current viewport: visible bbox in dbu, pixel size of "
-        "the view widget, and cellview index. Call this to align an "
-        "external coordinate with what the user sees."
+        "Report the current viewport: visible bbox in microns "
+        "(`bbox_um`, klink's standard unit) and in integer database "
+        "units (`bbox_dbu`, converted via the active layout's dbu), "
+        "pixel size of the view widget, and cellview index. Call this "
+        "to align an external coordinate with what the user sees."
     ),
     params_schema={"type": "object"},
     returns_schema={
         "type": "object",
         "properties": {
+            "bbox_um": {"type": "array"},
             "bbox_dbu": {"type": "array"},
             "width_px": {"type": "integer"},
             "height_px": {"type": "integer"},
@@ -310,12 +439,13 @@ def view_zoom_box(params, ctx):
     tags=["view", "read"],
 )
 def view_viewport(params, ctx):
-    view, _, _ = _active_layout()
+    view, _, ly = _active_layout()
     out: dict = {}
     try:
-        bb = view.box()  # LayoutView.box() returns visible region as DBox
+        bb = view.box()  # LayoutView.box() returns the visible region as a DBox, in microns
         if hasattr(bb, "left"):
-            out["bbox_dbu"] = [bb.left, bb.bottom, bb.right, bb.top]
+            out["bbox_um"] = [bb.left, bb.bottom, bb.right, bb.top]
+            out["bbox_dbu"] = _real_dbu_from_dbox(bb, ly.dbu)
     except Exception:
         pass
     try:
@@ -328,6 +458,162 @@ def view_viewport(params, ctx):
     except Exception:
         pass
     return out
+
+
+@method(
+    "view.new_tab",
+    description=(
+        "Open a new, empty layout tab with a fresh top cell and make it "
+        "the current tab (pya MainWindow.create_layout mode 1). Returns "
+        "`index` (the new tab) and `previous_current_index` so scratch-tab "
+        "workflows can restore the user's tab afterwards via "
+        "view.activate_tab. `previous_current_index` is -1 when there was "
+        "no tab open at all before this call -- in that case there is "
+        "nothing to restore, so skip the view.activate_tab restore step. "
+        "Use this instead of exec.python."
+    ),
+    params_schema={
+        "type": "object",
+        "properties": {
+            "cell_name": {
+                "type": "string", "default": "TOP",
+                "description": "Top cell to create and display in the new tab.",
+            },
+            "dbu": {
+                "type": "number", "default": 0.001,
+                "description": "Database unit of the new layout, in microns.",
+            },
+        },
+    },
+    returns_schema={
+        "type": "object",
+        "properties": {
+            "ok": {"type": "boolean"},
+            "index": {"type": "integer"},
+            "previous_current_index": {
+                "type": "integer",
+                "description": (
+                    "The tab index that was current before this call, to pass "
+                    "back to view.activate_tab afterwards. -1 means there was "
+                    "no tab open at all before this call, so there is no "
+                    "previous tab to restore."
+                ),
+            },
+            "title": {"type": "string"},
+            "cell": {"type": "string"},
+        },
+    },
+    mutates=True,
+    tags=["view"],
+)
+def view_new_tab(params, ctx):
+    mw = pya.Application.instance().main_window()
+    if mw is None:
+        raise RpcError(ErrorCode.INTERNAL, "no main window")
+
+    cell_name = params.get("cell_name", "TOP")
+    if not isinstance(cell_name, str) or not cell_name.strip():
+        raise RpcError(ErrorCode.BAD_PARAMS, "cell_name must be a non-empty string")
+    cell_name = cell_name.strip()
+
+    try:
+        dbu = float(params.get("dbu", 0.001))
+    except (TypeError, ValueError):
+        raise RpcError(ErrorCode.BAD_PARAMS, "dbu must be a number (microns)")
+    if not dbu > 0:
+        raise RpcError(ErrorCode.BAD_PARAMS, "dbu must be > 0")
+
+    previous = int(mw.current_view_index)
+    view, _cv, _ly = _create_default_layout(mw, name=cell_name, dbu=dbu)
+    return {
+        "ok": True,
+        "index": int(mw.current_view_index),
+        "previous_current_index": previous,
+        "title": str(view.title or ""),
+        "cell": cell_name,
+    }
+
+
+def _validate_hier_levels(params: dict, current_min: int, current_max: int):
+    """Pure helper: resolve requested min/max hierarchy display levels
+    against the current values. Returns (new_min, new_max, changed)."""
+
+    def _as_int(value, label):
+        if isinstance(value, bool) or not isinstance(value, (int, float)) \
+                or int(value) != value:
+            raise RpcError(ErrorCode.BAD_PARAMS, f"{label} must be an integer")
+        if int(value) < 0:
+            raise RpcError(ErrorCode.BAD_PARAMS, f"{label} must be >= 0")
+        return int(value)
+
+    has_min = params.get("min") is not None
+    has_max = params.get("max") is not None
+    new_min = _as_int(params["min"], "min") if has_min else int(current_min)
+    new_max = _as_int(params["max"], "max") if has_max else int(current_max)
+    if new_min > new_max:
+        raise RpcError(
+            ErrorCode.BAD_PARAMS,
+            f"min ({new_min}) must be <= max ({new_max})",
+            hint="geometry is drawn for hierarchy levels between min and "
+                 "max; e.g. min=0, max=4 shows four levels of child cells",
+        )
+    return new_min, new_max, has_min or has_max
+
+
+@method(
+    "view.hier_levels",
+    description=(
+        "Read or set the view's displayed hierarchy depth (pya "
+        "min_hier_levels/max_hier_levels). With no params, reports the "
+        "current levels. Pass `min` and/or `max` to change them; the view "
+        "is refreshed via update_content() so following screenshots see "
+        "the change. If dense child-cell instances render as name-label "
+        "boxes instead of geometry, max is too shallow - raise it (the "
+        "KLayout default is 1)."
+    ),
+    params_schema={
+        "type": "object",
+        "properties": {
+            "min": {
+                "type": "integer", "minimum": 0,
+                "description": "Minimum hierarchy level to draw.",
+            },
+            "max": {
+                "type": "integer", "minimum": 0,
+                "description": "Maximum hierarchy level to draw.",
+            },
+        },
+    },
+    returns_schema={
+        "type": "object",
+        "properties": {
+            "ok": {"type": "boolean"},
+            "min_hier_levels": {"type": "integer"},
+            "max_hier_levels": {"type": "integer"},
+            "changed": {"type": "boolean"},
+        },
+    },
+    mutates=True,
+    tags=["view"],
+)
+def view_hier_levels(params, ctx):
+    view, _, _ = _active_layout()
+    new_min, new_max, changed = _validate_hier_levels(
+        params, int(view.min_hier_levels), int(view.max_hier_levels)
+    )
+    if changed:
+        view.min_hier_levels = new_min
+        view.max_hier_levels = new_max
+        try:
+            view.update_content()
+        except Exception:
+            pass
+    return {
+        "ok": True,
+        "min_hier_levels": int(view.min_hier_levels),
+        "max_hier_levels": int(view.max_hier_levels),
+        "changed": bool(changed),
+    }
 
 
 @method(

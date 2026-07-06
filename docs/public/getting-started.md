@@ -51,6 +51,14 @@ agent.
    running session won't see it until you restart. `klink.status` then reports
    the interpreter and capabilities so you can verify.
 
+## Supported versions
+
+| Component | Floor | Notes |
+|---|---|---|
+| `klayout` (pip) | >= 0.28 | 0.27 is not supported: klink's device extractor uses a `GenericDeviceExtractor` overload that pya itself documents as introduced in 0.28. |
+| `gdsfactory` (`[photonics]`) | >= 9.0, < 10 | Every 9.x release is covered. gdsfactory 8.x works in testing but is not part of the pin yet — treat it as experimental. |
+| KLayout desktop application | not yet floor-tested | Version coverage for the plugin's own pya surface inside the GUI (as opposed to the `klayout` pip module) is planned for a later phase. |
+
 > **You do not need MCP to RUN the examples.** Every example is a plain
 > `python -m ...` script (the exact commands are throughout this page) that
 > talks to KLayout directly over the plugin's port — install klink and run it,

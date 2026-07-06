@@ -94,6 +94,7 @@ def filter_methods(specs: List[dict], profiles: List[str]) -> List[dict]:
             tags & {"meta", "read"}
             or name in (
                 "view.zoom_fit", "view.zoom_box", "view.show_cell",
+                "view.hier_levels",
                 "recorder.start", "recorder.stop", "recorder.status",
                 "selection.clear", "selection.set_box",
                 "selection.send_context",
@@ -105,7 +106,7 @@ def filter_methods(specs: List[dict], profiles: List[str]) -> List[dict]:
             name.startswith("drc.") or name.startswith("lvs.")
         ) and (
             tags & {"write", "undo"}
-            or name in ("selection.clear", "selection.set_box")
+            or name in ("selection.clear", "selection.set_box", "view.new_tab")
         ):
             matched = True
 

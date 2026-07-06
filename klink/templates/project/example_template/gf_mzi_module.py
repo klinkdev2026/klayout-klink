@@ -69,9 +69,9 @@ one interpreter that has both:
 Do NOT sys.path-hack the klink repo into a random interpreter and monkey-patch
 klink internals to paper over a gdsfactory API gap — that is exactly how you
 get 1000x-off geometry (gf.Port's `center` unit contract varies by version).
-The demos are pinned to gdsfactory 9.40.x for this reason; [photonics] installs
-a tested one. If you must use a different gdsfactory, expect to adjust the
-script, not klink.
+The demos support gdsfactory >=9.0,<10 for this reason (every 9.x line is
+CI-tested); [photonics] installs a tested one. If you must use a different
+gdsfactory, expect to adjust the script, not klink.
 """
 
 from __future__ import annotations

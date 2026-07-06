@@ -42,6 +42,14 @@ PCell、布线、跑 LVS——用你的工艺,通过你的 agent。
    **然后重启你的 agent**——MCP server 是 agent 启动时加载的,运行中的会话不重启就
    看不到它。之后 `klink.status` 会报解释器和能力供你核对。
 
+## 版本支持
+
+| 组件 | 底线版本 | 说明 |
+|---|---|---|
+| `klayout`(pip) | >= 0.28 | 不支持 0.27:klink 的器件抽取用到的 `GenericDeviceExtractor` 重载,pya 自己的文档写明是 0.28 才引入的。 |
+| `gdsfactory`(`[photonics]`) | >= 9.0, < 10 | 9.x 全线覆盖。gdsfactory 8.x 在测试中能跑,但还未纳入 pin——当作实验性支持。 |
+| KLayout 应用程序本体 | 尚未实测底线 | 插件在 GUI 内的 pya 接口(区别于 `klayout` pip 模块)的版本覆盖计划放到后续阶段。 |
+
 > **跑例子不需要 MCP。** 每个例子都是普通 `python -m ...` 脚本(本页各处都有确切命令),
 > 直接通过插件端口和 KLayout 对话——装好 klink 跑就行,不需要 MCP。MCP 是让你的
 > *agent* 把 klink 当**常驻工具**调用的那一层(比反复重跑脚本更快更顺)。两条路都用

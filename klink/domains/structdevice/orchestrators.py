@@ -1397,7 +1397,8 @@ def device_lvs_db(
             terminal_layers.setdefault(c, {})[term] = reg
 
         register_device_extractors(L, device_terminals=device_terminals,
-                                   terminal_layers=terminal_layers)
+                                   terminal_layers=terminal_layers,
+                                   layout=ly, top_cell=top)
         L.extract_netlist()
         ext = L.netlist()
         for c in device_terminals:                 # flatten device-cell shells

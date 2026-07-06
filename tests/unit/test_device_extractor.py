@@ -42,6 +42,8 @@ def _extract(path: Path):
         l2n,
         device_terminals={"generic_pair": ["left", "right"]},
         terminal_layers={"generic_pair": {"left": (10, 0), "right": (20, 0)}},
+        layout=layout,
+        top_cell=top,
     )
     left = registrations[0].layers["left"]
     right = registrations[0].layers["right"]
@@ -98,3 +100,29 @@ def test_generic_device_extractor_is_deterministic(tmp_path):
         )
 
     assert signature(first) == signature(second)
+
+
+def test_register_without_explicit_layout_matches_klayout_capability(tmp_path):
+    # klayout >= 0.29 exposes LayoutToNetlist.original_layout, so layout=/
+    # top_cell= may be omitted; older klayout has no original-layout accessor
+    # and must get an instructive error naming the exact fix.
+    gds = tmp_path / "device_cells.gds"
+    _write_fixture(gds)
+
+    layout = pya.Layout()
+    layout.read(str(gds))
+    top = layout.cell("TOP")
+    left_metal = layout.layer(10, 0)
+    right_metal = layout.layer(20, 0)
+    l2n = pya.LayoutToNetlist(pya.RecursiveShapeIterator(layout, top, [left_metal, right_metal]))
+
+    kwargs = dict(
+        device_terminals={"generic_pair": ["left", "right"]},
+        terminal_layers={"generic_pair": {"left": (10, 0), "right": (20, 0)}},
+    )
+    if hasattr(l2n, "original_layout"):
+        registrations = register_device_extractors(l2n, **kwargs)
+        assert len(registrations) == 1
+    else:
+        with pytest.raises(Exception, match="pass layout= and top_cell="):
+            register_device_extractors(l2n, **kwargs)

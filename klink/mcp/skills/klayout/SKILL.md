@@ -193,8 +193,6 @@ Required flow:
 6. Write corrected rules into the spec or design document instead of leaving
    them only in chat history.
 
-## gdsfactory Port Compatibility
-
 ## Routing Backend Choice
 
 Prefer MCP routing tools for standard reroutes:

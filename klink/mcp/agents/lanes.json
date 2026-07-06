@@ -62,6 +62,8 @@
         "view.zoom_box",
         "view.show_cell",
         "view.viewport",
+        "view.new_tab",
+        "view.hier_levels",
         "view.screenshot",
         "layout.save_file",
         "layout.show_file",
@@ -146,6 +148,7 @@
         "instance.insert_pcell_many",
         "instance.delete",
         "port.mark",
+        "port.mark_many",
         "port.update",
         "port.unmark",
         "port.set_layer",
@@ -169,7 +172,7 @@
       "rules": [
         "Generate into the spec's target cell only; *_delete_all and shape.delete are restricted to cells the task owns.",
         "Batch discipline: for more than ~20 objects or any loop, write one KLinkClient Python script (single connection, batch RPCs) and run it via shell instead of per-object MCP calls.",
-        "Prefer shape.insert_boxes / shape.insert_many / instance.insert_many / instance.insert_pcell_many over singular calls.",
+        "Prefer shape.insert_boxes / shape.insert_many / instance.insert_many / instance.insert_pcell_many / port.mark_many over singular calls.",
         "Execute the spec exactly; if the spec is ambiguous or infeasible, stop and report instead of improvising.",
         "After building, report object counts per layer/kind so layout-verify can check them."
       ]

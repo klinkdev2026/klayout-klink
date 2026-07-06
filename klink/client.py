@@ -401,6 +401,20 @@ class KLinkClient:
         if bbox_dbu is not None: p["bbox_dbu"] = list(bbox_dbu)
         return self.call("instance.query", p)
 
+    # ---- port writes ----
+    def port_mark_many(self, cell, items, **defaults) -> dict:
+        """Batch port.mark_many wrapper. `items` is a list of per-port dicts
+        (same fields as port.mark's params, each needing center_um or
+        center_dbu); `**defaults` are top-level fields (layer, label,
+        orientation, width_um, port_type, net, target_layer, show_label,
+        access_mode, slide_allowed, slide_edge) inherited by items that
+        omit them."""
+        return self.call("port.mark_many", {
+            "cell": cell,
+            "items": [dict(item) for item in items],
+            **defaults,
+        })
+
     # ---- M3 Basic-library PCell shortcuts ----------------------------
     # Thin wrappers around instance.insert_pcell that hard-code the
     # parameter names for each standard KLayout Basic PCell. Extra
@@ -657,11 +671,35 @@ class KLinkClient:
     def zoom_fit(self) -> dict:
         return self.call("view.zoom_fit")
 
-    def zoom_box(self, bbox_dbu) -> dict:
-        return self.call("view.zoom_box", {"bbox_dbu": bbox_dbu})
+    def zoom_box(self, bbox_um=None, *, bbox_dbu=None) -> dict:
+        """Zoom the viewport to a bbox. Prefer `bbox_um=[x1,y1,x2,y2]`
+        (microns, klink's standard unit); `bbox_dbu=[x1,y1,x2,y2]`
+        (integer database units, converted server-side via the active
+        layout's dbu) is also accepted. Provide exactly one."""
+        p = {}
+        if bbox_um is not None:
+            p["bbox_um"] = list(bbox_um)
+        if bbox_dbu is not None:
+            p["bbox_dbu"] = list(bbox_dbu)
+        return self.call("view.zoom_box", p)
 
     def viewport(self) -> dict:
         return self.call("view.viewport")
+
+    def new_tab(self, cell_name: str = "TOP", dbu: float = 0.001) -> dict:
+        """Open a new empty layout tab (made current). The response's
+        `previous_current_index` lets scratch-tab workflows restore the
+        user's tab afterwards via activate_tab."""
+        return self.call("view.new_tab", {"cell_name": cell_name, "dbu": dbu})
+
+    def hier_levels(self, min=None, max=None) -> dict:
+        """Read (no args) or set the displayed hierarchy depth."""
+        p = {}
+        if min is not None:
+            p["min"] = min
+        if max is not None:
+            p["max"] = max
+        return self.call("view.hier_levels", p)
 
     def show_cell(self, cell, zoom_fit: bool = True) -> dict:
         return self.call("view.show_cell", {"cell": cell, "zoom_fit": bool(zoom_fit)})

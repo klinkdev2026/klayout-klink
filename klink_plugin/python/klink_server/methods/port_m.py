@@ -526,6 +526,230 @@ def port_mark(params, ctx):
     }
 
 
+_MAX_BATCH_PORTS = 50_000
+
+# Fields port.mark accepts besides `cell`, `name`, `center_um`/`center_dbu`.
+# port.mark_many lets any of these be supplied ONCE at the top level as a
+# default that every item inherits unless it sets its own value.
+_PORT_MARK_MANY_DEFAULTABLE = (
+    "layer", "label", "orientation", "width_um", "port_type", "net",
+    "target_layer", "show_label", "access_mode", "slide_allowed",
+    "slide_edge",
+)
+
+
+def _validate_port_mark_many_items(items, defaults: dict, existing_names) -> list[dict]:
+    """Pure validate-before-mutate pass for port.mark_many: no pya object is
+    touched here, so this is safe to unit-test offline.
+
+    Checks (in order, first failure wins -- the whole batch is rejected so
+    nothing is half-inserted):
+      * `items` is a non-empty list, under the batch size cap.
+      * every item is an object.
+      * every item provides `center_um` or `center_dbu` as a 2-element list.
+      * every EXPLICIT `name` is unique, both against names already
+        occupied elsewhere in this same batch and against ports that
+        already exist in the target cell (`existing_names`). Items that
+        omit `name` are left for auto-naming at mutate time (order-
+        dependent, so it cannot be pre-validated here).
+
+    Returns the list of resolved per-item dicts (top-level `defaults`
+    merged under each item's own fields, so an item's own value always
+    wins). Raises RpcError naming the offending `items[i]` index+field.
+    """
+    if not isinstance(items, list):
+        raise RpcError(ErrorCode.BAD_PARAMS, "items must be a list")
+    if not items:
+        raise RpcError(ErrorCode.BAD_PARAMS, "items must not be empty")
+    if len(items) > _MAX_BATCH_PORTS:
+        raise RpcError(
+            ErrorCode.BAD_PARAMS,
+            f"items is too large ({len(items)} > {_MAX_BATCH_PORTS})",
+        )
+
+    resolved: list[dict] = []
+    seen_names = set(existing_names)
+    for i, item in enumerate(items):
+        if not isinstance(item, dict):
+            raise RpcError(ErrorCode.BAD_PARAMS, f"items[{i}] must be an object")
+        merged = dict(defaults)
+        merged.update(item)
+
+        has_um = "center_um" in merged
+        has_dbu = "center_dbu" in merged
+        if not has_um and not has_dbu:
+            raise RpcError(
+                ErrorCode.BAD_PARAMS,
+                f"items[{i}]: provide center_um or center_dbu",
+            )
+        if has_um and not (isinstance(merged["center_um"], list) and len(merged["center_um"]) == 2):
+            raise RpcError(ErrorCode.BAD_PARAMS, f"items[{i}]: center_um must be [x, y]")
+        if has_dbu and not (isinstance(merged["center_dbu"], list) and len(merged["center_dbu"]) == 2):
+            raise RpcError(ErrorCode.BAD_PARAMS, f"items[{i}]: center_dbu must be [x, y]")
+
+        name = merged.get("name")
+        if name:
+            name = str(name)
+            if name in seen_names:
+                raise RpcError(
+                    ErrorCode.BAD_PARAMS,
+                    f"items[{i}]: port name {name!r} is already used (either "
+                    "earlier in this batch or already present in the cell)",
+                    hint="port names must be unique; omit name to auto-assign",
+                )
+            seen_names.add(name)
+        resolved.append(merged)
+    return resolved
+
+
+@method(
+    "port.mark_many",
+    description=(
+        "Create many klink_Port PCell instances in one cell in a single RPC "
+        "and one undo transaction. `items` is a list of per-port objects "
+        "accepting the same fields as port.mark's params (name, label, "
+        "center_um/center_dbu, orientation, width_um, port_type, net, "
+        "target_layer, show_label, access_mode, slide_allowed, slide_edge); "
+        "each item must set center_um or center_dbu. Any of layer, label, "
+        "orientation, width_um, port_type, net, target_layer, show_label, "
+        "access_mode, slide_allowed, slide_edge may also be given ONCE at "
+        "the top level as a default every item inherits unless it overrides "
+        "it. Every item is validated BEFORE any port is inserted -- if one "
+        "item is invalid (missing center, duplicate name), nothing is "
+        "created and the error names the offending items[i] index."
+    ),
+    params_schema={
+        "type": "object",
+        "required": ["cell", "items"],
+        "properties": {
+            "cell": {"description": "Target cell name or cell_index"},
+            "items": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                        "label": {"type": "string"},
+                        "center_um": {"type": "array", "minItems": 2, "maxItems": 2},
+                        "center_dbu": {"type": "array", "minItems": 2, "maxItems": 2},
+                        "orientation": {"type": "number"},
+                        "width_um": {"type": "number"},
+                        "port_type": {"type": "string"},
+                        "net": {"type": "string"},
+                        "layer": {"type": "string"},
+                        "target_layer": {"type": "string"},
+                        "show_label": {"type": "boolean"},
+                        "access_mode": {"type": "string", "enum": ["point", "edge"]},
+                        "slide_allowed": {"type": "boolean"},
+                        "slide_edge": {"type": "string"},
+                    },
+                },
+            },
+            "layer": {"type": "string", "description": "Default marker layer for items that omit it."},
+            "label": {"type": "string", "description": "Default label for items that omit it."},
+            "orientation": {"type": "number", "default": 0, "description": "Default orientation for items that omit it."},
+            "width_um": {"type": "number", "default": 5.0, "description": "Default width_um for items that omit it."},
+            "port_type": {"type": "string", "default": "electrical", "description": "Default port_type for items that omit it."},
+            "net": {"type": "string", "description": "Default net for items that omit it."},
+            "target_layer": {"type": "string", "default": "1/0", "description": "Default target_layer for items that omit it."},
+            "show_label": {"type": "boolean", "default": True, "description": "Default show_label for items that omit it."},
+            "access_mode": {"type": "string", "enum": ["point", "edge"], "default": "point", "description": "Default access_mode for items that omit it."},
+            "slide_allowed": {"type": "boolean", "default": False, "description": "Default slide_allowed for items that omit it."},
+            "slide_edge": {"type": "string", "description": "Default slide_edge for items that omit it."},
+        },
+    },
+    returns_schema={
+        "type": "object",
+        "properties": {
+            "cell": {"type": "string"},
+            "count": {"type": "integer"},
+            "ports": {"type": "array"},
+        },
+    },
+    mutates=True,
+    tags=["port", "write"],
+)
+def port_mark_many(params, ctx):
+    view, _, ly = _active_layout()
+    if "cell" not in params:
+        raise RpcError(ErrorCode.BAD_PARAMS, "'cell' is required")
+    parent = _resolve_cell(ly, params["cell"])
+
+    defaults = {k: params[k] for k in _PORT_MARK_MANY_DEFAULTABLE if k in params}
+    existing_names = _collect_port_names(parent)
+    resolved = _validate_port_mark_many_items(params.get("items"), defaults, existing_names)
+
+    # Second (still read-only) pass: resolve each item's center to dbu and
+    # its marker layer string. Neither touches the layout -- if any item's
+    # center/layer is malformed we fail here, before a single port exists.
+    prepared = []
+    for i, merged in enumerate(resolved):
+        try:
+            x_dbu, y_dbu = _point_from_um_or_dbu(merged, ly.dbu, "center_dbu", "center_um")
+        except RpcError as exc:
+            raise RpcError(exc.code, f"items[{i}]: {exc.message}", hint=exc.hint)
+        port_layer_str = _get_port_layer_str(merged, ly)
+        try:
+            _parse_layer_ld(port_layer_str)
+        except RpcError as exc:
+            raise RpcError(exc.code, f"items[{i}]: {exc.message}", hint=exc.hint)
+        prepared.append({"merged": merged, "x_dbu": x_dbu, "y_dbu": y_dbu,
+                         "port_layer_str": port_layer_str})
+
+    # Auto-name assignment: walk in order, reserving explicit names first
+    # (already validated unique above) so auto-assigned names never
+    # collide with one that appears later in the same batch.
+    used_names = set(existing_names)
+    for p in prepared:
+        if p["merged"].get("name"):
+            used_names.add(str(p["merged"]["name"]))
+    for p in prepared:
+        name = p["merged"].get("name")
+        p["name"] = str(name) if name else _auto_name(used_names)
+        used_names.add(p["name"])
+
+    ports_out = []
+    with auto_txn(view, "klink: port.mark_many (%d ports)" % len(prepared)):
+        for p in prepared:
+            m = p["merged"]
+            orientation = float(m.get("orientation", 0.0)) % 360.0
+            label = str(m.get("label", ""))
+            width_um = float(m.get("width_um", 5.0))
+            port_type = str(m.get("port_type", "electrical"))
+            net = str(m.get("net", ""))
+            target_layer = str(m.get("target_layer", "1/0"))
+            show_label = bool(m.get("show_label", True))
+            access_mode = str(m.get("access_mode", "point"))
+            slide_allowed = bool(m.get("slide_allowed", False))
+            slide_edge = str(m.get("slide_edge", ""))
+
+            _resolve_port_layer_idx(ly, p["port_layer_str"])
+            variant = _create_port_variant(
+                ly, p["port_layer_str"], p["name"], label, orientation, width_um,
+                port_type, net, target_layer, show_label,
+                access_mode, slide_allowed, slide_edge,
+            )
+            parent.insert(pya.CellInstArray(
+                variant.cell_index(), pya.Trans(int(p["x_dbu"]), int(p["y_dbu"])),
+            ))
+            ports_out.append({
+                "name": p["name"],
+                "label": label,
+                "center_um": [p["x_dbu"] * ly.dbu, p["y_dbu"] * ly.dbu],
+                "orientation": orientation,
+                "width_um": width_um,
+                "port_type": port_type,
+                "net": net,
+                "show_label": show_label,
+                "target_layer": target_layer,
+                "access_mode": access_mode,
+                "slide_allowed": slide_allowed,
+                "slide_edge": slide_edge,
+            })
+
+    return {"cell": parent.name, "count": len(ports_out), "ports": ports_out}
+
+
 @method(
     "port.list",
     description=(

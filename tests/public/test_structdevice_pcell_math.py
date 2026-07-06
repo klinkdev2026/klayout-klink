@@ -12,9 +12,14 @@ from pathlib import Path
 
 import pytest
 
-# stub pya so the plugin module imports off-KLayout (only _parse_ld / the PCell
-# class / library registration touch pya; the edge math does not)
-if "pya" not in sys.modules:
+# The plugin module imports pya. Prefer the REAL pya (the klayout pip
+# package provides one) — a fake left in sys.modules would poison every
+# later test that imports klink_server modules in the same process. Only
+# stub when pya is genuinely unimportable (bare env without the klayout
+# pip package; the pya-dependent tests elsewhere skip there anyway).
+try:
+    import pya  # noqa: F401
+except ImportError:
     pya = types.ModuleType("pya")
     for _n in ("LayerInfo", "Text", "Trans", "Box", "Library"):
         setattr(pya, _n, type(_n, (), {"__init__": lambda self, *a, **k: None}))
