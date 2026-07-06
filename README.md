@@ -232,7 +232,7 @@ For a first end-to-end result with no external geometry, run one of the public
 demos (see [`docs/public/demos.md`](docs/public/demos.md)):
 
 ```bash
-python -m examples_klink.public.demos.ebl_wraparound      # fully offline
+python -m examples_klink.public.demos.nanodevice.ebl_wraparound      # fully offline
 ```
 
 ## Claude Code / MCP

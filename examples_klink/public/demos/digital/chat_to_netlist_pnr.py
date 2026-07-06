@@ -25,7 +25,7 @@ Everything process/device-specific is THIS demo's data (synthetic fitted
 devices + the public 3-layer process from fit_device_pnr_lvs); klink ships
 only mechanisms.
 
-Run: python -m examples_klink.public.demos.chat_to_netlist_pnr [--port 8766]
+Run: python -m examples_klink.public.demos.digital.chat_to_netlist_pnr [--port 8766]
 """
 import os
 import sys
@@ -43,7 +43,7 @@ from klink.routing.grid.pad_harvest import spread_ports
 
 # The public, IP-free process + fitted synthetic device library (see that
 # demo for how the devices are fitted from exemplar geometry).
-from examples_klink.public.demos import fit_device_pnr_lvs as D
+from examples_klink.public.demos.digital import fit_device_pnr_lvs as D
 
 PORT = int(sys.argv[sys.argv.index("--port") + 1]) if "--port" in sys.argv else 8766
 CELL = "CHAT_RING3"

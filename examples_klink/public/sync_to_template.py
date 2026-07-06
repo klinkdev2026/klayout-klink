@@ -37,21 +37,22 @@ from pathlib import Path
 SRC = Path(__file__).resolve().parent
 
 # category -> list of (source bucket dir, filename). The category is the
-# example_template subfolder; the source bucket is under examples_klink/public/.
+# example_template subfolder; the source bucket is the matching category
+# subfolder under examples_klink/public/demos/.
 STARTERS: dict[str, list[tuple[str, str]]] = {
     "nanodevice": [
-        ("demos", "hallbar.py"),
-        ("demos", "ebl_wraparound.py"),
-        ("demos", "neural_electrode.py"),
+        ("demos/nanodevice", "hallbar.py"),
+        ("demos/nanodevice", "ebl_wraparound.py"),
+        ("demos/nanodevice", "neural_electrode.py"),
     ],
     "photonics": [
-        ("demos", "gf_mzi_module.py"),
+        ("demos/photonics", "gf_mzi_module.py"),
     ],
     "passives": [
-        ("passives", "idc_capacitor.py"),
-        ("passives", "spiral_inductor.py"),
-        ("passives", "saw_idt_filter.py"),
-        ("passives", "baw_fbar_planview.py"),
+        ("demos/passives", "idc_capacitor.py"),
+        ("demos/passives", "spiral_inductor.py"),
+        ("demos/passives", "saw_idt_filter.py"),
+        ("demos/passives", "baw_fbar_planview.py"),
     ],
 }
 

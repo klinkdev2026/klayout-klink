@@ -72,7 +72,7 @@ The EBL nanodevice recipe runs **fully offline** — no KLayout, no external
 geometry:
 
 ```bash
-python -m examples_klink.public.demos.ebl_wraparound
+python -m examples_klink.public.demos.nanodevice.ebl_wraparound
 ```
 
 Real output (abridged): `"ok": true`, 40 electrodes, 12 patches, writefield of
@@ -82,7 +82,7 @@ With KLayout + the plugin running, the neural-electrode recipe builds and
 routes a probe (no GDS, just live Port/Anchor PCells):
 
 ```bash
-python -m examples_klink.public.demos.neural_electrode --port <session-port> --elec-rows 4
+python -m examples_klink.public.demos.nanodevice.neural_electrode --port <session-port> --elec-rows 4
 ```
 
 Real output (abridged): `ok: True`, 48 ports, 24 nets routed (12 on `1/0` +

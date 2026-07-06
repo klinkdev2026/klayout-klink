@@ -34,7 +34,7 @@ trace at the periphery (spread_ports wire-end stubs, no pad boxes drawn),
 power stays on the auto-labelled PDN tie rails; you hand-connect your own
 pads later, the labels tell you where.
 
-Usage: python -m examples_klink.public.demos.padframe_pnr_lvs [--no-card] [--port 8766]
+Usage: python -m examples_klink.public.demos.digital.padframe_pnr_lvs [--no-card] [--port 8766]
 """
 import json
 import os
@@ -56,7 +56,7 @@ from klink.routing.grid.process_profile import ProcessProfile
 
 # The public, IP-free process + fitted synthetic device library. We reuse its
 # fitter/geometry helpers so this demo owns zero device geometry of its own.
-from examples_klink.public.demos import fit_device_pnr_lvs as D
+from examples_klink.public.demos.digital import fit_device_pnr_lvs as D
 
 PORT = int(sys.argv[sys.argv.index("--port") + 1]) if "--port" in sys.argv else 8766
 NO_CARD = "--no-card" in sys.argv

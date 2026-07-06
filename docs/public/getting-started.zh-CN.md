@@ -60,7 +60,7 @@ PCell、布线、跑 LVS——用你的工艺,通过你的 agent。
 EBL 纳米器件 recipe **完全离线**就能跑——不需要 KLayout,不需要外部几何:
 
 ```bash
-python -m examples_klink.public.demos.ebl_wraparound
+python -m examples_klink.public.demos.nanodevice.ebl_wraparound
 ```
 
 实测输出(节选):`"ok": true`,40 电极,12 patch,writefield 16 fields / 11
@@ -70,7 +70,7 @@ KLayout + 插件起来后,神经电极 recipe 生成并布线一个探针(无 GD
 Port/Anchor PCell):
 
 ```bash
-python -m examples_klink.public.demos.neural_electrode --port <会话端口> --elec-rows 4
+python -m examples_klink.public.demos.nanodevice.neural_electrode --port <会话端口> --elec-rows 4
 ```
 
 实测输出(节选):`ok: True`,48 端口,24 net 全布通(12 条 `1/0` + 12 条

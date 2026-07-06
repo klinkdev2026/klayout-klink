@@ -1,6 +1,6 @@
 """Stage-by-stage gdsfactory-MZI tutorial capture.
 
-Mirrors examples_klink/public/demos/gf_mzi_module.py's main() build ->
+Mirrors examples_klink/public/demos/photonics/gf_mzi_module.py's main() build ->
 import_gf_component(route=False) -> restyle sbend -> add all_angle + dubins
 + electrical nets -> ONE reroute() -- the exact sequence the real starter
 demo runs with no flag -- but stops to screenshot after each state change,
@@ -57,7 +57,7 @@ sys.path.insert(0, str(REPO_ROOT))
 from klink import KLinkClient
 from klink.domains.photonics.gf_import import import_gf_component
 from klink.domains.photonics.net_intent import NetTable, RouteStyle, reroute
-from examples_klink.public.demos.gf_mzi_module import (
+from examples_klink.public.demos.photonics.gf_mzi_module import (
     build_user_module, CELL, OPTICAL_LAYER, METAL_LAYER,
 )
 

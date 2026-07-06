@@ -208,7 +208,7 @@ with KLinkClient(port=8766) as c:
 [`docs/public/demos.md`](docs/public/demos.md)):
 
 ```bash
-python -m examples_klink.public.demos.ebl_wraparound      # 完全离线
+python -m examples_klink.public.demos.nanodevice.ebl_wraparound      # 完全离线
 ```
 
 ## Claude Code / MCP

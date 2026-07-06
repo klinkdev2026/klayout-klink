@@ -25,7 +25,7 @@ and edit the tables for YOUR process/circuit; klink ships only mechanisms):
           POSITIVE per-port extraction probe (every marked port's metal must
           land on the SAME extracted net as its net's device terminals)
 
-Usage: python -m examples_klink.public.demos.multilayer_pnr_lvs [--port 8766]
+Usage: python -m examples_klink.public.demos.digital.multilayer_pnr_lvs [--port 8766]
 """
 import json
 import os
@@ -55,7 +55,7 @@ from klink.routing.grid.process_profile import ProcessProfile
 # The public, IP-free process + fitted synthetic device library (see that
 # demo for how the devices are fitted from exemplar geometry). We reuse its
 # fitter/geometry helpers so this demo owns zero device geometry of its own.
-from examples_klink.public.demos import fit_device_pnr_lvs as D
+from examples_klink.public.demos.digital import fit_device_pnr_lvs as D
 
 PORT = int(sys.argv[sys.argv.index("--port") + 1]) if "--port" in sys.argv else 8766
 CELL = "PUB_ML_CPU4"
@@ -188,7 +188,7 @@ print(f"[{CELL}] marking {len(ins)} inputs W + {len(outs)} outputs E "
 # STEP 6 -- route with the multilayer routing engine, live LVS, and a
 # positive per-port extraction probe.
 # --------------------------------------------------------------------------- #
-from examples_klink.public.demos import _multilayer_engine as engine
+from examples_klink.public.demos.digital import _multilayer_engine as engine
 
 t0 = time.time()
 with KLinkClient(port=PORT).connect() as c:

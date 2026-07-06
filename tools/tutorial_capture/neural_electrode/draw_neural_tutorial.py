@@ -1,6 +1,6 @@
 """Stage-by-stage neural electrode harness tutorial capture.
 
-Mirrors examples_klink/public/demos/neural_electrode.py's
+Mirrors examples_klink/public/demos/nanodevice/neural_electrode.py's
 generate_harnesspcell() geometry (the same function
 example_template/neural_electrode.py --port <session-port> --elec-rows 4
 calls), but issues the RPCs incrementally (layer plan -> probe body/frame ->
@@ -37,7 +37,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT))
 
 from klink import KLinkClient
-from examples_klink.public.demos.neural_electrode import (
+from examples_klink.public.demos.nanodevice.neural_electrode import (
     HarnessPCellSpec,
     _frame_items,
     _layer_items,

@@ -20,7 +20,7 @@ import math
 import klayout.db as kdb
 import pytest
 
-from examples_klink.public.passives import (
+from examples_klink.public.demos.passives import (
     baw_fbar_planview as baw,
     idc_capacitor as idc,
     saw_idt_filter as saw,

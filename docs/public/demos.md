@@ -2,11 +2,12 @@
 
 > 中文见 [demos.zh-CN.md](demos.zh-CN.md)
 
-The public gallery has eight load-bearing demos under
-`examples_klink/public/demos/`. None needs confidential geometry from you. Two
-run fully offline; six need a live KLayout session (but still no external GDS);
-one of those (the gdsfactory takeover) also needs gdsfactory in the same
-interpreter. This page is honest about each.
+The public gallery lives under `examples_klink/public/demos/`, grouped into
+category subfolders (`nanodevice/`, `photonics/`, `digital/`, `passives/`).
+None needs confidential geometry from you. Two run fully offline; the digital
+P&R demos need a live KLayout session (but still no external GDS); the
+gdsfactory takeover also needs gdsfactory in the same interpreter. This page is
+honest about each.
 
 Everything device- and process-specific lives in the example itself; `klink`
 ships zero process constants. Copy a demo and edit its numbers for your own
@@ -35,7 +36,7 @@ process — the flow is identical.
 ### EBL nanodevice wraparound
 
 ```bash
-python -m examples_klink.public.demos.ebl_wraparound          # [--live] [--keep]
+python -m examples_klink.public.demos.nanodevice.ebl_wraparound          # [--live] [--keep]
 ```
 
 A parametric electron-beam-lithography wraparound generator. Offline it prints
@@ -46,7 +47,7 @@ the generated bundle; `--live` writes to a KLayout session. Measured output:
 ### Hall bar nanodevice
 
 ```bash
-python -m examples_klink.public.demos.hallbar                 # [--live] [--keep]
+python -m examples_klink.public.demos.nanodevice.hallbar                 # [--live] [--keep]
 ```
 
 A parametric Hall-bar generator. Offline it prints the semantic bundle plus the
@@ -71,7 +72,7 @@ make no frequency or material claims).
 
 ```bash
 python example_template/passives/idc_capacitor.py        # [--live --port <session-port>]
-# repo clone: python -m examples_klink.public.passives.idc_capacitor
+# repo clone: python -m examples_klink.public.demos.passives.idc_capacitor
 ```
 
 Two opposing bus bars with alternating fingers: pitch = finger width + gap,
@@ -83,7 +84,7 @@ and every finger stops `gap` short of the opposite bus. Measured output
 
 ```bash
 python example_template/passives/spiral_inductor.py      # [--live --port <session-port>]
-# repo clone: python -m examples_klink.public.passives.spiral_inductor
+# repo clone: python -m examples_klink.public.demos.passives.spiral_inductor
 ```
 
 An outward-wound square spiral on the top metal; the trapped inner end
@@ -96,7 +97,7 @@ both the inner-end pad and the underpass, 2 ports (`OUT`/`IN`).
 
 ```bash
 python example_template/passives/saw_idt_filter.py       # [--live --port <session-port>]
-# repo clone: python -m examples_klink.public.passives.saw_idt_filter
+# repo clone: python -m examples_klink.public.demos.passives.saw_idt_filter
 ```
 
 Two identical IDTs facing each other along the acoustic axis (electrode
@@ -110,7 +111,7 @@ IDT** (no finger short), **1 per reflector grating**, electrode width
 
 ```bash
 python example_template/passives/baw_fbar_planview.py    # [--live --port <session-port>]
-# repo clone: python -m examples_klink.public.passives.baw_fbar_planview
+# repo clone: python -m examples_klink.public.demos.passives.baw_fbar_planview
 ```
 
 Plan view of a membrane-type resonator: the top electrode is an irregular
@@ -127,7 +128,7 @@ target): no-two-edges-parallel **true**, pentagon area 1999.996 µm² (within
 ### Neural-electrode harness
 
 ```bash
-python -m examples_klink.public.demos.neural_electrode --port <session-port> --elec-rows 4
+python -m examples_klink.public.demos.nanodevice.neural_electrode --port <session-port> --elec-rows 4
 ```
 
 Self-contained probe generator: defines pad/via geometry and Port/Anchor
@@ -138,7 +139,7 @@ resources, then calls the tapered-hybrid router. Measured output (4 rows):
 ### Fit a device → digital place & route → LVS
 
 ```bash
-python -m examples_klink.public.demos.fit_device_pnr_lvs --port <session-port>   # [--draw-only]
+python -m examples_klink.public.demos.digital.fit_device_pnr_lvs --port <session-port>   # [--draw-only]
 ```
 
 The full self-contained digital flow, IP-free: fit a parametric device PCell
@@ -150,7 +151,7 @@ does not change.
 ### Hand-written netlist → lint → place & route → LVS
 
 ```bash
-python -m examples_klink.public.demos.chat_to_netlist_pnr --port <session-port>
+python -m examples_klink.public.demos.digital.chat_to_netlist_pnr --port <session-port>
 ```
 
 The "describe it in chat, get a verified layout" flow: a 3-stage ring
@@ -166,7 +167,7 @@ can write one for ANY topology, no logic synthesizer required.
 ### Multilayer place & route at scale
 
 ```bash
-python -m examples_klink.public.demos.multilayer_pnr_lvs --port <session-port>
+python -m examples_klink.public.demos.digital.multilayer_pnr_lvs --port <session-port>
 ```
 
 The scale demo: a bundled 766-device synthetic netlist (a toy 4-bit ALU, 268
@@ -187,7 +188,7 @@ your own layer stack — the flow does not change.
 ### Probe-card-first place & route
 
 ```bash
-python -m examples_klink.public.demos.padframe_pnr_lvs --port <session-port>   # [--no-card]
+python -m examples_klink.public.demos.digital.padframe_pnr_lvs --port <session-port>   # [--no-card]
 ```
 
 The reversed-order hardware flow: the probe card / pad ring **exists first**
@@ -216,7 +217,7 @@ all 14 stubs CONNECTED. Copy this file and edit the pad table for your own card.
 ### gdsfactory takeover → editable photonic module
 
 ```bash
-python -m examples_klink.public.demos.gf_mzi_module --port <session-port>
+python -m examples_klink.public.demos.photonics.gf_mzi_module --port <session-port>
 ```
 
 A complete thermo-optic MZI — tilted fiber GC → 1×2 MMI splitter → two thermal
@@ -234,7 +235,7 @@ one-shot. From a plain shell you re-route with the `--reroute` flag:
 
 ```bash
 # ... drag a component in KLayout ...
-python -m examples_klink.public.demos.gf_mzi_module --port <session-port> --reroute
+python -m examples_klink.public.demos.photonics.gf_mzi_module --port <session-port> --reroute
 ```
 
 `--reroute` re-routes from the dragged positions **without rebuilding**, so it

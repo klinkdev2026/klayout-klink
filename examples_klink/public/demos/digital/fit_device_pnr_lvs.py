@@ -7,7 +7,7 @@ exemplar boxes (from your drawn device cells) to fit your real device -- the
 flow is identical. The fitter (klink.domains.structdevice.pcell_fitter) is the
 general mechanism; everything device/process-specific lives in this example.
 
-Run: python -m examples_klink.public.demos.fit_device_pnr_lvs [--port 8766] [--draw-only]
+Run: python -m examples_klink.public.demos.digital.fit_device_pnr_lvs [--port 8766] [--draw-only]
 """
 import json
 import sys
@@ -46,7 +46,7 @@ PUBLIC_PROCESS = ProcessProfile(
     margin_um=60.0,
 )
 
-_ROOT = Path(__file__).resolve().parents[3]   # repo root (to reach klink_plugin/python)
+_ROOT = Path(__file__).resolve().parents[4]   # repo root (to reach klink_plugin/python)
 _OUT = Path(__file__).parent / "_generated"; _OUT.mkdir(exist_ok=True)
 FIT = str(_OUT / "public_fit.json")     # generated fit table (this demo's output)
 GEOM = str(_OUT / "public_geom.json")   # generated synthetic device geometry
