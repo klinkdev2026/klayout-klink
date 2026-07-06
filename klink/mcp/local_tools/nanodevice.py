@@ -23,7 +23,7 @@ from . import local_tool
         "type": "object",
         "properties": {
             "cell": {"type": "string", "description": "Target cell (created/replaced; device-owned)."},
-            "spec": {"type": "object", "description": "HallBarSpec fields. MUST include your process layers (device_layer/metal_layer/label_layer/route_layer 'L/D'); klink ships no process layers. See example_template/hallbar.py."},
+            "spec": {"type": "object", "description": "HallBarSpec fields. MUST include your process layers (device_layer/metal_layer/label_layer/route_layer 'L/D'); klink ships no process layers. See example_template/nanodevice/hallbar.py."},
             "writefield": {"type": "object", "description": "Writefield plan kwargs; omit to skip EBL walls."},
             "route_layer": {"type": "string", "description": "optional override for the routing layer 'L/D'; defaults to the spec's route_layer."},
             "spacing_um": {"type": "number", "default": 4.0},

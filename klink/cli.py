@@ -78,20 +78,33 @@ def update(target: str) -> int:
         return 1
 
     dst_examples.mkdir(parents=True, exist_ok=True)
-    want = {p.name for p in src_examples.glob("*.py")}
-    have = {p.name for p in dst_examples.glob("*.py")}
+    # Starters are grouped into category subfolders (nanodevice/ photonics/
+    # passives/), so walk RECURSIVELY and sync by relative path -- a flat glob
+    # would miss everything and silently refresh nothing.
+    def _rel_files(root: Path) -> set:
+        return {p.relative_to(root) for p in root.rglob("*") if p.is_file()}
+
+    want = _rel_files(src_examples)
+    have = _rel_files(dst_examples)
     added, updated, removed = [], [], []
-    for name in sorted(want):
-        s, d = src_examples / name, dst_examples / name
+    for rel in sorted(want, key=str):
+        s, d = src_examples / rel, dst_examples / rel
         if not d.exists():
+            d.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(s, d)
-            added.append(name)
+            added.append(str(rel).replace("\\", "/"))
         elif s.read_bytes() != d.read_bytes():
             shutil.copy2(s, d)
-            updated.append(name)
-    for name in sorted(have - want):        # starters no longer shipped
-        (dst_examples / name).unlink()
-        removed.append(name)
+            updated.append(str(rel).replace("\\", "/"))
+    for rel in sorted(have - want, key=str):     # starters no longer shipped
+        (dst_examples / rel).unlink()
+        removed.append(str(rel).replace("\\", "/"))
+    # prune any now-empty category dirs left behind (e.g. after a flat->nested
+    # migration), deepest first
+    for d in sorted((p for p in dst_examples.rglob("*") if p.is_dir()),
+                    key=lambda p: len(p.parts), reverse=True):
+        if not any(d.iterdir()):
+            d.rmdir()
 
     print(f"Refreshed example_template/ in {dst} from the installed package.")
     for label, items in (("added", added), ("updated", updated), ("removed", removed)):

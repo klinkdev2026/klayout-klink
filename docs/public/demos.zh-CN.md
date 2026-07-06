@@ -6,14 +6,21 @@
 保密几何。两个完全离线;六个需要 live KLayout 会话(但同样不需要外部 GDS);
 其中一个(gdsfactory 接管)还需要同一解释器里有 gdsfactory。本页对每个都说实话。
 
-> **怎么跑取决于你怎么装的 klink。** 其中四个是**starter**、随 wheel 打包:
-> `klink init <proj>` 会把它们铺进 `<proj>/example_template/`,`pip install` 用户
-> 直接 `python example_template/<name>.py` 跑——**ebl_wraparound、hallbar、
-> neural_electrode、gf_mzi_module**。另外四个(**fit_device_pnr_lvs、
-> chat_to_netlist_pnr、multilayer_pnr_lvs、padframe_pnr_lvs**)是 **repo-only**:
-> 它们要读源码树 / 内置网表,只能从仓库克隆里跑,不是 pip 装能跑的。下面每个 demo
-> 的命令是 repo 的 `python -m …` 形式;你若是 starter 用户,改跑
-> `python example_template/<name>.py`。
+> **怎么跑取决于你怎么装的 klink。** 其中八个是**starter**、随 wheel 打包:
+> `klink init <proj>` 会把它们按类铺进 `<proj>/example_template/`,`pip install`
+> 用户直接 `python example_template/<类>/<名>.py` 跑:
+>
+> | 类 | starter |
+> |---|---|
+> | `nanodevice/` | ebl_wraparound、hallbar、neural_electrode |
+> | `photonics/` | gf_mzi_module |
+> | `passives/` | idc_capacitor、spiral_inductor、saw_idt_filter、baw_fbar_planview |
+>
+> 另外四个数字 P&R demo(**fit_device_pnr_lvs、chat_to_netlist_pnr、
+> multilayer_pnr_lvs、padframe_pnr_lvs**)是 **repo-only**:它们读内置网表、互相
+> import,只能从仓库克隆里跑,不是 pip 装能跑的。下面每个 demo 的命令是 repo 的
+> `python -m …` 形式;你若是 starter 用户,改跑
+> `python example_template/<类>/<名>.py` 形式。
 
 所有器件/工艺相关的东西都住在示例自己里;`klink` 发布零工艺常数。抄一个
 demo、把数字改成你自己的工艺——流程完全相同。
@@ -41,8 +48,9 @@ python -m examples_klink.public.demos.hallbar                 # [--live] [--keep
 
 ## 无源器件几何模板(离线可跑;`--live` 需 KLayout)
 
-四个参数化无源器件模板,在 `examples_klink/public/passives/` 下——仓库示例
-(不随 wheel 打包成 starter):从仓库克隆里跑。默认离线,各自往
+四个参数化无源器件模板——`passives/` 类下的 **starter**,`pip install` 用户直接
+`python example_template/passives/<名>.py` 跑(仓库克隆也可用每个下面
+`# 仓库克隆:` 行里的 `python -m …` 模块形式)。默认离线,各自往
 `test_outputs/` 写一个 GDS 并打印结构化自检 summary;`--live [--port <会话端口>]`
 则往 KLayout 会话推一个用完即弃的 cell。每族都在电学端子上打 klink Port
 (999/99),路由后端开箱即用。每个都是**几何模板,不是验证过的电学/声学设计**
@@ -52,7 +60,8 @@ python -m examples_klink.public.demos.hallbar                 # [--live] [--keep
 ### IDC 叉指电容
 
 ```bash
-python -m examples_klink.public.passives.idc_capacitor        # [--live --port <会话端口>]
+python example_template/passives/idc_capacitor.py        # [--live --port <会话端口>]
+# 仓库克隆: python -m examples_klink.public.passives.idc_capacitor
 ```
 
 两条对置母线加交替叉指:指距 = 指宽 + 间隙,每根指距对面母线留 `gap` 的
@@ -62,7 +71,8 @@ python -m examples_klink.public.passives.idc_capacitor        # [--live --port <
 ### 方形螺旋电感
 
 ```bash
-python -m examples_klink.public.passives.spiral_inductor      # [--live --port <会话端口>]
+python example_template/passives/spiral_inductor.py      # [--live --port <会话端口>]
+# 仓库克隆: python -m examples_klink.public.passives.spiral_inductor
 ```
 
 顶层金属上向外绕的方形螺旋;被绕线困住的内端经过通孔 + 从各圈下方穿出的
@@ -73,7 +83,8 @@ python -m examples_klink.public.passives.spiral_inductor      # [--live --port <
 ### SAW IDT 滤波器
 
 ```bash
-python -m examples_klink.public.passives.saw_idt_filter       # [--live --port <会话端口>]
+python example_template/passives/saw_idt_filter.py       # [--live --port <会话端口>]
+# 仓库克隆: python -m examples_klink.public.passives.saw_idt_filter
 ```
 
 两个相同的 IDT 沿声轴相对(电极宽 = pitch/4,金属化率 0.5;均匀交叠——
@@ -84,7 +95,8 @@ python -m examples_klink.public.passives.saw_idt_filter       # [--live --port <
 ### BAW / FBAR 俯视图
 
 ```bash
-python -m examples_klink.public.passives.baw_fbar_planview    # [--live --port <会话端口>]
+python example_template/passives/baw_fbar_planview.py    # [--live --port <会话端口>]
+# 仓库克隆: python -m examples_klink.public.passives.baw_fbar_planview
 ```
 
 薄膜型谐振器的俯视模板:顶电极是一个**任意两边都不平行**的不规则五边形

@@ -19,7 +19,7 @@ class HallBarSpec:
     pad_size_um: float = 12.0
     pad_gap_um: float = 34.0
     # Process layers are REQUIRED and example-owned: klink ships no process
-    # layers, so the caller (your example / example_template/hallbar.py) passes
+    # layers, so the caller (your example / example_template/nanodevice/hallbar.py) passes
     # them for YOUR process. (999/99 Port + 999/1 Anchor are klink's reserved
     # marker layers, like 900/0 keepout — those keep sensible defaults.)
     device_layer: str | None = None
@@ -37,7 +37,7 @@ class HallBarSpec:
                 f"HallBarSpec is missing process layer(s) {missing}; klink ships "
                 "no process layers -- pass them for YOUR process, e.g. "
                 "device_layer='1/0', metal_layer='10/0', label_layer='6/0', "
-                "route_layer='12/0'. See example_template/hallbar.py.")
+                "route_layer='12/0'. See example_template/nanodevice/hallbar.py.")
 
 
 def _parse_layer(layer: str) -> tuple[int, int]:

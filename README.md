@@ -149,8 +149,9 @@ cd mychip
 `klink init` refuses a non-empty folder, so point it at a fresh name. Then open
 the folder with your agent (Claude Code / Codex) and describe what you are
 building — it fills in `pdk.py` + `custom_devices/` from the matching recipe. The
-scaffolded `example_template/` holds copy-and-adapt starter demos; run one with
-`python example_template/<name>.py`.
+scaffolded `example_template/` holds copy-and-adapt starter demos, grouped into
+`nanodevice/`, `photonics/`, and `passives/`; run one with
+`python example_template/<category>/<name>.py`.
 
 When you upgrade klink later, refresh those bundled starters **without touching
 your own work** (`pdk.py`, `custom_devices/`, `.klink/`, `out/`, `specs/` are

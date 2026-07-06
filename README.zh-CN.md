@@ -132,8 +132,9 @@ cd mychip
 
 `klink init` 会拒绝非空文件夹,所以给它一个新名字。然后用你的 agent(Claude Code /
 Codex)打开这个文件夹、描述你要做什么——它会从对应 recipe 补出 `pdk.py` +
-`custom_devices/`。脚手架里的 `example_template/` 是可"抄了就改"的 starter demo;
-跑其中一个:`python example_template/<name>.py`。
+`custom_devices/`。脚手架里的 `example_template/` 是可"抄了就改"的 starter demo,
+按 `nanodevice/`、`photonics/`、`passives/` 分类;跑其中一个:
+`python example_template/<类>/<名>.py`。
 
 以后升级 klink 时,刷新这些自带 starter 而**不动你自己的东西**(`pdk.py`、
 `custom_devices/`、`.klink/`、`out/`、`specs/` 绝不改动):

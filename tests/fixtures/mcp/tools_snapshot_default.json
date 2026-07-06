@@ -2508,7 +2508,7 @@
           },
           "spec": {
             "type": "object",
-            "description": "HallBarSpec fields. MUST include your process layers (device_layer/metal_layer/label_layer/route_layer 'L/D'); klink ships no process layers. See example_template/hallbar.py."
+            "description": "HallBarSpec fields. MUST include your process layers (device_layer/metal_layer/label_layer/route_layer 'L/D'); klink ships no process layers. See example_template/nanodevice/hallbar.py."
           },
           "writefield": {
             "type": "object",

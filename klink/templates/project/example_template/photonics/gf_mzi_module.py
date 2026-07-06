@@ -28,12 +28,12 @@ after any drag.
 Run against a live KLayout (klink plugin) with gdsfactory in this interpreter
 (see Requirements below if that is not your setup):
 
-    python example_template/gf_mzi_module.py [--port 8765]
+    python example_template/photonics/gf_mzi_module.py [--port 8765]
 
 Then EDIT and re-route -- the layout stays live, that is the whole point:
 
     ... drag any component in the KLayout GUI ...
-    python example_template/gf_mzi_module.py --port 8765 --reroute
+    python example_template/photonics/gf_mzi_module.py --port 8765 --reroute
 
 `--reroute` re-routes from the dragged positions WITHOUT rebuilding, so it keeps
 your edit. Re-running with NO flag rebuilds the module from the gdsfactory script
@@ -63,7 +63,7 @@ one interpreter that has both:
 
   2. gdsfactory already lives in another venv (a tool venv, a PDK venv, ...):
          <that-venv>/python -m pip install klayout-klink   # klink is pure-Python
-         <that-venv>/python example_template/gf_mzi_module.py
+         <that-venv>/python example_template/photonics/gf_mzi_module.py
      i.e. add klink INTO the gdsfactory venv and run from there.
 
 Do NOT sys.path-hack the klink repo into a random interpreter and monkey-patch

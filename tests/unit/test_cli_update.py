@@ -16,17 +16,19 @@ def test_update_refreshes_example_template_only(tmp_path):
     (proj / "custom_devices" / "d.py").write_text("USER DEVICE\n")
 
     # a starter the user (or a stale install) left out of date, plus a starter
-    # the package no longer ships
-    starter = proj / "example_template" / "gf_mzi_module.py"
+    # the package no longer ships. Starters live in category subfolders now.
+    starter = proj / "example_template" / "photonics" / "gf_mzi_module.py"
     assert starter.exists()
     starter.write_text("STALE\n")
     (proj / "example_template" / "zzz_old_starter.py").write_text("OLD\n")
 
     assert update(str(proj)) == 0
 
-    pkg = _template_dir() / "example_template" / "gf_mzi_module.py"
+    pkg = _template_dir() / "example_template" / "photonics" / "gf_mzi_module.py"
     assert starter.read_bytes() == pkg.read_bytes()                    # refreshed
     assert not (proj / "example_template" / "zzz_old_starter.py").exists()  # pruned
+    # a passive starter is scaffolded into its category subfolder
+    assert (proj / "example_template" / "passives" / "saw_idt_filter.py").exists()
     assert (proj / "pdk.py").read_text() == "USER PDK\n"               # untouched
     assert (proj / ".klink" / "net.json").read_text() == "USER NET TABLE\n"
     assert (proj / "custom_devices" / "d.py").read_text() == "USER DEVICE\n"

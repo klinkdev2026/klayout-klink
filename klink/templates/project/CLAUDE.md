@@ -29,7 +29,7 @@ For photonic circuits, prefer the one-call orchestrators over ad-hoc glue:
   that do. Optical nets are re-drawn with euler bends when klink has to
   detour around a device; a route is only reported ok when it crosses
   nothing and cuts no device body.
-- Worked example: `example_template/gf_mzi_module.py` (complete thermo-optic
+- Worked example: `example_template/photonics/gf_mzi_module.py` (complete thermo-optic
   MZI: optical + sbend + all-angle + dubins + electrical nets in ONE
   persisted net table; requires gdsfactory in the MCP interpreter and a
   live KLayout).

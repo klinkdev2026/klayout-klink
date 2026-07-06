@@ -12,16 +12,23 @@ Everything device- and process-specific lives in the example itself; `klink`
 ships zero process constants. Copy a demo and edit its numbers for your own
 process — the flow is identical.
 
-> **How you run these depends on how you installed klink.** Four demos are
+> **How you run these depends on how you installed klink.** Eight examples are
 > **starters** bundled in the wheel: `klink init <proj>` scaffolds them into
-> `<proj>/example_template/`, and a `pip install` user runs them as
-> `python example_template/<name>.py` — **ebl_wraparound, hallbar,
-> neural_electrode, gf_mzi_module**. The other four (**fit_device_pnr_lvs,
-> chat_to_netlist_pnr, multilayer_pnr_lvs, padframe_pnr_lvs**) are **repo-only**:
-> they read the source tree / a bundled netlist, so they run from a clone of the
-> repository, not from a pip install. The command shown under each demo below is
-> the repo `python -m …` form; if you are a starter user, run
-> `python example_template/<name>.py` instead.
+> `<proj>/example_template/`, grouped by category, and a `pip install` user runs
+> them as `python example_template/<category>/<name>.py`:
+>
+> | category | starters |
+> |---|---|
+> | `nanodevice/` | ebl_wraparound, hallbar, neural_electrode |
+> | `photonics/` | gf_mzi_module |
+> | `passives/` | idc_capacitor, spiral_inductor, saw_idt_filter, baw_fbar_planview |
+>
+> The four digital P&R demos (**fit_device_pnr_lvs, chat_to_netlist_pnr,
+> multilayer_pnr_lvs, padframe_pnr_lvs**) are **repo-only**: they read a bundled
+> netlist and cross-import each other, so they run from a clone of the repository,
+> not from a pip install. The command shown under each demo below is the repo
+> `python -m …` form; if you are a starter user, run the
+> `python example_template/<category>/<name>.py` form instead.
 
 ## Runs offline (no KLayout, no GDS)
 
@@ -48,8 +55,10 @@ routed result; `--live` writes a disposable KLayout cell (deleted unless
 
 ## Passive-device geometry templates (offline; `--live` needs KLayout)
 
-Four parametric passive-device templates under `examples_klink/public/passives/`
-— repo examples (not starters in the wheel): run them from a clone. Offline
+Four parametric passive-device templates — **starters** in the `passives/`
+category, so a `pip install` user runs them as
+`python example_template/passives/<name>.py` (repo clones can also use the
+`python -m …` module form shown in the `# repo clone:` line under each). Offline
 (the default) each writes a GDS under `test_outputs/` and prints a structured
 self-check summary; `--live [--port <session-port>]` pushes a disposable cell
 to a KLayout session instead. Every family marks klink Ports (999/99) on its
@@ -61,7 +70,8 @@ make no frequency or material claims).
 ### IDC — interdigitated capacitor
 
 ```bash
-python -m examples_klink.public.passives.idc_capacitor        # [--live --port <session-port>]
+python example_template/passives/idc_capacitor.py        # [--live --port <session-port>]
+# repo clone: python -m examples_klink.public.passives.idc_capacitor
 ```
 
 Two opposing bus bars with alternating fingers: pitch = finger width + gap,
@@ -72,7 +82,8 @@ and every finger stops `gap` short of the opposite bus. Measured output
 ### Square spiral inductor
 
 ```bash
-python -m examples_klink.public.passives.spiral_inductor      # [--live --port <session-port>]
+python example_template/passives/spiral_inductor.py      # [--live --port <session-port>]
+# repo clone: python -m examples_klink.public.passives.spiral_inductor
 ```
 
 An outward-wound square spiral on the top metal; the trapped inner end
@@ -84,7 +95,8 @@ both the inner-end pad and the underpass, 2 ports (`OUT`/`IN`).
 ### SAW IDT filter
 
 ```bash
-python -m examples_klink.public.passives.saw_idt_filter       # [--live --port <session-port>]
+python example_template/passives/saw_idt_filter.py       # [--live --port <session-port>]
+# repo clone: python -m examples_klink.public.passives.saw_idt_filter
 ```
 
 Two identical IDTs facing each other along the acoustic axis (electrode
@@ -97,7 +109,8 @@ IDT** (no finger short), **1 per reflector grating**, electrode width
 ### BAW / FBAR plan view
 
 ```bash
-python -m examples_klink.public.passives.baw_fbar_planview    # [--live --port <session-port>]
+python example_template/passives/baw_fbar_planview.py    # [--live --port <session-port>]
+# repo clone: python -m examples_klink.public.passives.baw_fbar_planview
 ```
 
 Plan view of a membrane-type resonator: the top electrode is an irregular
