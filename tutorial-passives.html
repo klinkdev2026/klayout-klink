@@ -204,11 +204,11 @@
         <div class="tut-figure-row">
           <figure class="tut-figure">
             <img src="assets/tutorials/passives/baw-default.png" alt="默认参数下的 BAW/FBAR 俯视图：五边形顶电极、覆盖它的矩形底电极、顶连接走线和两个探针 pad">
-            <figcaption>默认参数（目标面积 2000 µm²）实跑截图。</figcaption>
+            <figcaption>默认参数（目标面积 2000 µm²）实跑截图。底电极矩形物理上必须完全盖住五边形（谐振器全交叠），所以 <code>membrane_release</code> 文档层描出五边形自身的轮廓——即便填充被盖住，真实的谐振形状也能透过这圈轮廓看见。</figcaption>
           </figure>
           <figure class="tut-figure">
             <img src="assets/tutorials/passives/baw-variant.png" alt="变体参数下的 BAW/FBAR 俯视图：五边形明显更大，pad 和连接走线也相应变粗变长">
-            <figcaption>变体：<code>active_area_um2</code> 2000.0→6000.0，同时 <code>connect_width_um</code> 8.0→12.0、<code>pad_size_um</code> 30.0→40.0、<code>bottom_extension_um</code> 60.0→90.0、<code>overlap_margin_um</code> 6.0→10.0、<code>membrane_margin_um</code> 15.0→20.0（与单测的扩展参数用例一致；注意两张图都是 <code>zoom_fit</code>，实际尺寸差异要看左下角比例尺 20 µm → 40 µm）。</figcaption>
+            <figcaption>变体：<code>active_area_um2</code> 2000.0→6000.0，同时 <code>connect_width_um</code> 8.0→12.0、<code>pad_size_um</code> 30.0→40.0、<code>bottom_extension_um</code> 60.0→90.0、<code>overlap_margin_um</code> 6.0→10.0、<code>membrane_margin_um</code> 15.0→20.0（与单测的扩展参数用例一致；default 和 variant 两图共用同一个取景框，所以尺寸变大一眼可见）。</figcaption>
           </figure>
         </div>
         <p><strong>五边形任意两边都不平行</strong>是这个模板的核心不变量，光看整体截图不容易确认，下面放大标注默认参数下距离"平行"最近的一对边——即便是最接近的一对，也仍然不平行：</p>

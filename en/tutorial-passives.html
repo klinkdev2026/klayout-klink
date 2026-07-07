@@ -204,11 +204,11 @@
         <div class="tut-figure-row">
           <figure class="tut-figure">
             <img src="../assets/tutorials/passives/baw-default.png" alt="BAW/FBAR plan view with default parameters: pentagon top electrode, covering rectangular bottom electrode, top connect strip, and two probe pads">
-            <figcaption>Default parameters (target area 2000 µm²), live screenshot.</figcaption>
+            <figcaption>Default parameters (target area 2000 µm²), live screenshot. The bottom-electrode rectangle must physically cover the pentagon completely (full-overlap resonator), so the <code>membrane_release</code> documentation layer traces the pentagon's own outline — the true resonant shape stays visible through that outline even though the fill is covered.</figcaption>
           </figure>
           <figure class="tut-figure">
             <img src="../assets/tutorials/passives/baw-variant.png" alt="BAW/FBAR plan view with expanded parameters: visibly larger pentagon, thicker/longer pads and connect strips">
-            <figcaption>Variant: <code>active_area_um2</code> 2000.0&rarr;6000.0, plus <code>connect_width_um</code> 8.0&rarr;12.0, <code>pad_size_um</code> 30.0&rarr;40.0, <code>bottom_extension_um</code> 60.0&rarr;90.0, <code>overlap_margin_um</code> 6.0&rarr;10.0, <code>membrane_margin_um</code> 15.0&rarr;20.0 (matches the unit tests' expanded-parameter case; both screenshots are <code>zoom_fit</code>, so compare the scale bars -- 20 µm vs 40 µm -- to see the actual size difference).</figcaption>
+            <figcaption>Variant: <code>active_area_um2</code> 2000.0&rarr;6000.0, plus <code>connect_width_um</code> 8.0&rarr;12.0, <code>pad_size_um</code> 30.0&rarr;40.0, <code>bottom_extension_um</code> 60.0&rarr;90.0, <code>overlap_margin_um</code> 6.0&rarr;10.0, <code>membrane_margin_um</code> 15.0&rarr;20.0 (matches the unit tests' expanded-parameter case; default and variant share one zoom box, so the size increase is directly visible).</figcaption>
           </figure>
         </div>
         <p><strong>No two edges parallel</strong> is this template's core invariant, and it's hard to eyeball on the full overview -- here's a zoomed, annotated crop of the default pentagon's closest-to-parallel edge pair, which is still not parallel:</p>
