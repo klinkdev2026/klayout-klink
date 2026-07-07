@@ -94,11 +94,11 @@ MCP 配置。描述你要做什么,agent 识别领域并从对应 recipe 起 `pd
 
 ## 什么能开箱跑
 
-公开示例都不需要你提供几何。其中八个是**starter**、随 wheel 打包、按类分组,
+公开示例都不需要你提供几何,而且**全都是 starter**、随 wheel 打包、按类分组,
 `pip install` 用户直接从铺好的 `example_template/` 跑
 (`python example_template/<类>/<名>.py`):`nanodevice/`(ebl_wraparound、
 hallbar、neural_electrode)、`photonics/`(gf_mzi_module)、`passives/`
-(idc_capacitor、spiral_inductor、saw_idt_filter、baw_fbar_planview)。另外四个
-数字 P&R demo(fit-device → P&R → LVS、手写网表 → P&R、多层 P&R、针卡 padframe)
-读内置网表且互相 import,只能从仓库克隆里跑。每个 demo 的确切命令和实测输出见
-[demos.zh-CN](demos.zh-CN.md)——**跑起来都不需要 MCP**。
+(idc_capacitor、spiral_inductor、saw_idt_filter、baw_fbar_planview)、以及
+`digital/`(fit-device → P&R → LVS、手写网表 → P&R、多层 P&R、针卡 padframe)。
+`digital/` 家族做 live P&R + LVS,所以需要一个运行中的 KLayout 会话(`--port`)。
+每个 demo 的确切命令和实测输出见 [demos.zh-CN](demos.zh-CN.md)——**跑起来都不需要 MCP**。

@@ -9,6 +9,16 @@ klink 是一个面向 [KLayout](https://www.klayout.de/) 的 AI-native 控制面
 📖 **文档网站**（中文；English 见 `/en/`）：
 <https://klinkdev2026.github.io/klayout-klink/>
 
+**图文分步教程** —— 每篇都是一个 demo 的真实运行，在 KLayout 里逐阶段画出来，每一步配截图和可运行代码：
+
+- [Hall bar](https://klinkdev2026.github.io/klayout-klink/tutorial-hallbar.html) —— geometry-first 入门
+- [EBL wraparound](https://klinkdev2026.github.io/klayout-klink/tutorial-ebl-wraparound.html) —— writefield 约束
+- [神经电极阵列](https://klinkdev2026.github.io/klayout-klink/tutorial-neural-electrode.html) —— 参数化阵列 + 批量 RPC
+- [gdsfactory MZI](https://klinkdev2026.github.io/klayout-klink/tutorial-gf-mzi.html) —— gdsfactory 桥 + 拖动后重布线
+- [自定义器件 → P&R → LVS](https://klinkdev2026.github.io/klayout-klink/tutorial-fit-device.html) —— 把你自己的器件接入数字布局布线流
+- [针卡 padframe](https://klinkdev2026.github.io/klayout-klink/tutorial-padframe.html) —— pad 环 + 电源网络，两种卡模式
+- [无源器件模板](https://klinkdev2026.github.io/klayout-klink/tutorial-passives.html) —— IDC / 螺旋电感 / SAW / BAW
+
 项目分为三层：
 
 - `klink`: 外部 Python 客户端、MCP bridge、路由/领域逻辑和 agent 工作流。

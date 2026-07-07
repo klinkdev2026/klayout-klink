@@ -54,6 +54,19 @@ STARTERS: dict[str, list[tuple[str, str]]] = {
         ("demos/passives", "saw_idt_filter.py"),
         ("demos/passives", "baw_fbar_planview.py"),
     ],
+    # digital P&R -> LVS: a self-contained family that cross-imports within the
+    # folder and reads its own bundled netlists, so the whole folder ships (the
+    # demos fall back to a same-dir sibling import when scaffolded). These are
+    # LIVE starters (they need a running KLayout session for P&R + LVS).
+    "digital": [
+        ("demos/digital", "fit_device_pnr_lvs.py"),
+        ("demos/digital", "padframe_pnr_lvs.py"),
+        ("demos/digital", "chat_to_netlist_pnr.py"),
+        ("demos/digital", "multilayer_pnr_lvs.py"),
+        ("demos/digital", "_multilayer_engine.py"),
+        ("demos/digital", "add4.devnet.json"),
+        ("demos/digital", "cpu4.devnet.json"),
+    ],
 }
 
 TEMPLATE = SRC.parents[1] / "klink" / "templates" / "project" / "example_template"

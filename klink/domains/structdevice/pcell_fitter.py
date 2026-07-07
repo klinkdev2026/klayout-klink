@@ -196,6 +196,54 @@ def analyze(
 # --------------------------------------------------------------------------- #
 # table generation
 # --------------------------------------------------------------------------- #
+_EVAL_INT_TOL = 1e-6
+
+
+def eval_edge(edge: Mapping[str, Any], params: Mapping[str, float],
+              param_order: Sequence[str],
+              sample_order: Sequence[Mapping[str, Any]]) -> int:
+    """Resolve one box edge of a fitted device table to integer dbu for the
+    given parameter values -- the pure-math inverse of :func:`fit_table`,
+    living in the klink package so device examples evaluate a fit WITHOUT
+    reaching into the KLayout-side plugin (klink / klink_plugin stay decoupled).
+
+    N-ary edge model, byte-identical to the plugin's PCell renderer:
+
+    - ``parametric``: ``base + Σ_i coef[param_i] · params[param_i]`` over the
+      ordered ``param_order`` (a missing coefficient is 0); refuses a
+      non-integer dbu result (no silent rounding).
+    - ``non_parametric``: exact exemplar lookup -- the sample whose EVERY
+      parameter matches ``params`` selects ``values[i]``; a miss lists the
+      available points (drawing conventions are never extrapolated).
+    """
+    kind = edge.get("kind")
+    if kind == "parametric":
+        value = float(edge.get("base", 0.0))
+        coef = edge.get("coef", {})
+        for name in param_order:
+            value += float(coef.get(name, 0.0)) * float(params[name])
+        if abs(value - round(value)) > _EVAL_INT_TOL:
+            shown = " ".join("%s=%g" % (n, params[n]) for n in param_order)
+            raise ValueError(
+                "parametric edge gives non-integer dbu %r for %s"
+                % (value, shown))
+        return int(round(value))
+    if kind == "non_parametric":
+        for i, sample in enumerate(sample_order):
+            if all(abs(float(sample[n]) - float(params[n])) < _EVAL_INT_TOL
+                   for n in param_order):
+                return int(edge["values"][i])
+        points = "; ".join(
+            ", ".join("%s=%s" % (n, s.get(n)) for n in param_order)
+            for s in sample_order)
+        shown = " ".join("%s=%g" % (n, params[n]) for n in param_order)
+        raise ValueError(
+            "non-parametric edge has no exemplar for %s; available: %s. "
+            "Drawing conventions are not extrapolated -- add an exemplar and "
+            "re-run the fitter." % (shown, points))
+    raise ValueError("unknown edge kind %r" % kind)
+
+
 def fit_table(
     report: FitReport,
     *,

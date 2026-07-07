@@ -107,13 +107,13 @@ matching recipe. See
 
 ## What runs out of the box
 
-The public examples run with no geometry from you. Eight are **starters**
+The public examples run with no geometry from you, and all are **starters**
 bundled in the wheel, grouped by category, so a `pip install` user runs them
 straight from the scaffolded `example_template/`
 (`python example_template/<category>/<name>.py`): `nanodevice/` (ebl_wraparound,
-hallbar, neural_electrode), `photonics/` (gf_mzi_module), and `passives/`
-(idc_capacitor, spiral_inductor, saw_idt_filter, baw_fbar_planview). The four
-digital P&R demos (fit-device → P&R → LVS, hand-written netlist → P&R,
-multilayer P&R, probe-card padframe) read a bundled netlist and cross-import,
-so they run from a clone of the repository. See [demos](demos.md) for each
-command and measured output — none needs MCP to run.
+hallbar, neural_electrode), `photonics/` (gf_mzi_module), `passives/`
+(idc_capacitor, spiral_inductor, saw_idt_filter, baw_fbar_planview), and
+`digital/` (fit-device → P&R → LVS, hand-written netlist → P&R, multilayer P&R,
+probe-card padframe). The `digital/` family does live P&R + LVS, so it needs a
+running KLayout session (`--port`). See [demos](demos.md) for each command and
+measured output — none needs MCP to run.

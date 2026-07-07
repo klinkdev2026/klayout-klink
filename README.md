@@ -11,6 +11,17 @@ controlled from external Python processes, MCP clients, and AI agents.
 📖 **Documentation site** (English; 中文 at the site root):
 <https://klinkdev2026.github.io/klayout-klink/en/>
 
+**Step-by-step illustrated tutorials** — each one is a real run of a demo,
+drawn stage by stage in KLayout, with a screenshot and runnable code per step:
+
+- [Hall bar](https://klinkdev2026.github.io/klayout-klink/en/tutorial-hallbar.html) — geometry-first basics
+- [EBL wraparound](https://klinkdev2026.github.io/klayout-klink/en/tutorial-ebl-wraparound.html) — writefield constraints
+- [Neural-electrode array](https://klinkdev2026.github.io/klayout-klink/en/tutorial-neural-electrode.html) — parametric arrays + batch RPCs
+- [gdsfactory MZI](https://klinkdev2026.github.io/klayout-klink/en/tutorial-gf-mzi.html) — the gdsfactory bridge + drag-to-reroute
+- [Custom device → P&R → LVS](https://klinkdev2026.github.io/klayout-klink/en/tutorial-fit-device.html) — fit your own device into a digital place-and-route flow
+- [Probe-card padframe](https://klinkdev2026.github.io/klayout-klink/en/tutorial-padframe.html) — pad ring + power net, two card modes
+- [Passive-device templates](https://klinkdev2026.github.io/klayout-klink/en/tutorial-passives.html) — IDC / spiral / SAW / BAW
+
 The project is split into three layers:
 
 - `klink`: the external Python client, MCP bridge, routing/domain logic, and

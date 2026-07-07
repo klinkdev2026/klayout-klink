@@ -1,0 +1,2249 @@
+{
+ "groups": [
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$218",
+   "gate_type": "INV",
+   "instances": [
+    "X1",
+    "X2"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$219",
+   "gate_type": "INV",
+   "instances": [
+    "X3",
+    "X4"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$220",
+   "gate_type": "INV",
+   "instances": [
+    "X5",
+    "X6"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$221",
+   "gate_type": "INV",
+   "instances": [
+    "X7",
+    "X8"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$222",
+   "gate_type": "INV",
+   "instances": [
+    "X9",
+    "X10"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$223",
+   "gate_type": "INV",
+   "instances": [
+    "X11",
+    "X12"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$224",
+   "gate_type": "NAND2",
+   "instances": [
+    "X13",
+    "X14",
+    "X15"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$225",
+   "gate_type": "INV",
+   "instances": [
+    "X16",
+    "X17"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$226",
+   "gate_type": "NOR2",
+   "instances": [
+    "X18",
+    "X19",
+    "X20"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$227",
+   "gate_type": "NOR2",
+   "instances": [
+    "X21",
+    "X22",
+    "X23"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$228",
+   "gate_type": "NAND2",
+   "instances": [
+    "X24",
+    "X25",
+    "X26"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$229",
+   "gate_type": "INV",
+   "instances": [
+    "X27",
+    "X28"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$230",
+   "gate_type": "NAND2",
+   "instances": [
+    "X29",
+    "X30",
+    "X31"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$231",
+   "gate_type": "NAND2",
+   "instances": [
+    "X32",
+    "X33",
+    "X34"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$232",
+   "gate_type": "NAND2",
+   "instances": [
+    "X35",
+    "X36",
+    "X37"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$233",
+   "gate_type": "NOR2",
+   "instances": [
+    "X38",
+    "X39",
+    "X40"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$234",
+   "gate_type": "INV",
+   "instances": [
+    "X41",
+    "X42"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$235",
+   "gate_type": "NOR2",
+   "instances": [
+    "X43",
+    "X44",
+    "X45"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$236",
+   "gate_type": "NAND2",
+   "instances": [
+    "X46",
+    "X47",
+    "X48"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$237",
+   "gate_type": "NOR2",
+   "instances": [
+    "X49",
+    "X50",
+    "X51"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$238",
+   "gate_type": "NOR2",
+   "instances": [
+    "X52",
+    "X53",
+    "X54"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$239",
+   "gate_type": "INV",
+   "instances": [
+    "X55",
+    "X56"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$240",
+   "gate_type": "NAND2",
+   "instances": [
+    "X57",
+    "X58",
+    "X59"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$241",
+   "gate_type": "NAND2",
+   "instances": [
+    "X60",
+    "X61",
+    "X62"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$242",
+   "gate_type": "NAND2",
+   "instances": [
+    "X63",
+    "X64",
+    "X65"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$243",
+   "gate_type": "NAND2",
+   "instances": [
+    "X66",
+    "X67",
+    "X68"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$244",
+   "gate_type": "NOR2",
+   "instances": [
+    "X69",
+    "X70",
+    "X71"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$245",
+   "gate_type": "NAND2",
+   "instances": [
+    "X72",
+    "X73",
+    "X74"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$246",
+   "gate_type": "NOR2",
+   "instances": [
+    "X75",
+    "X76",
+    "X77"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$247",
+   "gate_type": "NOR2",
+   "instances": [
+    "X78",
+    "X79",
+    "X80"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$248",
+   "gate_type": "INV",
+   "instances": [
+    "X81",
+    "X82"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$249",
+   "gate_type": "NOR2",
+   "instances": [
+    "X83",
+    "X84",
+    "X85"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$250",
+   "gate_type": "NAND2",
+   "instances": [
+    "X86",
+    "X87",
+    "X88"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$251",
+   "gate_type": "NOR2",
+   "instances": [
+    "X89",
+    "X90",
+    "X91"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$252",
+   "gate_type": "NOR2",
+   "instances": [
+    "X92",
+    "X93",
+    "X94"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$253",
+   "gate_type": "NOR2",
+   "instances": [
+    "X95",
+    "X96",
+    "X97"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$254",
+   "gate_type": "NAND2",
+   "instances": [
+    "X98",
+    "X99",
+    "X100"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$255",
+   "gate_type": "NOR2",
+   "instances": [
+    "X101",
+    "X102",
+    "X103"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$256",
+   "gate_type": "NAND2",
+   "instances": [
+    "X104",
+    "X105",
+    "X106"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$257",
+   "gate_type": "NOR2",
+   "instances": [
+    "X107",
+    "X108",
+    "X109"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$258",
+   "gate_type": "INV",
+   "instances": [
+    "X110",
+    "X111"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$259",
+   "gate_type": "NOR2",
+   "instances": [
+    "X112",
+    "X113",
+    "X114"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$260",
+   "gate_type": "NAND2",
+   "instances": [
+    "X115",
+    "X116",
+    "X117"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$261",
+   "gate_type": "NOR2",
+   "instances": [
+    "X118",
+    "X119",
+    "X120"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$262",
+   "gate_type": "NAND2",
+   "instances": [
+    "X121",
+    "X122",
+    "X123"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$263",
+   "gate_type": "NOR2",
+   "instances": [
+    "X124",
+    "X125",
+    "X126"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$264",
+   "gate_type": "NAND2",
+   "instances": [
+    "X127",
+    "X128",
+    "X129"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$265",
+   "gate_type": "NOR2",
+   "instances": [
+    "X130",
+    "X131",
+    "X132"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$266",
+   "gate_type": "NAND2",
+   "instances": [
+    "X133",
+    "X134",
+    "X135"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$267",
+   "gate_type": "NOR2",
+   "instances": [
+    "X136",
+    "X137",
+    "X138"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$268",
+   "gate_type": "NAND2",
+   "instances": [
+    "X139",
+    "X140",
+    "X141"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$269",
+   "gate_type": "NOR2",
+   "instances": [
+    "X142",
+    "X143",
+    "X144"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$270",
+   "gate_type": "NAND2",
+   "instances": [
+    "X145",
+    "X146",
+    "X147"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$271",
+   "gate_type": "NOR2",
+   "instances": [
+    "X148",
+    "X149",
+    "X150"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$272",
+   "gate_type": "NOR2",
+   "instances": [
+    "X151",
+    "X152",
+    "X153"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$273",
+   "gate_type": "NAND2",
+   "instances": [
+    "X154",
+    "X155",
+    "X156"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$274",
+   "gate_type": "NOR2",
+   "instances": [
+    "X157",
+    "X158",
+    "X159"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$275",
+   "gate_type": "INV",
+   "instances": [
+    "X160",
+    "X161"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$276",
+   "gate_type": "NAND2",
+   "instances": [
+    "X162",
+    "X163",
+    "X164"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$277",
+   "gate_type": "NAND2",
+   "instances": [
+    "X165",
+    "X166",
+    "X167"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$278",
+   "gate_type": "NOR2",
+   "instances": [
+    "X168",
+    "X169",
+    "X170"
+   ]
+  },
+  {
+   "group": "$abc$217$auto$blifparse.cc:397:parse_blif$279",
+   "gate_type": "NOR2",
+   "instances": [
+    "X171",
+    "X172",
+    "X173"
+   ]
+  }
+ ],
+ "nets": [
+  {
+   "net_id": "$abc$217$new_n15",
+   "terminals": [
+    "X1.S",
+    "X1.G",
+    "X2.D",
+    "X102.G"
+   ]
+  },
+  {
+   "net_id": "A[3]",
+   "terminals": [
+    "X2.G",
+    "X105.G",
+    "X108.G"
+   ]
+  },
+  {
+   "net_id": "VDD",
+   "terminals": [
+    "X1.D",
+    "X3.D",
+    "X5.D",
+    "X7.D",
+    "X9.D",
+    "X11.D",
+    "X13.D",
+    "X16.D",
+    "X18.D",
+    "X21.D",
+    "X24.D",
+    "X27.D",
+    "X29.D",
+    "X32.D",
+    "X35.D",
+    "X38.D",
+    "X41.D",
+    "X43.D",
+    "X46.D",
+    "X49.D",
+    "X52.D",
+    "X55.D",
+    "X57.D",
+    "X60.D",
+    "X63.D",
+    "X66.D",
+    "X69.D",
+    "X72.D",
+    "X75.D",
+    "X78.D",
+    "X81.D",
+    "X83.D",
+    "X86.D",
+    "X89.D",
+    "X92.D",
+    "X95.D",
+    "X98.D",
+    "X101.D",
+    "X104.D",
+    "X107.D",
+    "X110.D",
+    "X112.D",
+    "X115.D",
+    "X118.D",
+    "X121.D",
+    "X124.D",
+    "X127.D",
+    "X130.D",
+    "X133.D",
+    "X136.D",
+    "X139.D",
+    "X142.D",
+    "X145.D",
+    "X148.D",
+    "X151.D",
+    "X154.D",
+    "X157.D",
+    "X160.D",
+    "X162.D",
+    "X165.D",
+    "X168.D",
+    "X171.D"
+   ]
+  },
+  {
+   "net_id": "GND",
+   "terminals": [
+    "X2.S",
+    "X4.S",
+    "X6.S",
+    "X8.S",
+    "X10.S",
+    "X12.S",
+    "X15.S",
+    "X17.S",
+    "X19.S",
+    "X20.S",
+    "X22.S",
+    "X23.S",
+    "X26.S",
+    "X28.S",
+    "X31.S",
+    "X34.S",
+    "X37.S",
+    "X39.S",
+    "X40.S",
+    "X42.S",
+    "X44.S",
+    "X45.S",
+    "X48.S",
+    "X50.S",
+    "X51.S",
+    "X53.S",
+    "X54.S",
+    "X56.S",
+    "X59.S",
+    "X62.S",
+    "X65.S",
+    "X68.S",
+    "X70.S",
+    "X71.S",
+    "X74.S",
+    "X76.S",
+    "X77.S",
+    "X79.S",
+    "X80.S",
+    "X82.S",
+    "X84.S",
+    "X85.S",
+    "X88.S",
+    "X90.S",
+    "X91.S",
+    "X93.S",
+    "X94.S",
+    "X96.S",
+    "X97.S",
+    "X100.S",
+    "X102.S",
+    "X103.S",
+    "X106.S",
+    "X108.S",
+    "X109.S",
+    "X111.S",
+    "X113.S",
+    "X114.S",
+    "X117.S",
+    "X119.S",
+    "X120.S",
+    "X123.S",
+    "X125.S",
+    "X126.S",
+    "X129.S",
+    "X131.S",
+    "X132.S",
+    "X135.S",
+    "X137.S",
+    "X138.S",
+    "X141.S",
+    "X143.S",
+    "X144.S",
+    "X147.S",
+    "X149.S",
+    "X150.S",
+    "X152.S",
+    "X153.S",
+    "X156.S",
+    "X158.S",
+    "X159.S",
+    "X161.S",
+    "X164.S",
+    "X167.S",
+    "X169.S",
+    "X170.S",
+    "X172.S",
+    "X173.S"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n16",
+   "terminals": [
+    "X3.S",
+    "X3.G",
+    "X4.D",
+    "X103.G"
+   ]
+  },
+  {
+   "net_id": "B[3]",
+   "terminals": [
+    "X4.G",
+    "X106.G",
+    "X109.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n17",
+   "terminals": [
+    "X5.S",
+    "X5.G",
+    "X6.D",
+    "X44.G"
+   ]
+  },
+  {
+   "net_id": "A[2]",
+   "terminals": [
+    "X6.G",
+    "X47.G",
+    "X50.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n18",
+   "terminals": [
+    "X7.S",
+    "X7.G",
+    "X8.D",
+    "X45.G"
+   ]
+  },
+  {
+   "net_id": "B[2]",
+   "terminals": [
+    "X8.G",
+    "X48.G",
+    "X51.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n19",
+   "terminals": [
+    "X9.S",
+    "X9.G",
+    "X10.D",
+    "X33.G"
+   ]
+  },
+  {
+   "net_id": "A[1]",
+   "terminals": [
+    "X10.G",
+    "X30.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n20",
+   "terminals": [
+    "X11.S",
+    "X11.G",
+    "X12.D",
+    "X34.G"
+   ]
+  },
+  {
+   "net_id": "B[1]",
+   "terminals": [
+    "X12.G",
+    "X31.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n21",
+   "terminals": [
+    "X13.S",
+    "X13.G",
+    "X14.D",
+    "X17.G",
+    "X58.G",
+    "X155.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$auto$blifparse.cc:397:parse_blif$224.MID",
+   "terminals": [
+    "X14.S",
+    "X15.D"
+   ]
+  },
+  {
+   "net_id": "A[0]",
+   "terminals": [
+    "X14.G",
+    "X19.G"
+   ]
+  },
+  {
+   "net_id": "B[0]",
+   "terminals": [
+    "X15.G",
+    "X20.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n22",
+   "terminals": [
+    "X16.S",
+    "X16.G",
+    "X17.D",
+    "X22.G",
+    "X61.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n23",
+   "terminals": [
+    "X18.S",
+    "X18.G",
+    "X19.D",
+    "X20.D",
+    "X23.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n24",
+   "terminals": [
+    "X21.S",
+    "X21.G",
+    "X22.D",
+    "X23.D",
+    "X26.G",
+    "X170.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n25",
+   "terminals": [
+    "X24.S",
+    "X24.G",
+    "X25.D",
+    "X28.G",
+    "X39.G",
+    "X156.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$auto$blifparse.cc:397:parse_blif$228.MID",
+   "terminals": [
+    "X25.S",
+    "X26.D"
+   ]
+  },
+  {
+   "net_id": "CIN",
+   "terminals": [
+    "X25.G",
+    "X169.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n26",
+   "terminals": [
+    "X27.S",
+    "X27.G",
+    "X28.D",
+    "X172.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n27",
+   "terminals": [
+    "X29.S",
+    "X29.G",
+    "X30.D",
+    "X36.G",
+    "X59.G",
+    "X64.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$auto$blifparse.cc:397:parse_blif$230.MID",
+   "terminals": [
+    "X30.S",
+    "X31.D"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n28",
+   "terminals": [
+    "X32.S",
+    "X32.G",
+    "X33.D",
+    "X37.G",
+    "X62.G",
+    "X67.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$auto$blifparse.cc:397:parse_blif$231.MID",
+   "terminals": [
+    "X33.S",
+    "X34.D"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n29",
+   "terminals": [
+    "X35.S",
+    "X35.G",
+    "X36.D",
+    "X40.G",
+    "X158.G",
+    "X163.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$auto$blifparse.cc:397:parse_blif$232.MID",
+   "terminals": [
+    "X36.S",
+    "X37.D"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n30",
+   "terminals": [
+    "X38.S",
+    "X38.G",
+    "X39.D",
+    "X40.D",
+    "X42.G",
+    "X87.G",
+    "X90.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n31",
+   "terminals": [
+    "X41.S",
+    "X41.G",
+    "X42.D",
+    "X84.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n32",
+   "terminals": [
+    "X43.S",
+    "X43.G",
+    "X44.D",
+    "X45.D",
+    "X53.G",
+    "X96.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n33",
+   "terminals": [
+    "X46.S",
+    "X46.G",
+    "X47.D",
+    "X99.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$auto$blifparse.cc:397:parse_blif$236.MID",
+   "terminals": [
+    "X47.S",
+    "X48.D"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n34",
+   "terminals": [
+    "X49.S",
+    "X49.G",
+    "X50.D",
+    "X51.D",
+    "X54.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n35",
+   "terminals": [
+    "X52.S",
+    "X52.G",
+    "X53.D",
+    "X54.D",
+    "X56.G",
+    "X73.G",
+    "X76.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n36",
+   "terminals": [
+    "X55.S",
+    "X55.G",
+    "X56.D",
+    "X70.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n37",
+   "terminals": [
+    "X57.S",
+    "X57.G",
+    "X58.D",
+    "X68.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$auto$blifparse.cc:397:parse_blif$240.MID",
+   "terminals": [
+    "X58.S",
+    "X59.D"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n38",
+   "terminals": [
+    "X60.S",
+    "X60.G",
+    "X61.D",
+    "X65.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$auto$blifparse.cc:397:parse_blif$241.MID",
+   "terminals": [
+    "X61.S",
+    "X62.D"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n39",
+   "terminals": [
+    "X63.S",
+    "X63.G",
+    "X64.D",
+    "X74.G",
+    "X77.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$auto$blifparse.cc:397:parse_blif$242.MID",
+   "terminals": [
+    "X64.S",
+    "X65.D"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n40",
+   "terminals": [
+    "X66.S",
+    "X66.G",
+    "X67.D",
+    "X71.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$auto$blifparse.cc:397:parse_blif$243.MID",
+   "terminals": [
+    "X67.S",
+    "X68.D"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n41",
+   "terminals": [
+    "X69.S",
+    "X69.G",
+    "X70.D",
+    "X71.D",
+    "X79.G",
+    "X97.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n42",
+   "terminals": [
+    "X72.S",
+    "X72.G",
+    "X73.D",
+    "X100.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$auto$blifparse.cc:397:parse_blif$245.MID",
+   "terminals": [
+    "X73.S",
+    "X74.D"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n43",
+   "terminals": [
+    "X75.S",
+    "X75.G",
+    "X76.D",
+    "X77.D",
+    "X80.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n44",
+   "terminals": [
+    "X78.S",
+    "X78.G",
+    "X79.D",
+    "X80.D",
+    "X82.G",
+    "X88.G",
+    "X91.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n45",
+   "terminals": [
+    "X81.S",
+    "X81.G",
+    "X82.D",
+    "X85.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n46",
+   "terminals": [
+    "X83.S",
+    "X83.G",
+    "X84.D",
+    "X85.D",
+    "X93.G",
+    "X140.G",
+    "X149.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n47",
+   "terminals": [
+    "X86.S",
+    "X86.G",
+    "X87.D",
+    "X137.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$auto$blifparse.cc:397:parse_blif$250.MID",
+   "terminals": [
+    "X87.S",
+    "X88.D"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n48",
+   "terminals": [
+    "X89.S",
+    "X89.G",
+    "X90.D",
+    "X91.D",
+    "X94.G"
+   ]
+  },
+  {
+   "net_id": "S[2]",
+   "terminals": [
+    "X92.S",
+    "X92.G",
+    "X93.D",
+    "X94.D"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n50",
+   "terminals": [
+    "X95.S",
+    "X95.G",
+    "X96.D",
+    "X97.D",
+    "X119.G",
+    "X128.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n51",
+   "terminals": [
+    "X98.S",
+    "X98.G",
+    "X99.D",
+    "X122.G",
+    "X125.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$auto$blifparse.cc:397:parse_blif$254.MID",
+   "terminals": [
+    "X99.S",
+    "X100.D"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n52",
+   "terminals": [
+    "X101.S",
+    "X101.G",
+    "X102.D",
+    "X103.D",
+    "X113.G",
+    "X143.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n53",
+   "terminals": [
+    "X104.S",
+    "X104.G",
+    "X105.D",
+    "X116.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$auto$blifparse.cc:397:parse_blif$256.MID",
+   "terminals": [
+    "X105.S",
+    "X106.D"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n54",
+   "terminals": [
+    "X107.S",
+    "X107.G",
+    "X108.D",
+    "X109.D",
+    "X111.G",
+    "X114.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n55",
+   "terminals": [
+    "X110.S",
+    "X110.G",
+    "X111.D",
+    "X117.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n56",
+   "terminals": [
+    "X112.S",
+    "X112.G",
+    "X113.D",
+    "X114.D",
+    "X123.G",
+    "X126.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n57",
+   "terminals": [
+    "X115.S",
+    "X115.G",
+    "X116.D",
+    "X120.G",
+    "X129.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$auto$blifparse.cc:397:parse_blif$260.MID",
+   "terminals": [
+    "X116.S",
+    "X117.D"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n58",
+   "terminals": [
+    "X118.S",
+    "X118.G",
+    "X119.D",
+    "X120.D",
+    "X131.G",
+    "X144.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n59",
+   "terminals": [
+    "X121.S",
+    "X121.G",
+    "X122.D",
+    "X134.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$auto$blifparse.cc:397:parse_blif$262.MID",
+   "terminals": [
+    "X122.S",
+    "X123.D"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n60",
+   "terminals": [
+    "X124.S",
+    "X124.G",
+    "X125.D",
+    "X126.D",
+    "X132.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n61",
+   "terminals": [
+    "X127.S",
+    "X127.G",
+    "X128.D",
+    "X135.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$auto$blifparse.cc:397:parse_blif$264.MID",
+   "terminals": [
+    "X128.S",
+    "X129.D"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n62",
+   "terminals": [
+    "X130.S",
+    "X130.G",
+    "X131.D",
+    "X132.D",
+    "X141.G",
+    "X150.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n63",
+   "terminals": [
+    "X133.S",
+    "X133.G",
+    "X134.D",
+    "X138.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$auto$blifparse.cc:397:parse_blif$266.MID",
+   "terminals": [
+    "X134.S",
+    "X135.D"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n64",
+   "terminals": [
+    "X136.S",
+    "X136.G",
+    "X137.D",
+    "X138.D",
+    "X152.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n65",
+   "terminals": [
+    "X139.S",
+    "X139.G",
+    "X140.D",
+    "X146.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$auto$blifparse.cc:397:parse_blif$268.MID",
+   "terminals": [
+    "X140.S",
+    "X141.D"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n66",
+   "terminals": [
+    "X142.S",
+    "X142.G",
+    "X143.D",
+    "X144.D",
+    "X147.G"
+   ]
+  },
+  {
+   "net_id": "COUT",
+   "terminals": [
+    "X145.S",
+    "X145.G",
+    "X146.D"
+   ]
+  },
+  {
+   "net_id": "$abc$217$auto$blifparse.cc:397:parse_blif$270.MID",
+   "terminals": [
+    "X146.S",
+    "X147.D"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n68",
+   "terminals": [
+    "X148.S",
+    "X148.G",
+    "X149.D",
+    "X150.D",
+    "X153.G"
+   ]
+  },
+  {
+   "net_id": "S[3]",
+   "terminals": [
+    "X151.S",
+    "X151.G",
+    "X152.D",
+    "X153.D"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n70",
+   "terminals": [
+    "X154.S",
+    "X154.G",
+    "X155.D",
+    "X159.G",
+    "X164.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$auto$blifparse.cc:397:parse_blif$273.MID",
+   "terminals": [
+    "X155.S",
+    "X156.D"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n71",
+   "terminals": [
+    "X157.S",
+    "X157.G",
+    "X158.D",
+    "X159.D",
+    "X161.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n72",
+   "terminals": [
+    "X160.S",
+    "X160.G",
+    "X161.D",
+    "X166.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n73",
+   "terminals": [
+    "X162.S",
+    "X162.G",
+    "X163.D",
+    "X167.G"
+   ]
+  },
+  {
+   "net_id": "$abc$217$auto$blifparse.cc:397:parse_blif$276.MID",
+   "terminals": [
+    "X163.S",
+    "X164.D"
+   ]
+  },
+  {
+   "net_id": "S[1]",
+   "terminals": [
+    "X165.S",
+    "X165.G",
+    "X166.D"
+   ]
+  },
+  {
+   "net_id": "$abc$217$auto$blifparse.cc:397:parse_blif$277.MID",
+   "terminals": [
+    "X166.S",
+    "X167.D"
+   ]
+  },
+  {
+   "net_id": "$abc$217$new_n75",
+   "terminals": [
+    "X168.S",
+    "X168.G",
+    "X169.D",
+    "X170.D",
+    "X173.G"
+   ]
+  },
+  {
+   "net_id": "S[0]",
+   "terminals": [
+    "X171.S",
+    "X171.G",
+    "X172.D",
+    "X173.D"
+   ]
+  }
+ ],
+ "instances": [
+  {
+   "instance_id": "X1",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X2",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X3",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X4",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X5",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X6",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X7",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X8",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X9",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X10",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X11",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X12",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X13",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X14",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X15",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X16",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X17",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X18",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X19",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X20",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X21",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X22",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X23",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X24",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X25",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X26",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X27",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X28",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X29",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X30",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X31",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X32",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X33",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X34",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X35",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X36",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X37",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X38",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X39",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X40",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X41",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X42",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X43",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X44",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X45",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X46",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X47",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X48",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X49",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X50",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X51",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X52",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X53",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X54",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X55",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X56",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X57",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X58",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X59",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X60",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X61",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X62",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X63",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X64",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X65",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X66",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X67",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X68",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X69",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X70",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X71",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X72",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X73",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X74",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X75",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X76",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X77",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X78",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X79",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X80",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X81",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X82",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X83",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X84",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X85",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X86",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X87",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X88",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X89",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X90",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X91",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X92",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X93",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X94",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X95",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X96",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X97",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X98",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X99",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X100",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X101",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X102",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X103",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X104",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X105",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X106",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X107",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X108",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X109",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X110",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X111",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X112",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X113",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X114",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X115",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X116",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X117",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X118",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X119",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X120",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X121",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X122",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X123",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X124",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X125",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X126",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X127",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X128",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X129",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X130",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X131",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X132",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X133",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X134",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X135",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X136",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X137",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X138",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X139",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X140",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X141",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X142",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X143",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X144",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X145",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X146",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X147",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X148",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X149",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X150",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X151",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X152",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X153",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X154",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X155",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X156",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X157",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X158",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X159",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X160",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X161",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X162",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X163",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X164",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X165",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X166",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X167",
+   "device_cell": "dev20_8"
+  },
+  {
+   "instance_id": "X168",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X169",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X170",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X171",
+   "device_cell": "dev50_3"
+  },
+  {
+   "instance_id": "X172",
+   "device_cell": "dev10_8"
+  },
+  {
+   "instance_id": "X173",
+   "device_cell": "dev10_8"
+  }
+ ],
+ "required_cells": [
+  "dev20_8",
+  "dev50_3",
+  "dev10_8"
+ ]
+}

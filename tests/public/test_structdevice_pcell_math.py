@@ -92,3 +92,31 @@ def test_v1_normalises_to_v2_byte_identical():
     for W, L in [(7, 5), (14, 5), (10, 3)]:
         old = -380 + -536 * W + -258 * L          # v1 arithmetic, same order
         assert sd._edge_value(e["x1"], {"w_um": W, "l_um": L}, po, so) == int(round(old))
+
+
+def test_klink_eval_edge_matches_plugin_edge_value():
+    # The klink package ships its own edge evaluator (klink.domains.structdevice
+    # .pcell_fitter.eval_edge) so device EXAMPLES stay decoupled from the KLayout
+    # plugin. This guard asserts the two implementations never drift -- a drift
+    # would silently break a fitted device's geometry (and its LVS).
+    from klink.domains.structdevice.pcell_fitter import eval_edge
+
+    t = _v2_table()
+    po = t["param_order"]
+    so = t["sample_order"]
+    edges = t["styles"]["s"]["roles"]["r"]["edges"]
+    for W, L in [(7, 5), (14, 5), (10, 3), (50, 8)]:
+        params = {"w_um": W, "l_um": L}
+        for name, edge in edges.items():
+            try:
+                plugin_val = sd._edge_value(edge, params, po, so)
+                plugin_err = None
+            except Exception as e:  # non_parametric miss etc.
+                plugin_val, plugin_err = None, type(e).__name__
+            try:
+                klink_val = eval_edge(edge, params, po, so)
+                klink_err = None
+            except Exception as e:
+                klink_val, klink_err = None, type(e).__name__
+            assert (plugin_val, plugin_err) == (klink_val, klink_err), (
+                name, (W, L), plugin_val, plugin_err, klink_val, klink_err)

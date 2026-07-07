@@ -9,6 +9,8 @@ by category:
 nanodevice/   hallbar, ebl_wraparound, neural_electrode
 photonics/    gf_mzi_module                (needs gdsfactory)
 passives/     idc_capacitor, spiral_inductor, saw_idt_filter, baw_fbar_planview
+digital/      fit_device_pnr_lvs, padframe_pnr_lvs, chat_to_netlist_pnr,
+              multilayer_pnr_lvs           (custom device -> P&R -> live LVS)
 ```
 
 ## Run one
@@ -26,9 +28,16 @@ The passive-device files (`passives/`) are **geometry templates, not validated
 electrical/acoustic designs** — tune the numbers for your process and verify
 with your own models.
 
-## Heavier examples (not here)
+## Digital place-and-route → LVS (`digital/`)
 
-End-to-end digital place-and-route to LVS (custom-device fitting, probe-card
-padframes) reads bundled netlists and cross-imports, so those live in the
-repository at `examples_klink/public/demos/` and run from a clone, not from this
-scaffolded template.
+The `digital/` family is the end-to-end flow: fit a custom device from exemplar
+geometry, place it from a netlist, route it, and verify with **live LVS**. These
+need a running KLayout session (they do real P&R + extraction), so pass a port:
+
+```bash
+python example_template/digital/fit_device_pnr_lvs.py --port <session-port>
+python example_template/digital/padframe_pnr_lvs.py --port <session-port> [--no-card]
+```
+
+They cross-import within the folder and read the bundled `*.devnet.json`
+netlists next to them; keep the folder together when you copy it.

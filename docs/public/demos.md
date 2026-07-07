@@ -13,7 +13,7 @@ Everything device- and process-specific lives in the example itself; `klink`
 ships zero process constants. Copy a demo and edit its numbers for your own
 process — the flow is identical.
 
-> **How you run these depends on how you installed klink.** Eight examples are
+> **How you run these depends on how you installed klink.** All of these are
 > **starters** bundled in the wheel: `klink init <proj>` scaffolds them into
 > `<proj>/example_template/`, grouped by category, and a `pip install` user runs
 > them as `python example_template/<category>/<name>.py`:
@@ -23,13 +23,14 @@ process — the flow is identical.
 > | `nanodevice/` | ebl_wraparound, hallbar, neural_electrode |
 > | `photonics/` | gf_mzi_module |
 > | `passives/` | idc_capacitor, spiral_inductor, saw_idt_filter, baw_fbar_planview |
+> | `digital/` | fit_device_pnr_lvs, padframe_pnr_lvs, chat_to_netlist_pnr, multilayer_pnr_lvs |
 >
-> The four digital P&R demos (**fit_device_pnr_lvs, chat_to_netlist_pnr,
-> multilayer_pnr_lvs, padframe_pnr_lvs**) are **repo-only**: they read a bundled
-> netlist and cross-import each other, so they run from a clone of the repository,
-> not from a pip install. The command shown under each demo below is the repo
-> `python -m …` form; if you are a starter user, run the
-> `python example_template/<category>/<name>.py` form instead.
+> The `digital/` family does live P&R + LVS, so those need a running KLayout
+> session (`--port <session-port>`); they cross-import within the folder and read
+> the bundled netlists next to them, so the folder ships together. The command
+> shown under each demo below is the repo `python -m …` form; if you are a
+> starter user, run the `python example_template/<category>/<name>.py` form
+> instead.
 
 ## Runs offline (no KLayout, no GDS)
 
