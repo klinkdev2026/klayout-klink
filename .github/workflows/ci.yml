@@ -59,3 +59,113 @@ jobs:
           python -m pip install ./rust/klink_boxmaze
       - name: Verify the Rust kernel imports
         run: python -c "import klink_boxmaze_rs, platform; print('kernel built on', platform.platform())"
+
+  gf-compat:
+    # gdsfactory drift bit us once (gf.Port `center` unit drift across
+    # versions broke the public gf demo). The base `unit` job installs NO
+    # gdsfactory at all (on purpose, to keep CI light), so every gf-gated
+    # test in tests/unit silently skips there. This job installs gdsfactory
+    # across the version range a `[photonics]` user can actually resolve and
+    # un-skips those tests. One axis (gdsfactory version) on one OS/python —
+    # the OS axis is already covered by `unit`.
+    name: gf-compat (${{ matrix.leg }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # floor: the pinned/tested line users get from `[photonics]`.
+          - leg: floor
+            gf_spec: "gdsfactory==9.40.*"
+            continue_on_error: false
+          # latest-9x: newest gf a `[photonics]` user (gdsfactory>=9.40,<10)
+          # can resolve today.
+          - leg: latest-9x
+            gf_spec: "gdsfactory>=9.40,<10"
+            continue_on_error: false
+          # unbounded: no pin at all. Informational early-warning for a
+          # gdsfactory 10 release; must NOT gate merges.
+          - leg: unbounded
+            gf_spec: "gdsfactory"
+            continue_on_error: true
+          # descent-9.0: oldest published 9.x line. Its kfactory pin in turn
+          # pins klayout to a different line than floor/latest-9x resolve.
+          - leg: descent-9.0
+            gf_spec: "gdsfactory==9.0.*"
+            continue_on_error: false
+          # descent-8x: newest published 8.x line. Not part of the shipped
+          # `[photonics]` pin (still `>=9.0,<10`) — informational early
+          # warning for an unsupported-but-working line, not a support
+          # commitment.
+          - leg: descent-8x
+            gf_spec: "gdsfactory==8.32.*"
+            continue_on_error: true
+    runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.continue_on_error }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          # gdsfactory 9.40.x-9.45.x wheels declare requires-python
+          # ">=3.11,<3.14" on PyPI; klayout ships manylinux cp312 wheels on
+          # every line this repo cares about. 3.12 sits inside gf's supported
+          # range and is not the project's floor (3.10, exercised by `unit`),
+          # so this job adds real coverage rather than duplicating it.
+          python-version: "3.12"
+          cache: pip
+      - name: Install package + test deps + gdsfactory (${{ matrix.leg }})
+        run: |
+          # Same base as the `unit` job (klayout + numpy), plus the
+          # version-pinned gdsfactory leg under test.
+          python -m pip install --upgrade pip pytest klayout numpy "${{ matrix.gf_spec }}"
+          # --no-deps: same rationale as `unit` — the Rust kernels aren't on
+          # PyPI yet; gdsfactory pulls its own deps (numpy, etc) regardless.
+          python -m pip install -e . --no-deps
+      - name: Print resolved versions
+        run: |
+          python -c "import importlib.metadata as m; print('gdsfactory', m.version('gdsfactory'))"
+          python -c "import importlib.metadata as m; print('klayout', m.version('klayout'))"
+      - name: Unit tests (gf-gated tests un-skip here)
+        run: python -m pytest tests/unit -q
+
+  klayout-compat:
+    # The klayout pip module's pya DB API does move across minor lines. The
+    # `unit` job only ever installs unpinned latest, so drift on older lines
+    # users still run goes unguarded. One axis (klayout version) on one
+    # OS/python; no gdsfactory here (one axis per job).
+    name: klayout-compat (${{ matrix.klayout_line }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Two previous minor lines + current.
+          #   0.28 -> wheels up to cp312 only (no cp313) -> pin this leg to
+          #           python 3.12.
+          #   0.29 -> wheels cp38-cp313 -> 3.12 fits.
+          #   0.30 -> current line -> 3.12 fits.
+          # 3.12 is used uniformly across all three legs because it is the
+          # newest CPython every line's wheel matrix actually supports.
+          - klayout_line: "0.28.*"
+            python: "3.12"
+          - klayout_line: "0.29.*"
+            python: "3.12"
+          - klayout_line: "0.30.*"
+            python: "3.12"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install package + test deps + klayout (${{ matrix.klayout_line }})
+        run: |
+          # Same base as the `unit` job (pytest + numpy), plus the
+          # version-pinned klayout leg under test.
+          python -m pip install --upgrade pip pytest numpy "klayout==${{ matrix.klayout_line }}"
+          python -m pip install -e . --no-deps
+      - name: Print resolved klayout version
+        # importlib.metadata works across every klayout line, including ones
+        # where the module's own `klayout.__version__` attribute may be
+        # absent on older lines -- kept as the robust accessor either way.
+        run: python -c "import importlib.metadata as m; print('klayout', m.version('klayout'))"
+      - name: Unit tests
+        run: python -m pytest tests/unit -q

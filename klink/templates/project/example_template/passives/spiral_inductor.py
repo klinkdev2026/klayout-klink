@@ -153,9 +153,14 @@ def build_spiral(params: dict) -> dict:
         "bbox_um": via_box,
     })
 
-    out_orientation = math.degrees(math.atan2(
+    # The square spiral's own segments are already axis-aligned, so this is
+    # exactly 0/90/180/270 in practice -- snap to the nearest 90 deg multiple
+    # anyway so OUT hands routing a clean Manhattan-axis interface even if
+    # floating-point noise ever nudges the raw atan2 result off-axis.
+    raw_out_orientation = math.degrees(math.atan2(
         points[-1][1] - points[-2][1], points[-1][0] - points[-2][0],
     )) % 360.0
+    out_orientation = round(raw_out_orientation / 90.0) * 90.0 % 360.0
     ports = [
         {
             "name": "OUT", "center_um": [points[-1][0], points[-1][1]],
@@ -306,10 +311,18 @@ def write_offline(params: dict, out_path: str) -> dict:
 
 
 def push_live(params: dict, *, port: int, keep: bool) -> dict:
-    from klink import KLinkClient
+    from klink import KLinkClient, KLinkTransportError
 
     bundle = build_spiral(params)
-    with KLinkClient(port=port).connect() as client:
+    try:
+        session = KLinkClient(port=port).connect()
+    except KLinkTransportError as e:
+        raise RuntimeError(
+            f"could not connect to klink on port {port}: {e}\n"
+            "Confirm KLayout is running with the klink plugin loaded, or "
+            "pass --port <your session's klink port>."
+        ) from e
+    with session as client:
         cells = {c["name"] for c in client.cell_list(limit=1000).get("cells", [])}
         if bundle["cell"] in cells:
             client.cell_delete(bundle["cell"], recursive=True)

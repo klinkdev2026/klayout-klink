@@ -24,12 +24,20 @@ extends further out on the side OPPOSITE the top connection to reach its own
 contact pad -- so bottom/top overlap is effectively the whole pentagon.
 `top_connect` is a strip from the pentagon's most eastward edge to a probe
 pad; `bottom_connect` is simply the bottom electrode's own westward
-extension, ending in its own pad. An optional `membrane_release` box
-(documentation layer only) marks the released-membrane area around the
-active region. A `StackSpec` instance documents the intended vertical stack
-(top electrode / piezo / bottom electrode) as DATA -- descriptive only, not
-drawn geometry (StackSpec has no notion of a non-conductor interlayer; the
-piezo sits between the two declared conductors in the real stack).
+extension, ending in its own pad. The `membrane_release` documentation
+layer (on by default) traces the pentagon's OWN outline -- the same
+five-sided shape as `top_electrode`, uniformly offset outward by
+`membrane_margin_um` -- rather than its rectangular bounding box. This
+matters because `bottom_electrode` physically has to fully cover the
+pentagon (100% top/bottom overlap is a required invariant, never shrink the
+bottom electrode to "reveal" the pentagon): with the release layer drawn as
+a matching pentagon outline instead of a box, the resonator's true active
+shape stays visible on its own documentation layer even though the metal
+stack beneath it is a solid, fully-overlapping rectangle. A `StackSpec`
+instance documents the intended vertical stack (top electrode / piezo /
+bottom electrode) as DATA -- descriptive only, not drawn geometry (StackSpec
+has no notion of a non-conductor interlayer; the piezo sits between the two
+declared conductors in the real stack).
 
 Params (all microns/um^2 unless noted):
   active_area_um2       target pentagon (active membrane) area
@@ -39,8 +47,8 @@ Params (all microns/um^2 unless noted):
                          pentagon on the side opposite the top connection
   overlap_margin_um     margin the bottom electrode adds around the
                          pentagon's bbox on the other three sides
-  membrane_margin_um    margin of the optional membrane_release box around
-                         the pentagon's bbox
+  membrane_margin_um    outward offset of the membrane_release pentagon
+                         outline from the top_electrode pentagon's own edges
 
 Ports: TOP (top pad, outward = +x / 0 deg), BOT (bottom pad, outward = -x /
 180 deg).
@@ -114,6 +122,49 @@ def _edge_direction_classes_deg(vertices: list[tuple[float, float]]) -> list[flo
     return classes
 
 
+def _offset_convex_polygon(vertices: list[tuple[float, float]], margin: float) -> list[tuple[float, float]]:
+    """Uniformly offset a CONVEX polygon's boundary outward by `margin`
+    (pure Python/math -- no klayout import, matching this module's
+    "pure geometry builder" convention): push each edge outward along its
+    own normal by `margin`, then re-intersect consecutive offset edge lines
+    to get the new vertices. The pentagon this is used for is convex by
+    construction and, per the "no two edges parallel" invariant, no two
+    edges ever share a direction -- so every pair of consecutive offset
+    lines is guaranteed to intersect (never parallel)."""
+    n = len(vertices)
+    # Ensure CCW winding (shoelace sum > 0) so "rotate edge direction by
+    # -90 deg" is the OUTWARD normal; the base pentagon recipe is already
+    # CCW, but this keeps the helper correct if that ever changes.
+    area2 = sum(vertices[i][0] * vertices[(i + 1) % n][1] - vertices[(i + 1) % n][0] * vertices[i][1]
+                for i in range(n))
+    verts = list(vertices) if area2 > 0 else list(reversed(vertices))
+
+    offset_lines: list[tuple[tuple[float, float], tuple[float, float]]] = []
+    for i in range(n):
+        x0, y0 = verts[i]
+        x1, y1 = verts[(i + 1) % n]
+        ex, ey = x1 - x0, y1 - y0
+        length = math.hypot(ex, ey)
+        ux, uy = ex / length, ey / length
+        nx, ny = uy, -ux  # outward normal for a CCW polygon
+        offset_lines.append(((x0 + nx * margin, y0 + ny * margin), (ux, uy)))
+
+    def _line_intersect(p0, d0, p1, d1) -> tuple[float, float]:
+        x0, y0 = p0
+        dx0, dy0 = d0
+        x1, y1 = p1
+        dx1, dy1 = d1
+        denom = dx0 * dy1 - dy0 * dx1
+        t = ((x1 - x0) * dy1 - (y1 - y0) * dx1) / denom
+        return (x0 + dx0 * t, y0 + dy0 * t)
+
+    return [
+        _line_intersect(offset_lines[i - 1][0], offset_lines[i - 1][1],
+                         offset_lines[i][0], offset_lines[i][1])
+        for i in range(n)
+    ]
+
+
 def build_baw_fbar(params: dict) -> dict:
     """Pure geometry builder (no klayout/klink import): returns the shape
     item list, the port list, and the derived numbers the invariants in
@@ -181,11 +232,19 @@ def build_baw_fbar(params: dict) -> dict:
                        bottom_pad_x0 + pad_size_um, pad_size_um / 2.0]
     items.append({"kind": "box", "layer": blayer, "datatype": bdt, "bbox_um": bottom_pad_box})
 
-    membrane_box = [bbox[0] - membrane_margin_um, bbox[1] - membrane_margin_um,
-                     bbox[2] + membrane_margin_um, bbox[3] + membrane_margin_um]
+    # membrane_release: documentation layer ON by default, tracing the
+    # pentagon's OWN outline (same shape as top_electrode, offset outward by
+    # membrane_margin_um) instead of its rectangular bbox -- see module
+    # docstring for why: bottom_electrode must physically fully cover the
+    # pentagon (100% overlap invariant), so this is the only layer where the
+    # resonator's true active shape stays visible.
+    membrane_pentagon = _offset_convex_polygon(pentagon, membrane_margin_um)
+    membrane_xs = [p[0] for p in membrane_pentagon]
+    membrane_ys = [p[1] for p in membrane_pentagon]
+    membrane_bbox = (min(membrane_xs), min(membrane_ys), max(membrane_xs), max(membrane_ys))
     items.append({
-        "kind": "box", "layer": LAYER_MEMBRANE[0], "datatype": LAYER_MEMBRANE[1],
-        "bbox_um": membrane_box,
+        "kind": "polygon", "layer": LAYER_MEMBRANE[0], "datatype": LAYER_MEMBRANE[1],
+        "points_um": [list(p) for p in membrane_pentagon],
     })
 
     ports = [
@@ -228,7 +287,8 @@ def build_baw_fbar(params: dict) -> dict:
         "top_pad_box_um": top_pad_box,
         "bottom_pad_box_um": bottom_pad_box,
         "bottom_box_um": bottom_box,
-        "membrane_box_um": membrane_box,
+        "membrane_pentagon_um": [list(p) for p in membrane_pentagon],
+        "membrane_bbox_um": list(membrane_bbox),
         "stack": stack.to_dict(),
     }
     return {"cell": CELL_NAME, "items": items, "ports": ports, "summary": summary, "pentagon_um": pentagon}
@@ -350,10 +410,18 @@ def write_offline(params: dict, out_path: str) -> dict:
 
 
 def push_live(params: dict, *, port: int, keep: bool) -> dict:
-    from klink import KLinkClient
+    from klink import KLinkClient, KLinkTransportError
 
     bundle = build_baw_fbar(params)
-    with KLinkClient(port=port).connect() as client:
+    try:
+        session = KLinkClient(port=port).connect()
+    except KLinkTransportError as e:
+        raise RuntimeError(
+            f"could not connect to klink on port {port}: {e}\n"
+            "Confirm KLayout is running with the klink plugin loaded, or "
+            "pass --port <your session's klink port>."
+        ) from e
+    with session as client:
         cells = {c["name"] for c in client.cell_list(limit=1000).get("cells", [])}
         if bundle["cell"] in cells:
             client.cell_delete(bundle["cell"], recursive=True)

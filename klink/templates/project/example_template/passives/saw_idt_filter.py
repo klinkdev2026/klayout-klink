@@ -293,10 +293,18 @@ def write_offline(params: dict, out_path: str) -> dict:
 
 
 def push_live(params: dict, *, port: int, keep: bool) -> dict:
-    from klink import KLinkClient
+    from klink import KLinkClient, KLinkTransportError
 
     bundle = build_saw_idt(params)
-    with KLinkClient(port=port).connect() as client:
+    try:
+        session = KLinkClient(port=port).connect()
+    except KLinkTransportError as e:
+        raise RuntimeError(
+            f"could not connect to klink on port {port}: {e}\n"
+            "Confirm KLayout is running with the klink plugin loaded, or "
+            "pass --port <your session's klink port>."
+        ) from e
+    with session as client:
         cells = {c["name"] for c in client.cell_list(limit=1000).get("cells", [])}
         if bundle["cell"] in cells:
             client.cell_delete(bundle["cell"], recursive=True)
