@@ -63,6 +63,16 @@
         </ul>
         <div class="note">The core package does not bundle third-party scientific libraries. Feature errors name the exact missing `pip install` command.</div>
 
+        <h3>Supported versions</h3>
+        <table class="data-table">
+          <thead><tr><th>Component</th><th>Floor</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td>`klayout` (pip)</td><td>&gt;= 0.28</td><td>0.27 is not supported: klink's device extractor uses a `GenericDeviceExtractor` overload that pya itself documents as introduced in 0.28.</td></tr>
+            <tr><td>`gdsfactory` (`[photonics]`)</td><td>&gt;= 9.0, &lt; 10</td><td>Every 9.x release is covered. gdsfactory 8.x works in testing but is not part of the pin yet -- treat it as experimental.</td></tr>
+          </tbody>
+        </table>
+        <p>These versions are continuously verified by the public repo's CI gf-compat / klayout-compat matrices.</p>
+
         <h2 id="python">Install the Python package</h2>
         <pre><code>python -m pip install klayout-klink</code></pre>
         <p>This installs `klink` and its own two Rust acceleration kernels, `klink-boxmaze-rs` and `klink-trackmaze-rs`. On unsupported platforms pip may build the kernels from source, which requires a Rust toolchain. For pure-Python core only:</p>

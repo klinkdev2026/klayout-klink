@@ -153,7 +153,7 @@ klink update mychip</code></pre>
         <p>新领域=一个为它塑形的 <code>pdk.py</code> + 一个 <code>custom_devices/</code> 脚本（import 你的工艺、显式调 klink API）。复制最近的目录条目改写即可，<strong>你从不编辑 klink 来加领域</strong>。</p>
 
         <h2 id="walkthroughs" class="anchor-h">图文分步教程</h2>
-        <p>下面是 7 篇分步图文教程——5 个 starter 示例（<code>example_template/</code> 里可以直接跑）加 2 个 repo-only 示例（需要仓库克隆）：<strong>教程与示例是同一个实体的两个视图</strong>，每篇教程对应一个示例脚本，把它拆成可观察的阶段，每一步在 live KLayout 里真的画出来、截图，并配上产生它的 klink 调用，最后用结构化报告（而不是截图）判定完成；教程结尾就是那条能直接复制运行的一键命令。建议按顺序读——后一篇会复用前一篇建立的概念。逐个 demo 的功能/依赖/实测数字见 <a href="examples.html">示例</a>。</p>
+        <p>下面是 7 篇分步图文教程，全部对应 <code>example_template/</code> 里可以直接跑的 starter 示例（其中 digital 家族两篇需要 live KLayout 会话)：<strong>教程与示例是同一个实体的两个视图</strong>，每篇教程对应一个示例脚本，把它拆成可观察的阶段，每一步在 live KLayout 里真的画出来、截图，并配上产生它的 klink 调用，最后用结构化报告（而不是截图）判定完成；教程结尾就是那条能直接复制运行的一键命令。建议按顺序读——后一篇会复用前一篇建立的概念。逐个 demo 的功能/依赖/实测数字见 <a href="examples.html">示例</a>。</p>
         <div class="grid two">
           <a class="card" href="tutorial-hallbar.html">
             <span class="feature-kicker">入门 · nanodevice</span>
@@ -182,13 +182,13 @@ klink update mychip</code></pre>
           <a class="card" href="tutorial-fit-device.html">
             <span class="feature-kicker">structdevice · 数字 P&amp;R</span>
             <h3>自定义器件：拟合 → PCell → P&amp;R → LVS</h3>
-            <p>从几个不同尺寸的范例几何拟合出参数化边模型，注册成真 PCell，按网表摆放 173 个实例，FlexDR 详细布线，最后 live LVS match=True。repo-only，需 live KLayout。</p>
+            <p>从几个不同尺寸的范例几何拟合出参数化边模型，注册成真 PCell，按网表摆放 173 个实例，FlexDR 详细布线，最后 live LVS match=True。starter，需 live KLayout 会话。</p>
             <span class="card-more">看分步教程 →</span>
           </a>
           <a class="card" href="tutorial-padframe.html">
             <span class="feature-kicker green">structdevice · padframe</span>
             <h3>针卡优先的 padframe</h3>
-            <p>探针卡 / pad 环先固定，电路必须迁就它：pad 环 harvest、net→pad 分配、一半卡内一半卡下的摆放、分区电网，最后 card 与 <code>--no-card</code> 裸线头两种模式各自 live LVS match=True。repo-only，需 live KLayout。</p>
+            <p>探针卡 / pad 环先固定，电路必须迁就它：pad 环 harvest、net→pad 分配、一半卡内一半卡下的摆放、分区电网，最后 card 与 <code>--no-card</code> 裸线头两种模式各自 live LVS match=True。starter，需 live KLayout 会话。</p>
             <span class="card-more">看分步教程 →</span>
           </a>
           <a class="card" href="tutorial-passives.html">
@@ -222,9 +222,9 @@ python example_template/photonics/gf_mzi_module.py --port &lt;session-port&gt;
         <p>换成你的 PDK 时，层、stub 规则、cross-section 都来自你的脚本或 <code>pdk.py</code>。</p>
 
         <h2 id="digital" class="anchor-h">P&amp;R 到 LVS</h2>
-        <p>公开 release 的 digital path 是自包含或用户自带几何两种模式。fit-device demo 用合成 exemplar 跑通 device fit、placement、routing 和 live LVS。</p>
-        <pre><code># repo-only：需要仓库克隆运行，不在 pip wheel 里
-python -m examples_klink.public.demos.digital.fit_device_pnr_lvs --port &lt;session-port&gt;</code></pre>
+        <p>公开 release 的 digital path 是自包含或用户自带几何两种模式。fit-device demo 用合成 exemplar 跑通 device fit、placement、routing 和 live LVS。整个 digital 家族（fit-device、padframe、chat-to-netlist、multilayer）都是 <code>example_template/digital/</code> 里的 starter，需要一个运行中的 KLayout 会话：</p>
+        <pre><code>python example_template/digital/fit_device_pnr_lvs.py --port &lt;session-port&gt;
+# 仓库克隆里也可以: python -m examples_klink.public.demos.digital.fit_device_pnr_lvs --port &lt;session-port&gt;</code></pre>
         <p>器件无关的自定义器件流由 <a href="mcp-reference.html#d-structdevice"><code>structdevice.*</code></a> 一族提供：给器件级网表 → <code>build_from_netlist</code> 自动 floorplan/route/draw/LVS；或 SEND 驱动的 <code>declare_nets</code> → <code>connect_nets</code> → <code>lvs_check</code> → <code>spec_write</code>。任何 LVS mismatch 都会撤销全部改动。</p>
 
         <h2 id="verify" class="anchor-h">验证习惯</h2>

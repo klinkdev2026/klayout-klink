@@ -82,7 +82,7 @@
       <div class="container">
         <div class="eyebrow">Step-by-step tutorial · structdevice · 数字 P&amp;R</div>
         <h1>分步教程：自定义器件——从范例几何拟合到 PCell 再到 P&amp;R/LVS</h1>
-        <p>对应公开 gallery 里的 <a href="examples.html#fitdevice">fit-device demo</a>（repo-only）。前四篇教程画的都是“一个器件”；这一篇回答下一个问题：<strong>你自己的器件怎么接入数字 place &amp; route 流？</strong>整条链是：几个不同尺寸的范例几何（exemplar）→ 拟合出参数化边模型 → 注册成真 PCell → 按器件级网表摆放 173 个实例 → FlexDR 详细布线 → live LVS <code>match=True</code>。这也是 <strong>process purity</strong> 的活教材：器件形状、层号、线宽、间距全部写在这一个 example 文件里，klink 机制层零工艺常数——换成你自己的器件，就是换这份文件里的数字。</p>
+        <p>对应公开 gallery 里的 <a href="examples.html#fitdevice">fit-device demo</a>。前四篇教程画的都是“一个器件”；这一篇回答下一个问题：<strong>你自己的器件怎么接入数字 place &amp; route 流？</strong>整条链是：几个不同尺寸的范例几何（exemplar）→ 拟合出参数化边模型 → 注册成真 PCell → 按器件级网表摆放 173 个实例 → FlexDR 详细布线 → live LVS <code>match=True</code>。这也是 <strong>process purity</strong> 的活教材：器件形状、层号、线宽、间距全部写在这一个 example 文件里，klink 机制层零工艺常数——换成你自己的器件，就是换这份文件里的数字。</p>
       </div>
     </section>
 
@@ -104,9 +104,9 @@
       <article class="content">
         <h2 id="prereqs" class="anchor-h">前置条件</h2>
         <ul>
-          <li><strong>repo-only</strong>：这个 demo 读源码树，不在 pip wheel 里。先克隆仓库：<code>git clone https://github.com/klinkdev2026/klayout-klink &amp;&amp; cd klayout-klink</code>。</li>
+          <li><strong>starter</strong>：<code>klink init &lt;proj&gt;</code> 脚手架里就有（<code>example_template/digital/fit_device_pnr_lvs.py</code>）；需要一个运行中的 KLayout 会话（它做 live P&amp;R+LVS）。</li>
           <li>KLayout 正在运行，并已加载 klink 插件（把 <code>--port</code> 指向你的 live 会话）。</li>
-          <li>完整流程就是一条命令：<code>python -m examples_klink.public.demos.digital.fit_device_pnr_lvs --port &lt;session-port&gt;</code>（加 <code>--draw-only</code> 只画器件、跳过 P&amp;R/LVS）。</li>
+          <li>完整流程就是一条命令：<code>python example_template/digital/fit_device_pnr_lvs.py --port &lt;session-port&gt;</code>（加 <code>--draw-only</code> 只画器件、跳过 P&amp;R/LVS；仓库克隆里也可以用 <code>python -m examples_klink.public.demos.digital.fit_device_pnr_lvs --port &lt;session-port&gt;</code>）。</li>
         </ul>
         <div class="note">这篇教程把 demo 一次跑完的流程拆成 6 个可观察的阶段，每一步都在 live KLayout 里真的执行、截图。demo 里的器件是<strong>合成的</strong>（数字干净、明显非真实工艺），所以整个 demo 零机密数据就能跑；把 <code>_device_boxes()</code> 换成你从自己手画 cell 里 harvest 出来的盒子，流程一行不改。</div>
 

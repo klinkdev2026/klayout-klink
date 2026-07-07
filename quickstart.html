@@ -65,6 +65,16 @@
           klink 核心包不打包第三方科学库。某个功能缺依赖时，工具会返回具体 `pip install` 指令。这样可以保持基础安装轻量。
         </div>
 
+        <h3>支持版本</h3>
+        <table class="data-table">
+          <thead><tr><th>组件</th><th>版本下限</th><th>说明</th></tr></thead>
+          <tbody>
+            <tr><td>`klayout`（pip）</td><td>&gt;= 0.28</td><td>0.27 不支持：klink 的 device extractor 用到一个 `GenericDeviceExtractor` 重载，pya 自己的文档说明它是 0.28 才引入的。</td></tr>
+            <tr><td>`gdsfactory`（`[photonics]`）</td><td>&gt;= 9.0, &lt; 10</td><td>9.x 全线版本都覆盖到。gdsfactory 8.x 测试能跑，但还没纳入 pin，当作实验性对待。</td></tr>
+          </tbody>
+        </table>
+        <p>这些版本由公开仓库 CI 的 gf-compat / klayout-compat 矩阵持续验证。</p>
+
         <h2 id="python">安装 Python 包</h2>
         <p>普通用户从 PyPI 安装公开包：</p>
         <pre><code>python -m pip install klayout-klink</code></pre>

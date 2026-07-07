@@ -61,7 +61,7 @@
 
       <article class="content">
         <h2 id="how" class="anchor-h">How you run them depends on how you installed</h2>
-        <p>8 demos are <strong>starters bundled in the wheel</strong>, grouped into <code>nanodevice/</code>, <code>photonics/</code>, and <code>passives/</code> categories: <code>klink init &lt;proj&gt;</code> scaffolds them into <code>&lt;proj&gt;/example_template/&lt;category&gt;/</code> and a pip user runs <code>python example_template/&lt;category&gt;/&lt;name&gt;.py</code> — <strong>ebl_wraparound, hallbar, neural_electrode</strong> under <code>nanodevice/</code>, <strong>gf_mzi_module</strong> under <code>photonics/</code>, and <strong>idc_capacitor, spiral_inductor, saw_idt_filter, baw_fbar_planview</strong> under <code>passives/</code> (the cards below give this command directly). The other 4 (<strong>fit_device_pnr_lvs, chat_to_netlist_pnr, multilayer_pnr_lvs, padframe_pnr_lvs</strong>) are <strong>repo-only</strong>: they read the source tree / a bundled netlist, so they only run from a clone, not from a pip install; the 4 cards below keep the repo <code>python -m …</code> form and are marked repo-only.</p>
+        <p>All 8 demos are <strong>starters bundled in the wheel</strong>, grouped into <code>nanodevice/</code>, <code>photonics/</code>, <code>passives/</code>, and <code>digital/</code> categories: <code>klink init &lt;proj&gt;</code> scaffolds them into <code>&lt;proj&gt;/example_template/&lt;category&gt;/</code> and a pip user runs <code>python example_template/&lt;category&gt;/&lt;name&gt;.py</code> — <strong>ebl_wraparound, hallbar, neural_electrode</strong> under <code>nanodevice/</code>, <strong>gf_mzi_module</strong> under <code>photonics/</code>, <strong>idc_capacitor, spiral_inductor, saw_idt_filter, baw_fbar_planview</strong> under <code>passives/</code>, and <strong>fit_device_pnr_lvs, chat_to_netlist_pnr, multilayer_pnr_lvs, padframe_pnr_lvs</strong> under <code>digital/</code> (the cards below give this command directly). The 4 <code>digital/</code> demos additionally need a running KLayout session (they do live P&amp;R+LVS); from a repo clone you can also run them as <code>python -m examples_klink.public.demos.digital.&lt;name&gt;</code>, which the cards below also give.</p>
         <div class="note">Running the demos <strong>needs no MCP</strong>. Each is a plain <code>python -m …</code> script talking to KLayout over the plugin port. MCP is the layer that lets your <em>agent</em> call klink as resident tools. Both paths use the same <code>pip install klayout-klink</code>.<br>A KLayout "port" is just a session — any port works; none has a special role. Use an empty or test-owned session, not your manual working tab.</div>
 
         <h2 id="overview" class="anchor-h">The 8 demos at a glance</h2>
@@ -121,8 +121,8 @@
         <div class="demo-card">
           <h2 id="fitdevice" class="anchor-h">4 · Fit a device → digital P&amp;R → LVS <span class="tier live">live KLayout</span></h2>
           <p>The full self-contained, IP-free digital flow: fit a parametric device PCell from <strong>synthetic</strong> exemplar geometry, place it, run detailed routing, and verify with live LVS. Swap in your own harvested exemplar boxes to fit your real device — the flow does not change.</p>
-          <pre><code># repo-only: needs a repo clone to run, not in the pip wheel
-python -m examples_klink.public.demos.digital.fit_device_pnr_lvs --port &lt;session-port&gt;   # [--draw-only]</code></pre>
+          <pre><code>python example_template/digital/fit_device_pnr_lvs.py --port &lt;session-port&gt;   # [--draw-only]
+# from a repo clone you can also run: python -m examples_klink.public.demos.digital.fit_device_pnr_lvs --port &lt;session-port&gt;   # [--draw-only]</code></pre>
           <div class="metric-row">
             <div class="metric"><b>94/94</b><span>routed</span></div>
             <div class="metric"><b>match=True</b><span>live LVS</span></div>
@@ -135,8 +135,8 @@ python -m examples_klink.public.demos.digital.fit_device_pnr_lvs --port &lt;sess
         <div class="demo-card">
           <h2 id="chat" class="anchor-h">5 · Hand-written netlist → lint → P&amp;R → LVS <span class="tier live">live KLayout</span></h2>
           <p>The "describe it in chat, get a verified layout" flow: a 3-stage ring oscillator netlist is written <strong>by hand</strong>, validated by <code>lint_netlist</code> (every structural mistake gets a fix-it message <strong>before any geometry exists</strong>), then placed, routed, LVS-verified, and every stage node brought out as a bare labelled trace. Netlists are plain data — an agent (or you) can write one for <strong>any topology</strong>, no logic synthesizer required.</p>
-          <pre><code># repo-only: needs a repo clone to run, not in the pip wheel
-python -m examples_klink.public.demos.digital.chat_to_netlist_pnr --port &lt;session-port&gt;</code></pre>
+          <pre><code>python example_template/digital/chat_to_netlist_pnr.py --port &lt;session-port&gt;
+# from a repo clone you can also run: python -m examples_klink.public.demos.digital.chat_to_netlist_pnr --port &lt;session-port&gt;</code></pre>
           <div class="metric-row">
             <div class="metric"><b>0</b><span>lint errors</span></div>
             <div class="metric"><b>3/3</b><span>routed</span></div>
@@ -149,8 +149,8 @@ python -m examples_klink.public.demos.digital.chat_to_netlist_pnr --port &lt;ses
         <div class="demo-card">
           <h2 id="multilayer" class="anchor-h">6 · Multilayer place &amp; route at scale <span class="tier live">live KLayout</span></h2>
           <p>The scale demo: a bundled <strong>766-device</strong> synthetic netlist (a toy 4-bit ALU, 268 gates, netted by an open logic synthesizer, remapped onto this gallery's synthetic fitted devices) is linted, then compared on two example process stacks with the built-in layer-count advisor — the 3-layer public process from the fit-a-device demo, and a 7-layer example stack defined in the demo itself. The advisor prints each stack's core-area cost so you can see why a design this size wants the extra layers. It then places, marks all 20 primary ports (13 in west, 7 out east), and routes with the multilayer engine.</p>
-          <pre><code># repo-only: needs a repo clone to run, not in the pip wheel
-python -m examples_klink.public.demos.digital.multilayer_pnr_lvs --port &lt;session-port&gt;</code></pre>
+          <pre><code>python example_template/digital/multilayer_pnr_lvs.py --port &lt;session-port&gt;
+# from a repo clone you can also run: python -m examples_klink.public.demos.digital.multilayer_pnr_lvs --port &lt;session-port&gt;</code></pre>
           <div class="metric-row">
             <div class="metric"><b>405/405</b><span>nets routed</span></div>
             <div class="metric"><b>match=True</b><span>LVS</span></div>
@@ -164,8 +164,8 @@ python -m examples_klink.public.demos.digital.multilayer_pnr_lvs --port &lt;sess
         <div class="demo-card">
           <h2 id="padframe" class="anchor-h">7 · Probe-card-first place &amp; route <span class="tier live">live KLayout</span></h2>
           <p>The reversed-order hardware flow: the probe card / pad ring <strong>exists first</strong> (positions frozen long ago) and the circuit must meet it — even when the card interior is too small for the whole block. The same synthetic 4-bit adder is linted, then a stand-in 20-pad probe card is fabricated and <strong>harvested back</strong> with <code>pads_from_gds</code>. A net→pad table assigns all 14 primary ports + VDD + GND; because the interior fits only half the rows, <code>place_grid(forbid_y_bands=…)</code> splits the block <strong>half inside / half below</strong>, and <code>pdn_split_bands</code> threads one power grid per region bridged by a spine strap.</p>
-          <pre><code># repo-only: needs a repo clone to run, not in the pip wheel
-python -m examples_klink.public.demos.digital.padframe_pnr_lvs --port &lt;session-port&gt;   # [--no-card]</code></pre>
+          <pre><code>python example_template/digital/padframe_pnr_lvs.py --port &lt;session-port&gt;   # [--no-card]
+# from a repo clone you can also run: python -m examples_klink.public.demos.digital.padframe_pnr_lvs --port &lt;session-port&gt;   # [--no-card]</code></pre>
           <div class="metric-row">
             <div class="metric"><b>94/94</b><span>routed</span></div>
             <div class="metric"><b>match=True</b><span>LVS</span></div>

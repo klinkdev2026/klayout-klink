@@ -153,7 +153,7 @@ klink update mychip</code></pre>
         <p>A new domain is just a <code>pdk.py</code> shaped for it + a <code>custom_devices/</code> script that imports your process and calls klink explicitly. Copy the closest catalog entry and adapt — <strong>you never edit klink to add a domain</strong>.</p>
 
         <h2 id="walkthroughs" class="anchor-h">Step-by-step tutorials</h2>
-        <p>These are 7 step-by-step walkthroughs -- the 5 starter demos runnable directly from <code>example_template/</code>, plus 2 repo-only examples (need a repo clone): <strong>a tutorial and its demo are two views of the same thing</strong>. Each tutorial corresponds to one demo script and breaks it into observable stages: every step is actually drawn in a live KLayout session, screenshotted, and paired with the klink calls that produced it, then verified with a structured report -- not a screenshot. The tutorial ends with the same one-line command you can copy and run. Read them in order; each one builds on concepts from the one before it. For what each demo does, its requirements, and measured numbers, see <a href="examples.html">Examples</a>.</p>
+        <p>These are 7 step-by-step walkthroughs, all runnable directly from <code>example_template/</code> as starters (the two digital-family ones need a live KLayout session): <strong>a tutorial and its demo are two views of the same thing</strong>. Each tutorial corresponds to one demo script and breaks it into observable stages: every step is actually drawn in a live KLayout session, screenshotted, and paired with the klink calls that produced it, then verified with a structured report -- not a screenshot. The tutorial ends with the same one-line command you can copy and run. Read them in order; each one builds on concepts from the one before it. For what each demo does, its requirements, and measured numbers, see <a href="examples.html">Examples</a>.</p>
         <div class="grid two">
           <a class="card" href="tutorial-hallbar.html">
             <span class="feature-kicker">Getting started · nanodevice</span>
@@ -182,13 +182,13 @@ klink update mychip</code></pre>
           <a class="card" href="tutorial-fit-device.html">
             <span class="feature-kicker">structdevice · digital P&amp;R</span>
             <h3>Custom device: fit → PCell → P&amp;R → LVS</h3>
-            <p>Fit a parametric edge model from a few exemplar drawings at different sizes, register a real PCell, place 173 instances from a netlist, run FlexDR detailed routing, and finish with live LVS match=True. Repo-only, needs live KLayout.</p>
+            <p>Fit a parametric edge model from a few exemplar drawings at different sizes, register a real PCell, place 173 instances from a netlist, run FlexDR detailed routing, and finish with live LVS match=True. Starter, needs a live KLayout session.</p>
             <span class="card-more">Read the tutorial →</span>
           </a>
           <a class="card" href="tutorial-padframe.html">
             <span class="feature-kicker green">structdevice · padframe</span>
             <h3>A probe-card-first padframe</h3>
-            <p>The probe card / pad ring exists first and the circuit must meet it: harvest the pad ring, assign net→pad, place half-in/half-out, split the power grid by region, and finish with both the card and <code>--no-card</code> bare-stub modes each passing live LVS match=True. Repo-only, needs live KLayout.</p>
+            <p>The probe card / pad ring exists first and the circuit must meet it: harvest the pad ring, assign net→pad, place half-in/half-out, split the power grid by region, and finish with both the card and <code>--no-card</code> bare-stub modes each passing live LVS match=True. Starter, needs a live KLayout session.</p>
             <span class="card-more">Read the tutorial →</span>
           </a>
           <a class="card" href="tutorial-passives.html">
@@ -222,9 +222,9 @@ python example_template/photonics/gf_mzi_module.py --port &lt;session-port&gt;
         <p>For your own PDK, layers, stub rules and cross-section come from your script or <code>pdk.py</code>.</p>
 
         <h2 id="digital" class="anchor-h">P&amp;R to LVS</h2>
-        <p>The public release digital path is either self-contained or your-own-geometry. The fit-device demo runs device fit, placement, routing and live LVS on synthetic exemplars.</p>
-        <pre><code># repo-only: needs a repo clone to run, not part of the pip wheel
-python -m examples_klink.public.demos.digital.fit_device_pnr_lvs --port &lt;session-port&gt;</code></pre>
+        <p>The public release digital path is either self-contained or your-own-geometry. The fit-device demo runs device fit, placement, routing and live LVS on synthetic exemplars. The whole digital family (fit-device, padframe, chat-to-netlist, multilayer) are starters under <code>example_template/digital/</code>, needing a running KLayout session:</p>
+        <pre><code>python example_template/digital/fit_device_pnr_lvs.py --port &lt;session-port&gt;
+# from a repo clone you can also run: python -m examples_klink.public.demos.digital.fit_device_pnr_lvs --port &lt;session-port&gt;</code></pre>
         <p>The device-agnostic custom-device flow is the <a href="mcp-reference.html#d-structdevice"><code>structdevice.*</code></a> family: give a device-level netlist → <code>build_from_netlist</code> auto floorplan/route/draw/LVS; or the SEND-driven <code>declare_nets</code> → <code>connect_nets</code> → <code>lvs_check</code> → <code>spec_write</code>. Any LVS mismatch undoes every mutation.</p>
 
         <h2 id="verify" class="anchor-h">Verification habits</h2>

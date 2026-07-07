@@ -82,7 +82,7 @@
       <div class="container">
         <div class="eyebrow">Step-by-step tutorial · structdevice</div>
         <h1>分步教程：针卡优先的 padframe</h1>
-        <p>对应仓库里的 <a href="examples.html#padframe"><code>examples_klink/public/demos/padframe_pnr_lvs.py</code></a>。这是一个<strong>反序</strong>的硬件流程：探针卡 / pad 环<strong>先存在</strong>（位置很久前就冻结了），电路必须去迁就它——哪怕卡内部装不下整个器件块。这篇教程把它拆成 6 个阶段，每一步都在 live KLayout 里真的画出来、截图，并给出对应的 klink 代码，最后 <strong>card 与 <code>--no-card</code> 两种模式各自跑 live LVS，match=True 才算完</strong>。文中所有数据都是合成的（工艺、器件、针卡都是替身），不含任何真实厂商或探针卡型号。</p>
+        <p>对应公开 gallery 里的 <a href="examples.html#padframe">padframe demo</a>（<code>example_template/digital/padframe_pnr_lvs.py</code>）。这是一个<strong>反序</strong>的硬件流程：探针卡 / pad 环<strong>先存在</strong>（位置很久前就冻结了），电路必须去迁就它——哪怕卡内部装不下整个器件块。这篇教程把它拆成 6 个阶段，每一步都在 live KLayout 里真的画出来、截图，并给出对应的 klink 代码，最后 <strong>card 与 <code>--no-card</code> 两种模式各自跑 live LVS，match=True 才算完</strong>。文中所有数据都是合成的（工艺、器件、针卡都是替身），不含任何真实厂商或探针卡型号。</p>
       </div>
     </section>
 
@@ -106,11 +106,10 @@
         <ul>
           <li>安装 klink：<code>pip install klayout-klink</code>（一条命令装好 klink 和它的 Rust 内核）。</li>
           <li>KLayout 正在运行，并已加载 klink 插件。</li>
-          <li>这个 demo 是 <strong>repo-only</strong>：需要克隆仓库运行（它 import 仓库里的合成器件模块，不在 pip wheel 里）。完整脚本是：
-<pre><code>git clone https://github.com/klinkdev2026/klayout-klink
-cd klayout-klink
-python -m examples_klink.public.demos.digital.padframe_pnr_lvs --port &lt;session-port&gt;            # 有卡模式
-python -m examples_klink.public.demos.digital.padframe_pnr_lvs --port &lt;session-port&gt; --no-card  # 无卡模式</code></pre></li>
+          <li>这个 demo 是 <strong>starter</strong>：<code>klink init &lt;proj&gt;</code> 脚手架里就有（<code>example_template/digital/padframe_pnr_lvs.py</code>），需要一个运行中的 KLayout 会话。完整命令是：
+<pre><code>python example_template/digital/padframe_pnr_lvs.py --port &lt;会话端口&gt;            # 有卡模式
+python example_template/digital/padframe_pnr_lvs.py --port &lt;会话端口&gt; --no-card  # 无卡模式
+# 仓库克隆里也可以: python -m examples_klink.public.demos.digital.padframe_pnr_lvs --port &lt;会话端口&gt; [--no-card]</code></pre></li>
         </ul>
         <div class="note">这篇教程把 <code>padframe_pnr_lvs.py</code> 内部一次性完成的构建拆成 6 个可观察阶段，方便讲清"卡先存在、电路后迁就"这条反序流每一步在做什么。生产环境里你还是直接跑那一个脚本——分阶段只是教学手段。它复用 <a href="examples.html#fitdevice">拟合器件 demo</a> 的公开 3 层工艺与合成拟合器件库，所以本身<strong>零器件几何</strong>；电路是一个开源逻辑综合器网出来、再映射到这些合成器件上的 4-bit 加法器（<code>173</code> 器件 / <code>96</code> net / <code>62</code> gate）。</div>
 

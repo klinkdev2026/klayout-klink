@@ -82,7 +82,7 @@
       <div class="container">
         <div class="eyebrow">Step-by-step tutorial · structdevice · digital P&amp;R</div>
         <h1>Step-by-step: a custom device — from exemplar geometry to a PCell to P&amp;R/LVS</h1>
-        <p>This walks through the <a href="examples.html#fitdevice">fit-device demo</a> from the public gallery (repo-only). The first four tutorials each drew <em>one</em> device; this one answers the next question: <strong>how does YOUR device enter a digital place-&amp;-route flow?</strong> The chain is: a few exemplar drawings of the same device at different sizes → fit a parametric edge model → register a real PCell → place 173 instances from a device-level netlist → FlexDR detailed routing → live LVS <code>match=True</code>. It is also the living example of <strong>process purity</strong>: every device shape, layer number, wire width and spacing lives in this one example file — klink's mechanism layer ships zero process constants. Swapping in your own device means editing the numbers in this file, nothing else.</p>
+        <p>This walks through the <a href="examples.html#fitdevice">fit-device demo</a> from the public gallery. The first four tutorials each drew <em>one</em> device; this one answers the next question: <strong>how does YOUR device enter a digital place-&amp;-route flow?</strong> The chain is: a few exemplar drawings of the same device at different sizes → fit a parametric edge model → register a real PCell → place 173 instances from a device-level netlist → FlexDR detailed routing → live LVS <code>match=True</code>. It is also the living example of <strong>process purity</strong>: every device shape, layer number, wire width and spacing lives in this one example file — klink's mechanism layer ships zero process constants. Swapping in your own device means editing the numbers in this file, nothing else.</p>
       </div>
     </section>
 
@@ -104,9 +104,9 @@
       <article class="content">
         <h2 id="prereqs" class="anchor-h">Prerequisites</h2>
         <ul>
-          <li><strong>Repo-only</strong>: this demo reads the source tree and is not in the pip wheel. Clone the repository first: <code>git clone https://github.com/klinkdev2026/klayout-klink &amp;&amp; cd klayout-klink</code>.</li>
+          <li><strong>Starter</strong>: it's already in the <code>klink init &lt;proj&gt;</code> scaffold (<code>example_template/digital/fit_device_pnr_lvs.py</code>); it needs a running KLayout session (it does live P&amp;R+LVS).</li>
           <li>KLayout running with the klink plugin loaded (point <code>--port</code> at your live session).</li>
-          <li>The whole flow is one command: <code>python -m examples_klink.public.demos.digital.fit_device_pnr_lvs --port &lt;session-port&gt;</code> (add <code>--draw-only</code> to draw the devices and skip P&amp;R/LVS).</li>
+          <li>The whole flow is one command: <code>python example_template/digital/fit_device_pnr_lvs.py --port &lt;session-port&gt;</code> (add <code>--draw-only</code> to draw the devices and skip P&amp;R/LVS; from a repo clone you can also run <code>python -m examples_klink.public.demos.digital.fit_device_pnr_lvs --port &lt;session-port&gt;</code>).</li>
         </ul>
         <div class="note">This tutorial splits the demo's single run into 6 observable stages, each really executed and screenshotted in a live KLayout. The device in the demo is <strong>synthetic</strong> (clean, obviously-not-real numbers), so the whole demo runs with zero confidential data; swap <code>_device_boxes()</code> for boxes harvested from your own hand-drawn cells and the flow doesn't change by a single line.</div>
 
