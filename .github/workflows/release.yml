@@ -71,11 +71,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - name: Build wheels (py3.10-3.13) with maturin
+      - name: Build abi3 wheel with maturin
+        # The kernels target the abi3 stable ABI (pyo3 feature abi3-py310):
+        # ONE wheel per platform covers CPython 3.10 and every newer release,
+        # including versions that did not exist at build time — no
+        # per-interpreter matrix.
         uses: PyO3/maturin-action@v1
         with:
           command: build
-          args: --release --out dist -m rust/${{ matrix.crate }}/Cargo.toml --interpreter 3.10 3.11 3.12 3.13
+          args: --release --out dist -m rust/${{ matrix.crate }}/Cargo.toml
           manylinux: auto
       - uses: actions/upload-artifact@v4
         with:
@@ -93,7 +97,9 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-14, macos-15-intel]
-        python: ["3.10", "3.11", "3.12", "3.13"]
+        # 3.14 has no dedicated kernel build — it exercises the abi3 promise
+        # (the cp310-abi3 wheel must install and import on newer CPythons).
+        python: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/setup-python@v5

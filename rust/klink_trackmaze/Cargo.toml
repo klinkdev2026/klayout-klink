@@ -8,7 +8,7 @@ name = "klink_trackmaze_rs"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.27.2", features = ["extension-module"] }
+pyo3 = { version = "0.27.2", features = ["extension-module", "abi3-py310"] }
 
 [profile.release]
 opt-level = 3

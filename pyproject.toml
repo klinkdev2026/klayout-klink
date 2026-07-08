@@ -21,7 +21,8 @@ classifiers = [
 ]
 # Runtime deps are klink's OWN Rust acceleration kernels (byte-parity vs the
 # pure-Python reference, CI-gated cross-platform). They ship as pre-built wheels
-# for Linux/macOS/Windows on CPython 3.10-3.13, so `pip install klayout-klink`
+# for Linux/macOS/Windows on CPython 3.10+ (abi3 stable-ABI wheels, so newer
+# CPython releases are covered too); `pip install klayout-klink`
 # gets them. THIRD-PARTY scientific libraries (klayout, gdsfactory, numpy, scipy,
 # opencv, scikit-*) are NOT bundled — klink imports them lazily and, when a
 # feature needs one that is missing, names the exact `pip install`; you install
@@ -70,6 +71,13 @@ klink = [
     "mcp/CLAUDE.md",
     "mcp/README.md",
     "domains/nanodevice/flake/priors/*.json",
+    # The bundled KLayout salt plugin (mirror of klink_plugin/, synced by
+    # tools/sync_plugin_payload.py) -- `klink plugin install` copies it into
+    # KLayout's salt/ so pip users need no repo checkout. RECURSIVE glob
+    # (**/*): the payload has nested dirs (pymacros/, python/klink_server/).
+    "plugin_payload/**/*",
+    # PEP 561: klink ships inline type annotations.
+    "py.typed",
 ]
 
 [project.urls]

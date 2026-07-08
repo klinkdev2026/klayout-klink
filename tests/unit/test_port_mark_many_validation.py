@@ -24,6 +24,11 @@ PLUGIN_PYTHON = Path(__file__).resolve().parents[2] / "klink_plugin" / "python"
 if str(PLUGIN_PYTHON) not in sys.path:
     sys.path.insert(0, str(PLUGIN_PYTHON))
 
+# klink_server imports pya at package level; the offline compat ships with
+# `pip install klayout`. Gate on klayout.db (not "pya"): another test module
+# may plant a minimal fake pya in sys.modules, which must not un-skip us.
+pytest.importorskip("klayout.db", reason="klayout pip package not installed")
+
 from klink_server.errors import ErrorCode, RpcError  # noqa: E402
 from klink_server.methods.port_m import (  # noqa: E402
     _MAX_BATCH_PORTS,

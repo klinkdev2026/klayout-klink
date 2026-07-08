@@ -93,7 +93,7 @@ bake process/device values into `klink/`. A complete, self-contained reference
 that owns its own process (layers / spacing / vias) and a synthetic device is:
 
 ```text
-examples_klink/public/demos/fit_device_pnr_lvs.py
+examples_klink/public/demos/digital/fit_device_pnr_lvs.py
 ```
 
 It fits a parametric device PCell from exemplar geometry, places it, runs

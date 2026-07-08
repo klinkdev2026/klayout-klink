@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Questions & Discussions
+    url: https://github.com/klinkdev2026/klayout-klink/issues
+    about: General questions, ideas, and discussion that aren't a bug report or a concrete feature request.

@@ -7,7 +7,17 @@ import pytest
 from klink.domains.nanodevice.ebl.patching import generate_wf_patches
 from klink.domains.nanodevice.ebl.writefield import CrossingWindow, plan_writefields
 
-KDB_PRESENT = importlib.util.find_spec("klayout.db") is not None or importlib.util.find_spec("pya") is not None
+def _spec_present(name: str) -> bool:
+    # find_spec("klayout.db") raises ModuleNotFoundError when the PARENT
+    # package is absent, and finders may raise other errors in bare envs
+    # (e.g. ValueError for a module with __spec__ unset), so guard broadly.
+    try:
+        return importlib.util.find_spec(name) is not None
+    except Exception:
+        return False
+
+
+KDB_PRESENT = _spec_present("klayout.db") or _spec_present("pya")
 
 
 def test_writefield_grid_obstacles_leave_crossing_window_gap():

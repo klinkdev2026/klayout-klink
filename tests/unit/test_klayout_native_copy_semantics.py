@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from klayout import db as kdb
+import pytest
+
+kdb = pytest.importorskip(
+    "klayout.db", reason="klayout pip package not installed (bare env)")
 
 
 def test_klayout_cell_copy_tree_uses_native_dollar_suffix_for_conflicts():

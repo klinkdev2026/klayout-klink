@@ -265,7 +265,8 @@ def test_pads_from_boxes_orders_reading_order_and_spread_ports_stub_contract():
 
 
 def test_pads_from_gds_round_trip(tmp_path):
-    import klayout.db as kdb
+    kdb = pytest.importorskip(
+        "klayout.db", reason="klayout pip package not installed (bare env)")
     from klink.routing.grid.pad_harvest import pads_from_gds
     ly = kdb.Layout()
     ly.dbu = 0.001

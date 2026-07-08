@@ -81,7 +81,8 @@ THIRD_PARTY_NOTICES.md  Third-party notices
   KLayout 0.30.x; any recent official desktop build (whose macro environment
   provides the `pya` Qt bindings) should work. Purely offline workflows (the
   public test suite and the offline demos) run without it.
-- Python 3.10 or newer (the bundled Rust kernels target CPython 3.10–3.13).
+- Python 3.10 or newer (the bundled Rust kernels ship abi3 stable-ABI wheels,
+  covering CPython 3.10 and newer).
 - Optional: Claude Code or another MCP client.
 - Optional: gdsfactory, the `klayout` Python package, NumPy/OpenCV, or detector
   dependencies depending on the workflow.
@@ -96,7 +97,7 @@ python -m pip install klayout-klink
 
 `pip install klayout-klink` installs klink **and its two Rust acceleration
 kernels** (`klink-boxmaze-rs` + `klink-trackmaze-rs`) — klink's own code, shipped
-as pre-built wheels for Linux / macOS / Windows on CPython 3.10–3.13. You get the
+as pre-built abi3 wheels for Linux / macOS / Windows on CPython 3.10+. You get the
 fast path automatically; nothing else to do.
 
 > **On a platform with no pre-built kernel wheel** (an unusual OS / arch /
@@ -161,8 +162,9 @@ cd mychip
 the folder with your agent (Claude Code / Codex) and describe what you are
 building — it fills in `pdk.py` + `custom_devices/` from the matching recipe. The
 scaffolded `example_template/` holds copy-and-adapt starter demos, grouped into
-`nanodevice/`, `photonics/`, and `passives/`; run one with
-`python example_template/<category>/<name>.py`.
+`nanodevice/`, `photonics/`, `passives/`, and `digital/`; run one with
+`python example_template/<category>/<name>.py`. The `digital/` family does live
+P&R + LVS, so it needs a running KLayout session (`--port`).
 
 When you upgrade klink later, refresh those bundled starters **without touching
 your own work** (`pdk.py`, `custom_devices/`, `.klink/`, `out/`, `specs/` are
@@ -178,15 +180,28 @@ klink update mychip   # or run `klink update` from inside the project folder
 Prerequisite: KLayout itself must be installed first — get the desktop build
 for your OS from <https://www.klayout.de/build.html>.
 
-`klink_plugin` is a KLayout salt package. Once installed, KLayout autoruns
-`pymacros/klink.lym` and starts:
+`klink_plugin` is a KLayout salt package. The plugin ships **inside the pip
+package**, so after `pip install klayout-klink` one command installs it — no
+repository clone needed:
+
+```bash
+klink plugin install      # copies the bundled plugin into KLayout's salt/
+klink plugin status       # shows installed vs bundled plugin versions
+```
+
+The salt directory is auto-detected per OS (`%USERPROFILE%\KLayout\salt` on
+Windows, `~/.klayout/salt` elsewhere, honouring `KLAYOUT_HOME`); pass
+`--salt-dir` to override. Re-run `klink plugin install` after upgrading the
+pip package so the plugin stays in lockstep with the client.
+
+Once installed, KLayout autoruns `pymacros/klink.lym` and starts:
 
 - klink RPC on `127.0.0.1:8765`. If the port is busy, it tries the next ports up
   to `8799`.
 - a klive-compatible server on `127.0.0.1:8082` for gdsfactory-style `c.show()`
   workflows.
 
-Windows:
+From a repository checkout you can instead copy the folder by hand — Windows:
 
 ```powershell
 cd path\to\klink
@@ -205,7 +220,7 @@ cp -R klink_plugin ~/.klayout/salt/
 Either way the plugin ends up at `<KLayout salt dir>/klink_plugin/` (the folder
 that contains `grain.xml`).
 
-Restart KLayout after copying the plugin. Each KLayout window runs its own
+Restart KLayout after installing the plugin. Each KLayout window runs its own
 klink session: it binds the first free port in `8765`–`8799` and registers as
 session `klayout-<port>`, so with several windows open there is one listener
 per window (`8765`, `8766`, …). A successful startup prints:
@@ -214,9 +229,9 @@ per window (`8765`, `8766`, …). A successful startup prints:
 [klink.server] listening on 127.0.0.1:8765
 ```
 
-When upgrading an old plugin copy, close KLayout, remove the old
-`salt/klink_plugin` directory, copy the new `klink_plugin` folder, then restart
-KLayout.
+When upgrading, close KLayout, run `klink plugin install` again (it replaces
+the old copy — from a checkout, remove the old `salt/klink_plugin` and re-copy
+instead), then restart KLayout.
 
 ## Smoke Test
 
@@ -317,7 +332,8 @@ Integration tests (routing, LVS, recorder) need a live KLayout with the
 Check that:
 
 - KLayout is running.
-- `klink_plugin` was copied into the KLayout salt directory.
+- `klink_plugin` is installed in the KLayout salt directory
+  (`klink plugin status` tells you).
 - KLayout was restarted after plugin installation.
 - Port `8765` is available, or use the actual session port such as `8766`.
 - Firewall or security software is not blocking localhost TCP.

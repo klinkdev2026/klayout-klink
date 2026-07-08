@@ -51,8 +51,8 @@ must run in the Python environment where `klayout-klink` is installed.
 
 ## Environment
 
-- klink core is pure Python; its only runtime dependency is its own Rust kernel
-  (prebuilt wheel, byte-parity with the pure-Python reference)
+- klink core is pure Python; its only runtime dependencies are its own two Rust
+  kernels (prebuilt wheels, byte-parity with the pure-Python references)
 - gdsfactory must be in the SAME interpreter that runs `klink.mcp`
 - klink RPC port: 8765
 - klive-compat port: 8082

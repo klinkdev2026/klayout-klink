@@ -25,8 +25,10 @@ jobs:
           # gdsfactory/scipy/opencv are NOT installed on purpose — the tests that
           # need them skip gracefully, keeping CI light.
           python -m pip install --upgrade pip pytest klayout numpy
-          # --no-deps: the kernels aren't on PyPI yet; the public suite runs
-          # pure-Python (the Rust build job builds + import-checks them separately).
+          # --no-deps ON PURPOSE: the kernels are on PyPI, but this job runs
+          # the pure-Python fallbacks so that path stays covered. The Rust
+          # kernels are exercised by the rust-build job here and by the
+          # release workflow's install-smoke.
           python -m pip install -e . --no-deps
       - name: Import smoke
         run: python -c "import klink, klink.mcp; print('klink import ok')"
@@ -36,15 +38,17 @@ jobs:
         # loaded; they run locally only.
 
   rust-build:
-    # Build the Track 1 Rust kernel (box_maze) from source on each OS and assert
-    # it imports. This is the cross-platform build guard for the Rust
-    # accelerator: a precondition for ever shipping klink-accel wheels. The
-    # byte-parity reference fixtures are dev-only (not part of the public suite).
-    name: rust kernel build (${{ matrix.os }})
+    # Build BOTH Rust kernels from source on each OS and assert they import.
+    # This is the per-push cross-platform build guard for the accelerators —
+    # without it a broken kernel source tree is only discovered on release
+    # day. The byte-parity reference fixtures are dev-only (not part of the
+    # public suite).
+    name: rust kernel build (${{ matrix.crate }}, ${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
+        crate: [klink_boxmaze, klink_trackmaze]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -56,9 +60,31 @@ jobs:
         run: |
           python -m pip install --upgrade pip pytest
           python -m pip install -e . --no-deps
-          python -m pip install ./rust/klink_boxmaze
+          python -m pip install ./rust/${{ matrix.crate }}
       - name: Verify the Rust kernel imports
-        run: python -c "import klink_boxmaze_rs, platform; print('kernel built on', platform.platform())"
+        run: python -c "import importlib, platform; importlib.import_module('${{ matrix.crate }}_rs'); print('${{ matrix.crate }} built on', platform.platform())"
+
+  next-python:
+    # Early warning for brand-new CPython lines: install klink pure-Python
+    # (no klayout/numpy — their wheels may lag a new CPython) and run the
+    # unit suite; dependency-gated tests skip gracefully. The kernels'
+    # abi3 wheels are proven on new CPythons by the release workflow's
+    # install-smoke instead.
+    name: unit (ubuntu, py3.14, light)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: Install package (pure-Python) + pytest only
+        run: |
+          python -m pip install --upgrade pip pytest
+          python -m pip install -e . --no-deps
+      - name: Import smoke
+        run: python -c "import klink, klink.mcp; print('klink import ok')"
+      - name: Unit tests (dependency-gated tests skip)
+        run: python -m pytest tests/public tests/unit -q
 
   gf-compat:
     # gdsfactory drift bit us once (gf.Port `center` unit drift across

@@ -4,6 +4,13 @@ import sys
 from pathlib import Path
 import json
 
+import pytest
+
+# The klink_server package (imported inside the tests) needs pya, which the
+# klayout pip package provides offline; skip cleanly in a bare env.
+pytest.importorskip("klayout.db", reason="klayout pip package not installed")
+
+
 
 def test_transfer_pending_store_set_status_clear(monkeypatch):
     plugin_python = str(Path(__file__).resolve().parents[2] / "klink_plugin" / "python")

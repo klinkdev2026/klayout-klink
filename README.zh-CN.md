@@ -69,7 +69,7 @@ THIRD_PARTY_NOTICES.md  第三方声明
   <https://www.klayout.de/build.html> 安装对应操作系统的标准桌面版。klink 基于
   KLayout 0.30.x 开发和测试；任何较新的官方桌面版(宏环境带 `pya` Qt 绑定)都
   应该可用。纯离线工作流(公开测试套件和离线 demo)不需要它。
-- Python 3.10 或更新版本(自带的两个 Rust 内核针对 CPython 3.10–3.13)。
+- Python 3.10 或更新版本(自带的两个 Rust 内核以 abi3 稳定 ABI 轮子发布,覆盖 CPython 3.10 及更新版本)。
 - 可选: Claude Code 或其它 MCP 客户端。
 - 可选: gdsfactory、`klayout` Python 包、NumPy/OpenCV 或 detector 依赖，取决于具体工作流。
 
@@ -83,7 +83,7 @@ python -m pip install klayout-klink
 
 `pip install klayout-klink` 会装上 klink **以及它自己的两个 Rust 加速内核**
 (`klink-boxmaze-rs` + `klink-trackmaze-rs`——都是 klink 自己的代码),以
-Linux / macOS / Windows 上 CPython 3.10–3.13 的**预编译轮子**形式发布。快路径
+Linux / macOS / Windows 上 CPython 3.10+ 的**预编译 abi3 轮子**形式发布。快路径
 自动到位,无需额外操作。
 
 > **如果某平台没有预编译内核轮子**(冷门 OS / 架构 / Python),pip 会回退到**从源码
@@ -143,8 +143,9 @@ cd mychip
 `klink init` 会拒绝非空文件夹,所以给它一个新名字。然后用你的 agent(Claude Code /
 Codex)打开这个文件夹、描述你要做什么——它会从对应 recipe 补出 `pdk.py` +
 `custom_devices/`。脚手架里的 `example_template/` 是可"抄了就改"的 starter demo,
-按 `nanodevice/`、`photonics/`、`passives/` 分类;跑其中一个:
-`python example_template/<类>/<名>.py`。
+按 `nanodevice/`、`photonics/`、`passives/`、`digital/` 分类;跑其中一个:
+`python example_template/<类>/<名>.py`。`digital/` 家族做 live P&R + LVS,
+所以需要一个运行中的 KLayout 会话(`--port`)。
 
 以后升级 klink 时,刷新这些自带 starter 而**不动你自己的东西**(`pdk.py`、
 `custom_devices/`、`.klink/`、`out/`、`specs/` 绝不改动):
@@ -159,12 +160,24 @@ klink update mychip   # 或在项目文件夹里直接跑 `klink update`
 前置条件：先安装 KLayout 本体——从 <https://www.klayout.de/build.html> 下载对应
 操作系统的桌面版。
 
-`klink_plugin` 是一个 KLayout salt package。安装后，KLayout 会自动运行 `pymacros/klink.lym`，并启动：
+`klink_plugin` 是一个 KLayout salt package。插件**随 pip 包一起发布**，
+`pip install klayout-klink` 之后一条命令即可安装，无需 clone 仓库：
+
+```bash
+klink plugin install      # 把自带插件复制进 KLayout 的 salt/ 目录
+klink plugin status       # 查看已装插件版本 vs 包内插件版本
+```
+
+salt 目录按操作系统自动定位（Windows 为 `%USERPROFILE%\KLayout\salt`，其余为
+`~/.klayout/salt`，尊重 `KLAYOUT_HOME`）；可用 `--salt-dir` 覆盖。升级 pip 包后
+重新运行 `klink plugin install`，插件即与客户端保持同版本。
+
+安装后，KLayout 会自动运行 `pymacros/klink.lym`，并启动：
 
 - klink RPC: `127.0.0.1:8765`。如果端口被占用，会继续尝试到 `8799`。
 - klive-compatible server: `127.0.0.1:8082`，用于 gdsfactory 风格的 `c.show()` 工作流。
 
-Windows:
+从仓库检出也可以手工复制文件夹——Windows:
 
 ```powershell
 cd path\to\klink
@@ -183,7 +196,7 @@ cp -R klink_plugin ~/.klayout/salt/
 两种方式最终插件都位于 `<KLayout salt 目录>/klink_plugin/`（即包含
 `grain.xml` 的那个文件夹）。
 
-复制插件后重启 KLayout。每个 KLayout 窗口运行自己的 klink session：绑定
+安装插件后重启 KLayout。每个 KLayout 窗口运行自己的 klink session：绑定
 `8765`–`8799` 中第一个空闲端口，并以 `klayout-<port>` 注册 session。同时开多个
 窗口就有多个监听（`8765`、`8766`、……）。启动成功时，KLayout 控制台会打印：
 
@@ -191,7 +204,7 @@ cp -R klink_plugin ~/.klayout/salt/
 [klink.server] listening on 127.0.0.1:8765
 ```
 
-升级旧插件时，建议先关闭 KLayout，删除旧的 `salt/klink_plugin` 目录，再复制新的 `klink_plugin` 文件夹，然后重启。
+升级时，先关闭 KLayout，重新运行 `klink plugin install`（会替换旧副本；从仓库检出则删除旧的 `salt/klink_plugin` 后重新复制），然后重启。
 
 ## 连接测试
 
@@ -287,7 +300,7 @@ python -m pytest -q tests/public
 请检查：
 
 - KLayout 已启动。
-- `klink_plugin` 已复制到 KLayout salt 目录。
+- `klink_plugin` 已安装到 KLayout salt 目录（用 `klink plugin status` 查看）。
 - 安装插件后已经重启 KLayout。
 - 默认端口 `8765` 可用，或改用实际 session 端口，例如 `8766`。
 - 防火墙或安全软件没有阻止 localhost TCP。

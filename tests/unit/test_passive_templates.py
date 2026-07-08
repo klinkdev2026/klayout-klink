@@ -17,8 +17,10 @@ from __future__ import annotations
 
 import math
 
-import klayout.db as kdb
 import pytest
+
+kdb = pytest.importorskip(
+    "klayout.db", reason="klayout pip package not installed (bare env)")
 
 from examples_klink.public.demos.passives import (
     baw_fbar_planview as baw,

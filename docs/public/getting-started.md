@@ -8,12 +8,7 @@ agent.
 
 ## Install
 
-1. **KLayout + the klink plugin.** Install KLayout (desktop build from
-   <https://www.klayout.de/build.html>) if you don't have it, then copy the
-   repo's `klink_plugin/` folder into KLayout's `salt/` directory (exact
-   commands are in the README's *Install KLayout Plugin* section) and start
-   KLayout. The plugin runs an in-process RPC server.
-2. **`pip install klayout-klink`** into one Python (call it the *klink
+1. **`pip install klayout-klink`** into one Python (call it the *klink
    interpreter*).
 
    ```bash
@@ -21,12 +16,25 @@ agent.
    ```
 
    klink ships its two Rust kernels as prebuilt wheels (Linux/macOS/Windows,
-   CPython 3.10–3.13) and both are runtime dependencies, so this one command
+   CPython 3.10+, abi3) and both are runtime dependencies, so this one command
    brings klink + both accelerators (single-stack + multilayer P&R) in one shot.
    They are speed-only — pure-Python fallbacks exist, and `pip install --no-deps
    klayout-klink` gives the pure-Python core alone. No third-party libs are
    bundled — the silicon-photonics recipe additionally needs `gdsfactory` in that
    **same** Python (`pip install "klayout-klink[photonics]"` gets a tested one).
+2. **KLayout + the klink plugin.** Install KLayout (desktop build from
+   <https://www.klayout.de/build.html>) if you don't have it, then install the
+   bundled plugin — it ships inside the pip package, no repository clone
+   needed:
+
+   ```bash
+   klink plugin install    # auto-detects KLayout's salt/ dir; --salt-dir to override
+   ```
+
+   Start (or restart) KLayout; the plugin runs an in-process RPC server.
+   `klink plugin status` shows the installed vs bundled plugin versions, and
+   after upgrading the pip package re-run `klink plugin install` to keep them
+   in lockstep.
 3. **Register the klink MCP server into your agent, then restart the agent.**
    klink ships the server; the one thing that varies is how your agent records
    it. Let klink write the exact command for you:

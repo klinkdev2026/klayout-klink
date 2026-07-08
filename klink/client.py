@@ -75,18 +75,7 @@ class KLinkClient:
             pass
         # Drain any still-pending callers with a transport error so they
         # don't hang forever.
-        with self._pending_lock:
-            pendings = list(self._pending.values())
-            self._pending.clear()
-        sentinel = {"ok": False, "error": {
-            "code": "ERR_CONN_CLOSED",
-            "message": "connection was closed before the response arrived",
-        }}
-        for q in pendings:
-            try:
-                q.put_nowait(sentinel)
-            except Exception:
-                pass
+        self._drain_pending("connection was closed before the response arrived")
         # Explicitly join the reader thread so the interpreter can exit
         # cleanly. Even though the thread is a daemon, on Windows a
         # still-running socket recv can delay interpreter shutdown and
@@ -903,6 +892,21 @@ class KLinkClient:
     # ------------------------------------------------------------------
     # Internals
     # ------------------------------------------------------------------
+    def _drain_pending(self, message: str) -> None:
+        """Fail every in-flight call() immediately with ERR_CONN_CLOSED."""
+        with self._pending_lock:
+            pendings = list(self._pending.values())
+            self._pending.clear()
+        sentinel = {"ok": False, "error": {
+            "code": "ERR_CONN_CLOSED",
+            "message": message,
+        }}
+        for q in pendings:
+            try:
+                q.put_nowait(sentinel)
+            except Exception:
+                pass
+
     def _reader_loop(self) -> None:
         try:
             while self._running:
@@ -924,6 +928,12 @@ class KLinkClient:
                         pass
         finally:
             self._running = False
+            # The server side went away (or transport failed): fail blocked
+            # callers NOW instead of letting each one sit out its full call
+            # timeout waiting for a response that can never arrive.
+            self._drain_pending(
+                "connection lost before the response arrived (KLayout closed "
+                "or the plugin stopped); reconnect and retry")
 
     def _deliver_event(self, msg: dict) -> None:
         name = msg.get("event")
