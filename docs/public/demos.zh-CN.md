@@ -131,6 +131,18 @@ PCell,放置,跑详细布线,live LVS 验证。实测输出:94/94 布通,**LVS
 `match=True`**,173 个器件。换成你自己采集的 exemplar box 即可拟合你的真实
 器件——流程不变。
 
+### profile 推导的 DRC 门(正 + 负对照)
+
+```bash
+python -m examples_klink.public.features.profile_drc_gate --port <会话端口>   # [--check-demo]
+```
+
+驱动布线和 LVS 的同一份 `ProcessProfile` 现在也能推导 KLayout DRC deck
+(`profile.drc_script()`):每个布线层的 width/space + via cut enclosure。
+这个示例把门正反各证一遍——合法场景 0 违例通过,故意埋的违例恰好触发
+对应类别——`--check-demo` 再对 fit-device 版图跑全 deck(实测:在同一个
+LVS 通过的版图上 `ok=True violations=0`)。见 [drc-lvs.zh-CN.md](drc-lvs.zh-CN.md)。
+
 ### 手写网表 → lint 校验 → 布局布线 → LVS
 
 ```bash

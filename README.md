@@ -370,6 +370,9 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 - [`docs/public/demos.md`](docs/public/demos.md): the demos and what each requires.
 - [`docs/public/control-plane.md`](docs/public/control-plane.md): the typed RPC surface, the MCP tool catalogue, batch authoring.
 - [`docs/public/interactive-workflows.md`](docs/public/interactive-workflows.md): SEND selection memory, multi-session transfer, the recorder.
+- [`docs/public/api-stability.md`](docs/public/api-stability.md): what counts as public API and the 0.x compatibility policy.
+- [`docs/public/drc-lvs.md`](docs/public/drc-lvs.md): writing and running DRC/LVS, including the profile-derived deck (`profile.drc_script()`).
+- [`docs/public/drc-lvs-agent-handout.md`](docs/public/drc-lvs-agent-handout.md): paste-to-agent recipe that teaches an agent to author KLayout DRC/LVS.
 - [`CLAUDE.md`](CLAUDE.md): Claude Code operating rules and project context.
 - [`klink/mcp/README.md`](klink/mcp/README.md): MCP bridge details.
 

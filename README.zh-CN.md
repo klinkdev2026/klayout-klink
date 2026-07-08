@@ -334,6 +334,9 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 - [`docs/public/demos.zh-CN.md`](docs/public/demos.zh-CN.md): 各 demo 及其依赖。
 - [`docs/public/control-plane.zh-CN.md`](docs/public/control-plane.zh-CN.md): 类型化 RPC 面、MCP 工具目录、批量写入。
 - [`docs/public/interactive-workflows.zh-CN.md`](docs/public/interactive-workflows.zh-CN.md): SEND 选区记忆、多会话搬运、录制回放。
+- [`docs/public/api-stability.zh-CN.md`](docs/public/api-stability.zh-CN.md): 什么算公开 API,以及 0.x 阶段的兼容性政策。
+- [`docs/public/drc-lvs.zh-CN.md`](docs/public/drc-lvs.zh-CN.md): 编写并运行 DRC/LVS,含 profile 推导 deck(`profile.drc_script()`)。
+- [`docs/public/drc-lvs-agent-handout.zh-CN.md`](docs/public/drc-lvs-agent-handout.zh-CN.md): 直接粘给 agent 的配方,教会 agent 写 KLayout DRC/LVS。
 
 全部公开文档页均有中英双语,索引见
 [`docs/public/README.zh-CN.md`](docs/public/README.zh-CN.md)。

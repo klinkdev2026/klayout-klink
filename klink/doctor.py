@@ -1,6 +1,6 @@
 """klink doctor — one-command preflight for a klink install.
 
-    python -m klink.doctor [--host H] [--port P] [--gdsfactory] [--scan] [--json]
+    python -m klink.doctor [--host H] [--port P] [--gdsfactory] [--scan] [--json] [--report]
 
 Checks, in order: this interpreter, the klink package, the Rust acceleration
 kernels (informational), the `klayout` pip package version floor
@@ -12,13 +12,23 @@ otherwise.
 ``--scan`` probes a range of localhost ports for a live klink session instead
 of (or in addition to) the single configured port — handy when you don't
 remember which port KLayout is listening on.
+
+``--report`` runs the same checks (plus ``--scan`` and the gdsfactory check)
+and prints a fenced markdown block ready to paste into a GitHub issue: klink
+version + protocol, the interpreter path with the username redacted (home
+directory prefix replaced with ``~``), OS (``platform.platform()``), Rust
+kernels, `klayout` pip version, gdsfactory version if importable, the plugin
+connection result, and the port-scan summary. Works with no KLayout running
+(the connection line states "not reachable").
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import platform
 import sys
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from ._meta import PROTOCOL_VERSION, __version__
@@ -46,6 +56,19 @@ def _parse_version_prefix(version: str) -> Tuple[int, ...]:
 
 def _version_at_least(version: str, floor: Tuple[int, ...]) -> bool:
     return _parse_version_prefix(version) >= floor
+
+
+def _redact_home(path: str) -> str:
+    """Replace the current user's home-directory prefix with ``~``.
+
+    Used only for the ``--report`` output, which is meant to be pasted into a
+    public GitHub issue — the interpreter path should not leak the reporter's
+    OS username.
+    """
+    home = str(Path.home())
+    if home and path.startswith(home):
+        return "~" + path[len(home):]
+    return path
 
 
 def _check_kernels(add) -> None:
@@ -238,6 +261,59 @@ def run_doctor(
     return {"ok": all(c["ok"] for c in checks), "checks": checks}
 
 
+def format_issue_report(report: Dict[str, Any]) -> str:
+    """Render ``report`` (from :func:`run_doctor`) as a fenced markdown block
+    ready to paste into a GitHub issue.
+
+    The interpreter path has its home-directory prefix redacted to ``~`` so
+    the reporter's OS username is not published. Works with no live KLayout
+    connection: the plugin-connection line states "not reachable" instead of
+    raising.
+    """
+    checks = {c["name"]: c for c in report["checks"]}
+
+    lines: List[str] = ["```"]
+    lines.append(f"klink: {checks['klink']['detail']}")
+
+    interpreter = checks.get("interpreter")
+    if interpreter:
+        lines.append(f"interpreter: {_redact_home(interpreter['detail'])}")
+
+    lines.append(f"OS: {platform.platform()}")
+
+    kernels = checks.get("kernels")
+    if kernels:
+        lines.append(f"kernels: {kernels['detail']}")
+
+    klayout_pip = checks.get("klayout_pip")
+    if klayout_pip:
+        lines.append(f"klayout (pip): {klayout_pip['detail']}")
+
+    gdsfactory = checks.get("gdsfactory")
+    if gdsfactory and gdsfactory["ok"]:
+        lines.append(f"gdsfactory: {gdsfactory['detail']}")
+
+    conn = checks.get("plugin_connection")
+    if conn:
+        status = "reachable" if conn["ok"] else "not reachable"
+        lines.append(f"plugin connection: {status} ({conn['detail']})")
+
+    protocol = checks.get("protocol")
+    if protocol:
+        lines.append(f"protocol: {protocol['detail']}")
+
+    klayout_desktop = checks.get("klayout")
+    if klayout_desktop:
+        lines.append(f"KLayout desktop: {klayout_desktop['detail']}")
+
+    port_scan = checks.get("port_scan")
+    if port_scan:
+        lines.append(f"port scan: {port_scan['detail']}")
+
+    lines.append("```")
+    return "\n".join(lines)
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(
         prog="python -m klink.doctor",
@@ -261,16 +337,27 @@ def main(argv: Optional[List[str]] = None) -> int:
         ),
     )
     ap.add_argument("--json", action="store_true", help="emit the report as JSON")
+    ap.add_argument(
+        "--report",
+        action="store_true",
+        help=(
+            "print a fenced markdown block ready to paste into a GitHub issue "
+            "(implies --scan and a gdsfactory check; the interpreter path has "
+            "the username redacted)"
+        ),
+    )
     args = ap.parse_args(argv)
 
     report = run_doctor(
         args.host,
         args.port,
-        want_gdsfactory=args.gdsfactory,
-        want_scan=args.scan,
+        want_gdsfactory=args.gdsfactory or args.report,
+        want_scan=args.scan or args.report,
     )
 
-    if args.json:
+    if args.report:
+        print(format_issue_report(report))
+    elif args.json:
         print(json.dumps(report, indent=2))
     else:
         for c in report["checks"]:

@@ -3,8 +3,10 @@
 import socket
 import sys
 import types
+from pathlib import Path
 
-from klink.doctor import run_doctor
+from klink.doctor import format_issue_report, main, run_doctor
+from klink._meta import __version__
 
 
 def _by_name(report):
@@ -166,3 +168,61 @@ def test_doctor_default_args_do_not_raise():
     assert {"interpreter", "klink", "kernels", "klayout_pip", "plugin_connection"}.issubset(
         names
     )
+
+
+def test_doctor_report_renders_fenced_markdown_and_contains_version():
+    # port=0 -> no live KLayout, so this also proves --report works offline.
+    report = run_doctor(port=0, want_gdsfactory=True, want_scan=True)
+    text = format_issue_report(report)
+    lines = text.splitlines()
+    assert lines[0] == "```"
+    assert lines[-1] == "```"
+    assert __version__ in text
+
+
+def test_doctor_report_works_offline_and_states_not_reachable():
+    report = run_doctor(port=0)
+    text = format_issue_report(report)
+    assert "plugin connection: not reachable" in text
+
+
+def test_doctor_report_redacts_home_directory(monkeypatch, tmp_path):
+    fake_home = tmp_path / "Users" / "secretperson"
+    fake_home.mkdir(parents=True)
+    fake_exe = fake_home / "venv" / "Scripts" / "python.exe"
+
+    monkeypatch.setattr(sys, "executable", str(fake_exe))
+    monkeypatch.setattr(Path, "home", lambda: fake_home)
+
+    report = run_doctor(port=0)
+    text = format_issue_report(report)
+
+    assert "secretperson" not in text
+    assert str(fake_home) not in text
+    assert "~" in text
+
+
+def test_doctor_report_omits_gdsfactory_line_when_not_importable(monkeypatch):
+    import builtins
+
+    real_import = builtins.__import__
+
+    def fake_import(name, *args, **kwargs):
+        if name == "gdsfactory":
+            raise ImportError("no gdsfactory")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+
+    report = run_doctor(port=0, want_gdsfactory=True)
+    text = format_issue_report(report)
+    assert "gdsfactory:" not in text
+
+
+def test_doctor_main_report_flag_prints_fenced_block(capsys):
+    code = main(["--port", "0", "--report"])
+    captured = capsys.readouterr()
+    assert "```" in captured.out
+    assert __version__ in captured.out
+    # port 0 is never reachable, so the report describes a real failure.
+    assert code == 1

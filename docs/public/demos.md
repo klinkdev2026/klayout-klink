@@ -149,6 +149,20 @@ with live LVS. Measured output: routed 94/94, **LVS `match=True`**, 173 devices.
 Swap in your own harvested exemplar boxes to fit your real device — the flow
 does not change.
 
+### Profile-derived DRC gate (positive + negative control)
+
+```bash
+python -m examples_klink.public.features.profile_drc_gate --port <session-port>   # [--check-demo]
+```
+
+The same `ProcessProfile` that drives routing and LVS also derives a KLayout
+DRC deck (`profile.drc_script()`): width/space per routing layer plus via-cut
+enclosure. The example proves the gate both ways — a legal scene passes with
+0 violations, a deliberately planted violation trips exactly its category —
+and `--check-demo` runs the full deck over the fit-device layout (measured:
+`ok=True violations=0` on the same layout that passes LVS). See
+[drc-lvs.md](drc-lvs.md).
+
 ### Hand-written netlist → lint → place & route → LVS
 
 ```bash

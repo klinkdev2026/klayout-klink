@@ -240,6 +240,24 @@ After routing, read the structured result. Treat the route as failed if
 routes than expected. Router stress examples must mark expected failures as
 failures instead of leaving invalid geometry for visual inspection.
 
+## DRC and LVS
+
+For writing and running DRC decks (`drc.run`) and LVS, follow the dedicated
+recipe: `docs/public/drc-lvs-agent-handout.md` (self-contained; construct
+whitelist + verdict discipline). The short form:
+
+- DRC dimensions ALWAYS carry a decimal point (`width(2.0)` is µm;
+  `width(2)` is database units and passes everything). `report(...)` is the
+  first line of every deck.
+- When the project routes with a `ProcessProfile`, derive the deck instead of
+  hand-writing it: `profile.drc_script()` /
+  `klink.routing.grid.profile_drc.run_drc(client, profile)` — routing, DRC,
+  and LVS then read the same process declaration.
+- Verdicts are all-or-nothing: DRC passes only on `exception is None` and
+  `total_items == 0`; LVS (`structdevice.lvs_check`) passes only on
+  `match=True`. Never weaken a rule to make a run pass; scope with
+  `exclude_around` only for device-region geometry and say so.
+
 Be explicit about limits. `routing.global_channel_cell` has assignment,
 capacity split, and small-bundle route-order search, but not full negotiated
 rip-up/reroute. `routing.damped_steiner_cell` is still trunk/branch topology,

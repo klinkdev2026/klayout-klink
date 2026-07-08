@@ -117,3 +117,11 @@ class ProcessProfile:
         """LVS ConnectivitySpec derived from the same profile."""
         from klink.domains.structdevice.connectivity import ConnectivitySpec
         return ConnectivitySpec(conductors=tuple(self.routing_layers), vias=tuple(self.vias))
+
+    def drc_script(self, **kwargs) -> str:
+        """KLayout DRC runset derived from the same profile (width / space /
+        via-cut enclosure). See klink.routing.grid.profile_drc for options;
+        run it with client.drc_run or profile_drc.run_drc. With this, routing,
+        DRC, and LVS all read ONE process declaration."""
+        from klink.routing.grid.profile_drc import drc_script
+        return drc_script(self, **kwargs)
