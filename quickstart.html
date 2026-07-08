@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>快速上手 - klink</title>
   <meta name="description" content="安装 klayout-klink、KLayout 插件、运行第一个离线 demo 和 live KLayout smoke test。">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="assets/styles.css">
 </head>
 <body data-page="quickstart">
@@ -56,21 +57,21 @@
       <article class="content">
         <h2 id="requirements">环境要求</h2>
         <ul>
-          <li>KLayout 桌面版。klink 是围绕 KLayout GUI 和 `pya`/`db` API 工作的工具。</li>
-          <li>Python 3.10 或更新版本。release 元数据声明 `requires-python = ">=3.10"`。</li>
+          <li>KLayout 桌面版。klink 是围绕 KLayout GUI 和 <code>pya</code>/<code>db</code> API 工作的工具。</li>
+          <li>Python 3.10 或更新版本。release 元数据声明 <code>requires-python = ">=3.10"</code>。</li>
           <li>可选：Claude Code、Codex 或其他 MCP client。</li>
-          <li>按工作流可选安装 `gdsfactory`、`klayout` Python 包、NumPy/OpenCV、SciPy/scikit 系列库。</li>
+          <li>按工作流可选安装 <code>gdsfactory</code>、<code>klayout</code> Python 包、NumPy/OpenCV、SciPy/scikit 系列库。</li>
         </ul>
         <div class="note">
-          klink 核心包不打包第三方科学库。某个功能缺依赖时，工具会返回具体 `pip install` 指令。这样可以保持基础安装轻量。
+          klink 核心包不打包第三方科学库。某个功能缺依赖时，工具会返回具体 <code>pip install</code> 指令。这样可以保持基础安装轻量。
         </div>
 
         <h3>支持版本</h3>
         <table class="data-table">
           <thead><tr><th>组件</th><th>版本下限</th><th>说明</th></tr></thead>
           <tbody>
-            <tr><td>`klayout`（pip）</td><td>&gt;= 0.28</td><td>0.27 不支持：klink 的 device extractor 用到一个 `GenericDeviceExtractor` 重载，pya 自己的文档说明它是 0.28 才引入的。</td></tr>
-            <tr><td>`gdsfactory`（`[photonics]`）</td><td>&gt;= 9.0, &lt; 10</td><td>9.x 全线版本都覆盖到。gdsfactory 8.x 测试能跑，但还没纳入 pin，当作实验性对待。</td></tr>
+            <tr><td><code>klayout</code>（pip）</td><td>&gt;= 0.28</td><td>0.27 不支持：klink 的 device extractor 用到一个 <code>GenericDeviceExtractor</code> 重载，pya 自己的文档说明它是 0.28 才引入的。</td></tr>
+            <tr><td><code>gdsfactory</code>（<code>[photonics]</code>）</td><td>&gt;= 9.0, &lt; 10</td><td>9.x 全线版本都覆盖到。gdsfactory 8.x 测试能跑，但还没纳入 pin，当作实验性对待。</td></tr>
           </tbody>
         </table>
         <p>这些版本由公开仓库 CI 的 gf-compat / klayout-compat 矩阵持续验证。</p>
@@ -78,7 +79,7 @@
         <h2 id="python">安装 Python 包</h2>
         <p>普通用户从 PyPI 安装公开包：</p>
         <pre><code>python -m pip install klayout-klink</code></pre>
-        <p>这会安装 `klink` 和它自带的两个 Rust 加速内核 `klink-boxmaze-rs` 与 `klink-trackmaze-rs`。如果某个平台没有预编译 wheel，pip 可能回退到源码编译，需要 Rust toolchain；只想安装纯 Python 核心时可用：</p>
+        <p>这会安装 <code>klink</code> 和它自带的两个 Rust 加速内核 <code>klink-boxmaze-rs</code> 与 <code>klink-trackmaze-rs</code>。如果某个平台没有预编译 wheel，pip 可能回退到源码编译，需要 Rust toolchain；只想安装纯 Python 核心时可用：</p>
         <pre><code>python -m pip install klayout-klink --no-deps</code></pre>
         <p>按需安装可选能力：</p>
         <pre><code>python -m pip install klayout
@@ -87,7 +88,7 @@ python -m pip install numpy opencv-python-headless
 python -m pip install scipy scikit-learn scikit-image</code></pre>
 
         <h2 id="plugin">安装 KLayout 插件</h2>
-        <p>`klink_plugin` 是 KLayout salt package。它不是普通 Python import 包，安装方式是复制公开仓库里的 `klink_plugin/` 文件夹到 KLayout 的 salt 目录。</p>
+        <p><code>klink_plugin</code> 是 KLayout salt package。它不是普通 Python import 包，安装方式是复制公开仓库里的 <code>klink_plugin/</code> 文件夹到 KLayout 的 salt 目录。</p>
         <h3>Windows PowerShell</h3>
         <pre><code>cd path\to\klink
 New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\KLayout\salt" | Out-Null
@@ -98,7 +99,7 @@ mkdir -p ~/.klayout/salt
 cp -R klink_plugin ~/.klayout/salt/</code></pre>
         <p>复制后重启 KLayout。插件启动成功时，KLayout console 会出现类似：</p>
         <pre><code>[klink.server] listening on 127.0.0.1:8765</code></pre>
-        <p>如果 `8765` 被占用，插件会尝试后续端口直到 `8799`。每个 KLayout 窗口都是独立 session。</p>
+        <p>如果 <code>8765</code> 被占用，插件会尝试后续端口直到 <code>8799</code>。每个 KLayout 窗口都是独立 session。</p>
 
         <h2 id="smoke">连接测试</h2>
         <p>启动带插件的 KLayout 后，用 Python client 连接：</p>
@@ -123,7 +124,7 @@ cd my-chip
 python example_template/nanodevice/ebl_wraparound.py</code></pre>
         <p>如果你是在公开源码/release checkout 里，也可以运行公开 gallery 的模块路径：</p>
         <pre><code>python -m examples_klink.public.demos.nanodevice.ebl_wraparound</code></pre>
-        <p>release 文档记录的实测摘要：`"ok": true`，40 electrodes，12 patches，writefield 16 fields / 11 windows / 20 crossings，0 violations，0 overlaps。</p>
+        <p>release 文档记录的实测摘要：<code>"ok": true</code>，40 electrodes，12 patches，writefield 16 fields / 11 windows / 20 crossings，0 violations，0 overlaps。</p>
 
         <h3>live KLayout：neural electrode harness</h3>
         <p>这个 demo 需要 KLayout + 插件，但不需要你的 GDS：</p>
@@ -136,12 +137,12 @@ python example_template/nanodevice/ebl_wraparound.py</code></pre>
         </div>
 
         <h3>升级 klink 后刷新 starter</h3>
-        <p>装了新版本 klink 之后，用 `klink update` 刷新 `example_template/` 里的 starter demo；你自己的文件（`pdk.py`、`custom_devices/`、`.klink/`、`out/`、`specs/`）绝不会被碰：</p>
+        <p>装了新版本 klink 之后，用 <code>klink update</code> 刷新 <code>example_template/</code> 里的 starter demo；你自己的文件（<code>pdk.py</code>、<code>custom_devices/</code>、<code>.klink/</code>、<code>out/</code>、<code>specs/</code>）绝不会被碰：</p>
         <pre><code>python -m pip install -U klayout-klink
 klink update my-chip   # 或者在项目目录内直接运行: klink update</code></pre>
 
         <h2 id="mcp">接入 MCP</h2>
-        <p>安装 Python 包后会有 `klink-mcp` 命令入口。先给项目安装 agent skill 和项目记忆文件：</p>
+        <p>安装 Python 包后会有 <code>klink-mcp</code> 命令入口。先给项目安装 agent skill 和项目记忆文件：</p>
         <pre><code>cd path\to\klink
 klink-mcp --setup .</code></pre>
         <p>注册 MCP server 的典型命令：</p>
@@ -150,19 +151,19 @@ klink-mcp --setup .</code></pre>
         <table class="data-table">
           <thead><tr><th>Profile</th><th>用途</th></tr></thead>
           <tbody>
-            <tr><td>`read`</td><td>layout、cell、layer、shape、view、selection 查询。</td></tr>
-            <tr><td>`write`</td><td>创建 cell、layer、shape、instance、PCell 和 undo transaction。</td></tr>
-            <tr><td>`verify`</td><td>DRC、LVS 和结构化验证工具。</td></tr>
-            <tr><td>`escape`</td><td>`exec.python` 等受控 escape hatch。</td></tr>
-            <tr><td>`all`</td><td>暴露全部工具。</td></tr>
+            <tr><td><code>read</code></td><td>layout、cell、layer、shape、view、selection 查询。</td></tr>
+            <tr><td><code>write</code></td><td>创建 cell、layer、shape、instance、PCell 和 undo transaction。</td></tr>
+            <tr><td><code>verify</code></td><td>DRC、LVS 和结构化验证工具。</td></tr>
+            <tr><td><code>escape</code></td><td><code>exec.python</code> 等受控 escape hatch。</td></tr>
+            <tr><td><code>all</code></td><td>暴露全部工具。</td></tr>
           </tbody>
         </table>
 
         <h2 id="trouble">排错</h2>
         <ul>
           <li>Python 连接失败：确认 KLayout 已启动、插件已复制到 salt、重启过 KLayout、端口正确。</li>
-          <li>MCP 工具存在但调用报连接错误：MCP server 在跑，但 KLayout 不可达。启动 KLayout 后调用 `klink.reconnect` 或重启 MCP client。</li>
-          <li>gdsfactory 工具缺依赖：在运行 MCP server 的同一个 Python 环境里安装 `gdsfactory`。</li>
+          <li>MCP 工具存在但调用报连接错误：MCP server 在跑，但 KLayout 不可达。启动 KLayout 后调用 <code>klink.reconnect</code> 或重启 MCP client。</li>
+          <li>gdsfactory 工具缺依赖：在运行 MCP server 的同一个 Python 环境里安装 <code>gdsfactory</code>。</li>
           <li>PowerShell 不允许激活 venv：只对当前进程放开脚本执行策略。</li>
         </ul>
         <pre><code>Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass

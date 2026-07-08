@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>分步教程：gdsfactory MZI 接管与拖动重布线 - klink</title>
   <meta name="description" content="用 klink 的 gdsfactory 桥接把一个普通 gdsfactory 热光 MZI 脚本接管进 klink 的交互循环：一次 import_gf_component 接管器件与端口、恢复倾斜光栅耦合器的可路由性、restyle 成 sbend、加入 all_angle/dubins/electrical net，再实际拖动一个组件、观察布线过期，最后用同一个 reroute() 调用重新接上——图文分步 + 可运行代码 + 真实结构化报告。">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="assets/styles.css">
   <style>
     /* Minimal figure styling, following the site's existing card/note language

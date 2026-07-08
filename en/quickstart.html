@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Quickstart - klink</title>
   <meta name="description" content="Install klayout-klink, the KLayout plugin, run offline starters, and connect a live KLayout session.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="../assets/styles.css">
 </head>
 <body data-page="quickstart">
@@ -56,26 +57,26 @@
       <article class="content">
         <h2 id="requirements">Requirements</h2>
         <ul>
-          <li>KLayout desktop build. Live workflows depend on the GUI macro environment and `pya`/`db` APIs.</li>
-          <li>Python 3.10 or newer. The package metadata declares `requires-python = ">=3.10"`.</li>
+          <li>KLayout desktop build. Live workflows depend on the GUI macro environment and <code>pya</code>/<code>db</code> APIs.</li>
+          <li>Python 3.10 or newer. The package metadata declares <code>requires-python = ">=3.10"</code>.</li>
           <li>Optional: Claude Code, Codex, or another MCP client.</li>
-          <li>Optional per workflow: `gdsfactory`, the `klayout` Python package, NumPy/OpenCV, SciPy, scikit-learn, or scikit-image.</li>
+          <li>Optional per workflow: <code>gdsfactory</code>, the <code>klayout</code> Python package, NumPy/OpenCV, SciPy, scikit-learn, or scikit-image.</li>
         </ul>
-        <div class="note">The core package does not bundle third-party scientific libraries. Feature errors name the exact missing `pip install` command.</div>
+        <div class="note">The core package does not bundle third-party scientific libraries. Feature errors name the exact missing <code>pip install</code> command.</div>
 
         <h3>Supported versions</h3>
         <table class="data-table">
           <thead><tr><th>Component</th><th>Floor</th><th>Notes</th></tr></thead>
           <tbody>
-            <tr><td>`klayout` (pip)</td><td>&gt;= 0.28</td><td>0.27 is not supported: klink's device extractor uses a `GenericDeviceExtractor` overload that pya itself documents as introduced in 0.28.</td></tr>
-            <tr><td>`gdsfactory` (`[photonics]`)</td><td>&gt;= 9.0, &lt; 10</td><td>Every 9.x release is covered. gdsfactory 8.x works in testing but is not part of the pin yet -- treat it as experimental.</td></tr>
+            <tr><td><code>klayout</code> (pip)</td><td>&gt;= 0.28</td><td>0.27 is not supported: klink's device extractor uses a <code>GenericDeviceExtractor</code> overload that pya itself documents as introduced in 0.28.</td></tr>
+            <tr><td><code>gdsfactory</code> (<code>[photonics]</code>)</td><td>&gt;= 9.0, &lt; 10</td><td>Every 9.x release is covered. gdsfactory 8.x works in testing but is not part of the pin yet -- treat it as experimental.</td></tr>
           </tbody>
         </table>
         <p>These versions are continuously verified by the public repo's CI gf-compat / klayout-compat matrices.</p>
 
         <h2 id="python">Install the Python package</h2>
         <pre><code>python -m pip install klayout-klink</code></pre>
-        <p>This installs `klink` and its own two Rust acceleration kernels, `klink-boxmaze-rs` and `klink-trackmaze-rs`. On unsupported platforms pip may build the kernels from source, which requires a Rust toolchain. For pure-Python core only:</p>
+        <p>This installs <code>klink</code> and its own two Rust acceleration kernels, <code>klink-boxmaze-rs</code> and <code>klink-trackmaze-rs</code>. On unsupported platforms pip may build the kernels from source, which requires a Rust toolchain. For pure-Python core only:</p>
         <pre><code>python -m pip install klayout-klink --no-deps</code></pre>
         <p>Install optional feature dependencies only when needed:</p>
         <pre><code>python -m pip install klayout
@@ -84,7 +85,7 @@ python -m pip install numpy opencv-python-headless
 python -m pip install scipy scikit-learn scikit-image</code></pre>
 
         <h2 id="plugin">Install the KLayout plugin</h2>
-        <p>`klink_plugin` is a KLayout salt package. Copy the public repository or release checkout's `klink_plugin/` folder into KLayout's salt directory.</p>
+        <p><code>klink_plugin</code> is a KLayout salt package. Copy the public repository or release checkout's <code>klink_plugin/</code> folder into KLayout's salt directory.</p>
         <h3>Windows PowerShell</h3>
         <pre><code>cd path\to\klink
 New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\KLayout\salt" | Out-Null
@@ -118,7 +119,7 @@ cd my-chip
 python example_template/nanodevice/ebl_wraparound.py</code></pre>
         <p>In a public source or release checkout, the gallery module path also works:</p>
         <pre><code>python -m examples_klink.public.demos.nanodevice.ebl_wraparound</code></pre>
-        <p>Recorded public output summary: `"ok": true`, 40 electrodes, 12 patches, writefield 16 fields / 11 windows / 20 crossings, 0 violations, 0 overlaps.</p>
+        <p>Recorded public output summary: <code>"ok": true</code>, 40 electrodes, 12 patches, writefield 16 fields / 11 windows / 20 crossings, 0 violations, 0 overlaps.</p>
 
         <h3>Live KLayout: neural electrode harness</h3>
         <pre><code>python example_template/nanodevice/neural_electrode.py --port &lt;session-port&gt; --elec-rows 4</code></pre>
@@ -128,7 +129,7 @@ python example_template/nanodevice/ebl_wraparound.py</code></pre>
         <div class="warning">A KLayout port is just a session. Use an empty or test-owned window for demos, not your manual working layout.</div>
 
         <h3>Refresh starters after upgrading klink</h3>
-        <p>After installing a newer klink, run `klink update` to refresh the starter demos under `example_template/`; your own files (`pdk.py`, `custom_devices/`, `.klink/`, `out/`, `specs/`) are never touched:</p>
+        <p>After installing a newer klink, run <code>klink update</code> to refresh the starter demos under <code>example_template/</code>; your own files (<code>pdk.py</code>, <code>custom_devices/</code>, <code>.klink/</code>, <code>out/</code>, <code>specs/</code>) are never touched:</p>
         <pre><code>python -m pip install -U klayout-klink
 klink update my-chip   # or run it from inside the project folder: klink update</code></pre>
 
@@ -139,19 +140,19 @@ klink-mcp --setup .</code></pre>
         <table class="data-table">
           <thead><tr><th>Profile</th><th>Purpose</th></tr></thead>
           <tbody>
-            <tr><td>`read`</td><td>Layout, cell, layer, shape, view, and selection queries.</td></tr>
-            <tr><td>`write`</td><td>Cell, layer, shape, instance, PCell, and undo transaction authoring.</td></tr>
-            <tr><td>`verify`</td><td>DRC, LVS, and structured verification tools.</td></tr>
-            <tr><td>`escape`</td><td>Controlled escape-hatch tools such as `exec.python`.</td></tr>
-            <tr><td>`all`</td><td>Expose all tools.</td></tr>
+            <tr><td><code>read</code></td><td>Layout, cell, layer, shape, view, and selection queries.</td></tr>
+            <tr><td><code>write</code></td><td>Cell, layer, shape, instance, PCell, and undo transaction authoring.</td></tr>
+            <tr><td><code>verify</code></td><td>DRC, LVS, and structured verification tools.</td></tr>
+            <tr><td><code>escape</code></td><td>Controlled escape-hatch tools such as <code>exec.python</code>.</td></tr>
+            <tr><td><code>all</code></td><td>Expose all tools.</td></tr>
           </tbody>
         </table>
 
         <h2 id="trouble">Troubleshooting</h2>
         <ul>
           <li>Python cannot connect: check KLayout is running, the plugin was copied, KLayout was restarted, and the port is correct.</li>
-          <li>MCP tools exist but calls fail: MCP is running but KLayout is unreachable. Start KLayout and call `klink.reconnect` or restart the MCP client.</li>
-          <li>gdsfactory tools miss dependencies: install `gdsfactory` into the same interpreter that runs the MCP server.</li>
+          <li>MCP tools exist but calls fail: MCP is running but KLayout is unreachable. Start KLayout and call <code>klink.reconnect</code> or restart the MCP client.</li>
+          <li>gdsfactory tools miss dependencies: install <code>gdsfactory</code> into the same interpreter that runs the MCP server.</li>
           <li>PowerShell blocks venv activation: allow scripts for the current process.</li>
         </ul>
         <pre><code>Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass

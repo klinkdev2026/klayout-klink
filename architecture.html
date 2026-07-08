@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>架构 - klink</title>
   <meta name="description" content="klink 三层架构、control path、process purity、批量 RPC、验证和公开 release 边界。">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="assets/styles.css">
 </head>
 <body data-page="architecture">
@@ -36,7 +37,7 @@
       <div class="container">
         <div class="eyebrow">Architecture</div>
         <h1>机制层稳定，工艺层留给用户</h1>
-        <p>公开 release 的核心设计是 process purity：`klink/` 只提供机制和算法，不保存你的层号、器件、DRC 数值或 PDK 实例。</p>
+        <p>公开 release 的核心设计是 process purity：<code>klink/</code> 只提供机制和算法，不保存你的层号、器件、DRC 数值或 PDK 实例。</p>
       </div>
     </section>
 
@@ -58,9 +59,9 @@
         <table class="data-table">
           <thead><tr><th>层</th><th>内容</th><th>形式</th></tr></thead>
           <tbody>
-            <tr><td>Mechanism</td><td>`klink` Python client、算法、MCP bridge、KLayout 插件。</td><td>安装包和 salt package，普通用户不修改。</td></tr>
+            <tr><td>Mechanism</td><td><code>klink</code> Python client、算法、MCP bridge、KLayout 插件。</td><td>安装包和 salt package，普通用户不修改。</td></tr>
             <tr><td>Development repo</td><td>测试、录制、开发示例、内部设计记录。</td><td>开发仓，不等于公开发布内容。</td></tr>
-            <tr><td>User project</td><td>`pdk.py`、`custom_devices/`、specs、输出结果。</td><td>用户自己的目录，agent 在这里写代码。</td></tr>
+            <tr><td>User project</td><td><code>pdk.py</code>、<code>custom_devices/</code>、specs、输出结果。</td><td>用户自己的目录，agent 在这里写代码。</td></tr>
           </tbody>
         </table>
 
@@ -74,11 +75,11 @@
         <p>KLayout 插件保持薄，复杂逻辑在外部 Python 中运行。这样 agent、脚本、测试和可选第三方库不需要塞进 KLayout macro 环境。</p>
 
         <h2 id="purity">Process purity</h2>
-        <p>`klink` 核心不带工艺默认值。文档和 demo 中出现的层号、尺寸、器件参数，属于示例或用户 `pdk.py`，不是 klink 的默认工艺。</p>
+        <p><code>klink</code> 核心不带工艺默认值。文档和 demo 中出现的层号、尺寸、器件参数，属于示例或用户 <code>pdk.py</code>，不是 klink 的默认工艺。</p>
         <ul>
-          <li>换工艺：写你的 `pdk.py`，不要改 `klink/`。</li>
+          <li>换工艺：写你的 <code>pdk.py</code>，不要改 <code>klink/</code>。</li>
           <li>调用 API：把 layer、width、spacing、device library 等显式传入。</li>
-          <li>缺参数：工具应该返回带 `next_action` 的 instructive error，而不是静默套默认值。</li>
+          <li>缺参数：工具应该返回带 <code>next_action</code> 的 instructive error，而不是静默套默认值。</li>
         </ul>
 
         <h2 id="agent" class="anchor-h">Agent 工具设计原则</h2>
@@ -97,10 +98,10 @@
         <table class="data-table">
           <thead><tr><th>工作量</th><th>优先 RPC</th></tr></thead>
           <tbody>
-            <tr><td>同一个 cell/layer 上很多 box</td><td>`shape.insert_boxes`</td></tr>
-            <tr><td>混合 shape</td><td>`shape.insert_many`，支持 box、polygon、path、text。</td></tr>
-            <tr><td>很多 child-cell instances</td><td>`instance.insert_many`</td></tr>
-            <tr><td>很多 library/basic PCell instances</td><td>`instance.insert_pcell_many`</td></tr>
+            <tr><td>同一个 cell/layer 上很多 box</td><td><code>shape.insert_boxes</code></td></tr>
+            <tr><td>混合 shape</td><td><code>shape.insert_many</code>，支持 box、polygon、path、text。</td></tr>
+            <tr><td>很多 child-cell instances</td><td><code>instance.insert_many</code></td></tr>
+            <tr><td>很多 library/basic PCell instances</td><td><code>instance.insert_pcell_many</code></td></tr>
           </tbody>
         </table>
         <p>单个 insert 适合调试，不适合作为生成器主循环。</p>
@@ -117,10 +118,10 @@
         <h2 id="release">release 边界</h2>
         <p>这个网站只写公开 release 可验证的内容。站点内容核对过以下公开入口：</p>
         <ul>
-          <li>`README.md` / `README.zh-CN.md`</li>
-          <li>`docs/public/` 的 getting-started、architecture、demos、recipes、project-model、control-plane、interactive-workflows</li>
-          <li>`examples_klink/public/` 的 demos、features、smoke</li>
-          <li>`klink/`、`klink_plugin/`、`pyproject.toml` 里的包名、入口和公开源码结构</li>
+          <li><code>README.md</code> / <code>README.zh-CN.md</code></li>
+          <li><code>docs/public/</code> 的 getting-started、architecture、demos、recipes、project-model、control-plane、interactive-workflows</li>
+          <li><code>examples_klink/public/</code> 的 demos、features、smoke</li>
+          <li><code>klink/</code>、<code>klink_plugin/</code>、<code>pyproject.toml</code> 里的包名、入口和公开源码结构</li>
         </ul>
         <div class="warning">
           内部开发记录只用于判断哪些内容不该公开。网站不发布未进入 release 的开发流程、私有 PDK、私有 GDS 或 NDA 验证细节。

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Architecture - klink</title>
   <meta name="description" content="klink architecture: three tiers, control path, process purity, batch RPCs, verification, and public release boundaries.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="../assets/styles.css">
 </head>
 <body data-page="architecture">
@@ -36,7 +37,7 @@
       <div class="container">
         <div class="eyebrow">Architecture</div>
         <h1>Stable mechanism, user-owned process</h1>
-        <p>The public release is built around process purity: `klink/` provides mechanism and algorithms, not your layers, devices, DRC numbers, or PDK instances.</p>
+        <p>The public release is built around process purity: <code>klink/</code> provides mechanism and algorithms, not your layers, devices, DRC numbers, or PDK instances.</p>
       </div>
     </section>
 
@@ -57,9 +58,9 @@
         <table class="data-table">
           <thead><tr><th>Tier</th><th>Content</th><th>Form</th></tr></thead>
           <tbody>
-            <tr><td>Mechanism</td><td>`klink` Python client, algorithms, MCP bridge, and KLayout plugin.</td><td>Installed package and salt package; normal users do not edit these.</td></tr>
+            <tr><td>Mechanism</td><td><code>klink</code> Python client, algorithms, MCP bridge, and KLayout plugin.</td><td>Installed package and salt package; normal users do not edit these.</td></tr>
             <tr><td>Development repo</td><td>Tests, recordings, development examples, and internal design records.</td><td>Development source, not the full public release surface.</td></tr>
-            <tr><td>User project</td><td>`pdk.py`, `custom_devices/`, specs, and generated outputs.</td><td>Your folder. The agent writes here.</td></tr>
+            <tr><td>User project</td><td><code>pdk.py</code>, <code>custom_devices/</code>, specs, and generated outputs.</td><td>Your folder. The agent writes here.</td></tr>
           </tbody>
         </table>
 
@@ -73,9 +74,9 @@
         <p>The plugin stays thin. Heavier logic runs in external Python, where agents, tests, and optional third-party libraries are easier to manage.</p>
 
         <h2 id="purity">Process purity</h2>
-        <p>The core holds no process defaults. Any layer number, size, or device parameter in a demo belongs to that example or to the user's `pdk.py`.</p>
+        <p>The core holds no process defaults. Any layer number, size, or device parameter in a demo belongs to that example or to the user's <code>pdk.py</code>.</p>
         <ul>
-          <li>To bring up a new process, write `pdk.py`; do not edit `klink/`.</li>
+          <li>To bring up a new process, write <code>pdk.py</code>; do not edit <code>klink/</code>.</li>
           <li>Pass layers, widths, spacing, and device libraries explicitly.</li>
           <li>When required process facts are missing, tools should return instructive errors with the next action.</li>
         </ul>
@@ -96,10 +97,10 @@
         <table class="data-table">
           <thead><tr><th>Workload</th><th>Preferred RPC</th></tr></thead>
           <tbody>
-            <tr><td>Many boxes on one cell/layer</td><td>`shape.insert_boxes`</td></tr>
-            <tr><td>Mixed shapes</td><td>`shape.insert_many` for box, polygon, path, and text.</td></tr>
-            <tr><td>Many child-cell instances</td><td>`instance.insert_many`</td></tr>
-            <tr><td>Many library/basic PCell instances</td><td>`instance.insert_pcell_many`</td></tr>
+            <tr><td>Many boxes on one cell/layer</td><td><code>shape.insert_boxes</code></td></tr>
+            <tr><td>Mixed shapes</td><td><code>shape.insert_many</code> for box, polygon, path, and text.</td></tr>
+            <tr><td>Many child-cell instances</td><td><code>instance.insert_many</code></td></tr>
+            <tr><td>Many library/basic PCell instances</td><td><code>instance.insert_pcell_many</code></td></tr>
           </tbody>
         </table>
 
@@ -107,13 +108,13 @@
         <div class="grid two">
           <article class="card"><h3>routing</h3><p>Port/Anchor tapered, steiner, damped, and channel backends, plus custom-device detailed routing to LVS.</p></article>
           <article class="card"><h3>nanodevice</h3><p>EBL wraparound, Hall bar, neural electrode harness, and flake-related tools.</p></article>
-          <article class="card"><h3>photonics</h3><p>gdsfactory bridge, blackbox port harvesting, `import_gf_component`, photonic net intent, and reroute.</p></article>
+          <article class="card"><h3>photonics</h3><p>gdsfactory bridge, blackbox port harvesting, <code>import_gf_component</code>, photonic net intent, and reroute.</p></article>
           <article class="card"><h3>structdevice</h3><p>Device extraction, netlists, logic map, layout engine, P&R, LVS-lite, and live LVS integration.</p></article>
           <article class="card"><h3>MCP core</h3><p>Tool discovery, session registry, interaction context, recorder, transfer, and diagnostics.</p></article>
         </div>
 
         <h2 id="release">Release boundary</h2>
-        <p>This website only documents release-verifiable public content: root READMEs, `docs/public`, `examples_klink/public`, package metadata, `klink/`, and `klink_plugin/` public entry points.</p>
+        <p>This website only documents release-verifiable public content: root READMEs, <code>docs/public</code>, <code>examples_klink/public</code>, package metadata, <code>klink/</code>, and <code>klink_plugin/</code> public entry points.</p>
         <div class="warning">Internal development notes are used only to avoid publishing the wrong thing. The public website does not disclose unreleased workflows, private PDKs, private GDS, or confidential validation details.</div>
       </article>
     </div>

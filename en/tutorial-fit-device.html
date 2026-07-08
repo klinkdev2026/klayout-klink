@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Step-by-step tutorial: a custom device — fit exemplar geometry into a PCell, then P&amp;R/LVS - klink</title>
   <meta name="description" content="Bring your own device into klink's digital P&amp;R flow: fit a parametric edge model from exemplar geometry, register it as a KLayout PCell, draw parameter variants, place 173 instances from a netlist, run FlexDR detailed routing 94/94, and finish with live LVS match=True. Screenshots and runnable code for every step; every process number is example-owned.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="../assets/styles.css">
   <style>
     /* Minimal figure styling, following the site's existing card/note language
@@ -193,7 +194,7 @@ PUBLIC_PROCESS = ProcessProfile(          # every number example-owned; copy + e
 
 P = replace(PUBLIC_PROCESS, wire_clear_um=5.0, grid_pitch_um=10.0,
             col_pitch_um=100.0, y_step_um=35.0)     # density knobs, also example-owned
-nl = json.loads(Path("examples_klink/public/demos/add4.devnet.json").read_text())
+nl = json.loads(Path("examples_klink/public/demos/digital/add4.devnet.json").read_text())
 raw = eng.load_device_geom(GEOM)          # device geometry table (terms/pads/body), generated from the fit table
 _, _, terms = eng._geom_tables(raw)
 rows, cols = derive_grid(len(nl["groups"]))          # 62 gates -> 8 x 8
@@ -234,7 +235,7 @@ ok, info, _ = eng.route_and_draw_flexdr(
 from klink.domains.structdevice.recipes import geom_terminal_provider
 
 # device_terms = absolute terminal coordinates per instance (placement offset
-# + terminal centers from `terms`; see the demo source for the one-line dict)
+# + terminal centers from terms; see the demo source for the one-line dict)
 res = lvs_check(c, "DEMO_ADD4", declared=declared, mode="lvsdb",
                 connectivity=P.connectivity_spec(),      # derived from the SAME profile
                 terminal_provider=geom_terminal_provider(raw),
@@ -258,11 +259,11 @@ RESULT: PASS (synthetic fitted device: fit -> P&amp;R -> LVS match)</code></pre>
         <p>Four structural quality gates, all required: fitter screening <code>0 unexplained</code> (every edge accounted for); routing <code>routed=94/94</code> with <code>markers=0</code> (everything routed, zero DRC violations); LVS <code>match=True</code> (the netlist extracted from the 173 drawn devices matches the declared one). If any gate fails, the demo exits non-zero — there is no "close enough counts as done".</p>
         <figure class="tut-figure">
           <img src="../assets/tutorials/fit-device/step-07-lvs-verify.png" alt="KLayout's Netlist Database Browser with DEMO_ADD4.lvsdb open; on the Cross Reference tab the Nets and Devices under DEMO_ADD4 both show green (matched)">
-          <figcaption>Step 6 · the human-facing side of <code>match=True</code>: the <code>DEMO_ADD4.lvsdb</code> written by <code>mode="lvsdb"</code>, opened in KLayout's Netlist Database Browser, with every net and device cross-referenced and matched (green). This is the native extraction behind the <code>LVS ok=True match=True</code> line above — the numbers are the verdict; this picture is just what that same verdict looks like to a person.</figcaption>
+          <figcaption>Step 7 · the human-facing side of <code>match=True</code>: the <code>DEMO_ADD4.lvsdb</code> written by <code>mode="lvsdb"</code>, opened in KLayout's Netlist Database Browser, with every net and device cross-referenced and matched (green). This is the native extraction behind the <code>LVS ok=True match=True</code> line above — the numbers are the verdict; this picture is just what that same verdict looks like to a person.</figcaption>
         </figure>
 
         <h2 id="next" class="anchor-h">Next steps</h2>
-        <p>Make the flow yours: copy <code>examples_klink/public/demos/fit_device_pnr_lvs.py</code> and swap three things — <code>_device_boxes()</code> (boxes read via <code>shape.query</code> from your own hand-drawn device cells), the layer numbers / widths / spacings in <code>PUBLIC_PROCESS</code>, and the netlist. klink's mechanism layer needs no edits. If you're starting from zero, read the first batch's <a href="tutorial-hallbar.html">Hall bar tutorial</a> first for the basic geometry-first loop. The next tutorial covers the <a href="tutorial-padframe.html">probe-card padframe demo</a>: the pad ring is fixed first and the circuit's P&amp;R has to meet it.</p>
+        <p>Make the flow yours: copy <code>examples_klink/public/demos/digital/fit_device_pnr_lvs.py</code> and swap three things — <code>_device_boxes()</code> (boxes read via <code>shape.query</code> from your own hand-drawn device cells), the layer numbers / widths / spacings in <code>PUBLIC_PROCESS</code>, and the netlist. klink's mechanism layer needs no edits. If you're starting from zero, read the first batch's <a href="tutorial-hallbar.html">Hall bar tutorial</a> first for the basic geometry-first loop. The next tutorial covers the <a href="tutorial-padframe.html">probe-card padframe demo</a>: the pad ring is fixed first and the circuit's P&amp;R has to meet it.</p>
       </article>
     </div>
   </main>

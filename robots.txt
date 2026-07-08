@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://klinkdev2026.github.io/klayout-klink/sitemap.xml
