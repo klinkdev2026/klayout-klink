@@ -181,10 +181,18 @@ def update(target: str, *, dry_run: bool = False) -> int:
 
     dst_examples.mkdir(parents=True, exist_ok=True)
     # Starters are grouped into category subfolders (nanodevice/ photonics/
-    # passives/), so walk RECURSIVELY and sync by relative path -- a flat glob
-    # would miss everything and silently refresh nothing.
+    # passives/ digital/), so walk RECURSIVELY and sync by relative path -- a
+    # flat glob would miss everything and silently refresh nothing. Skip
+    # bytecode caches on BOTH sides: pip compiles every .py in the wheel at
+    # install time, so the installed template dir grows __pycache__/ that must
+    # never be copied into (or deleted from) the user's project.
     def _rel_files(root: Path) -> set:
-        return {p.relative_to(root) for p in root.rglob("*") if p.is_file()}
+        return {
+            p.relative_to(root) for p in root.rglob("*")
+            if p.is_file()
+            and "__pycache__" not in p.parts
+            and p.suffix not in (".pyc", ".pyo")
+        }
 
     want = _rel_files(src_examples)
     have = _rel_files(dst_examples)

@@ -51,10 +51,28 @@ def test_doctor_reports_kernels_check_present():
     assert checks["kernels"]["detail"]
 
 
+def test_doctor_treats_namespace_only_klayout_as_not_installed(monkeypatch):
+    # A stray `klayout/` directory on sys.path imports as an empty namespace
+    # package: `import klayout` succeeds but `import klayout.db` fails. The
+    # check must NOT report that as an install.
+    fake_pkg = types.ModuleType("klayout")   # no `db`, no __path__
+    monkeypatch.setitem(sys.modules, "klayout", fake_pkg)
+    monkeypatch.delitem(sys.modules, "klayout.db", raising=False)
+
+    report = run_doctor(port=0)
+    kp = _by_name(report)["klayout_pip"]
+    assert kp["ok"] is True
+    assert "not installed" in kp["detail"]
+
+
 def test_doctor_flags_old_klayout_pip_version(monkeypatch):
     import importlib.metadata as importlib_metadata
 
-    monkeypatch.setitem(sys.modules, "klayout", types.ModuleType("klayout"))
+    fake_pkg = types.ModuleType("klayout")
+    fake_db = types.ModuleType("klayout.db")
+    fake_pkg.db = fake_db
+    monkeypatch.setitem(sys.modules, "klayout", fake_pkg)
+    monkeypatch.setitem(sys.modules, "klayout.db", fake_db)
 
     real_version = importlib_metadata.version
 
@@ -76,7 +94,11 @@ def test_doctor_flags_old_klayout_pip_version(monkeypatch):
 def test_doctor_accepts_klayout_pip_version_at_floor(monkeypatch):
     import importlib.metadata as importlib_metadata
 
-    monkeypatch.setitem(sys.modules, "klayout", types.ModuleType("klayout"))
+    fake_pkg = types.ModuleType("klayout")
+    fake_db = types.ModuleType("klayout.db")
+    fake_pkg.db = fake_db
+    monkeypatch.setitem(sys.modules, "klayout", fake_pkg)
+    monkeypatch.setitem(sys.modules, "klayout.db", fake_db)
 
     real_version = importlib_metadata.version
 

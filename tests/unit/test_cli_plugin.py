@@ -82,6 +82,37 @@ def test_default_salt_dir_honours_klayout_home(monkeypatch, tmp_path):
     assert cli._default_salt_dir() == tmp_path / "kh" / "salt"
 
 
+def test_update_ignores_bytecode_caches_on_both_sides(tmp_path, capsys, monkeypatch):
+    # pip byte-compiles every .py in the wheel at install time, so the
+    # INSTALLED template dir contains __pycache__/. Those must never be
+    # copied into the project ("added"), and pycache in the PROJECT must
+    # never be treated as stale starters ("removed").
+    proj = tmp_path / "proj"
+    assert cli.init(str(proj)) == 0
+
+    # Simulate the installed-package situation without touching the real
+    # package: point _template_dir at a copy that has pycache junk.
+    import shutil
+    fake_tpl = tmp_path / "tpl"
+    shutil.copytree(cli._template_dir(), fake_tpl)
+    junk_src = fake_tpl / "example_template" / "digital" / "__pycache__"
+    junk_src.mkdir()
+    (junk_src / "x.cpython-313.pyc").write_bytes(b"junk")
+    monkeypatch.setattr(cli, "_template_dir", lambda: fake_tpl)
+
+    junk_dst = proj / "example_template" / "passives" / "__pycache__"
+    junk_dst.mkdir()
+    (junk_dst / "y.pyc").write_bytes(b"junk")
+    capsys.readouterr()
+
+    assert cli.update(str(proj)) == 0
+    out = capsys.readouterr().out
+    assert "pycache" not in out and ".pyc" not in out
+    assert "already up to date." in out
+    assert not (proj / "example_template" / "digital" / "__pycache__").exists()
+    assert (junk_dst / "y.pyc").exists()   # user-side cache left alone
+
+
 def test_update_dry_run_writes_nothing(tmp_path, capsys):
     proj = tmp_path / "proj"
     assert cli.init(str(proj)) == 0

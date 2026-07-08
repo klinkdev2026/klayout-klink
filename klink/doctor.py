@@ -72,7 +72,10 @@ def _check_kernels(add) -> None:
 
 def _check_klayout_pip(add) -> None:
     try:
-        import klayout  # noqa: F401
+        # Import the real DB module, not bare `klayout`: a stray directory on
+        # sys.path can satisfy `import klayout` as an empty namespace package
+        # and fake a positive.
+        import klayout.db  # noqa: F401
     except Exception:
         add(
             "klayout_pip",
