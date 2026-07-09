@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>2.5d 视图——用同一份工艺声明把层叠画成 3D - klink</title>
+  <meta name="description" content="用 klink 一次调用把 StackSpec 和你自己的 z 表喂给 KLayout 原生 2.5d 查看器：双金属+过孔场景实测，以及 173 器件 add4 数字块渲染成六材料 3D 叠层的案例；需要 OpenGL。">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body data-page="tutorials">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="主导航">
+        <a href="index.html" data-nav="home">首页</a>
+        <a href="quickstart.html" data-nav="quickstart">快速上手</a>
+        <a href="tutorials.html" data-nav="tutorials" class="active">教程</a>
+        <a href="workflows.html" data-nav="workflows">工作流</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP 参考</a>
+        <a href="examples.html" data-nav="examples">示例</a>
+        <a href="architecture.html" data-nav="architecture">架构</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="语言切换">
+          <a class="active" href="25d-view.html">CN</a>
+          <a href="en/25d-view.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="打开导航" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">指南 · 2.5d 视图</div>
+        <h1>2.5d 视图——用同一份工艺声明把层叠画成 3D</h1>
+        <p>KLayout 自带原生 2.5d 查看器(Tools → 2.5d View),把版图多边形挤出成可旋转的 3D 叠层。klink 用一次调用驱动它:布线和 LVS 读的同一份 <code>StackSpec</code>,加上一张你自己拥有的 z 表,就变成"工具所推理的那个版图"的挤出视图。</p>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#viewer-mechanics">1. 原生查看器是什么</a>
+          <a href="#klink-path">2. klink 路径</a>
+          <a href="#add4-case-study">3. 真实电路块的 3D</a>
+          <a href="#escape-hatch">4. 逃生舱</a>
+          <a href="#troubleshooting">5. 排障</a>
+        </nav>
+      </aside>
+
+      <article class="content">
+        <h2 id="viewer-mechanics" class="anchor-h">1. 原生查看器是什么(官方机制)</h2>
+        <p>本页一切都建立在有文档记载的 KLayout 特性上——官方手册的 2.5d view 章节,以及 <code>D25View</code> API 类(KLayout 0.28 起官方提供)。先知道两件事:</p>
+        <ul>
+          <li><strong>需要 OpenGL。</strong> 2.5d 视图只存在于带 OpenGL 编译的 KLayout 构建里(标准桌面版都带)。缺失时 klink 返回指令性错误,不会崩。</li>
+          <li>KLayout 自己的工作流是脚本式的:Tools → 2.5d View → New 2.5d Script 打开一个 DRC 风格脚本,用官方 <code>z(...)</code> / <code>zz(...)</code> 声明做挤出:
+<pre><code>z(input(1, 0), zstart: 0.1.um, height: 200.nm)   # 一片挤出层
+zz(name: "GATE", like: "1/0") do                 # 命名材料组
+  z(layer1, zstart: 0.0, height: 10.nm)
+  z(layer2, height: 10.nm)                       # zstart 默认接上一片顶部
+end</code></pre>
+          <code>z</code> 接受 <code>zstart</code>、<code>zstop</code> 或 <code>height</code>,以及显示选项(<code>color</code>/<code>frame</code>/<code>fill</code> 十六进制、<code>like: "7/0"</code> 借用版图层色、<code>name</code>)。脚本路径始终可用;下面的 klink RPC 用于"叠层应来自你的工艺声明而非手写脚本"的场合。</li>
+        </ul>
+
+        <h2 id="klink-path" class="anchor-h">2. klink 路径:从 StackSpec 一次调用</h2>
+        <p>klink <strong>不带任何 z 高度</strong>——层厚和海拔是你拥有的工艺事实,和层号、净空一样。你提供 z 表;klink 把它与你的 <code>StackSpec</code>(已命名每个导体和过孔层)合成显示清单,喂给 KLayout 原生查看器:</p>
+        <pre><code>from klink import KLinkClient
+from klink.process_stack import StackSpec
+from klink.stack25d import stack_displays
+
+stack = StackSpec.from_dict({
+    "conductors": [{"layer": "31/0", "role": "metalA"},
+                   {"layer": "33/0", "role": "metalB"}],
+    "vias": [{"from": "31/0", "via_layer": "32/0", "to": "33/0",
+              "via_cell": "VIA_A"}],
+})
+displays = stack_displays(stack, z_um={     # 你的工艺事实
+    "31/0": (0.00, 0.50),                   # zstart, zstop(微米)
+    "32/0": (0.50, 1.00),
+    "33/0": (1.00, 1.50),
+}, colors={"31/0": 0x2B6CB0})
+
+with KLinkClient() as c:
+    res = c.show_25d(displays, cell="MY_TOP")
+    assert res["ok"] and not res["empty_layers"]</code></pre>
+        <p>各部件的保证:</p>
+        <ul>
+          <li><code>stack_displays</code> 覆盖 stack 的<strong>每个</strong>导体和过孔层;缺 z 条目是点名该层的指令性错误,绝不瞎猜。名字默认取导体声明的 role;<code>extra_layers</code> 用来加非导体的器件/标记层(它们同样要 z 条目)。</li>
+          <li><code>view.show_25d</code> RPC 在碰窗口<strong>之前</strong>校验整份显示清单(层格式、z 区间),按层次读取指定 cell 的几何,并返回结构化判定:显示了几种材料、哪些源层是空的(<code>empty_layers</code>——空层通常意味着层号写错,要读,别忽略)。</li>
+          <li>显示条目接受 <code>color</code>(0xRRGGBB,同时用于边框和填充),或分开的 <code>frame_color</code>/<code>fill_color</code>;不给则用查看器默认。</li>
+        </ul>
+        <p>可跑、自包含(自己画双金属+过孔场景):</p>
+        <pre><code>python -m examples_klink.public.features.stack_25d_view --port &lt;会话端口&gt;</code></pre>
+        <p>live 实测输出:</p>
+        <pre><code>display list derived from the stack:
+   31/0   metalA           z 0.00 -&gt; 0.50 um
+   32/0   via 31/0&lt;-&gt;33/0  z 0.50 -&gt; 1.00 um
+   33/0   metalB           z 1.00 -&gt; 1.50 um
+2.5d window: ok=True cell=PUB_STACK_25D displays=3 empty_layers=[]
+RESULT: PASS (native 2.5d stack shown — orbit it with the mouse)</code></pre>
+
+        <h2 id="add4-case-study" class="anchor-h">3. 真实电路块的 3D:add4 案例</h2>
+        <p>同一个调用直接扩展到完整数字块。<code>--demo-add4</code> 把 fit-device starter 画出的版图——173 个拟合器件、94 条布通网、电源网格、两个 via 家族——渲染成六材料叠层。z 表按 starter 的合成<strong>背栅</strong>器件建模:栅板是<em>最底部</em>导体,半导体沟道隔薄介质悬在其上,源漏金属落在沟道上,两个 cut 家族向上爬到顶层布线金属:</p>
+        <pre><code>   101/0  gate metal (bottom)    z 0.00 -&gt; 0.10 um
+   102/0  via 101/0&lt;-&gt;104/0      z 0.10 -&gt; 0.16 um
+   103/0  channel                z 0.12 -&gt; 0.16 um
+   104/0  source/drain metal     z 0.16 -&gt; 0.28 um
+   105/0  via 104/0&lt;-&gt;106/0      z 0.28 -&gt; 0.40 um
+   106/0  top routing metal      z 0.40 -&gt; 0.55 um</code></pre>
+        <pre><code>python -m examples_klink.public.demos.digital.fit_device_pnr_lvs --port &lt;会话端口&gt;
+python -m examples_klink.public.features.stack_25d_view --port &lt;会话端口&gt; --demo-add4</code></pre>
+        <p>实测输出:</p>
+        <pre><code>2.5d window: ok=True cell=DEMO_ADD4 displays=6 empty_layers=[]
+RESULT: PASS (full add4 block in 3D — 173 devices, PDN, both via families;
+orbit with the mouse)</code></pre>
+        <p>你会看到什么,以及它为什么不只是好看:横向的源漏通道与纵向的栅/顶层布线分离成清晰的平面;每个 via 家族在它的两层金属之间变成可见的柱阵;PDN 环和 strap 读作粗壮的顶部边框。错误的叠层声明在这里会跳出来——via 家族放错 z、沟道层漏declare、电源轨在错误金属上——恰恰因为这个视图渲染的是路由器和 LVS 消费的<strong>同一份声明</strong>,不是另一份手工维护的描述。画面让你意外时,错的是声明(或版图);像对待其它门一样对待它。</p>
+        <p>沟道(103/0)刻意走 <code>extra_layers</code>:它是器件层不是导体,所以进显示清单但永远不进布线和 LVS 连通性——与 <a href="drc-lvs.html#starter-deck">DRC 指南</a>用 <code>exclude_around</code> 划的器件/布线边界是同一条线。</p>
+
+        <h2 id="escape-hatch" class="anchor-h">4. 逃生舱(以及 RPC 藏起来的东西)</h2>
+        <p>RPC 封装的是官方 <code>D25View</code> API(<code>begin</code> → <code>open_display</code> → <code>entry(region, dbu, zstart, zstop)</code> → <code>close_display</code> → <code>finish</code>)。用 <code>exec.python</code> 手动驱动可行,但有真实的巫术:对话框<strong>不能直接构造</strong>(<code>D25View()</code> 存在,但 <code>begin</code> 拒绝外来实例)——必须由 KLayout 自己的工厂通过 Tools → 2.5d View → Open Window 菜单动作创建,再从顶层部件里找到实例。<code>view.show_25d</code> 封装的正是这套舞步,外加校验和结构化判定。逃生舱只用于 RPC 未暴露的事(相机控制、图像导出);需求反复出现时,优先扩展 RPC。</p>
+
+        <h2 id="troubleshooting" class="anchor-h">5. 排障</h2>
+        <table class="data-table">
+          <thead><tr><th>症状</th><th>含义 / 修法</th></tr></thead>
+          <tbody>
+            <tr><td>报错提到 OpenGL / 没有 D25View</td><td>这个 KLayout 构建没有 2.5d 查看器——装标准桌面版(0.28+)</td></tr>
+            <tr><td><code>empty_layers</code> 列出某层</td><td>该层在所选 cell 里没有几何——查层号和 cell</td></tr>
+            <tr><td><code>cell ... not in the active layout</code></td><td>激活持有你版图的 tab,或显式传 <code>cell=</code></td></tr>
+            <tr><td>KLayout 重启后窗口消失</td><td>不持久化任何东西——重跑那一行调用即可</td></tr>
+            <tr><td>叠层交错 / 顺序不对</td><td>z 表是你的:修声明,别去揉视图</td></tr>
+          </tbody>
+        </table>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>geometry-first：在几何上标意图，让算法补全布线，用结构化证据验证。</p></div>
+      <div><h3>继续阅读</h3><p><a href="tutorials.html">核心思路与教程</a></p><p><a href="mcp-reference.html">MCP 工具参考</a></p></div>
+      <div><h3>安装</h3><p><a href="quickstart.html">快速上手</a></p></div>
+    </div>
+  </footer>
+  <script src="assets/app.js"></script>
+</body>
+</html>
