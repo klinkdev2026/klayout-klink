@@ -2443,6 +2443,63 @@
       }
     },
     {
+      "name": "view.show_25d",
+      "description": "Open KLayout's native 2.5d (extruded 3D) viewer and feed it a display list: one entry per material with a layer, a z range in microns, and optional name/colors. Layers are read from a cell of the active layout (default: the current cell). klink ships no z heights - thickness/elevation are process facts the caller owns (derive the list with klink.stack25d.stack_displays from your StackSpec + z table). Requires a KLayout build with OpenGL.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "displays"
+        ],
+        "properties": {
+          "cell": {
+            "type": "string",
+            "description": "cell to read geometry from (default: current cell)"
+          },
+          "generator": {
+            "type": "string",
+            "description": "label shown by the 2.5d window (default 'klink')"
+          },
+          "displays": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "layer",
+                "zstart_um",
+                "zstop_um"
+              ],
+              "properties": {
+                "layer": {
+                  "type": "string",
+                  "description": "'L/D' source layer"
+                },
+                "zstart_um": {
+                  "type": "number"
+                },
+                "zstop_um": {
+                  "type": "number"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "color": {
+                  "type": "integer",
+                  "description": "0xRRGGBB fill+frame"
+                },
+                "frame_color": {
+                  "type": "integer"
+                },
+                "fill_color": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
       "name": "klink.find_tools",
       "description": "Discover klink tools by domain or keyword. Call with NO args for the domain index; domain=<token> for that domain's tools + detailed usage; query=<keywords> to rank matching tools (optionally within one domain). tools/list already contains every tool and they are all callable — this is for NAVIGATION and on-demand detailed usage, not a gate. Use it whenever you are unsure which tool to use.",
       "inputSchema": {

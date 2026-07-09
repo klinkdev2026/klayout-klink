@@ -143,6 +143,18 @@ python -m examples_klink.public.features.profile_drc_gate --port <会话端口> 
 对应类别——`--check-demo` 再对 fit-device 版图跑全 deck(实测:在同一个
 LVS 通过的版图上 `ok=True violations=0`)。见 [drc-lvs.zh-CN.md](drc-lvs.zh-CN.md)。
 
+### 你的叠层的 3D——原生 2.5d 视图
+
+```bash
+python -m examples_klink.public.features.stack_25d_view --port <会话端口>   # [--demo-add4]
+```
+
+一次调用把你的 `StackSpec` + z 表喂给 KLayout 原生 2.5d 查看器
+(`klink.stack25d.stack_displays` -> `view.show_25d`)。默认自包含迷你场
+景;`--demo-add4` 渲染 fit-device starter 的完整块(173 器件、PDN、双
+via 家族、六材料——实测 `displays=6 empty_layers=[]`)。需要带 OpenGL 的
+KLayout 构建。见 [25d-view.zh-CN.md](25d-view.zh-CN.md)。
+
 ### 手写网表 → lint 校验 → 布局布线 → LVS
 
 ```bash

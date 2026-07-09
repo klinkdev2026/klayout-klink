@@ -4,6 +4,14 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project does not use dated entries (versions only).
 
+## Unreleased
+
+- Native 2.5d (3D stack) view: the `view.show_25d` RPC drives KLayout's
+  D25View from a display list; `klink.stack25d.stack_displays` derives the
+  list from a `StackSpec` plus a caller-owned z table. New example
+  `stack_25d_view` (self-contained scene, plus `--demo-add4` for the full
+  fit-device block) and a bilingual guide (`docs/public/25d-view.md`).
+
 ## 0.1.3
 
 - Profile-derived DRC: `ProcessProfile.drc_script()` and

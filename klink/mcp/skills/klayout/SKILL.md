@@ -240,6 +240,16 @@ After routing, read the structured result. Treat the route as failed if
 routes than expected. Router stress examples must mark expected failures as
 failures instead of leaving invalid geometry for visual inspection.
 
+## 2.5d (3D stack) view
+
+`view.show_25d` opens KLayout's native extruded-3D viewer from a display
+list. Derive the list — never hand-guess z heights — from the project's
+StackSpec + z table via `klink.stack25d.stack_displays(stack, z_um, ...)`;
+z heights are process facts the caller owns, and a missing entry is an
+instructive error. Read the structured result: `empty_layers` names source
+layers with no geometry (usually a wrong layer number). Needs an OpenGL
+KLayout build; the error says so when absent.
+
 ## DRC and LVS
 
 For writing and running DRC decks (`drc.run`) and LVS, follow the dedicated

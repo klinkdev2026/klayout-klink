@@ -163,6 +163,19 @@ and `--check-demo` runs the full deck over the fit-device layout (measured:
 `ok=True violations=0` on the same layout that passes LVS). See
 [drc-lvs.md](drc-lvs.md).
 
+### Your stack in 3D — the native 2.5d view
+
+```bash
+python -m examples_klink.public.features.stack_25d_view --port <session-port>   # [--demo-add4]
+```
+
+One call feeds KLayout's native 2.5d viewer from your `StackSpec` + z table
+(`klink.stack25d.stack_displays` -> `view.show_25d`). Self-contained mini
+scene by default; `--demo-add4` renders the fit-device starter's full block
+(173 devices, PDN, both via families, six materials — measured
+`displays=6 empty_layers=[]`). Needs an OpenGL KLayout build. See
+[25d-view.md](25d-view.md).
+
 ### Hand-written netlist → lint → place & route → LVS
 
 ```bash

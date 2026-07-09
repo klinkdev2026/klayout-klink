@@ -44,7 +44,7 @@ DOMAINS: "OrderedDict[str, dict]" = OrderedDict([
             "(bbox_um, microns). view.new_tab opens a disposable scratch tab "
             "(becomes current; afterwards restore the user's tab via "
             "view.activate_tab with the returned previous_current_index). "
-            "view.hier_levels reads/sets displayed hierarchy depth — if dense "
+            "view.show_25d opens KLayout's native 2.5d (extruded 3D) viewer from a display list (layer + z range per material; derive it with klink.stack25d.stack_displays from YOUR StackSpec + z table — z heights are process facts the caller owns; needs an OpenGL build). view.hier_levels reads/sets displayed hierarchy depth — if dense "
             "child-cell instances render as name-label boxes instead of "
             "geometry, raise max (KLayout default is 1).\n"
             "Screenshots (view.screenshot) are a USER-REQUESTED artifact only — "

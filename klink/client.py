@@ -693,6 +693,19 @@ class KLinkClient:
     def show_cell(self, cell, zoom_fit: bool = True) -> dict:
         return self.call("view.show_cell", {"cell": cell, "zoom_fit": bool(zoom_fit)})
 
+    def show_25d(self, displays, *, cell: Optional[str] = None,
+                 generator: str = "klink") -> dict:
+        """Open KLayout's native 2.5d viewer with a display list (one entry
+        per material: layer 'L/D', zstart_um/zstop_um, optional name/color).
+        Derive the list from your StackSpec + z table with
+        klink.stack25d.stack_displays — z heights are process facts you own.
+        Needs an OpenGL-enabled KLayout (D25View, official since 0.28)."""
+        p: Dict[str, Any] = {"displays": [dict(d) for d in displays],
+                             "generator": str(generator)}
+        if cell is not None:
+            p["cell"] = str(cell)
+        return self.call("view.show_25d", p)
+
     # ---- exec.python escape hatch (M4) ----
     def exec_python(
         self,
