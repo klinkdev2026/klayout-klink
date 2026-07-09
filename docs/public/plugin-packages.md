@@ -8,6 +8,28 @@ device libraries / recipes / stacks resolvable by name.
 
 > 中文见 [plugin-packages.zh-CN.md](plugin-packages.zh-CN.md)
 
+## Just USING someone's extension? Three steps
+
+You do not need anything on this page beyond this section:
+
+1. `pip install acme-pdk-klink` — into the same Python that runs klink
+   (the vendor tells you the package name).
+2. Restart your agent (MCP servers load at agent startup).
+3. That's it. Your agent's `klink.find_tools` now shows the vendor's domain
+   (e.g. `acme_pdk`) with its tools — call them like any built-in tool. In
+   your own scripts, the vendor's process data resolves by name:
+
+   ```python
+   from klink import ext
+   profile = ext.get_resource("profile", "acme_2m")   # vendor's ProcessProfile
+   ```
+
+If an expected tool is missing, check `klink.status` → `extensions`: it
+lists installed extension packages and names any broken one with its error.
+Uninstalling the package removes everything again.
+
+Everything below is for the people **writing** such a package.
+
 ## The minimal working package
 
 Two files. `pyproject.toml`:
