@@ -161,17 +161,22 @@ family)** — the production idiom derives the wide subset with a
 shrink-regrow, then checks separation with a run-length qualifier:
 
 ```ruby
-# Min. space of Metal1 lines if at least one line is wider than 0.3 um
-# and the parallel run is more than 1.0 um: 0.22 um
+# Min. space of wide (> 0.3 um) Metal1 lines when the parallel run
+# exceeds 1.0 um: 0.22 um
 wide_m1 = metal1_drw.sized(-0.15.um).sized(0.15.um)      # keeps only wide metal
-metal1_drw.sep(wide_m1, 0.22.um,
-               projection_limits(1.001.um, nil)).output('M1.e', '...')
+wide_m1.space(0.22.um,
+              projection_limits(1.001.um, nil)).output('M1.e', '...')
 ```
 
 `sized(-w/2).sized(w/2)` erases anything narrower than `w` — that is the
 standard wide-metal derivation. `projection_limits(lmin, lmax)` restricts the
-check to edge pairs whose parallel run is in range — that is the LEF
-SPACINGTABLE PARALLELRUNLENGTH semantic, natively.
+check to edge pairs whose parallel run is in range — the LEF SPACINGTABLE
+PARALLELRUNLENGTH semantic, natively. Shipping decks also write the
+one-sided variant `metal1_drw.sep(wide_m1, v, projection_limits(...))`
+("at least one line wide"); in our live verification on KLayout 0.30.x that
+form did not flag a wide-wide pair the `wide.space(...)` form catches —
+verify the variant you use against a planted violation on YOUR KLayout
+version before trusting it (§6 shows how).
 
 **Angle-dependent rules** — select edges first, then check:
 
@@ -420,7 +425,105 @@ Measured output of the fit-device starter (the flow this page's demo checks):
 
 ---
 
-## 6. House rules (they keep the gates honest)
+## 6. Case study: can an agent write this deck from the handout alone?
+
+Documentation that only humans have read is untested. We validate this
+guide's companion handout the way a deck itself is validated: plant known
+violations, hold the ground truth, and let a **small-model agent** (the
+weakest tier available to us) write and run the signoff deck with the
+handout as its ONLY reference. If the handout works there, it works.
+
+### The scene (reproducible)
+
+One cell, `BUSFAB_M2_BLOCK`, three process layers plus a waiver marker —
+every planted violation is exactly one rule's textbook case:
+
+| geometry (boxes, µm) | layer | plants |
+|---|---|---|
+| `[0,0,30,2]`, `[0,4,30,6]` | 31/0 | legal wires (2.0 wide, 2.0 gap) |
+| `[28,0,30,2]` + cut `[28.5,0.5,29.5,1.5]` | 33/0 + 32/0 | legal via (0.5 enclosure) |
+| `[28,4,30,6]` + cut `[28.2,4.2,29.8,5.8]` | 33/0 + 32/0 | **VA.1**: enclosure 0.2 |
+| `[0,7,30,9]` | 31/0 | **MA.2**: gap 1.0 to the wire below |
+| `[0,11,20,12.5]` | 31/0 | **MA.1**: width 1.5 |
+| `[24,11,26,13.2]` | 31/0 | **MA.4**: area 4.4 µm² (width legal) |
+| `[35,0,38.003,2]` | 31/0 | **MA.5**: vertices off the 5 nm grid |
+| `[0,16,30,21]`, `[0,23.5,30,28.5]` | 31/0 | **MA.3**: both 5.0 wide, gap 2.5, run 30 |
+| `[45,0,65,2]`, `[45,3,65,5]` | 31/0 | gap 1.0 — but **waived**: |
+| `[44,-1,66,6]` | 63/99 | waiver marker covering that gap |
+
+The ground truth is established FIRST, by the test author's own deck (§2
+idioms), before any agent sees the task: MA.1=1, MA.2=1 (the waived pair
+must NOT appear; unwaived the count would be 2), MA.3=1, MA.4=1, MA.5=2,
+MB.1=MB.2=0, VA.1=3+4 edge markers — 13 total.
+
+### The task context, verbatim
+
+The agent got the handout path, the MCP `drc_run` tool, and this DRM-style
+excerpt — nothing else (no syntax hints, no hint of what is planted or how
+many violations exist):
+
+```text
+Layers: metalA = 31/0, viaA cut = 32/0, metalB = 33/0, waiver marker = 63/99
+MA.1  Min. metalA width: 2.0 µm
+MA.2  Min. metalA space: 2.0 µm. Violations lying entirely inside a
+      waiver-marker (63/99) region are pre-approved and must not be
+      reported. The waiver applies to MA.2 ONLY.
+MA.3  Two metalA lines that are BOTH wider than 4.0 µm and run in parallel
+      for more than 5.0 µm must be spaced >= 3.0 µm.
+MA.4  Min. metalA polygon area: 5.0 µm².
+MA.5  All metalA geometry must be on the 0.005 µm manufacturing grid.
+MB.1  Min. metalB width: 2.0 µm
+MB.2  Min. metalB space: 2.0 µm
+VA.1  viaA cut must be enclosed by BOTH metalA and metalB by >= 0.5 µm.
+
+Write ONE DRC deck implementing exactly these rules with the DRM rule IDs
+as the report categories, run it, report every category with its count
+(including zeros) and your verdict per the handout's verdict rules.
+```
+
+### What the small-model agent produced
+
+First run, no retries, five tool calls. The deck followed the handout's
+production skeleton (rule-ID categories, `.forget` per rule, `deep`,
+decimal points on every dimension) and got the two hard rules right:
+
+```ruby
+# MA.3 — it derived the half-width itself ("wider than 4.0" -> sized ±2.0)
+wide_metalA = metalA.sized(-2.0).sized(2.0)
+r = wide_metalA.space(3.0, projection_limits(5.001, nil))
+r.output("MA.3", "...")
+
+# MA.2 — waiver applied to this rule only
+r = metalA.space(2.0)
+r = r.outside(waiver)
+r.output("MA.2", "...")
+```
+
+Result: **13/13 — every category count exactly matched the held-back ground
+truth** (MA.1=1, MA.2=1 with the waived pair correctly absorbed, MA.3=1,
+MA.4=1, MA.5=2, MB both 0, VA.1=7 combined), verdict FAIL with the handout's
+verdict rule quoted. One deviation from the handout: it wrote
+`.outside(waiver)` directly on the check result without `.polygons`; the
+engine accepts that form and it produced the correct waived count on this
+scene — an acceptable variant, kept here as observed.
+
+### What the exercise caught (why you should repeat it)
+
+The FIRST run of this scenario failed differently: the handout then showed
+the shipping-deck PRL form `metal.sep(wide, v, projection_limits(...))`,
+which on our KLayout 0.30.x did **not** flag the planted wide-wide pair —
+the verified `wide.space(...)` form does (§2.5). A blind test with planted
+violations is precisely what catches a documented idiom that parses but
+does not fire. The recipe is repeatable and cheap:
+
+1. draw a scene with one textbook violation per rule, plus legal
+   look-alikes and a waiver case;
+2. run YOUR deck first and freeze the counts as ground truth;
+3. hand an agent the handout + the DRM excerpt only — never the truth;
+4. grade category-by-category; a "clean" report on a planted violation
+   means the doc (or the idiom) is broken, not the layout.
+
+## 7. House rules (they keep the gates honest)
 
 1. **All-or-nothing verdicts.** DRC passes at zero violations with no
    exception; LVS passes at `match=True` / `compare` true. No "close enough".

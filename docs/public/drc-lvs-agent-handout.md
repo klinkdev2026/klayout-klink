@@ -46,7 +46,7 @@ shortest distance incl. corners), `projection` (parallel edges only),
 | `a.overlap(b, x.0)` | min overlap depth | — |
 | `.sized(x.0)` | grow (negative = shrink) a region | `dev = input(29,0).sized(10.0)` |
 | `.sized(-w).sized(w)` | wide-feature derivation (erases anything narrower than 2w) | `wide = m1.sized(-1.5).sized(1.5)` |
-| `sep(other, x.0, projection_limits(l.0, nil))` | spacing-table / parallel-run-length rule | `m1.sep(wide, 3.0, projection_limits(1.001, nil))` |
+| `wide.space(x.0, projection_limits(l.0, nil))` | spacing-table / parallel-run-length rule between wide features (verified form) | `wide.space(3.0, projection_limits(5.001, nil))` |
 | `.edges.with_angle(a, absolute)` | select edges by angle | `m1.edges.with_angle(45, absolute)` |
 | `.with_length(l.0, nil)` | filter edges by length | — |
 | `.with_area(0, a)` | polygons below a minimum area | `m1.with_area(0, 0.09)` |
@@ -77,9 +77,9 @@ r = m1.width(0.16, euclidian)
 r.output("M1.a", "M1.a: Min. M1 width 0.16 um")
 r.forget
 
-# Rule M1.e: wide-metal spacing table
-r = m1.sep(wide_m1, 0.22, projection_limits(1.001, nil))
-r.output("M1.e", "M1.e: space to wide M1 (PRL > 1.0 um) 0.22 um")
+# Rule M1.e: wide-metal spacing table (space between wide features)
+r = wide_m1.space(0.22, projection_limits(1.001, nil))
+r.output("M1.e", "M1.e: wide-M1 spacing (PRL > 1.0 um) 0.22 um")
 r.forget
 ```
 

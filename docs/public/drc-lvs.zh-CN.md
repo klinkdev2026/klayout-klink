@@ -14,7 +14,8 @@ SkyWater SKY130,全部 Apache-2.0,值得通读)。
 LVS 的同一份 `ProcessProfile` 推导入门 deck 的生成器。
 
 本文分层:§1 语言速成,§2 产线 runset 逐规则解剖,§3 同源入门 deck,
-§4 产线 LVS,§5 klink 的 LVS 路径,§6 家规。§1 扫一眼,§2 和 §4 常驻。
+§4 产线 LVS,§5 klink 的 LVS 路径,§6 盲测案例研究,§7 家规。§1 扫一眼,
+§2 和 §4 常驻。
 
 ---
 
@@ -140,15 +141,19 @@ a.overlap(b, 0.2.um).output(...)                     # 最小交叠深度
 是先用缩放-回涨派生宽金属子集,再带走线长度限定查 separation:
 
 ```ruby
-# 至少一根线宽于 0.3 µm 且平行走线超过 1.0 µm 时,M1 间距 ≥ 0.22 µm
+# 宽(> 0.3 µm)Metal1 线之间平行走线超过 1.0 µm 时,间距 ≥ 0.22 µm
 wide_m1 = metal1_drw.sized(-0.15.um).sized(0.15.um)      # 只剩宽金属
-metal1_drw.sep(wide_m1, 0.22.um,
-               projection_limits(1.001.um, nil)).output('M1.e', '...')
+wide_m1.space(0.22.um,
+              projection_limits(1.001.um, nil)).output('M1.e', '...')
 ```
 
 `sized(-w/2).sized(w/2)` 抹掉一切窄于 `w` 的东西——这是标准宽金属派生。
-`projection_limits(lmin, lmax)` 把检查限定在平行走线长度落在区间内的
-边对上——即 LEF SPACINGTABLE PARALLELRUNLENGTH 语义的原生表达。
+`projection_limits(lmin, lmax)` 把检查限定在平行走线长度落在区间内的边对
+上——即 LEF SPACINGTABLE PARALLELRUNLENGTH 语义的原生表达。发布 deck 里
+还有单侧变体 `metal1_drw.sep(wide_m1, v, projection_limits(...))`("至少
+一根线宽");我们在 KLayout 0.30.x 上的 live 验证中,该形式对一对宽-宽
+违例**不触发**,而 `wide.space(...)` 形式能抓到——用之前先在你的
+KLayout 版本上对埋好的违例验证你选的变体(§6 演示做法)。
 
 **角度相关规则**——先选边,再检查:
 
@@ -375,7 +380,98 @@ fit-device starter(本页 demo 检查的那条流程)实测:
 
 ---
 
-## 6. 家规(它们让门保持诚实)
+## 6. 案例研究:agent 只靠手册能写出这个 deck 吗?
+
+只被人类读过的文档等于没测过。我们用验证 deck 本身的方式验证本指南的
+配套手册:埋好已知违例、真值不出题人之手,让一个**小模型 agent**(我们
+可用的最弱档)只带手册上场编写并运行签核 deck。手册在那里能用,就在哪
+里都能用。
+
+### 场景(可复现)
+
+一个 cell `BUSFAB_M2_BLOCK`,三个工艺层加一个豁免标记——每处埋的违例
+都是某条规则的教科书样例:
+
+| 几何(盒,µm) | 层 | 埋点 |
+|---|---|---|
+| `[0,0,30,2]`、`[0,4,30,6]` | 31/0 | 合法线(宽 2.0、间距 2.0) |
+| `[28,0,30,2]` + cut `[28.5,0.5,29.5,1.5]` | 33/0 + 32/0 | 合法 via(enclosure 0.5) |
+| `[28,4,30,6]` + cut `[28.2,4.2,29.8,5.8]` | 33/0 + 32/0 | **VA.1**:enclosure 0.2 |
+| `[0,7,30,9]` | 31/0 | **MA.2**:与下方线间距 1.0 |
+| `[0,11,20,12.5]` | 31/0 | **MA.1**:宽 1.5 |
+| `[24,11,26,13.2]` | 31/0 | **MA.4**:面积 4.4 µm²(宽度合法) |
+| `[35,0,38.003,2]` | 31/0 | **MA.5**:顶点偏离 5 nm 网格 |
+| `[0,16,30,21]`、`[0,23.5,30,28.5]` | 31/0 | **MA.3**:都 5.0 宽、间距 2.5、平行 30 |
+| `[45,0,65,2]`、`[45,3,65,5]` | 31/0 | 间距 1.0——但**已豁免**: |
+| `[44,-1,66,6]` | 63/99 | 覆盖该间隙的豁免标记 |
+
+真值在任何 agent 看到题目之前,由出题人自己的 deck(§2 idiom)**先行**
+确立:MA.1=1、MA.2=1(豁免对必须不出现;不豁免则为 2)、MA.3=1、
+MA.4=1、MA.5=2、MB.1=MB.2=0、VA.1=3+4 个边标记——共 13。
+
+### 给 agent 的任务上下文(原文)
+
+agent 拿到的只有手册路径、MCP `drc_run` 工具、和下面这段 DRM 风格摘录
+——没有语法提示,不透露埋了什么、有多少违例:
+
+```text
+Layers: metalA = 31/0, viaA cut = 32/0, metalB = 33/0, waiver marker = 63/99
+MA.1  Min. metalA width: 2.0 µm
+MA.2  Min. metalA space: 2.0 µm. Violations lying entirely inside a
+      waiver-marker (63/99) region are pre-approved and must not be
+      reported. The waiver applies to MA.2 ONLY.
+MA.3  Two metalA lines that are BOTH wider than 4.0 µm and run in parallel
+      for more than 5.0 µm must be spaced >= 3.0 µm.
+MA.4  Min. metalA polygon area: 5.0 µm².
+MA.5  All metalA geometry must be on the 0.005 µm manufacturing grid.
+MB.1  Min. metalB width: 2.0 µm
+MB.2  Min. metalB space: 2.0 µm
+VA.1  viaA cut must be enclosed by BOTH metalA and metalB by >= 0.5 µm.
+
+Write ONE DRC deck implementing exactly these rules with the DRM rule IDs
+as the report categories, run it, report every category with its count
+(including zeros) and your verdict per the handout's verdict rules.
+```
+
+### 小模型 agent 交出了什么
+
+首跑、零重试、五次工具调用。deck 遵循了手册的产线骨架(规则号类别、
+每规则 `.forget`、`deep`、所有尺寸带小数点),两条难题也写对了:
+
+```ruby
+# MA.3 —— 半宽推导是它自己做的("宽于 4.0" -> sized ±2.0)
+wide_metalA = metalA.sized(-2.0).sized(2.0)
+r = wide_metalA.space(3.0, projection_limits(5.001, nil))
+r.output("MA.3", "...")
+
+# MA.2 —— 豁免只作用于这一条规则
+r = metalA.space(2.0)
+r = r.outside(waiver)
+r.output("MA.2", "...")
+```
+
+结果:**13/13——每个类别的计数与保留的真值完全一致**(MA.1=1、MA.2=1
+且豁免对被正确吸收、MA.3=1、MA.4=1、MA.5=2、MB 双零、VA.1 合并 7),
+判定 FAIL 并引用手册判定规则原文。与手册的一处偏差:它在检查结果上直接
+`.outside(waiver)` 而没有 `.polygons`;引擎接受该形式,且在本场景给出了
+正确的豁免后计数——可接受的变体,如实记录于此。
+
+### 这个练习抓到了什么(为什么你应该重复它)
+
+同一场景的**第一次**运行败得很有价值:当时手册展示的是发布 deck 的 PRL
+形式 `metal.sep(wide, v, projection_limits(...))`,在我们的 KLayout
+0.30.x 上它对埋好的宽-宽违例**不触发**——已验证的 `wide.space(...)`
+形式才能抓到(§2.5)。带埋点违例的盲测,恰好能抓出"能解析但不咬人"的
+文档化 idiom。这套配方可重复且便宜:
+
+1. 画一个场景,每条规则埋一个教科书违例,外加合法的相似结构和一个
+   豁免用例;
+2. 先跑**你自己的** deck,把计数冻结为真值;
+3. 只给 agent 手册 + DRM 摘录——永远不给真值;
+4. 逐类判分;对埋了违例的场景报"全净",说明坏的是文档(或 idiom),
+   不是版图。
+
+## 7. 家规(它们让门保持诚实)
 
 1. **全有或全无。** DRC 零违例且无异常才过;LVS `match=True` / `compare`
    为真才过。没有"差不多"。
