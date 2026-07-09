@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Writing a klink extension package — extend klink from your own pip package - klink</title>
+  <meta name="description" content="klink ships mechanism only; write a pip package with entry points to contribute MCP tools, your own find_tools domain, and named resources (profiles/device libraries/recipes/stacks); failures are isolated per package, and with zero extensions the tool list stays byte-identical.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body data-page="tutorials">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="index.html" data-nav="home">Home</a>
+        <a href="quickstart.html" data-nav="quickstart">Quickstart</a>
+        <a href="tutorials.html" data-nav="tutorials" class="active">Tutorials</a>
+        <a href="workflows.html" data-nav="workflows">Workflows</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP Reference</a>
+        <a href="examples.html" data-nav="examples">Examples</a>
+        <a href="architecture.html" data-nav="architecture">Architecture</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="Language switch">
+          <a href="../plugin-packages.html">CN</a>
+          <a class="active" href="plugin-packages.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Guide · Extension Packages</div>
+        <h1>Writing a klink extension package (<code>klink.plugins</code>)</h1>
+        <p>klink ships mechanism only; your process data and house tools can live in <strong>your own pip package</strong> and plug in through the <code>klink.plugins</code> entry point, without modifying a line of klink.</p>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#why-extension">1. Why write an extension package</a>
+          <a href="#minimal-package">2. The minimal working package</a>
+          <a href="#what-you-can-contribute">3. What you can contribute</a>
+          <a href="#fault-isolation">4. Fault isolation</a>
+          <a href="#verifying-your-package">5. Verifying your package</a>
+        </nav>
+      </aside>
+
+      <article class="content">
+        <h2 id="why-extension" class="anchor-h">1. Why write an extension package</h2>
+        <p>klink ships mechanism; your process data and house tools can live in <strong>your own pip package</strong> and plug in without modifying klink. A lab or PDK vendor publishes one package; anyone who installs it next to <code>klayout-klink</code> gets the vendor's tools in <code>klink.find_tools</code>, and the vendor's named profiles / device libraries / recipes / stacks resolvable by name.</p>
+
+        <h2 id="minimal-package" class="anchor-h">2. The minimal working package</h2>
+        <p>Two files. <code>pyproject.toml</code>:</p>
+        <pre><code>[project]
+name = "acme-pdk-klink"
+version = "0.1.0"
+dependencies = ["klayout-klink"]
+
+[project.entry-points."klink.plugins"]
+acme = "acme_pdk.klink_ext:register"</code></pre>
+        <p><code>acme_pdk/klink_ext.py</code>:</p>
+        <pre><code>from acme_pdk.process import ACME_2M_PROFILE     # your data, your package
+
+def hello(ctx, arguments):
+    # ctx is the MCP bridge: ctx._client reaches the live KLayout session
+    return {"greeting": f"hello {arguments.get('who', 'world')}"}
+
+def register(hook):
+    hook.add_domain(
+        "acme_pdk", title="ACME PDK",
+        summary="ACME's process data and helpers",
+        usage="Resolve the profile with klink.ext.get_resource('profile', "
+              "'acme_2m'); acme_pdk.hello is a smoke check.")
+    hook.add_tool(
+        "acme_pdk.hello", hello,
+        description="smoke-check the ACME extension",
+        input_schema={"type": "object",
+                      "properties": {"who": {"type": "string"}}},
+        domain="acme_pdk")
+    hook.add_profile("acme_2m", ACME_2M_PROFILE)</code></pre>
+        <p><code>pip install acme-pdk-klink</code> next to klink, restart the MCP server, and:</p>
+        <ul>
+          <li><code>klink.find_tools</code> (no args) lists an <code>acme_pdk</code> domain with its tool count; <code>domain="acme_pdk"</code> returns your usage text — your extension gets the same progressive disclosure as built-in domains.</li>
+          <li><code>acme_pdk.hello</code> is callable like any other tool.</li>
+          <li><code>klink.ext.get_resource("profile", "acme_2m")</code> returns your <code>ProcessProfile</code> from any example or script.</li>
+        </ul>
+
+        <h2 id="what-you-can-contribute" class="anchor-h">3. What you can contribute</h2>
+        <table class="data-table">
+          <thead><tr><th>hook call</th><th>contributes</th><th>notes</th></tr></thead>
+          <tbody>
+            <tr><td><code>add_tool(name, handler, description=, input_schema=, domain=)</code></td><td>an MCP tool</td><td>name MUST be namespaced <code>&lt;token&gt;.&lt;name&gt;</code>; built-in prefixes (<code>view.</code>, <code>shape.</code>, <code>routing.</code>, …) are reserved and rejected</td></tr>
+            <tr><td><code>add_domain(token, title=, summary=, usage=)</code></td><td>a <code>find_tools</code> domain</td><td>the <code>usage</code> string is your skill-like recipe, disclosed on demand</td></tr>
+            <tr><td><code>add_profile(name, obj)</code> / <code>add_devices</code> / <code>add_recipe</code> / <code>add_stack</code></td><td>named resources</td><td>resolved via <code>klink.ext.get_resource(kind, name)</code>; how examples and flows pick up your process data</td></tr>
+          </tbody>
+        </table>
+        <p>Handlers follow the local-tool contract: <code>handler(ctx, arguments)</code> returning a JSON-serializable dict; <code>ctx</code> is the MCP bridge (its <code>_client</code> is the connected <code>KLinkClient</code>). Contributed tools are expected to follow the same design rules as built-ins — one user intention per call, errors that instruct, validate before mutating.</p>
+
+        <h2 id="fault-isolation" class="anchor-h">4. Fault isolation (what happens when a package is broken)</h2>
+        <p>Discovery is lazy (first use) and per-package isolated:</p>
+        <ul>
+          <li>an extension that fails to import or whose <code>register()</code> raises is <strong>rolled back completely</strong> (no half-registered tools) and recorded as a failure naming the package and the error;</li>
+          <li>other extensions and every built-in tool are unaffected — the MCP server never crashes because of a broken extension;</li>
+          <li><code>klink.status</code> reports the <code>extensions</code> block: installed packages with their contributions, and the failure list. Check it first when an expected tool is missing.</li>
+          <li>With <strong>zero</strong> extensions installed, klink's tool list is byte-identical to a plain install — the mechanism costs nothing until used.</li>
+        </ul>
+
+        <h2 id="verifying-your-package" class="anchor-h">5. Verifying your package</h2>
+        <ol>
+          <li><code>pip install -e .</code> your extension next to <code>klayout-klink</code>.</li>
+          <li><code>klink.status</code> → your package under <code>extensions.installed</code>, empty <code>failures</code>.</li>
+          <li><code>klink.find_tools</code> → your domain appears with the right count; call your tool once.</li>
+          <li><code>python -c "from klink import ext; print(ext.get_resource('profile', '&lt;name&gt;'))"</code></li>
+          <li>Uninstall and re-check: everything disappears cleanly.</li>
+        </ol>
+        <p>Process purity applies to you too: keep the <em>numbers</em> (layers, dimensions, z tables) in your package's data modules, and pass them explicitly into klink APIs — your extension is exactly the "example that owns its process" pattern, shipped as a distribution.</p>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>geometry-first: mark intent on geometry, let algorithms complete the wiring, verify with structured evidence.</p></div>
+      <div><h3>Read on</h3><p><a href="tutorials.html">Core concepts &amp; tutorials</a></p><p><a href="mcp-reference.html">MCP reference</a></p></div>
+      <div><h3>Install</h3><p><a href="quickstart.html">Quickstart</a></p></div>
+    </div>
+  </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

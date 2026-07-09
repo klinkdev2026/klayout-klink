@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>编写 klink 扩展包——用你自己的 pip 包扩展 klink - klink</title>
+  <meta name="description" content="klink 只发机制；用 entry points 写一个 pip 包，贡献 MCP 工具、专属 find_tools 域和命名资源（profile/器件库/recipe/叠层）；故障按包隔离，坏扩展不拖垮内置工具，零扩展时工具清单逐字节不变。">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body data-page="tutorials">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="主导航">
+        <a href="index.html" data-nav="home">首页</a>
+        <a href="quickstart.html" data-nav="quickstart">快速上手</a>
+        <a href="tutorials.html" data-nav="tutorials" class="active">教程</a>
+        <a href="workflows.html" data-nav="workflows">工作流</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP 参考</a>
+        <a href="examples.html" data-nav="examples">示例</a>
+        <a href="architecture.html" data-nav="architecture">架构</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="语言切换">
+          <a class="active" href="plugin-packages.html">CN</a>
+          <a href="en/plugin-packages.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="打开导航" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">指南 · 扩展包</div>
+        <h1>编写 klink 扩展包(<code>klink.plugins</code>)</h1>
+        <p>klink 只发机制;你的工艺数据和自家工具可以住在<strong>你自己的 pip 包</strong>里,通过 <code>klink.plugins</code> entry point 接入,不改 klink 一行代码。</p>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#why-extension">1. 为什么写扩展包</a>
+          <a href="#minimal-package">2. 最小可用包</a>
+          <a href="#what-you-can-contribute">3. 你能贡献什么</a>
+          <a href="#fault-isolation">4. 故障隔离</a>
+          <a href="#verifying-your-package">5. 验证你的包</a>
+        </nav>
+      </aside>
+
+      <article class="content">
+        <h2 id="why-extension" class="anchor-h">1. 为什么写扩展包</h2>
+        <p>klink 只发机制;你的工艺数据和自家工具可以住在<strong>你自己的 pip 包</strong>里,不改 klink 一行就接入。实验室或 PDK 供应商发布一个包;任何人把它装在 <code>klayout-klink</code> 旁边,就能在 <code>klink.find_tools</code> 里看到供应商的工具,并按名字解析供应商的 profile / 器件库 / recipe / 叠层。</p>
+
+        <h2 id="minimal-package" class="anchor-h">2. 最小可用包</h2>
+        <p>两个文件。<code>pyproject.toml</code>:</p>
+        <pre><code>[project]
+name = "acme-pdk-klink"
+version = "0.1.0"
+dependencies = ["klayout-klink"]
+
+[project.entry-points."klink.plugins"]
+acme = "acme_pdk.klink_ext:register"</code></pre>
+        <p><code>acme_pdk/klink_ext.py</code>:</p>
+        <pre><code>from acme_pdk.process import ACME_2M_PROFILE     # 你的数据,你的包
+
+def hello(ctx, arguments):
+    # ctx 是 MCP bridge:ctx._client 可达 live KLayout 会话
+    return {"greeting": f"hello {arguments.get('who', 'world')}"}
+
+def register(hook):
+    hook.add_domain(
+        "acme_pdk", title="ACME PDK",
+        summary="ACME 的工艺数据与辅助工具",
+        usage="用 klink.ext.get_resource('profile', 'acme_2m') 解析 "
+              "profile;acme_pdk.hello 是冒烟检查。")
+    hook.add_tool(
+        "acme_pdk.hello", hello,
+        description="ACME 扩展的冒烟检查",
+        input_schema={"type": "object",
+                      "properties": {"who": {"type": "string"}}},
+        domain="acme_pdk")
+    hook.add_profile("acme_2m", ACME_2M_PROFILE)</code></pre>
+        <p>把 <code>acme-pdk-klink</code> 装在 klink 旁边,重启 MCP server,然后:</p>
+        <ul>
+          <li><code>klink.find_tools</code>(无参)会列出 <code>acme_pdk</code> 域和它的工具数;<code>domain="acme_pdk"</code> 返回你的 usage 文本——你的扩展享有与内置域相同的渐进式披露。</li>
+          <li><code>acme_pdk.hello</code> 像任何内置工具一样可调用。</li>
+          <li>任何示例或脚本可用 <code>klink.ext.get_resource("profile", "acme_2m")</code> 拿到你的 <code>ProcessProfile</code>。</li>
+        </ul>
+
+        <h2 id="what-you-can-contribute" class="anchor-h">3. 你能贡献什么</h2>
+        <table class="data-table">
+          <thead><tr><th>hook 调用</th><th>贡献</th><th>说明</th></tr></thead>
+          <tbody>
+            <tr><td><code>add_tool(名, handler, description=, input_schema=, domain=)</code></td><td>一个 MCP 工具</td><td>名字必须命名空间化 <code>&lt;token&gt;.&lt;名&gt;</code>;内置前缀(<code>view.</code>、<code>shape.</code>、<code>routing.</code>……)保留,占用会被拒</td></tr>
+            <tr><td><code>add_domain(token, title=, summary=, usage=)</code></td><td>一个 <code>find_tools</code> 域</td><td><code>usage</code> 字符串就是你的 skill 式配方,按需披露</td></tr>
+            <tr><td><code>add_profile(名, 对象)</code> / <code>add_devices</code> / <code>add_recipe</code> / <code>add_stack</code></td><td>命名资源</td><td>用 <code>klink.ext.get_resource(kind, 名)</code> 解析;示例和流程借此拿到你的工艺数据</td></tr>
+          </tbody>
+        </table>
+        <p>Handler 遵循本地工具契约:<code>handler(ctx, arguments)</code> 返回可 JSON 序列化的 dict;<code>ctx</code> 是 MCP bridge(其 <code>_client</code> 是已连接的 <code>KLinkClient</code>)。贡献的工具应遵守与内置相同的设计规则——一次调用一个用户意图、错误即指令、先校验后改动。</p>
+
+        <h2 id="fault-isolation" class="anchor-h">4. 故障隔离(包坏了会怎样)</h2>
+        <p>发现是惰性(首次使用)且按包隔离的:</p>
+        <ul>
+          <li>导入失败或 <code>register()</code> 抛异常的扩展会被<strong>完整回滚</strong>(不存在注册一半的工具),并记录为点名该包和错误的失败条目;</li>
+          <li>其它扩展和所有内置工具不受影响——MCP server 绝不因坏扩展而崩;</li>
+          <li><code>klink.status</code> 报告 <code>extensions</code> 块:已装包及其贡献、失败清单。预期的工具不见时先查它。</li>
+          <li><strong>零</strong>扩展安装时,klink 的工具清单与素装逐字节一致——机制不用就零开销。</li>
+        </ul>
+
+        <h2 id="verifying-your-package" class="anchor-h">5. 验证你的包</h2>
+        <ol>
+          <li>在 <code>klayout-klink</code> 旁 <code>pip install -e .</code> 你的扩展。</li>
+          <li><code>klink.status</code> → 你的包出现在 <code>extensions.installed</code>,<code>failures</code> 为空。</li>
+          <li><code>klink.find_tools</code> → 你的域带正确计数出现;调一次你的工具。</li>
+          <li><code>python -c "from klink import ext; print(ext.get_resource('profile', '&lt;名&gt;'))"</code></li>
+          <li>卸载再查:一切干净消失。</li>
+        </ol>
+        <p>工艺纯净律同样适用于你:<em>数字</em>(层号、尺寸、z 表)放你包里的数据模块,显式传进 klink API——你的扩展正是"自带工艺的 example"模式的发行版形态。</p>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>geometry-first：在几何上标意图，让算法补全布线，用结构化证据验证。</p></div>
+      <div><h3>继续阅读</h3><p><a href="tutorials.html">核心思路与教程</a></p><p><a href="mcp-reference.html">MCP 工具参考</a></p></div>
+      <div><h3>安装</h3><p><a href="quickstart.html">快速上手</a></p></div>
+    </div>
+  </footer>
+  <script src="assets/app.js"></script>
+</body>
+</html>
