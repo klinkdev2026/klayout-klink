@@ -16,6 +16,12 @@ from .local_tools import all_local_tools, get_local_tool
 from .profiles import INTENT_PROFILES, normalize_profiles
 from .results import _error_result, _json_result
 
+
+def _ext_tools():
+    """Tools contributed by installed klink.plugins extensions (lazy)."""
+    from klink import ext
+    return ext.discover().tools
+
 # Always reachable, even under a domain-only profile: the discovery entry point
 # and basic connection diagnostics/recovery.
 _ALWAYS_ON_LOCAL = {"klink.find_tools", "klink.status", "klink.reconnect"}
@@ -53,6 +59,13 @@ class ToolRegistry:
                 if domain_for(t.name) in requested_domains or t.name in _ALWAYS_ON_LOCAL
             ]
         tools.extend(tool.to_mcp_tool() for tool in local)
+        # third-party extension tools (klink.plugins entry points): same
+        # listing semantics as local tools; under a domain-only profile they
+        # are filtered by their declared domain like everything else.
+        ext_tools = list(_ext_tools().values())
+        if requested_domains and not (set(profiles) & INTENT_PROFILES):
+            ext_tools = [t for t in ext_tools if t.domain in requested_domains]
+        tools.extend(t.to_mcp_tool() for t in ext_tools)
         return {"tools": tools}
 
     @staticmethod
@@ -74,6 +87,17 @@ class ToolRegistry:
             # handler is a callable taking (ctx, arguments); pass the bridge as
             # ctx. The registry does not couple handlers via getattr(self, name).
             return local.handler(ctx, arguments or {})
+
+        ext_tool = _ext_tools().get(name)
+        if ext_tool is not None:
+            # fault isolation at call time too: a raising extension handler
+            # becomes an instructive error naming the owning package.
+            try:
+                return _json_result(ext_tool.handler(ctx, arguments or {}))
+            except Exception as e:
+                return _error_result(
+                    f"extension tool {name!r} (package "
+                    f"{ext_tool.package!r}) raised {type(e).__name__}: {e}")
 
         ctx.ensure_connected()
         if ctx._client is None:

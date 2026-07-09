@@ -10,6 +10,16 @@ import importlib.util
 import sys
 
 
+def _extensions_status() -> dict:
+    """Installed klink.plugins extensions + failures (lazy, fault-isolated)."""
+    try:
+        from klink import ext
+        return ext.status_summary()
+    except Exception as exc:                       # never break status
+        return {"installed": [], "failures": [
+            {"package": "<extension scan>", "error": repr(exc)}]}
+
+
 class Diagnostics:
     def __init__(self, ctx):
         self.ctx = ctx
@@ -41,6 +51,7 @@ class Diagnostics:
             },
             "journal_catchup_counts": dict(ctx._journal_catchup_counts),
             "version_handshake": self.version_handshake_status(),
+            "extensions": _extensions_status(),
         }
 
     def version_handshake_status(self) -> dict:

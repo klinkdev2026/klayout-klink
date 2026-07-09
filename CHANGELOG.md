@@ -6,6 +6,15 @@ this project does not use dated entries (versions only).
 
 ## Unreleased
 
+- Ecosystem extension point: third-party pip packages extend klink through
+  the `klink.plugins` entry-point group — contributed MCP tools appear in
+  `klink.find_tools` under their own domain, and named resources (profiles,
+  device libraries, recipes, stacks) resolve via `klink.ext.get_resource`.
+  Discovery is lazy and fault-isolated (a broken package is rolled back and
+  reported by `klink.status`, never crashing the server); zero installed
+  extensions means a byte-identical tool list. Guide:
+  `docs/public/plugin-packages.md`.
+
 - Native 2.5d (3D stack) view: the `view.show_25d` RPC drives KLayout's
   D25View from a display list; `klink.stack25d.stack_displays` derives the
   list from a `StackSpec` plus a caller-owned z table. New example

@@ -373,6 +373,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 - [`docs/public/api-stability.md`](docs/public/api-stability.md): what counts as public API and the 0.x compatibility policy.
 - [`docs/public/drc-lvs.md`](docs/public/drc-lvs.md): writing and running DRC/LVS, including the profile-derived deck (`profile.drc_script()`).
 - [`docs/public/drc-lvs-agent-handout.md`](docs/public/drc-lvs-agent-handout.md): paste-to-agent recipe that teaches an agent to author KLayout DRC/LVS.
+- [`docs/public/plugin-packages.md`](docs/public/plugin-packages.md): extend klink from your own pip package (`klink.plugins` entry points).
 - [`docs/public/25d-view.md`](docs/public/25d-view.md): the native 2.5d (3D stack) view driven from your StackSpec + z table.
 - [`CLAUDE.md`](CLAUDE.md): Claude Code operating rules and project context.
 - [`klink/mcp/README.md`](klink/mcp/README.md): MCP bridge details.

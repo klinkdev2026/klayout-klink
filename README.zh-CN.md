@@ -338,6 +338,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 - [`docs/public/drc-lvs.zh-CN.md`](docs/public/drc-lvs.zh-CN.md): 编写并运行 DRC/LVS,含 profile 推导 deck(`profile.drc_script()`)。
 - [`docs/public/drc-lvs-agent-handout.zh-CN.md`](docs/public/drc-lvs-agent-handout.zh-CN.md): 直接粘给 agent 的配方,教会 agent 写 KLayout DRC/LVS。
 
+- [`docs/public/plugin-packages.zh-CN.md`](docs/public/plugin-packages.zh-CN.md): 用你自己的 pip 包扩展 klink(`klink.plugins` entry points)。
 - [`docs/public/25d-view.zh-CN.md`](docs/public/25d-view.zh-CN.md): 用你的 StackSpec + z 表驱动原生 2.5d(3D 叠层)视图。
 全部公开文档页均有中英双语,索引见
 [`docs/public/README.zh-CN.md`](docs/public/README.zh-CN.md)。

@@ -353,8 +353,28 @@ def domain_for(name: str) -> str:
     if name.startswith("klink.session") or name.startswith("klink.transfer"):
         return "multi_session_transfer"
     prefix = name.split(".", 1)[0]
-    return _PREFIX_TO_DOMAIN.get(prefix, UNCATEGORIZED)
+    builtin = _PREFIX_TO_DOMAIN.get(prefix)
+    if builtin is not None:
+        return builtin
+    # third-party extension tools carry their own domain (klink.plugins
+    # entry points; lazy import keeps zero cost when nothing is installed)
+    ext_tool = _ext_registry().tools.get(name)
+    if ext_tool is not None:
+        return ext_tool.domain
+    return UNCATEGORIZED
+
+
+def _ext_registry():
+    from klink import ext
+    return ext.discover()
+
+
+def ext_domains() -> "OrderedDict[str, dict]":
+    """Domains contributed by installed klink.plugins extensions (may be
+    empty). Same value shape as DOMAINS entries, plus a 'package' key."""
+    return OrderedDict(_ext_registry().domains)
 
 
 def domain_tokens() -> list[str]:
-    return list(DOMAINS.keys())
+    return list(DOMAINS.keys()) + [t for t in _ext_registry().domains
+                                   if t not in DOMAINS]

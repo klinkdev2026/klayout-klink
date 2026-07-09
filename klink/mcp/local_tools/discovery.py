@@ -13,7 +13,15 @@ The detailed per-domain usage lives in klink/mcp/catalog.py.
 
 from __future__ import annotations
 
-from ..catalog import DOMAINS, domain_for, domain_tokens
+from ..catalog import DOMAINS, UNCATEGORIZED, domain_for, domain_tokens, ext_domains
+
+
+def _domain_meta(token: str) -> dict:
+    """Built-in or extension-contributed domain metadata."""
+    meta = DOMAINS.get(token) or ext_domains().get(token)
+    if meta is not None:
+        return meta
+    return {"title": token, "summary": "", "usage": ""}
 from ..results import _error_result, _json_result
 from . import local_tool
 
@@ -48,7 +56,7 @@ def _tool_klink_find_tools(ctx, arguments: dict) -> dict:
     try:
         query = str(arguments.get("query") or "").strip().lower()
         domain = str(arguments.get("domain") or "").strip()
-        if domain and domain not in DOMAINS:
+        if domain and domain not in domain_tokens():
             return _error_result(
                 f"unknown domain {domain!r}; valid domains: {', '.join(domain_tokens())}"
             )
@@ -64,8 +72,8 @@ def _tool_klink_find_tools(ctx, arguments: dict) -> dict:
             index = [
                 {
                     "domain": tok,
-                    "title": DOMAINS[tok]["title"],
-                    "summary": DOMAINS[tok]["summary"],
+                    "title": _domain_meta(tok)["title"],
+                    "summary": _domain_meta(tok)["summary"],
                     "tool_count": len(by_domain.get(tok, [])),
                 }
                 for tok in domain_tokens()
@@ -118,8 +126,8 @@ def _tool_klink_find_tools(ctx, arguments: dict) -> dict:
             # Focused on one domain -> return its detailed, skill-like usage.
             out["domain_usage"] = {
                 "domain": domain,
-                "title": DOMAINS[domain]["title"],
-                "usage": DOMAINS[domain]["usage"],
+                "title": _domain_meta(domain)["title"],
+                "usage": _domain_meta(domain)["usage"],
             }
         else:
             # Broad query -> just name the domains represented; the agent drills
