@@ -19,8 +19,8 @@ LVS.
 
 The document is layered: §1 is the language crash course, §2 is the anatomy
 of a production runset rule by rule, §3 the same-source starter deck, §4
-production LVS, §5 klink's LVS path, §6 the house rules. Skim §1, live in §2
-and §4.
+production LVS, §5 klink's LVS path, §6 a blind-test case study, §7 the
+house rules. Skim §1, live in §2 and §4.
 
 ---
 
