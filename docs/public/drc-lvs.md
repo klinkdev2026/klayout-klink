@@ -507,14 +507,14 @@ verdict rule quoted. One deviation from the handout: it wrote
 engine accepts that form and it produced the correct waived count on this
 scene — an acceptable variant, kept here as observed.
 
-### What the exercise caught (why you should repeat it)
+### The repeatable recipe
 
-The FIRST run of this scenario failed differently: the handout then showed
-the shipping-deck PRL form `metal.sep(wide, v, projection_limits(...))`,
-which on our KLayout 0.30.x did **not** flag the planted wide-wide pair —
-the verified `wide.space(...)` form does (§2.5). A blind test with planted
-violations is precisely what catches a documented idiom that parses but
-does not fire. The recipe is repeatable and cheap:
+This validation loop has already paid for itself once: it caught a
+documented PRL idiom that parses but never fires on KLayout 0.30.x (the
+full investigation and debug matrix are in
+[issue #1](https://github.com/klinkdev2026/klayout-klink/issues/1); the
+verified form is in §2.5). The recipe is cheap enough to rerun whenever the
+guide, the handout, or your own deck changes:
 
 1. draw a scene with one textbook violation per rule, plus legal
    look-alikes and a waiver case;
