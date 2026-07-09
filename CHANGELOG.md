@@ -4,7 +4,7 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project does not use dated entries (versions only).
 
-## Unreleased
+## 0.1.3
 
 - Profile-derived DRC: `ProcessProfile.drc_script()` and
   `klink.routing.grid.profile_drc.run_drc` generate and run a KLayout DRC
