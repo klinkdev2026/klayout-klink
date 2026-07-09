@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DRC and LVS with klink — from first deck to production runset - klink</title>
+  <meta name="description" content="Write and run DRC and LVS against a live KLayout session with klink: a DRC language crash course, a rule-by-rule anatomy of a production runset, a same-source starter deck derived from your ProcessProfile, KLayout's native LVS pipeline, and a blind small-model-agent case study.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body data-page="tutorials">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="index.html" data-nav="home">Home</a>
+        <a href="quickstart.html" data-nav="quickstart">Quickstart</a>
+        <a href="tutorials.html" data-nav="tutorials" class="active">Tutorials</a>
+        <a href="workflows.html" data-nav="workflows">Workflows</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP Reference</a>
+        <a href="examples.html" data-nav="examples">Examples</a>
+        <a href="architecture.html" data-nav="architecture">Architecture</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="Language switch">
+          <a href="../drc-lvs.html">CN</a>
+          <a class="active" href="drc-lvs.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Guide · DRC &amp; LVS</div>
+        <h1>DRC and LVS with klink — from first deck to production runset</h1>
+        <p>How to write and run design-rule checks (DRC) and layout-versus-schematic (LVS) against a live KLayout session — and what a <strong>production-grade</strong> runset actually looks like, modeled on the open PDKs that ship real KLayout decks (IHP SG13G2, GlobalFoundries GF180MCU, SkyWater SKY130 — all Apache-2.0 and worth reading in full).</p>
+        <div class="note">Handing this to an agent? Give it the condensed recipe instead: <a href="https://github.com/klinkdev2026/klayout-klink/blob/main/docs/public/drc-lvs-agent-handout.md">drc-lvs-agent-handout.md</a>.</div>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#drc-language">1. The DRC language in ten lines</a>
+          <a href="#anatomy">2. Anatomy of a production DRC runset</a>
+          <a href="#starter-deck">3. The same-source starter deck</a>
+          <a href="#production-lvs">4. Production LVS: the full pipeline</a>
+          <a href="#klink-lvs">5. klink's LVS path</a>
+          <a href="#case-study">6. Case study</a>
+          <a href="#house-rules">7. House rules</a>
+        </nav>
+      </aside>
+
+      <article class="content">
+        <p>Both checks run <strong>inside KLayout</strong> — klink does not reimplement them. DRC scripts execute on KLayout's official DRC engine through the <code>drc.run</code> RPC; LVS uses KLayout's native connectivity extraction and netlist comparer. klink adds the transport, the structured results, and (for DRC) a generator that derives a starter deck from the same <code>ProcessProfile</code> that drives routing and LVS.</p>
+        <p>The document is layered: §1 is the language crash course, §2 is the anatomy of a production runset rule by rule, §3 the same-source starter deck, §4 production LVS, §5 klink's LVS path, §6 a blind-test case study, §7 the house rules. Skim §1, live in §2 and §4.</p>
+
+        <h2 id="drc-language" class="anchor-h">1. The DRC language in ten lines</h2>
+        <p>A DRC script is a Ruby-DSL "runset" executed by KLayout. The authoritative references are the official manual (<em>DRC basics</em>, <em>DRC runsets</em>) and the <em>DRC reference</em> pages on <code>klayout.de</code>:</p>
+        <pre><code>report("my checks")                 # open a report database (do this FIRST)
+m1 = input(101, 0)                  # read layer 101/0 (merged polygons)
+
+m1.width(2.0).output("w1", "M1 width &lt; 2.0 um")       # min width
+m1.space(2.0).output("s1", "M1 space &lt; 2.0 um")       # min spacing
+cut = input(102, 0)
+cut.enclosed(m1, 0.5).output("e1", "cut enclosure in M1 &lt; 0.5 um")
+
+dev = input(29, 0).sized(10.0)      # grow a region by 10 um
+errs = m1.space(2.0).polygons       # edge-pair markers -&gt; polygons
+errs.outside(dev).output("s2", "spacing outside device regions")</code></pre>
+        <p>Three facts that save hours:</p>
+        <ul>
+          <li><strong>A floating-point number means micrometers; an integer means database units.</strong> <code>width(2.0)</code> checks 2 µm; <code>width(2)</code> checks 2 dbu (≈ 2 nm at the common 0.001 dbu) and silently passes everything. Production decks write explicit units (<code>0.16.um</code>, <code>300.nm</code>); at minimum always write the decimal point.</li>
+          <li><strong><code>report(...)</code> must come before any <code>.output("name", "desc")</code></strong> — string outputs file violations into the report database that <code>report</code> opens.</li>
+          <li><strong>Checks accept a metric</strong>: <code>euclidian</code> (default; true shortest distance, measures diagonally across corners), <code>projection</code> (parallel edge overlap only), <code>square</code>. Production metal rules in shipping PDK decks use <code>euclidian</code> explicitly; §3 explains when <code>projection</code> is the right gate.</li>
+        </ul>
+
+        <h2 id="anatomy" class="anchor-h">2. Anatomy of a production DRC runset</h2>
+        <p>Open any shipping KLayout deck (IHP's <code>ihp-sg13g2.drc</code> is ~530 lines of scaffold plus per-topic rule files; GF180MCU is organized the same way) and you find the same six-part shape. This is the part hand-rolled "check a few widths" scripts miss.</p>
+
+        <h3>2.1 Header: run modes, switches, logging</h3>
+        <p>Production decks are parameterized with <code>$variables</code> (passed by the runner) and choose an execution strategy up front:</p>
+        <pre><code># execution strategy — pick ONE:
+deep                        # hierarchical: subcells checked once, not per instance
+tiles(500.um)               # OR tiled: bounded memory on huge layouts
+tile_borders(30.um)         #    overlap so cross-tile violations aren't missed
+threads(Etc.nprocessors)    # parallel tiles
+flat                        # OR flat: simplest, fine for small layouts
+
+verbose(true)               # per-rule timing in the log</code></pre>
+        <p>Official constraint: <strong><code>deep</code> and <code>tiles</code> are mutually exclusive</strong> — tiling disables hierarchical mode and vice versa. Real decks expose the choice as a switch (<code>$run_mode</code> = <code>deep</code> / <code>tiling</code> / <code>flat</code>) and default to <code>deep</code>; they also gate rule groups behind "tables" switches (<code>$no_beol</code>, <code>$no_offgrid</code>, <code>$tables = "metal1 via1"</code>) so a designer can run one section fast during iteration and the full deck at signoff.</p>
+
+        <h3>2.2 Rule values live OUTSIDE the rules</h3>
+        <p>The deck contains rule <em>logic</em>; the <em>numbers</em> come from a data file keyed by rule ID (IHP loads a JSON of <code>{"M1_a": 0.16, "M1_b": 0.18, ...}</code>). This is what keeps a deck reviewable: a process tweak is a data diff, not a code diff. klink's profile-derived deck (§3) is the same idea — the profile IS the data file.</p>
+
+        <h3>2.3 Rule IDs match the design-rule manual</h3>
+        <p>Every check is named after its DRM section and embeds the value in the description. Verbatim shape from a shipping deck:</p>
+        <pre><code># Rule M1.a: Min. Metal1 width is 0.16µm
+m1_a_l = metal1_drw.width(0.16.um, euclidian)
+m1_a_l.output('M1.a', '5.16. M1.a: Min. Metal1 width: 0.16 μm.')
+m1_a_l.forget</code></pre>
+        <p>Three habits to copy: the DRM ID as the category (<code>M1.a</code>), the human sentence with the number in the description, and <strong><code>.forget</code> after every rule</strong> — big decks free each intermediate layer explicitly or memory balloons.</p>
+
+        <h3>2.4 Derived layers: booleans BEFORE checks</h3>
+        <p>Real rules rarely apply to a drawn layer directly; they apply to <em>derived</em> layers computed in a dedicated section before any check runs:</p>
+        <pre><code>nactiv  = activ_drw.not(psd_drw.join(nsd_block))    # n-type active
+pactiv  = activ_drw.and(psd_drw)                    # p-type active
+ngate   = nactiv.and(pwell).and(gatpoly_drw)        # NMOS gate = active &amp; poly
+poly_con = gatpoly_drw.not(res_mk)                  # poly that conducts (not resistor)
+CHIP    = extent.sized(0.0)                         # the layout extent itself</code></pre>
+        <p><code>and/not/join(or)/xor</code>, <code>sized</code>, <code>holes</code>, <code>with_holes</code>, <code>interacting</code>, <code>covering</code>, <code>not_outside</code>, <code>texts(pattern)</code> are the working vocabulary. Derivations are also where device recognition happens (marker layer + text label → device region) — the same derived layers later feed LVS extraction, which is why production DRC and LVS decks share their derivation files.</p>
+
+        <h3>2.5 The full rule taxonomy</h3>
+        <p>A production deck covers far more than width/space. Each class below shows the official idiom, taken from shipping decks:</p>
+        <p><strong>Width / space / notch</strong> (single layer):</p>
+        <pre><code>m1.width(0.16.um, euclidian).output('M1.a', '...')
+m1.space(0.18.um, euclidian).output('M1.b', '...')   # space includes notches
+m1.isolated(0.18.um).output(...)                     # different polygons only
+m1.notch(0.18.um).output(...)                        # within one polygon only</code></pre>
+        <p><strong>Two-layer relations</strong>:</p>
+        <pre><code>via1.enclosed(m1, 0.05.um).output('V1.d', '...')     # via sits inside metal
+m1.enclosing(via1, 0.05.um).output(...)              # same rule, other POV
+gatpoly.separation(cont, 0.11.um).output(...)        # min distance a&lt;-&gt;b
+a.overlap(b, 0.2.um).output(...)                     # min overlap depth</code></pre>
+        <p><strong>Spacing tables / parallel-run-length (the "wide metal needs more space" family)</strong> — the production idiom derives the wide subset with a shrink-regrow, then checks separation with a run-length qualifier:</p>
+        <pre><code># Min. space of wide (&gt; 0.3 um) Metal1 lines when the parallel run
+# exceeds 1.0 um: 0.22 um
+wide_m1 = metal1_drw.sized(-0.15.um).sized(0.15.um)      # keeps only wide metal
+wide_m1.space(0.22.um,
+              projection_limits(1.001.um, nil)).output('M1.e', '...')</code></pre>
+        <p><code>sized(-w/2).sized(w/2)</code> erases anything narrower than <code>w</code> — that is the standard wide-metal derivation. <code>projection_limits(lmin, lmax)</code> restricts the check to edge pairs whose parallel run is in range — the LEF SPACINGTABLE PARALLELRUNLENGTH semantic, natively. Shipping decks also write the one-sided variant <code>metal1_drw.sep(wide_m1, v, projection_limits(...))</code> ("at least one line wide"); in our live verification on KLayout 0.30.x that form did not flag a wide-wide pair the <code>wide.space(...)</code> form catches — verify the variant you use against a planted violation on YOUR KLayout version before trusting it (§6 shows how).</p>
+        <p><strong>Angle-dependent rules</strong> — select edges first, then check:</p>
+        <pre><code>bent45 = metal1_drw.edges.with_angle(45, absolute).with_length(0.501.um, nil)
+bent45.width(0.20.um, euclidian).output('M1.g', '45-degree bent width')</code></pre>
+        <p><strong>Minimum area</strong> — <code>with_area</code> selects polygons by area interval; the violating set is everything below the floor:</p>
+        <pre><code>metal1_drw.with_area(0, 0.09).output('M1.d', 'Min. Metal1 area 0.09 um^2')</code></pre>
+        <p><strong>Off-grid</strong> — every vertex on the manufacturing grid:</p>
+        <pre><code>metal1_drw.ongrid(0.005).output('M1_Offgrid', 'off 5 nm drawing grid')</code></pre>
+        <p><strong>Density</strong> — window-based metal density with <code>with_density(range, tile_size, tile_step, boundary)</code>; shipping decks wrap it to add boundary backup windows, but the primitive is official. Density runs are usually a SEPARATE deck (they force tiling mode).</p>
+        <p><strong>Antenna</strong> — needs connectivity first (<code>connect(...)</code> chain from gate up through each metal), then <code>antenna_check(gate, metal, ratio, [diodes])</code>. Also a separate deck in practice.</p>
+        <p><strong>Connectivity-dependent DRC</strong> — some rules only make sense on nets (latch-up distances to well taps, guard-ring rules). Decks declare <code>connect(...)</code> pairs mid-deck and then use net-aware selections; note there is <strong>no built-in net-aware <code>space</code> check</strong> — different-net spacing beyond the geometric rule is constructed from <code>nets</code> + property-constrained booleans when truly needed.</p>
+
+        <h3>2.6 Waivers</h3>
+        <p>Fabs waive specific violations via marker layers. The deck subtracts marker regions from specific rules — <strong>explicitly, per rule, never globally</strong>:</p>
+        <pre><code>waived = input(63, 99)                               # waiver marker layer
+viol = m1.space(0.18.um, euclidian).polygons
+viol.outside(waived).output('M1.b', '...')</code></pre>
+        <p>Every waiver layer is documented in the deck header; an undocumented exclusion is a hole in your signoff, not a convenience.</p>
+
+        <h2 id="starter-deck" class="anchor-h">3. The same-source starter deck: DRC from your ProcessProfile</h2>
+        <p>klink's profile-derived deck is the §2 architecture at day-0 scale: rule values externalized (in the profile), categories named after their source field, exclusions explicit. If you route with a <code>ProcessProfile</code>, you get a correct starter deck for free:</p>
+        <pre><code>from klink.routing.grid.profile_drc import run_drc
+
+res = run_drc(c, profile)               # width/space per routing layer +
+print(res["ok"], res["total"])          # cut enclosure per via, all from
+for cat in res["categories"]:           # the SAME profile the router and
+    print(cat["name"], cat["count"])    # LVS read</code></pre>
+        <table class="data-table">
+          <thead><tr><th>rule</th><th>value</th><th>source field</th></tr></thead>
+          <tbody>
+            <tr><td>width per routing layer</td><td>≥ <code>wire_width_um</code></td><td>the drawn wire width</td></tr>
+            <tr><td>space per routing layer</td><td>≥ <code>wire_clear_um</code></td><td>different-net clearance</td></tr>
+            <tr><td>cut enclosure per via, both metals</td><td>≥ <code>litho_tol_um</code></td><td>via cut inset</td></tr>
+          </tbody>
+        </table>
+        <p>Two knobs, and the reasoning behind them:</p>
+        <ul>
+          <li><code>metrics="projection"</code> (default) checks exactly what a Manhattan grid router promises — parallel-edge clearances — and does not fire on right-angle corner artifacts. Production metal rules use <code>euclidian</code> (§2.3); switch to it when your drawn geometry is meant to satisfy corner-to-corner rules too, and expect findings in dense metal that the router never promised to avoid. Both runs are one keyword apart; running both tells you which class each finding belongs to.</li>
+          <li><code>exclude_around=(layer_spec, size_um)</code> scopes width/space away from device regions (grown from a marker layer such as the profile's channel layer). Device-internal geometry — a source/drain gap smaller than the wire clearance — follows <em>device</em> rules, not routing rules; production decks scope metal rules around device markers the same way (§2.6). Via-enclosure checks are never excluded. Declare the exclusion in your example so reviewers see it.</li>
+        </ul>
+        <p>Runnable end-to-end proof (positive control, negative control, and the full deck over the fit-device starter's layout):</p>
+        <pre><code>python -m examples_klink.public.features.profile_drc_gate --port &lt;session-port&gt; [--check-demo]</code></pre>
+        <p>Measured on a live session:</p>
+        <pre><code>[positive control] legal scene: ok=True violations=0
+[negative control] bad scene: violations=1 fired=['space_21_0']
+[demo gate] DEMO_ADD4: ok=True violations=0
+RESULT: PASS (deck passes legal geometry, catches the planted violation)</code></pre>
+        <p><strong>Where the starter deck ends</strong>: it knows nothing about min-area, density, antenna, angle, off-grid, spacing tables, or your device rules — those need process facts the profile doesn't carry. As your process matures, grow the deck by hand along §2 (keep the profile-derived rules as the routing section; add DRM-ID'd sections per §2.3–2.5). The three-gate property — router, DRC, LVS reading one process declaration — is preserved as long as the routing section keeps deriving from the profile.</p>
+
+        <h3>Running any deck through klink</h3>
+        <pre><code>res = c.drc_run(deck_text, output_rdb="&lt;path&gt;.lyrdb", result_mode="summary")
+ok = res["exception"] is None and res["rdb_summary"]["total_items"] == 0</code></pre>
+        <p><code>$output_rdb</code> inside the deck is substituted server-side from the <code>output_rdb</code> argument. <code>result_mode="full"</code> also returns per-item detail. The verdict discipline is all-or-nothing; a deck that raised did not pass.</p>
+
+        <h2 id="production-lvs" class="anchor-h">4. Production LVS: the full pipeline</h2>
+        <p>KLayout's LVS scripts (<code>.lvs</code>, same Ruby DSL plus netlist functions) follow one canonical pipeline in every shipping PDK. Read IHP's <code>sg13g2.lvs</code> once and you can read them all:</p>
+        <pre><code>source(layout) ──&gt; derive layers ──&gt; connect() ──&gt; extract_devices()
+        ──&gt; align ──&gt; netlist options ──&gt; compare(schematic) ──&gt; report_lvs</code></pre>
+        <p><strong>1. Derivations</strong> — the same boolean layer algebra as DRC §2.4, shared between the DRC and LVS decks so both judges see identical device regions.</p>
+        <p><strong>2. Connectivity</strong>:</p>
+        <pre><code>connect(poly_con, cont_drw)          # layer-to-layer (via/contact)
+connect(metal1_con, via1_drw)
+connect_global(psub, 'VSS')          # global net: substrate is VSS everywhere
+connect_implicit('VDD*')             # join same-labelled nets without geometry</code></pre>
+        <p>Note the *_con derivations: production decks connect <code>metal1.not(metal1_res)</code> — the resistor-marked metal is NOT a conductor, it is a device. Connectivity correctness is 80% of LVS debugging.</p>
+        <p><strong>3. Device extraction</strong> — geometry → device instances with terminals:</p>
+        <pre><code>extract_devices(mos4('sg13_lv_nmos'),
+                { 'SD' =&gt; nsd_fet,     # source/drain diffusion
+                  'G'  =&gt; ngate_lv,    # gate region (active &amp; poly)
+                  'tS' =&gt; nsd_fet,     # terminal recognition layers
+                  'tD' =&gt; nsd_fet,
+                  'tG' =&gt; poly_con,
+                  'W'  =&gt; pwell })     # bulk/well (4th terminal)</code></pre>
+        <p>Official extractor classes: <code>mos3/mos4</code>, <code>dmos3/dmos4</code>, <code>resistor(name, sheet_rho)</code>, <code>capacitor(name, area_cap)</code>, <code>diode</code>, <code>bjt3/bjt4</code>. The extractor computes device parameters (W, L, A, P) from the geometry — those are what <code>tolerance(...)</code> later compares.</p>
+        <p><strong>4. Schematic + alignment + reductions</strong> — read the reference netlist and normalize both sides before comparing:</p>
+        <pre><code>schematic('my_block.cir')       # SPICE reference
+align                           # flatten cells present on only one side
+netlist.simplify                # canonical reductions
+netlist.combine_devices        # merge series/parallel devices (fingers!)
+netlist.make_top_level_pins
+netlist.purge                   # drop floating/unused
+max_res(1e9)                    # ignore extreme parasitic-style elements
+min_caps(1e-18)</code></pre>
+        <p><strong>5. Compare + escape hatches</strong>:</p>
+        <pre><code>success = compare &amp;&amp; flag_missing_ports   # strict: top ports must be labelled
+tolerance('sg13_lv_nmos', 'W', absolute: 5.nm)   # parameter compare tolerance
+same_nets('TOP', 'VDD', 'VDD!')           # declared net equivalences
+equivalent_pins('MY_MACRO', 'A', 'B')     # interchangeable pins
+blank_circuit('SRAM_*')                   # blackbox IP: interface only</code></pre>
+        <p><strong>6. Verdict</strong> — <code>compare</code> returns a boolean; production runners log an unambiguous PASS/FAIL line and exit nonzero on mismatch. <code>report_lvs(path)</code> writes the cross-probing database (open in KLayout's Netlist Browser).</p>
+        <p>Hierarchy note: production LVS runs <code>deep</code> — devices inside a cell are extracted once, not per instance, and the comparer works circuit-by-circuit. This is also what makes <code>blank_circuit</code> blackboxing possible.</p>
+
+        <h2 id="klink-lvs" class="anchor-h">5. klink's LVS path (the routing flow's judge)</h2>
+        <p>For klink-routed circuits, you usually don't have a SPICE schematic — you have <em>declared nets</em> (which terminals belong together, from your netlist). klink's <code>lvs_check</code> compares that declaration against KLayout's native extraction of the drawn geometry:</p>
+        <pre><code>from klink.domains.structdevice.orchestrators import lvs_check
+
+res = lvs_check(
+    c, "MY_TOP",
+    declared=[{"net": "n1", "terminals": ["X1.S", "X2.G"]}, ...],
+    mode="lvsdb",
+    connectivity=profile.connectivity_spec(),   # conductors+vias, same profile
+    terminal_provider=...,                       # where each terminal sits
+    placement=..., device_terms=...,
+)
+assert res["ok"] and res["match"]</code></pre>
+        <p>Under the hood this builds the same <code>connect(...)</code> graph as §4 step 2 from the profile's conductor/via lists and reconciles nets AND devices — the extraction is KLayout's, so the router cannot grade its own homework. <code>mode="lvsdb"</code> writes a native <code>.lvsdb</code>; open it with the <code>view.show_lvsdb</code> RPC for two-way layout ↔ netlist cross-probing.</p>
+        <p>When you need transistor-level device recognition (real MOS extraction with W/L parameter compare against SPICE), that is §4 — write a real <code>.lvs</code> deck with <code>extract_devices</code>; the derivation discipline you built for DRC carries over unchanged.</p>
+        <p>Measured output of the fit-device starter (the flow this page's demo checks):</p>
+        <pre><code>[public] FlexDR ok=True routed=94/94 markers=0
+[public] LVS ok=True match=True devices=173</code></pre>
+
+        <h2 id="case-study" class="anchor-h">6. Case study: can an agent write this deck from the handout alone?</h2>
+        <p>Documentation that only humans have read is untested. We validate this guide's companion handout the way a deck itself is validated: plant known violations, hold the ground truth, and let a <strong>small-model agent</strong> (the weakest tier available to us) write and run the signoff deck with the handout as its ONLY reference. If the handout works there, it works.</p>
+
+        <h3>The scene (reproducible)</h3>
+        <p>One cell, <code>BUSFAB_M2_BLOCK</code>, three process layers plus a waiver marker — every planted violation is exactly one rule's textbook case:</p>
+        <table class="data-table">
+          <thead><tr><th>geometry (boxes, µm)</th><th>layer</th><th>plants</th></tr></thead>
+          <tbody>
+            <tr><td><code>[0,0,30,2]</code>, <code>[0,4,30,6]</code></td><td>31/0</td><td>legal wires (2.0 wide, 2.0 gap)</td></tr>
+            <tr><td><code>[28,0,30,2]</code> + cut <code>[28.5,0.5,29.5,1.5]</code></td><td>33/0 + 32/0</td><td>legal via (0.5 enclosure)</td></tr>
+            <tr><td><code>[28,4,30,6]</code> + cut <code>[28.2,4.2,29.8,5.8]</code></td><td>33/0 + 32/0</td><td><strong>VA.1</strong>: enclosure 0.2</td></tr>
+            <tr><td><code>[0,7,30,9]</code></td><td>31/0</td><td><strong>MA.2</strong>: gap 1.0 to the wire below</td></tr>
+            <tr><td><code>[0,11,20,12.5]</code></td><td>31/0</td><td><strong>MA.1</strong>: width 1.5</td></tr>
+            <tr><td><code>[24,11,26,13.2]</code></td><td>31/0</td><td><strong>MA.4</strong>: area 4.4 µm² (width legal)</td></tr>
+            <tr><td><code>[35,0,38.003,2]</code></td><td>31/0</td><td><strong>MA.5</strong>: vertices off the 5 nm grid</td></tr>
+            <tr><td><code>[0,16,30,21]</code>, <code>[0,23.5,30,28.5]</code></td><td>31/0</td><td><strong>MA.3</strong>: both 5.0 wide, gap 2.5, run 30</td></tr>
+            <tr><td><code>[45,0,65,2]</code>, <code>[45,3,65,5]</code></td><td>31/0</td><td>gap 1.0 — but <strong>waived</strong>:</td></tr>
+            <tr><td><code>[44,-1,66,6]</code></td><td>63/99</td><td>waiver marker covering that gap</td></tr>
+          </tbody>
+        </table>
+        <p>The ground truth is established FIRST, by the test author's own deck (§2 idioms), before any agent sees the task: MA.1=1, MA.2=1 (the waived pair must NOT appear; unwaived the count would be 2), MA.3=1, MA.4=1, MA.5=2, MB.1=MB.2=0, VA.1=3+4 edge markers — 13 total.</p>
+
+        <h3>The task context, verbatim</h3>
+        <p>The agent got the handout path, the MCP <code>drc_run</code> tool, and this DRM-style excerpt — nothing else (no syntax hints, no hint of what is planted or how many violations exist):</p>
+        <pre><code>Layers: metalA = 31/0, viaA cut = 32/0, metalB = 33/0, waiver marker = 63/99
+MA.1  Min. metalA width: 2.0 µm
+MA.2  Min. metalA space: 2.0 µm. Violations lying entirely inside a
+      waiver-marker (63/99) region are pre-approved and must not be
+      reported. The waiver applies to MA.2 ONLY.
+MA.3  Two metalA lines that are BOTH wider than 4.0 µm and run in parallel
+      for more than 5.0 µm must be spaced &gt;= 3.0 µm.
+MA.4  Min. metalA polygon area: 5.0 µm².
+MA.5  All metalA geometry must be on the 0.005 µm manufacturing grid.
+MB.1  Min. metalB width: 2.0 µm
+MB.2  Min. metalB space: 2.0 µm
+VA.1  viaA cut must be enclosed by BOTH metalA and metalB by &gt;= 0.5 µm.
+
+Write ONE DRC deck implementing exactly these rules with the DRM rule IDs
+as the report categories, run it, report every category with its count
+(including zeros) and your verdict per the handout's verdict rules.</code></pre>
+
+        <h3>What the small-model agent produced</h3>
+        <p>First run, no retries, five tool calls. The deck followed the handout's production skeleton (rule-ID categories, <code>.forget</code> per rule, <code>deep</code>, decimal points on every dimension) and got the two hard rules right:</p>
+        <pre><code># MA.3 — it derived the half-width itself ("wider than 4.0" -&gt; sized ±2.0)
+wide_metalA = metalA.sized(-2.0).sized(2.0)
+r = wide_metalA.space(3.0, projection_limits(5.001, nil))
+r.output("MA.3", "...")
+
+# MA.2 — waiver applied to this rule only
+r = metalA.space(2.0)
+r = r.outside(waiver)
+r.output("MA.2", "...")</code></pre>
+        <p>Result: <strong>13/13 — every category count exactly matched the held-back ground truth</strong> (MA.1=1, MA.2=1 with the waived pair correctly absorbed, MA.3=1, MA.4=1, MA.5=2, MB both 0, VA.1=7 combined), verdict FAIL with the handout's verdict rule quoted. One deviation from the handout: it wrote <code>.outside(waiver)</code> directly on the check result without <code>.polygons</code>; the engine accepts that form and it produced the correct waived count on this scene — an acceptable variant, kept here as observed.</p>
+
+        <h3>The repeatable recipe</h3>
+        <p>This validation loop has already paid for itself once: it caught a documented PRL idiom that parses but never fires on KLayout 0.30.x (the full investigation and debug matrix are in <a href="https://github.com/klinkdev2026/klayout-klink/issues/1">issue #1</a>; the verified form is in §2.5). The recipe is cheap enough to rerun whenever the guide, the handout, or your own deck changes:</p>
+        <ol>
+          <li>draw a scene with one textbook violation per rule, plus legal look-alikes and a waiver case;</li>
+          <li>run YOUR deck first and freeze the counts as ground truth;</li>
+          <li>hand an agent the handout + the DRM excerpt only — never the truth;</li>
+          <li>grade category-by-category; a "clean" report on a planted violation means the doc (or the idiom) is broken, not the layout.</li>
+        </ol>
+
+        <h2 id="house-rules" class="anchor-h">7. House rules (they keep the gates honest)</h2>
+        <ol>
+          <li><strong>All-or-nothing verdicts.</strong> DRC passes at zero violations with no exception; LVS passes at <code>match=True</code> / <code>compare</code> true. No "close enough".</li>
+          <li><strong>Never delete a rule to make a run pass.</strong> Scope it (waiver layer, <code>exclude_around</code>, <code>layers=[...]</code>) with the reason written next to it — an undeclared exclusion is a silent hole in your signoff.</li>
+          <li><strong>Rule IDs and values are data, not prose.</strong> Name categories after your DRM (or profile field), keep the numbers in one place, embed the value in the description so the report is self-explaining.</li>
+          <li><strong>Fix the geometry or the declaration, not the judge.</strong> A real finding means the drawing or the declared netlist is wrong; editing the deck is the last resort and needs a written reason.</li>
+          <li><strong>Structured evidence only.</strong> Verdicts come from RPC results and report databases, not screenshots.</li>
+          <li><strong>Read the masters.</strong> The IHP SG13G2 / GF180MCU / SKY130 KLayout decks are open source and production-grade; when in doubt about an idiom, find it there before inventing it.</li>
+        </ol>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>geometry-first: mark intent on geometry, let algorithms complete the routing, verify with structured evidence.</p></div>
+      <div><h3>Keep reading</h3><p><a href="tutorials.html">Core concepts &amp; tutorials</a></p><p><a href="mcp-reference.html">MCP reference</a></p></div>
+      <div><h3>Install</h3><p><a href="quickstart.html">Quickstart</a></p></div>
+    </div>
+  </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>
