@@ -107,7 +107,7 @@
         <div class="eyebrow">对话式分步教程 · 硅光 · Port 与布线</div>
         <h1>gdsfactory 硅光：三种拿到端口的方式 + 拖动重连</h1>
         <p>要布线，先得让 klink 知道每个器件的端口在哪。这一篇走三条拿到 klink Port 的路：<strong>手绘三角形转换</strong>（自定义器件）、<strong>标准 gdsfactory 自动端口</strong>、<strong>PDK 黑箱按 stub 约定 harvest</strong>，中间放一个"三角形底边画错"的反面教材；拿到端口后，再走一遍 SEND 选区 → 连线 → 移动器件 → 重新布线的交互闭环。每一步都写清楚：agent 说了什么、调了哪个工具、返回什么结果，配当时的真实 KLayout 截图。</p>
-        <div class="note">这是给<strong>人和 agent 同时看</strong>的：每一轮先用人话说清在做什么，再给出具体的工具调用和返回值。所有截图都是本次会话在实时 KLayout 里真跑出来的——版图画布用 <code>view.screenshot</code> 离屏渲染，只有需要展示工具栏按钮（SEND）那一张是整窗口截图。演示只在一次性 tab 里进行，不碰任何已有工作 tab；用到的是几个普通图层（<code>1/0</code> 波导、<code>12/0</code> 布线、<code>999/99</code> 端口标记），不含任何真实工艺 PDK。</div>
+        <div class="note">这是给<strong>人和 agent 同时看</strong>的：每一轮先用人话说清在做什么，再给出具体的工具调用和返回值。所有截图都是本次会话在实时 KLayout 里真跑出来的——版图画布用 <code>view.screenshot</code> 离屏渲染，只有需要展示工具栏按钮（SEND）那一张是整窗口截图。演示只在一次性 tab 里进行，不碰任何已有工作 tab；用到的是几个普通图层（<code>1/0</code> 波导、<code>12/0</code> 布线、<code>999/99</code> 端口标记），不含任何真实工艺 PDK。本篇全部场景也打包成了可跑 starter：<code>python example_template/photonics/gf_ports.py --port &lt;端口&gt;</code>，拖动器件后 <code>--reroute</code> 只重连不重建（已进 GitHub 仓库，随下个发布版进 pip）。</div>
       </div>
     </section>
 

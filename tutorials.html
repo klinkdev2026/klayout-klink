@@ -179,6 +179,8 @@
             <span class="tier photonics">live KLayout + gdsfactory</span>
             <h3>三种拿到端口的方式 + 拖动重连</h3>
             <p>对话式走三条拿 Port 的路：手绘三角形转换（含"底边画错"反面教材）、标准 gdsfactory 自动端口、PDK 黑箱按 stub 约定 harvest；再走 SEND → 连线 → 移动 → 重连闭环。每步含 agent 的话 + 工具调用 + 结果。</p>
+            <p class="card-run"><code>python example_template/photonics/gf_ports.py --port &lt;端口&gt;</code></p>
+            <p class="card-metric">五场景一次跑完 · 拖动后 <code>--reroute</code> 只重连不重建（starter 已进 GitHub 仓库，随下个发布版进 pip）</p>
             <span class="card-more">看分步教程 →</span>
           </a>
           <a class="card" href="tutorial-gf-mzi.html">
