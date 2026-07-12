@@ -253,7 +253,7 @@ klink.transfer_commit package_id="pkg_0001"</code></pre>
             <tr><td><code>pcell.info</code></td><td>library, pcell*</td><td>Parameters of a PCell (name/type/default/description/choices).</td></tr>
           </tbody>
         </table>
-        <h3>Write · cells, layers, shapes, instances</h3>
+        <h3>Write · cells &amp; layers</h3>
         <table class="data-table reftable">
           <thead><tr><th>Tool</th><th>Params</th><th>Function</th></tr></thead>
           <tbody>
@@ -261,6 +261,12 @@ klink.transfer_commit package_id="pkg_0001"</code></pre>
             <tr><td><code>cell.rename</code> <span class="badge mutates">mutates</span></td><td>cell*, new_name*, allow_suffix</td><td>Rename; dup name errors unless <code>allow_suffix=true</code>.</td></tr>
             <tr><td><code>cell.delete</code> <span class="badge mutates">mutates</span></td><td>cell*, recursive</td><td>Delete a cell (recursive drops orphaned children). Destructive.</td></tr>
             <tr><td><code>layer.ensure</code> <span class="badge mutates">mutates</span></td><td>layer*, datatype, name</td><td>Upsert a GDS layer; returns <code>layer_index</code>.</td></tr>
+          </tbody>
+        </table>
+        <h3>Write · shapes (batch-first)</h3>
+        <table class="data-table reftable">
+          <thead><tr><th>Tool</th><th>Params</th><th>Function</th></tr></thead>
+          <tbody>
             <tr><td><code>shape.insert_boxes</code> <span class="badge mutates">mutates</span></td><td>cell, layer, boxes_um/boxes_dbu</td><td><strong>Batch</strong> many rectangles on one cell/layer.</td></tr>
             <tr><td><code>shape.insert_many</code> <span class="badge mutates">mutates</span></td><td>cell*, items*, dry_run</td><td><strong>Batch</strong> mixed box/polygon/path/text.</td></tr>
             <tr><td><code>shape.insert_box</code> <span class="badge mutates">mutates</span></td><td>cell, layer, bbox</td><td>One rectangle.</td></tr>
@@ -268,6 +274,12 @@ klink.transfer_commit package_id="pkg_0001"</code></pre>
             <tr><td><code>shape.insert_path</code> <span class="badge mutates">mutates</span></td><td>cell, layer, points, width, begin_ext, end_ext, round_ends</td><td>One path (center line + width).</td></tr>
             <tr><td><code>shape.insert_text</code> <span class="badge mutates">mutates</span></td><td>cell, layer, position, size_um</td><td>One text label (annotation, no mask geometry).</td></tr>
             <tr><td><code>shape.delete</code> <span class="badge mutates">mutates</span></td><td>cell, layer(s), bbox, kinds, dry_run</td><td>Delete shapes by selector; <code>dry_run</code> previews count. One transaction.</td></tr>
+          </tbody>
+        </table>
+        <h3>Write · instances &amp; PCells (batch-first)</h3>
+        <table class="data-table reftable">
+          <thead><tr><th>Tool</th><th>Params</th><th>Function</th></tr></thead>
+          <tbody>
             <tr><td><code>instance.insert_many</code> <span class="badge mutates">mutates</span></td><td>parent*, items*, dry_run</td><td><strong>Batch</strong> child-cell instances.</td></tr>
             <tr><td><code>instance.insert_pcell_many</code> <span class="badge mutates">mutates</span></td><td>parent*, items*, dry_run</td><td><strong>Batch</strong> PCell instances.</td></tr>
             <tr><td><code>instance.insert</code> <span class="badge mutates">mutates</span></td><td>parent*, child*, position, rotation, mirror, magnification, array</td><td>Place child in parent; optional array grid.</td></tr>
