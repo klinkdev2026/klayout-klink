@@ -47,6 +47,7 @@ STARTERS: dict[str, list[tuple[str, str]]] = {
     ],
     "photonics": [
         ("demos/photonics", "gf_mzi_module.py"),
+        ("demos/photonics", "gf_ports.py"),
     ],
     "passives": [
         ("demos/passives", "idc_capacitor.py"),
