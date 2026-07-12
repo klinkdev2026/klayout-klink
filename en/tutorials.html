@@ -1,10 +1,10 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Core Concepts &amp; Tutorials - klink</title>
-  <meta name="description" content="klink's core method is geometry-first: mark intent on geometry (Ports and Anchors) and let routing algorithms complete the wiring. Plus the user-project model, per-domain recipes, and adapting demos into your own project.">
+  <title>Step-by-Step Tutorials - klink</title>
+  <meta name="description" content="klink's 7 step-by-step tutorials, grouped into nanodevice / photonics / passives / digital: each one is a real run of a demo, staged with the klink calls and screenshots behind it.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="../assets/styles.css">
 </head>
@@ -16,6 +16,7 @@
         <a href="index.html" data-nav="home">Home</a>
         <a href="quickstart.html" data-nav="quickstart">Quickstart</a>
         <a href="tutorials.html" data-nav="tutorials">Tutorials</a>
+        <a href="features.html" data-nav="features">Features</a>
         <a href="workflows.html" data-nav="workflows">Workflows</a>
         <a href="mcp-reference.html" data-nav="mcp-reference">MCP Reference</a>
         <a href="examples.html" data-nav="examples">Examples</a>
@@ -35,234 +36,171 @@
   <main>
     <section class="page-hero">
       <div class="container">
-        <div class="eyebrow">Core concepts &amp; tutorials</div>
-        <h1>The core idea: geometry-first</h1>
-        <p>klink does not try to "generate a whole layout from a sentence". Its method is <strong>geometry-first</strong>: geometry (hand-drawn or generated) comes first, you mark <strong>intent</strong> on it (Ports and Anchors), routing algorithms complete the wiring, and structured geometry queries plus live LVS decide "done". The human keeps GUI freedom; the agent reads, writes, moves, records, routes, and verifies real geometry.</p>
+        <div class="eyebrow">Step-by-step tutorials</div>
+        <h1>Step-by-Step Tutorials</h1>
+        <p>Each tutorial is a real, staged run of one demo -- follow along: every step is actually drawn in a live KLayout session, screenshotted, and paired with the klink calls that produced it, then verified with a structured report, not a screenshot.</p>
+        <div class="note">New here? Read <a href="concepts.html">Core Concepts</a> first: geometry-first, Port/Anchor, the user-project model -- these tutorials assume you already know that background.</div>
       </div>
     </section>
 
-    <div class="docs-layout">
-      <aside class="sidebar">
-        <nav>
-          <a href="#geometry-first">The geometry-first idea</a>
-          <a href="#port">Port: connectivity intent</a>
-          <a href="#anchor">Anchor: routing constraint</a>
-          <a href="#loop">Mark → route → verify</a>
-          <a href="#model">The user-project model</a>
-          <a href="#init">Create a project</a>
-          <a href="#recipe">Pick a recipe</a>
-          <a href="#walkthroughs">Step-by-step tutorials</a>
-          <a href="#offline">Offline device tutorial</a>
-          <a href="#photonics">Silicon-photonics example</a>
-          <a href="#digital">P&amp;R to LVS</a>
-          <a href="#verify">Verification habits</a>
-        </nav>
-      </aside>
-
-      <article class="content">
-        <h2 id="geometry-first" class="anchor-h">The geometry-first idea</h2>
-        <p>Traditional parametric-layout tools (stretch-handle PCells) assume <strong>shapes are rectangles</strong> — pull an edge and that equals a parameter <code>W</code>. CMOS is all boxes, so it works. But photonics, flexible electronics, MEMS and superconducting circuits are not boxes: graded tapers, arc bends, free topologies — there is no "pull that edge = a parameter" mapping.</p>
-        <p>klink takes another path: <strong>lightweight semantic annotation</strong> rather than a complete constraint system. You mark intent at the geometric positions you are sure of; routing algorithms fill in between the markers; if it's wrong, add more marks and re-run. It is an iterative, convergent process, not a one-shot black box. Two kinds of marker:</p>
-        <div class="grid two">
-          <article class="card">
-            <span class="feature-kicker">Port</span>
-            <h3>Connectivity intent (net endpoint)</h3>
-            <p>A <code>klink_Port</code> PCell carrying net + orientation + width. It answers "a wire on some net leaves here, in this direction, at this width".</p>
-          </article>
-          <article class="card">
-            <span class="feature-kicker green">Anchor</span>
-            <h3>Routing constraint</h3>
-            <p>A <code>klink_Anchor</code> PCell whose <code>kind</code> is waypoint_region / bend_region / corridor. It answers "the wire should pass here / bend here / take this channel".</p>
-          </article>
+    <section class="section alt">
+      <div class="container">
+        <div class="section-head">
+          <h2 id="chat-cases" class="anchor-h">Chat walkthroughs <span class="tier live">real conversation</span></h2>
+          <p>Not step-by-step instructions but <strong>real conversation logs</strong>: a user asks for something in plain language, and klink's AI agent genuinely calls tools in a live KLayout to draw the layout / run DRC / run LVS -- watch it turn natural language into geometry. For the full follow-along version, see the illustrated tutorials below.</p>
         </div>
-        <p>These two <strong>are the input to the routing backends</strong>: mark Ports + Anchors, then call one <code>routing.*</code> tool and the wiring geometry is generated. This boundary keeps klink's mechanism layer process-agnostic — all process facts (layers, sizes, spacing) are passed in explicitly at call time.</p>
-
-        <h2 id="port" class="anchor-h">Port: connectivity intent</h2>
-        <p>A Port marks a net endpoint. It is a <code>klink_Port</code> PCell whose <strong>parameters are the single source of truth</strong> (center / orientation / width / target_layer / port_type / net) — the triangle orientation marker and text label are generated by the PCell and never drift from the parameters. Routing backends read Port markers from layer <code>999/99</code> by default.</p>
-        <pre><code>port.mark cell="NET1" name="A" center_um=[0,0]   orientation="E" width_um=2 net="sig"
-port.mark cell="NET1" name="B" center_um=[80,20] orientation="W" width_um=2 net="sig"
-port.list cell="NET1"</code></pre>
-        <p>Naming aligns with gdsfactory conventions (directional <code>E0/N0/W0/S0</code>, typed <code>o1/e1</code>). A triangle/rectangle you draw in the GUI can be snapped into a standard Port too — via direction inference + snapping to the nearest real edge (edge tolerance, 45° grid fallback). A Port is identified by an immutable <code>name</code> and can be <code>update</code>d / <code>transform</code>ed (batch by GUI selection) / <code>unmark</code>ed; duplicate/empty names have <code>port.repair_names</code> as a fallback. Full tools on <a href="mcp-reference.html#d-ports">MCP Reference · Ports &amp; anchors</a>.</p>
-
-        <h2 id="anchor" class="anchor-h">Anchor: routing constraint</h2>
-        <p>An Anchor expresses "how the wire should go". Read from layer <code>999/1</code> by default. Three kinds:</p>
-        <table class="data-table">
-          <thead><tr><th>kind</th><th>Geometry &amp; semantics</th></tr></thead>
-          <tbody>
-            <tr><td><code>waypoint_region</code></td><td>A rectangular <strong>must-pass</strong> region — the wire has to cross it.</td></tr>
-            <tr><td><code>bend_region</code></td><td>A triangle whose incircle is the <strong>bend search area</strong> — the wire makes its arc/corner transition here.</td></tr>
-            <tr><td><code>corridor</code></td><td>A <strong>directional channel</strong> defined by a polyline: the wire must "enter → run along → exit", not simply cross. A plain corridor is <strong>required</strong>; labeling <code>choice_group=BUS</code> makes it an <strong>optional</strong> load-balancing candidate channel for <code>routing.global_channel_cell</code>.</td></tr>
-          </tbody>
-        </table>
-        <pre><code>anchor.mark cell="NET1" kind="waypoint_region" center_um=[40,40] radius_um=6 net="sig"</code></pre>
-        <p>Anchors share Ports' identity model: <code>id</code>/<code>name</code> for locating, <code>label</code> for display, <code>net</code> for connectivity — three separate axes, with <code>anchor.repair_ids</code> as a duplicate/empty-id fallback. The split "thin plugin does create/edit, thick client does the understanding" is deliberate: how to interpret a hand-drawn marker is evolving workflow logic that should not be frozen into the KLayout plugin.</p>
-        <div class="note"><strong>Keepout is not an anchor kind.</strong> Obstacle avoidance is the <code>obstacle_layers</code> you pass to routing tools — your own design's keepout layers. klink ships no default keepout layer (<code>900/0</code> is a reserved keepout layer that structdevice uses internally as scratch).</div>
-
-        <h2 id="loop" class="anchor-h">Mark → route → verify</h2>
-        <p>The minimal geometry-first loop:</p>
-        <div class="flow">
-          <div class="flow-item"><strong>1 · Geometry</strong><span class="muted">Draw or generate device/pad geometry.</span></div>
-          <div class="flow-item"><strong>2 · Mark intent</strong><span class="muted">port.mark + anchor.mark.</span></div>
-          <div class="flow-item"><strong>3 · Route</strong><span class="muted">routing.* generates wiring.</span></div>
-          <div class="flow-item"><strong>4 · Verify</strong><span class="muted">Structured report + live LVS.</span></div>
+        <div class="grid three">
+          <a class="card" href="case-hallbar-chat.html">
+            <span class="feature-kicker">chat · draw a device</span>
+            <h3>Draw a Hall bar from one sentence</h3>
+            <p>"Draw a Hall bar with a bar body and 3 contacts on each side" &rarr; the agent really draws the mesa, contacts, probe pads and calls the router.</p>
+            <span class="card-more">Read the conversation →</span>
+          </a>
+          <a class="card" href="case-drc-chat.html">
+            <span class="feature-kicker">chat · DRC</span>
+            <h3>Run DRC, catch a violation, fix it</h3>
+            <p>"Draw two traces too close together" &rarr; DRC catches 1 spacing violation &rarr; move one away &rarr; rerun, 0 violations. Real DRC counts.</p>
+            <span class="card-more">Read the conversation →</span>
+          </a>
+          <a class="card" href="case-fit-lvs-chat.html">
+            <span class="feature-kicker">chat · LVS</span>
+            <h3>Custom device all the way to LVS match</h3>
+            <p>"Fit a device &rarr; place &amp; route from a netlist &rarr; run LVS" &rarr; 173 devices, routed 94/94, real <code>LVS match=True</code>.</p>
+            <span class="card-more">Read the conversation →</span>
+          </a>
+          <a class="card" href="case-gf-reroute-chat.html">
+            <span class="feature-kicker magenta">chat · photonics</span>
+            <h3>Mark ports → route → drag-to-reroute</h3>
+            <p>"Convert hand-drawn triangles to ports &rarr; route to an MMI &rarr; move it and reroute" &rarr; 0.8 µm ports from triangles, a 40 µm straight route, then a 60 µm S-bend after the drag.</p>
+            <span class="card-more">Read the conversation →</span>
+          </a>
         </div>
-        <pre><code>port.mark cell="NET1" name="A" center_um=[0,0]   orientation="E" width_um=2 net="sig"
-port.mark cell="NET1" name="B" center_um=[80,20] orientation="W" width_um=2 net="sig"
-anchor.mark cell="NET1" kind="waypoint_region" center_um=[40,40] radius_um=6 net="sig"
-routing.tapered_hybrid_cell cell="NET1" angle_mode="manhattan" obstacle_layers=["900/0"]
-# check the result: ok=true, obstacle_hit_count=0, no sibling overlap</code></pre>
-        <p>Routing backends divide by topology/quality (tapered hybrid main, tapered polygon continuous taper, steiner multi-terminal, damped strong clearance, global channel global-decision, multilayer escape cross-layer, gdsfactory strategies). See <a href="mcp-reference.html#d-routing">MCP Reference · Routing backends</a>. The many backends <strong>reject "one universal router"</strong>: they share one Port/Anchor planner, and the output differences are "form of expression", not "quality tiers".</p>
-        <p>A few principles run through the routing layer:</p>
-        <ul>
-          <li><strong>Rasterization-free geometric routing.</strong> A visibility graph + Dijkstra yields clean straight segments (not staircase artifacts), with native 0/45/90° angle modes; no dependency on <code>klayout.db</code>.</li>
-          <li><strong>Port launch contract.</strong> A router may not treat a Port as an arbitrary point — it must launch along <code>orientation</code> from the center before entering global search, adding a small perpendicular dogleg if that would fold back, rather than silently rewriting the Port's direction.</li>
-          <li><strong>Results must self-justify.</strong> <code>ok</code> / <code>obstacle_hit_count</code> / sibling overlap / <code>route_count</code> are structural quality gates; zero matches is not success. A parameter the chosen backend can't honor is an <strong>error that names the backends which do</strong> — never silently ignored.</li>
-          <li><strong>Honest about limits.</strong> global channel states it is "not a full rip-up/reroute congestion router"; multilayer escape does not model via enclosure; gdsfactory's astar is fragile, so klink re-verifies and errors on a wall-crossing route.</li>
-        </ul>
+      </div>
+    </section>
 
-        <h2 id="model" class="anchor-h">The user-project model</h2>
-        <p><code>klink</code> and <code>klink_plugin</code> are the <strong>mechanism layer</strong> (installed packages, never edited). Your process, devices, sizes, layer numbers, DRC/LVS rules live in <strong>your project</strong> and are passed explicitly into the mechanism.</p>
-        <pre><code>your-project/
-  pdk.py          your process — the only home for process facts
-  custom_devices/ build scripts / device generators the agent writes
-  specs/          .klink specs, net tables, interaction intent
-  out/            generated GDS / results   (never commit GDS)
-  AGENTS.md       agent rules (CLAUDE.md points to it)
-  mcp.example.json</code></pre>
-        <div class="warning">Your project must <strong>never</strong> contain GDS/PDK content — neither a proprietary foundry PDK nor a device layout. The template <code>.gitignore</code> blocks <code>*.gds</code>/<code>*.oas</code>. Point recipe code at such files at <strong>run time</strong> (open PDKs are fine to depend on, still not committed).</div>
-
-        <h2 id="init" class="anchor-h">Create a project</h2>
-        <p>Scaffold with the CLI bundled in the wheel, then open it with your agent.</p>
-        <pre><code>klink init my-chip
-cd my-chip</code></pre>
-        <p>Describe what you build; the agent identifies the domain, scaffolds <code>pdk.py</code> + a first <code>custom_devices/</code> script from the matching recipe, and passes your process <strong>explicitly</strong> into klink. There is no hard-coded default project — a fresh project must name its domain and geometry tier first.</p>
-        <p>After you upgrade klink, run <code>klink update mychip</code> (or just <code>klink update</code> from inside the project folder) to refresh the starters under <code>example_template/</code>; your own <code>pdk.py</code>, <code>custom_devices/</code>, <code>.klink/</code>, <code>out/</code>, and <code>specs/</code> are never overwritten:</p>
-        <pre><code>python -m pip install -U klayout-klink
-klink update mychip</code></pre>
-
-        <h2 id="recipe" class="anchor-h">Pick a recipe</h2>
-        <p>A recipe is the reference implementation for one domain. The geometry tier says whether it needs your confidential geometry.</p>
-        <table class="data-table">
-          <thead><tr><th>Domain</th><th>Geometry tier</th><th>Public release status</th></tr></thead>
-          <tbody>
-            <tr><td>EBL nanodevice</td><td>Self-contained</td><td>Runs offline, params inside the example.</td></tr>
-            <tr><td>Neural electrode harness</td><td>Self-contained</td><td>Needs live KLayout; public example uses Port/Anchor PCells + tapered-hybrid router.</td></tr>
-            <tr><td>Silicon photonics</td><td>Open or your own</td><td>Public features use the open <code>gf.gpdk</code> (needs gdsfactory); swap your PDK to route yours.</td></tr>
-            <tr><td>Digital P&amp;R → LVS</td><td>Self-contained or your own</td><td>The fit-device demo runs on synthetic exemplars; swap in your device geometry. Verilog→gates needs an external yosys; the flow returns the exact fix if missing.</td></tr>
-          </tbody>
-        </table>
-        <p>A new domain is just a <code>pdk.py</code> shaped for it + a <code>custom_devices/</code> script that imports your process and calls klink explicitly. Copy the closest catalog entry and adapt — <strong>you never edit klink to add a domain</strong>.</p>
-
-        <h2 id="walkthroughs" class="anchor-h">Step-by-step tutorials</h2>
-        <p>These are 7 step-by-step walkthroughs, all runnable directly from <code>example_template/</code> as starters (the two digital-family ones need a live KLayout session): <strong>a tutorial and its demo are two views of the same thing</strong>. Each tutorial corresponds to one demo script and breaks it into observable stages: every step is actually drawn in a live KLayout session, screenshotted, and paired with the klink calls that produced it, then verified with a structured report -- not a screenshot. The tutorial ends with the same one-line command you can copy and run. Read them in order; each one builds on concepts from the one before it. For what each demo does, its requirements, and measured numbers, see <a href="examples.html">Examples</a>.</p>
+    <section class="section">
+      <div class="container">
+        <div class="section-head">
+          <h2 id="nanodevice" class="anchor-h">Nanodevice <code>nanodevice</code></h2>
+          <p>EBL and probe-device generation: writefield planning, batch RPCs, and the full Port + Anchor to routing on-ramp.</p>
+        </div>
         <div class="grid two">
           <a class="card" href="tutorial-hallbar.html">
             <span class="feature-kicker">Getting started · nanodevice</span>
+            <span class="tier offline">Offline (--live optional)</span>
             <h3>Hall bar device</h3>
-            <p>The full geometry-first loop end to end: draw the mesa/contacts/pads, mark Port + Anchor intent, route the fanout with one call, verify with the routing report. A fully offline, self-contained device; needs live KLayout.</p>
+            <p>The full geometry-first loop end to end: draw the mesa/contacts/pads, mark Port + Anchor intent, route the fanout with one call, verify with the routing report. A fully offline, self-contained device; needs live KLayout to write.</p>
             <span class="card-more">Read the tutorial →</span>
           </a>
           <a class="card" href="tutorial-ebl-wraparound.html">
             <span class="feature-kicker amber">EBL · writefield</span>
+            <span class="tier offline">Fully offline</span>
             <h3>EBL wraparound nanodevice</h3>
             <p>Hand-drawn routing under writefield constraints: keepout boundaries, pre-planned crossing windows (corridor Anchors), stitch-patch compensation, and marking Port/Anchor after the fact instead of before.</p>
             <span class="card-more">Read the tutorial →</span>
           </a>
           <a class="card" href="tutorial-neural-electrode.html">
             <span class="feature-kicker green">Batch RPC · parametric</span>
+            <span class="tier live">live KLayout</span>
             <h3>Neural electrode array harness</h3>
             <p>Parametrized by <code>--elec-rows</code>; 394 geometry objects written with batched <code>shape.insert_many</code> calls. An almost 8x scale gap between bond pads and electrodes, closed with a corridor Anchor that forces convergence before routing all 24 nets in one pass.</p>
             <span class="card-more">Read the tutorial →</span>
           </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section alt">
+      <div class="container">
+        <div class="section-head">
+          <h2 id="photonics" class="anchor-h">Photonics <code>photonics</code></h2>
+          <p>gdsfactory bridge: an ordinary gdsfactory script taken over into klink's drag-and-reroute loop in one call.</p>
+        </div>
+        <div class="grid two">
           <a class="card" href="tutorial-gf-mzi.html">
             <span class="feature-kicker magenta">Photonics · gdsfactory</span>
+            <span class="tier photonics">live KLayout + gdsfactory</span>
             <h3>gdsfactory MZI takeover and drag-to-reroute</h3>
             <p>One <code>import_gf_component</code> call takes over an ordinary gdsfactory thermo-optic MZI script; after dragging any component in the GUI, the same <code>photonics.reroute</code> call only re-routes -- it never rebuilds a device. Needs gdsfactory.</p>
             <span class="card-more">Read the tutorial →</span>
           </a>
+          <a class="card" href="tutorial-gf-ports.html">
+            <span class="feature-kicker magenta">Photonics · ports</span>
+            <span class="tier photonics">live KLayout + gdsfactory</span>
+            <h3>Three ways to get ports + drag-to-reroute</h3>
+            <p>A conversation through three ways to get a Port: hand-drawn triangle conversion (with a "base drawn wrong" cautionary example), standard gdsfactory auto-ports, and PDK blackbox stub-convention harvest; then the SEND → route → move → reroute loop. Every step shows the agent's words + the tool call + the result.</p>
+            <span class="card-more">Read the tutorial →</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-head">
+          <h2 id="passives" class="anchor-h">Passives <code>passives</code></h2>
+          <p>Four families of parametric geometry templates, runnable offline, <code>--live</code> pushes to KLayout.</p>
+        </div>
+        <div class="grid two">
+          <a class="card" href="tutorial-passives.html">
+            <span class="feature-kicker amber">passives · geometry templates</span>
+            <span class="tier offline">Offline (--live optional)</span>
+            <h3>Passive-device geometry templates</h3>
+            <p>Four parametric geometry templates -- IDC capacitor, square spiral inductor, SAW IDT filter, BAW/FBAR plan view -- each with a default-parameter and a variant-parameter live screenshot. A <code>passives/</code>-category starter, runs offline, <code>--live</code> pushes to KLayout.</p>
+            <span class="card-more">Read the tutorial →</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section alt">
+      <div class="container">
+        <div class="section-head">
+          <h2 id="digital" class="anchor-h">Digital <code>digital</code></h2>
+          <p>Custom-device fit to digital place &amp; route to live LVS -- both tutorials need a live KLayout session.</p>
+        </div>
+        <div class="grid two">
           <a class="card" href="tutorial-fit-device.html">
             <span class="feature-kicker">structdevice · digital P&amp;R</span>
+            <span class="tier live">Needs a live KLayout session</span>
             <h3>Custom device: fit → PCell → P&amp;R → LVS</h3>
             <p>Fit a parametric edge model from a few exemplar drawings at different sizes, register a real PCell, place 173 instances from a netlist, run FlexDR detailed routing, and finish with live LVS match=True. Starter, needs a live KLayout session.</p>
             <span class="card-more">Read the tutorial →</span>
           </a>
           <a class="card" href="tutorial-padframe.html">
             <span class="feature-kicker green">structdevice · padframe</span>
+            <span class="tier live">Needs a live KLayout session</span>
             <h3>A probe-card-first padframe</h3>
             <p>The probe card / pad ring exists first and the circuit must meet it: harvest the pad ring, assign net→pad, place half-in/half-out, split the power grid by region, and finish with both the card and <code>--no-card</code> bare-stub modes each passing live LVS match=True. Starter, needs a live KLayout session.</p>
             <span class="card-more">Read the tutorial →</span>
           </a>
-          <a class="card" href="tutorial-passives.html">
-            <span class="feature-kicker amber">passives · geometry templates</span>
-            <h3>Passive-device geometry templates</h3>
-            <p>Four parametric geometry templates -- IDC capacitor, square spiral inductor, SAW IDT filter, BAW/FBAR plan view -- each with a default-parameter and a variant-parameter live screenshot. A <code>passives/</code>-category starter, runs offline, <code>--live</code> pushes to KLayout.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-head">
+          <h2 id="control-plane" class="anchor-h">Control plane · collaboration <code>control plane</code></h2>
+          <p>Not a kind of device but the control plane itself: one agent driving several KLayout windows at once, humans and the agent collaborating through the toolbar.</p>
+        </div>
+        <div class="grid two">
+          <a class="card" href="tutorial-multiwindow.html">
+            <span class="feature-kicker">control plane · multi-window</span>
+            <span class="tier live">Needs 2+ live KLayout windows</span>
+            <h3>Multi-window collaboration: one agent, many KLayouts</h3>
+            <p>One agent holds several windows at once, each on its own port. A step-by-step walk through the three toolbar moves: SEND (selection → durable memory), GFTGT (aim gdsfactory/klive at a window), cross-session transfer (two-phase dry-run→commit move of geometry) -- all from real live-session window captures with annotation.</p>
             <span class="card-more">Read the tutorial →</span>
           </a>
-          <a class="card" href="drc-lvs.html">
-            <span class="feature-kicker">Guide · DRC &amp; LVS</span>
-            <h3>DRC and LVS: from first deck to production runset</h3>
-            <p>A rule-by-rule anatomy of a production runset (hierarchical/tiled, externalized values, DRM IDs, waivers), a same-source starter deck derived from one ProcessProfile, KLayout's native LVS pipeline end to end, and a blind small-model-agent case study.</p>
-            <span class="card-more">Read the guide →</span>
-          </a>
-          <a class="card" href="25d-view.html">
-            <span class="feature-kicker">Guide · 2.5d View</span>
-            <h3>The 2.5d view: your layer stack in 3D from one process declaration</h3>
-            <p>One call from StackSpec + a z table drives KLayout's native 2.5d viewer, plus the add4 case study: a 173-device digital block rendered as a six-material 3D stack; needs OpenGL.</p>
-            <span class="card-more">Read the guide →</span>
-          </a>
-          <a class="card" href="plugin-packages.html">
-            <span class="feature-kicker">Guide · Extension Packages</span>
-            <h3>Writing a klink extension package: extend klink from your own pip package</h3>
-            <p>Write a pip package with entry points that contributes MCP tools, its own find_tools domain, and named resources (profiles/device libraries/recipes/stacks); failures are isolated per package so a broken extension never takes down the built-ins.</p>
-            <span class="card-more">Read the guide →</span>
-          </a>
         </div>
-
-        <h2 id="offline" class="anchor-h">Offline device tutorial</h2>
-        <p>Starting from the fully offline EBL wraparound or Hall bar is safest — they show "the mechanism layer holds no process facts": the example carries sizes, layer numbers and writefield rules, then calls <code>klink.domains.nanodevice</code>.</p>
-        <pre><code>klink init nano-demo
-cd nano-demo
-python example_template/nanodevice/ebl_wraparound.py
-python example_template/nanodevice/hallbar.py</code></pre>
-        <p>From a repo checkout you can also run the public gallery directly:</p>
-        <pre><code>python -m examples_klink.public.demos.nanodevice.ebl_wraparound
-python -m examples_klink.public.demos.nanodevice.hallbar</code></pre>
-        <p>After copying into your project, <strong>edit params first, don't touch <code>klink/</code></strong>; once stable, tidy it into <code>custom_devices/&lt;device&gt;.py</code>. Per-demo detail on <a href="examples.html">Examples</a>.</p>
-
-        <h2 id="photonics" class="anchor-h">Silicon-photonics example (gdsfactory bridge)</h2>
-        <p>If you already have gdsfactory code, the public checkout has two related examples: low-level features (<code>features/24_gdsfactory_route_ports.py</code>, <code>30_gdsfactory_routing_zoo.py</code>) and the full demo <code>demos/gf_mzi_module.py</code> — taking an ordinary gdsfactory MZI script into klink's reroute loop.</p>
-        <p>Install is always <strong>one command</strong>: <code>pip install klayout-klink</code> installs all of klink. This example additionally needs gdsfactory in the <strong>same interpreter</strong> (klink is an RPC client; the geometry is built client-side by gdsfactory) — klink bundles no third-party libs and names the exact <code>pip install</code> when one is missing. <code>[photonics]</code> is not a "per-domain install", just a convenience that also pulls a tested gdsfactory:</p>
-        <pre><code>pip install "klayout-klink[photonics]"    # = klink + a tested gdsfactory
-klink init my-chip &amp;&amp; cd my-chip
-python example_template/photonics/gf_mzi_module.py --port &lt;session-port&gt;
-# from a repo checkout you can also run: python -m examples_klink.public.demos.photonics.gf_mzi_module --port &lt;session-port&gt;</code></pre>
-        <p>After takeover, drag a component in the GUI and one <code>photonics.reroute</code> re-routes optics and metal together — see <a href="workflows.html#klive">Workflows · 8082 klive display</a> and <a href="mcp-reference.html#d-photonics">MCP Reference · Photonics</a>. From a plain shell, re-route with the <code>--reroute</code> flag, which re-routes from the dragged positions <strong>without rebuilding</strong>:</p>
-        <pre><code>python example_template/photonics/gf_mzi_module.py --port &lt;session-port&gt; --reroute</code></pre>
-        <p>For your own PDK, layers, stub rules and cross-section come from your script or <code>pdk.py</code>.</p>
-
-        <h2 id="digital" class="anchor-h">P&amp;R to LVS</h2>
-        <p>The public release digital path is either self-contained or your-own-geometry. The fit-device demo runs device fit, placement, routing and live LVS on synthetic exemplars. The whole digital family (fit-device, padframe, chat-to-netlist, multilayer) are starters under <code>example_template/digital/</code>, needing a running KLayout session:</p>
-        <pre><code>python example_template/digital/fit_device_pnr_lvs.py --port &lt;session-port&gt;
-# from a repo clone you can also run: python -m examples_klink.public.demos.digital.fit_device_pnr_lvs --port &lt;session-port&gt;</code></pre>
-        <p>The device-agnostic custom-device flow is the <a href="mcp-reference.html#d-structdevice"><code>structdevice.*</code></a> family: give a device-level netlist → <code>build_from_netlist</code> auto floorplan/route/draw/LVS; or the SEND-driven <code>declare_nets</code> → <code>connect_nets</code> → <code>lvs_check</code> → <code>spec_write</code>. Any LVS mismatch undoes every mutation.</p>
-
-        <h2 id="verify" class="anchor-h">Verification habits</h2>
-        <p>klink tutorials <strong>do not treat screenshots as proof of done</strong>. Decide with:</p>
-        <ul>
-          <li><code>layout.info</code>, <code>cell.tree</code>, <code>layer.list</code> for structure.</li>
-          <li><code>shape.query</code>, <code>instance.query</code>, <code>selection.get</code> for geometry.</li>
-          <li>the routing report's <code>ok</code>, overlap, obstacle hit, route count.</li>
-          <li>live LVS <code>match=True</code>.</li>
-        </ul>
-        <p>A route/layout is "done" only when live KLayout LVS returns <code>match=True</code>; marker counts and "looks routed" do not count. Screenshots can show a human the result but never replace structured verification.</p>
-      </article>
-    </div>
+      </div>
+    </section>
   </main>
 
   <footer class="footer">
     <div class="footer-grid">
-      <div><h2>klink</h2><p>geometry-first: mark intent on geometry, let algorithms complete the wiring, verify with structured evidence.</p></div>
-      <div><h3>Read on</h3><p><a href="mcp-reference.html">MCP Tool Reference</a></p><p><a href="examples.html">Demos explained</a></p></div>
+      <div><h2>klink</h2><p>Each tutorial is a real, staged run of one demo -- follow along.</p></div>
+      <div><h3>Read on</h3><p><a href="concepts.html">Core Concepts</a></p><p><a href="mcp-reference.html">MCP Tool Reference</a></p></div>
       <div><h3>Install</h3><p><a href="quickstart.html">Quickstart</a></p></div>
     </div>
   </footer>

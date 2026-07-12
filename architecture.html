@@ -16,6 +16,7 @@
         <a href="index.html" data-nav="home">首页</a>
         <a href="quickstart.html" data-nav="quickstart">快速上手</a>
         <a href="tutorials.html" data-nav="tutorials">教程</a>
+        <a href="features.html" data-nav="features">功能特性</a>
         <a href="workflows.html" data-nav="workflows">工作流</a>
         <a href="mcp-reference.html" data-nav="mcp-reference">MCP 参考</a>
         <a href="examples.html" data-nav="examples">示例</a>
@@ -114,6 +115,7 @@
           <article class="card"><h3>structdevice</h3><p>device extraction、netlist、logic map、layout engine、P&R、LVS-lite 和 live LVS 对接。</p></article>
           <article class="card"><h3>MCP core</h3><p>tool discovery、session registry、interaction context、recorder、transfer、diagnostics。</p></article>
         </div>
+        <p class="note">这些领域都是内置的，但<strong>第三方也能扩展</strong>：写一个 pip 包，通过 <code>klink.plugins</code> entry point 贡献自己的 MCP 工具、find_tools 域和命名资源（profile/devices/recipe/stack），故障按包隔离——这是给 PDK 供应商和扩展作者的入口，不是终端用户功能。见<a href="plugin-packages.html">编写扩展包指南</a>。</p>
 
         <h2 id="release">release 边界</h2>
         <p>这个网站只写公开 release 可验证的内容。站点内容核对过以下公开入口：</p>

@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chat Case Study: Wiring a Custom Device into a Digital Flow, All the Way to LVS Match - klink</title>
+  <meta name="description" content="A real chat transcript: fit a synthetic back-gate device's exemplar geometry into a parametric PCell, place 173 instances from a 4-bit adder netlist and route them in detail (94/94 routed, 0 violations), then run live LVS to match=True -- every step is a real call against a live KLayout (dedicated session, port 8767) with a real screenshot.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../assets/styles.css">
+  <style>
+    .chat{max-width:860px}
+    .chat-turn{margin:26px 0}
+    .chat-user{background:#e7f4f0;border:1px solid var(--line);border-radius:10px;padding:12px 16px;max-width:80%}
+    .chat-user .who{font-size:12px;color:var(--muted);font-weight:700;margin-bottom:4px}
+    .chat-assistant{margin-top:12px}
+    .chat-assistant .who{font-size:12px;color:#12654b;font-weight:800;margin-bottom:6px}
+    .chat-calls{font-family:ui-monospace,monospace;font-size:12.5px;background:#0d1f1a;color:#8fe6cf;border-radius:8px;padding:8px 12px;margin:8px 0;overflow-x:auto}
+    .chat-shot{margin:12px 0;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+    .chat-shot img{width:100%;display:block;background:#fff}
+    .chat-shot figcaption{padding:8px 12px;font-size:13px;color:var(--muted);border-top:1px solid var(--line);background:#f7fafb}
+  </style>
+</head>
+<body data-page="features">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="index.html" data-nav="home">Home</a>
+        <a href="quickstart.html" data-nav="quickstart">Quickstart</a>
+        <a href="tutorials.html" data-nav="tutorials">Tutorials</a>
+        <a href="features.html" data-nav="features">Features</a>
+        <a href="workflows.html" data-nav="workflows">Workflows</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP Reference</a>
+        <a href="examples.html" data-nav="examples">Examples</a>
+        <a href="architecture.html" data-nav="architecture">Architecture</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="Language switch">
+          <a href="../case-fit-lvs-chat.html">CN</a>
+          <a class="active" href="case-fit-lvs-chat.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Case Study · structdevice · Digital P&amp;R</div>
+        <h1>Chat Case Study: Wiring a Custom Device into a Digital Flow, All the Way to LVS Match</h1>
+        <p>Three requests, three real tool-driven stages: fit a custom device's exemplar geometry into a parametric PCell, place and route it from a netlist, then run live LVS to confirm the layout matches the netlist exactly.</p>
+        <div class="note">This is a real chat transcript. Every user request below is the kind of thing a real user would say; for each one, klink's AI agent actually drove the full fit &rarr; place &rarr; route &rarr; LVS pipeline against a live, running KLayout -- the screenshots and the LVS match / device count are the actual results of this run.</div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container chat">
+
+        <div class="chat-turn">
+          <div class="chat-user">
+            <div class="who">User</div>
+            I have the same device drawn at a few different sizes (exemplar geometry) -- can you fit that into one PCell I can re-parameterize freely?
+          </div>
+          <div class="chat-assistant">
+            <div class="who">klink agent</div>
+            <p>Running a fit screening over your 4 exemplar sizes (a synthetic back-gate device, W=10/50&nbsp;µm &times; L=4/8&nbsp;µm, both parameters varied independently): every role edge gets a linear regression against the parameters and is classified <code>linear</code> (parameter-driven), <code>constant</code> (doesn't move), or <code>unexplained</code> (the fitter can't explain it -- your call). The screening came back clean, so I built the fit table and registered it as a real PCell (<code>demobg</code>), then drew 3 variants to prove the parametrization is real: <code>dev10_8</code> is the exemplar point itself, <code>dev20_8</code> interpolates along W, and <code>dev50_3</code> extrapolates along L (outside the exemplar range).</p>
+            <div class="chat-calls">pcell_fitter.analyze(exemplars=4, params=["w_um","l_um"])
+&rarr; edges: 14 linear, 2 constant, 0 unexplained  (all 16 edges explained)
+pcell_fitter.fit_table(report, style="default", sample_order=[...])
+pcell.register_fitted(name="demobg", fit_table=...)
+instance.insert_pcell_many(cell, [
+  dev10_8(w_um=10, l_um=8),   # exemplar point
+  dev20_8(w_um=20, l_um=8),   # interpolation
+  dev50_3(w_um=50, l_um=3),   # extrapolation
+])</div>
+            <figure class="chat-shot">
+              <img src="../assets/cases/fit-lvs-chat/turn-01.png" alt="Three device variants drawn from the same PCell, dev10_8, dev20_8, dev50_3, each a different size, with an orange gate plate, green source/drain, and a hatched channel">
+              <figcaption>Turn 1 &middot; Three instances of the same <code>demobg</code> PCell at three parameter sets. The fit screening found 14 of 16 edges linear, 2 constant, and 0 unexplained -- the parametrization is fitted, not hard-coded.</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <div class="chat-turn">
+          <div class="chat-user">
+            <div class="who">User</div>
+            Place these devices from a small netlist, and route them in detail.
+          </div>
+          <div class="chat-assistant">
+            <div class="who">klink agent</div>
+            <p>The netlist is a bundled 4-bit adder (62 gates, 173 device instances, 96 nets). The row/column count and row pitch aren't guessed -- they're derived from the netlist itself: 62 gates &rarr; an 8&times;8 grid, row pitch = device stack height + routing channel, worked out to 170&nbsp;µm. After batch-placing all 173 fitted PCell instances, the signal nets among those 96 go to the FlexDR detailed router on a 3-layer stack; <code>VDD</code>/<code>GND</code> ride the power grid separately, outside the "signal net" count.</p>
+            <div class="chat-calls">routing.grid.floorplan.derive_grid(gates=62) &rarr; rows=8, cols=8
+routing.grid.floorplan.derive_row_pitch(...) &rarr; row_pitch_um=170.0
+structdevice.layout_engine.place_grid(nl, rows=8, cols=8, profile, row_pitch)
+&rarr; 173 device instances
+instance.insert_pcell_many(cell, 173 items)
+structdevice.layout_engine.route_and_draw_flexdr(cell, nl, placement, profile, layers=3, ...)
+&rarr; FlexDR 3.9s ok=True routed=94/94 markers=0 sig_vias=200 pdn_vias=166</div>
+            <figure class="chat-shot">
+              <img src="../assets/cases/fit-lvs-chat/turn-02.png" alt="Fully routed 8x8 device array: green horizontal traces and orange/grey vertical traces fill the row channels, with a power ring around the whole array labeled GND at top and VDD at bottom">
+              <figcaption>Turn 2 &middot; All 173 instances placed, 94 of 94 signal nets routed, <strong>0 DRC violations</strong> (<code>markers=0</code>). The power ring (<code>GND</code>/<code>VDD</code>) runs 166 PDN vias; the signal nets add another 200 cross-layer vias.</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <div class="chat-turn">
+          <div class="chat-user">
+            <div class="who">User</div>
+            Run LVS to confirm the drawn layout's connectivity matches the netlist exactly.
+          </div>
+          <div class="chat-assistant">
+            <div class="who">klink agent</div>
+            <p>Not "looks connected" -- KLayout's native connectivity extractor is the judge: it extracts nets from the real geometry just drawn (metal-layer connectivity + via crossings), reconciles them one by one against the 96 nets declared in step two, then does a device-level netlist comparison across all 173 devices. The extractor's connectivity rules are derived from the same <code>profile</code> the router used, but the extraction itself is KLayout's native engine -- not the router grading its own work. The real result gets written back onto the layout so it's easy to check by eye:</p>
+            <div class="chat-calls">structdevice.lvs_check(cell, declared=96 nets, mode="lvsdb",
+    connectivity=profile.connectivity_spec(),
+    terminal_provider=geom_terminal_provider(...),
+    placement=..., device_terms=...)
+&rarr; ok=True
+&rarr; device_lvs.match=True
+&rarr; device_lvs.device_count=173
+shape.insert_text(cell, "LVS match=True  devices=173", layer=6/0)</div>
+            <p>Real result: <strong>match=True, all 173 devices reconciled</strong> -- the connectivity drawn in the layout matches the declared netlist exactly.</p>
+            <figure class="chat-shot">
+              <img src="../assets/cases/fit-lvs-chat/turn-03.png" alt="Overview of the finished 4-bit adder layout with red text at the bottom reading LVS match=True devices=173">
+              <figcaption>Turn 3 &middot; The finished layout after LVS passes. The red text is the actual result written back by the agent -- <code>LVS match=True  devices=173</code> -- placed at the layout's real bounding box, not pre-staged decoration.</figcaption>
+            </figure>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container chat">
+        <p>Want the full step-by-step version with the fit formulas and zoomed-in detail shots? See the <a href="tutorial-fit-device.html">custom device tutorial</a>. Full DRC/LVS capability &rarr; <a href="drc-lvs.html">Features · DRC · LVS</a>.</p>
+        <div class="note">Honest recap: the device geometry, layer numbers (101/0 gate plate, 103/0 channel, 104/0 source/drain, 106/0 routing, 6/0 annotation text), and 4-bit adder netlist on this page are all synthesized/bundled demo data with no real process or customer content; the fit/place/route/LVS calls and their reported numbers (14 linear + 2 constant edges, routed=94/94, markers=0, LVS match=True, devices=173) were all executed for real against a live KLayout (dedicated session, port 8767), and the screenshots are the actual render output of that run. The disposable tab used for this work was closed at the end and the original tab restored as the active view; no session on 8765/8766 was touched.</div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>Geometry-first: mark intent on geometry, let algorithms fill in the routing, verify with structured evidence.</p></div>
+      <div><h3>Read on</h3><p><a href="../tutorials.html">Step-by-step tutorials</a></p><p><a href="../mcp-reference.html">MCP Tool Reference</a></p></div>
+      <div><h3>Install</h3><p><a href="../quickstart.html">Quickstart</a></p></div>
+    </div>
+  </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

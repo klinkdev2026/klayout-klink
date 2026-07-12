@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tutorial: Multi-window collaboration — one agent, many KLayouts - klink</title>
+  <meta name="description" content="klink's multi-window control plane: one agent drives several KLayout windows at once, each on its own port (session). A step-by-step walkthrough of the klink toolbar's SEND (turn a selection into durable agent memory), GFTGT (aim gdsfactory/klive traffic at a chosen window), and cross-session transfer (two-phase dry-run→commit move of geometry) — all from real live-session window captures with annotations and real numbers, not mockups.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../assets/styles.css">
+  <style>
+    /* Figure styling mirrors tutorial-gf-mzi.html (site card/note language). */
+    .tut-figure { margin: 16px 0 26px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #fff; }
+    .tut-figure img { width: 100%; display: block; background: #fff; }
+    .tut-figure figcaption { padding: 10px 14px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); background: #f7fafb; }
+    .tut-figure-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    @media (max-width: 760px) { .tut-figure-row { grid-template-columns: 1fr; } }
+    .stage-kicker { display: inline-flex; align-items: center; justify-content: center; min-width: 26px; height: 26px; padding: 0 8px; border-radius: 6px; background: #dff1ee; color: #12654b; font-weight: 800; font-size: 13px; margin-right: 10px; }
+  </style>
+</head>
+<body data-page="tutorials">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="index.html" data-nav="home">Home</a>
+        <a href="quickstart.html" data-nav="quickstart">Quickstart</a>
+        <a href="tutorials.html" data-nav="tutorials" class="active">Tutorials</a>
+        <a href="features.html" data-nav="features">Features</a>
+        <a href="workflows.html" data-nav="workflows">Workflows</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP Reference</a>
+        <a href="examples.html" data-nav="examples">Examples</a>
+        <a href="architecture.html" data-nav="architecture">Architecture</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="Language switch">
+          <a href="../tutorial-multiwindow.html">CN</a>
+          <a class="active" href="tutorial-multiwindow.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Step-by-step tutorial · control plane · multi-window</div>
+        <h1>Multi-window collaboration — one agent, many KLayouts</h1>
+        <p>Other tutorials are about what to draw inside <strong>one</strong> KLayout. This one is about the <strong>control plane itself</strong>: a single agent can be connected to several KLayout windows at once, each one a separate port (session). Humans and the agent collaborate across those windows through three buttons on the klink plugin toolbar — <strong>SEND</strong> (turn what you selected into durable memory the agent can refer back to), <strong>GFTGT</strong> (aim gdsfactory/klive traffic at one chosen window), and <strong>cross-session transfer</strong> (a two-phase, safe move of geometry between windows). Every figure here is a <strong>real capture of a live-session window</strong> with annotation on top, and the numbers are what that actual call returned.</p>
+        <div class="note">One thing differs from the other tutorials: their figures are <code>view.screenshot</code> captures of the <strong>layout canvas</strong>, whereas this one is about the toolbar and the window itself, so it captures the whole <strong>KLayout application window</strong> (title bar and toolbar included). The whole demo runs in throwaway tabs (<code>MW_SRC</code> / <code>MW_DST</code>) and never touches an existing working tab.</div>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#prereqs">Prerequisites</a>
+          <a href="#toolbar">① The klink toolbar</a>
+          <a href="#windows">② One agent, many windows</a>
+          <a href="#send">③ SEND: selection → durable memory</a>
+          <a href="#gftgt">④ GFTGT: aim photonics at a window</a>
+          <a href="#transfer">⑤ Cross-window transfer</a>
+          <a href="#verify">Verify, not screenshot</a>
+          <a href="#next">Next</a>
+        </nav>
+      </aside>
+
+      <article class="content">
+        <h2 id="prereqs" class="anchor-h">Prerequisites</h2>
+        <ul>
+          <li>At least <strong>two</strong> KLayout windows running, each with the klink plugin loaded on its own port — starting at <code>8765</code>, then <code>8766</code>, <code>8767</code>, and so on. Each window shows its own port badge <code>K876x</code> at the right of the toolbar.</li>
+          <li>The agent side (Claude Code / Codex, etc.) connects through the <a href="mcp-reference.html">MCP bridge</a>; calls pick a window with the <code>session</code> argument, defaulting to the first if omitted.</li>
+          <li>No process PDK is needed here — the demo uses illustrative geometry on a few ordinary layers (<code>10/0</code> metal, <code>20/0</code> pad, <code>1/0</code> frame, <code>6/0</code> text).</li>
+        </ul>
+
+        <h2 id="toolbar" class="anchor-h"><span class="stage-kicker">1</span>The klink toolbar</h2>
+        <p>Every KLayout window with the klink plugin loaded gets a small extra cluster of controls at the right of the standard toolbar. That cluster is the entry point for human + agent collaboration:</p>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/multiwindow/en/step-1-toolbar.png" alt="Top of a KLayout window; the K8765, SEND, GFTGT, and REC controls at the right of the toolbar are boxed in red, each with an arrow to an explanatory label">
+          <figcaption>Stage 1 · the klink plugin toolbar (red boxes are annotation overlay, not native KLayout): <code>K8765</code> is the port badge telling you this window is session 8765; <code>SEND</code> hands the current selection to the agent as a durable id; <code>GFTGT</code> marks this window as the gdsfactory/klive target (port 8082); <code>REC</code> records a replayable script. The title bar <code>[MW_SRC]</code> is the currently shown cell name.</figcaption>
+        </figure>
+        <p>The next three stages exercise <code>SEND</code>, <code>GFTGT</code>, and cross-window transfer in turn — each is both a button a human clicks and a typed call an agent makes.</p>
+
+        <h2 id="windows" class="anchor-h"><span class="stage-kicker">2</span>One agent, many windows</h2>
+        <p>klink's session model is simple: <strong>each KLayout window = one port = one session</strong>. A single agent can hold several windows at once over the MCP bridge and tells them apart by port. Here are two windows as one agent sees them — <code>K8765</code> on the left holds a source device, <code>K8767</code> on the right is an empty landing frame:</p>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/multiwindow/en/step-2-two-windows.png" alt="Two KLayout windows side by side; the left window badged K8765 holds a device, the right window badged K8767 holds only an empty frame, each port badge circled in red">
+          <figcaption>Stage 2 · two live KLayout windows side by side (each scaled and composited): left <code>K8765</code> (source, with a device), right <code>K8767</code> (target, empty frame). Windows identify themselves by the toolbar <code>K876x</code> badge — an agent passes <code>session="8765"</code> or <code>"8767"</code> to act on each independently, without interference.</figcaption>
+        </figure>
+        <p>Because windows are addressed by port rather than by "current focus", an agent can read in one window and write in another without shuffling anything to the foreground — which is exactly what the next three stages rely on.</p>
+
+        <h2 id="send" class="anchor-h"><span class="stage-kicker">3</span>SEND: turn a selection into durable agent memory</h2>
+        <p>You select something in KLayout, click the toolbar's <code>SEND</code>, and that selection is recorded into the agent's session memory with a stable id. Later, when you say "the one I just sent" or "this area", the agent resolves it to the exact geometry — no need to re-describe coordinates. The equivalent typed call on the agent side is <code>selection.send_context</code>:</p>
+        <pre><code># The human way: select → click SEND on the toolbar
+# The agent-equivalent way (what this demo actually called):
+client.selection_set_box("MW_SRC", [-12000, -2000, 12000, 2000])   # select the whole device (units: dbu)
+snd = client.call("selection.send_context", {"source": "tutorial_demo"})
+# -> {"status": "sent", "count": 5, "send_seq": 5}</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/multiwindow/en/step-3-send.png" alt="The K8765 window; the SEND button is boxed in red with an arrow to a label, and the device on the canvas is boxed in teal marked as 5 selected objects">
+          <figcaption>Stage 3 · select the device in <code>K8765</code> (teal box, 5 objects highlighted) → SEND. It returns <code>status: sent · count 5 · send_seq 5</code> — this selection is now a durable entry in the agent's memory (something like <code>sel_xxxx</code>), and "the one I just sent" refers to it in later turns. <code>send_seq</code> is monotonic, and SEND journals to disk before broadcasting, so nothing is lost even if no listener is subscribed at that instant.</figcaption>
+        </figure>
+
+        <h2 id="gftgt" class="anchor-h"><span class="stage-kicker">4</span>GFTGT: aim gdsfactory / klive traffic at a window</h2>
+        <p>With several windows open there's a practical question: when you generate a layout with gdsfactory in Python, <strong>which</strong> KLayout window should it land in? klive's compatibility port is a fixed <code>8082</code>, and the <code>GFTGT</code> button aims that traffic at the current window — click it, and this window becomes the gdsfactory/klive target; geometry pushed over <code>8082</code> afterwards lands here. The agent-side equivalent is <code>session.mark_klive_target</code>:</p>
+        <pre><code># The human way: click GFTGT on the window that should receive the gf layout
+# The agent-equivalent way (what this demo actually called), run on K8767:
+client.call("session.mark_klive_target", {})
+# -> {"ok": True, "klive_target_session": "klayout-8767", ...}</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/multiwindow/en/step-4-gftgt.png" alt="The K8767 window; the GFTGT button is boxed in red with an arrow to an explanatory label">
+          <figcaption>Stage 4 · click <code>GFTGT</code> on <code>K8767</code>: <code>klive_target_session</code> becomes <code>klayout-8767</code>. From now on, any gdsfactory layout pushed over the klive compatibility port <code>8082</code> lands in this window instead of the default first one. To receive on a different window, click GFTGT on that one.</figcaption>
+        </figure>
+
+        <h2 id="transfer" class="anchor-h"><span class="stage-kicker">5</span>Cross-window transfer: a two-phase move</h2>
+        <p>The last stage actually moves geometry from one window to another. klink's cross-session transfer is <strong>two-phase</strong> — first <code>dry-run</code> on the target window (compute only, no write, hand you a review), then <code>commit</code> to write for real once it checks out. That makes a move always validate-before-mutate, leaving no half-finished state on failure. It uses the <a href="mcp-reference.html">MCP tools</a> <code>klink.transfer_prepare</code> (read the source selection → package → dry-run on the target) and <code>klink.transfer_commit</code> (write for real):</p>
+        <pre><code># The 5 objects were already SENT / selected in source window K8765 (see Stage 3)
+# Phase 1: prepare -- read the source selection, package, dry-run on K8767's MW_DST
+prep = transfer_prepare(source_session="8765", target_session="8767",
+                        target_cell="MW_DST", copy_mode="flat_selection")
+# target_dry_run.inserted == 0   (a rehearsal, nothing written)
+
+# Phase 2: commit -- write for real after review
+commit = transfer_commit(package_id=prep["package_id"])
+# write.inserted == 5   (10/0 x 3 + 20/0 x 2)</code></pre>
+        <div class="tut-figure-row">
+          <figure class="tut-figure">
+            <img src="../assets/tutorials/multiwindow/en/step-5-transfer-before.png" alt="The K8767 window with only an empty pink landing frame and the text DST·K8767, no device inside">
+            <figcaption>Stage 5a · before transfer: <code>K8767</code>'s <code>MW_DST</code> holds only an empty landing frame.</figcaption>
+          </figure>
+          <figure class="tut-figure">
+            <img src="../assets/tutorials/multiwindow/en/step-6-transfer-after.png" alt="The same K8767 window; the device moved over from K8765 now sits inside the frame, boxed in teal">
+            <figcaption>Stage 5b · after commit: the device has landed from <code>K8765</code> into <code>K8767</code>. The <code>flat-selection</code> two-phase: dry-run <code>inserted 0</code> → commit <code>inserted 5</code> (<code>10/0 x 3 + 20/0 x 2</code>), matching layer by layer the 5 objects selected in Stage 3. The source window <code>K8765</code> is untouched — transfer is a copy, not a cut.</figcaption>
+          </figure>
+        </div>
+
+        <h2 id="verify" class="anchor-h">Verify, not screenshot</h2>
+        <p>As <a href="concepts.html#verify">Core Concepts</a> says, screenshots are for humans; the real proof of done is the structured return. Here is what each of the three stages actually returned:</p>
+        <pre><code>{
+  "send":     {"status": "sent", "count": 5, "send_seq": 5},
+  "gftgt":    {"ok": true, "klive_target_session": "klayout-8767"},
+  "transfer": {
+    "prepare_dry_run": {"cell": "MW_DST", "requested": 5, "inserted": 0, "by_layer": {"10/0": 3, "20/0": 2}},
+    "commit":          {"cell": "MW_DST", "requested": 5, "inserted": 5, "by_layer": {"10/0": 3, "20/0": 2}}
+  }
+}</code></pre>
+        <p>Both <code>requested</code> and <code>commit.inserted</code> are <code>5</code> and <code>by_layer</code> matches layer for layer — the 5 objects from the source window landed in the target, no more and no fewer, and the dry-run <code>inserted=0</code> proves validate-before-mutate really wrote nothing before you confirmed. Those numbers are how you judge success; the images just make it obvious at a glance.</p>
+
+        <h2 id="next" class="anchor-h">Next</h2>
+        <p>Put this control plane to work in your own multi-window flow: one window as "reference/source", another as "workspace"; use SEND to feed the agent a selection from the source, use transfer to move it across in two phases; when generating a layout with gdsfactory, click GFTGT on the target window first to aim it. The full list of these capabilities is on <a href="features.html">Features · Human + agent + live KLayout</a>, and the deeper field-level docs are in <a href="workflows.html">Workflows</a>. To watch the agent actually turn a sentence into a layout / DRC / LVS, see the <a href="tutorials.html#chat-cases">chat walkthroughs at the top of the tutorials page</a>.</p>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>One agent, many KLayouts: addressed by port, collaborating through SEND / GFTGT / transfer.</p></div>
+      <div><h3>Read on</h3><p><a href="features.html">Features · capability map</a></p><p><a href="workflows.html">Workflows</a></p><p><a href="tutorials.html">Tutorials hub</a></p></div>
+      <div><h3>Install</h3><p><a href="quickstart.html">Quickstart</a></p></div>
+    </div>
+  </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

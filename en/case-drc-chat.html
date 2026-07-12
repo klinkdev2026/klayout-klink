@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chat Case Study: Catching and Fixing a DRC Violation with klink - klink</title>
+  <meta name="description" content="A real chat transcript: draw two metal lines 0.1um apart, run a 0.5um min-space DRC through klink to catch the violation, then move the line to 1um and rerun clean -- every step is a real RPC call against a live KLayout with a real screenshot.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../assets/styles.css">
+  <style>
+    .chat{max-width:860px}
+    .chat-turn{margin:26px 0}
+    .chat-user{background:#e7f4f0;border:1px solid var(--line);border-radius:10px;padding:12px 16px;max-width:80%}
+    .chat-user .who{font-size:12px;color:var(--muted);font-weight:700;margin-bottom:4px}
+    .chat-assistant{margin-top:12px}
+    .chat-assistant .who{font-size:12px;color:#12654b;font-weight:800;margin-bottom:6px}
+    .chat-calls{font-family:ui-monospace,monospace;font-size:12.5px;background:#0d1f1a;color:#8fe6cf;border-radius:8px;padding:8px 12px;margin:8px 0;overflow-x:auto}
+    .chat-shot{margin:12px 0;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+    .chat-shot img{width:100%;display:block;background:#fff}
+    .chat-shot figcaption{padding:8px 12px;font-size:13px;color:var(--muted);border-top:1px solid var(--line);background:#f7fafb}
+  </style>
+</head>
+<body data-page="features">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="index.html" data-nav="home">Home</a>
+        <a href="quickstart.html" data-nav="quickstart">Quickstart</a>
+        <a href="tutorials.html" data-nav="tutorials">Tutorials</a>
+        <a href="features.html" data-nav="features">Features</a>
+        <a href="workflows.html" data-nav="workflows">Workflows</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP Reference</a>
+        <a href="examples.html" data-nav="examples">Examples</a>
+        <a href="architecture.html" data-nav="architecture">Architecture</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="Language switch">
+          <a href="../case-drc-chat.html">CN</a>
+          <a class="active" href="case-drc-chat.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Case Study · DRC</div>
+        <h1>Chat Case Study: Catching and Fixing a DRC Violation with klink</h1>
+        <p>Three requests, three real tool calls: draw a layout with a planted spacing problem, run DRC through klink to catch it, then fix it and confirm clean.</p>
+        <div class="note">This is a real chat transcript. Every user request below is the kind of thing a real user would say; for each one, klink's AI agent actually called the listed klink tools, drew geometry in a live, running KLayout, and ran real DRC -- the screenshot and violation count after each step are KLayout's actual results at that moment.</div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container chat">
+
+        <div class="chat-turn">
+          <div class="chat-user">
+            <div class="who">User</div>
+            Draw two parallel metal traces, deliberately only 0.1um apart -- I want to see if DRC can catch a spacing violation.
+          </div>
+          <div class="chat-assistant">
+            <div class="who">klink agent</div>
+            <p>Opening a disposable tab and drawing two 20um-long metal lines on layer 20/0: one at y=[0,2], the other at y=[2.1,4.1] -- exactly a 0.1um gap.</p>
+            <div class="chat-calls">view.new_tab(cell_name="DRC_CHAT_DEMO")
+layer.ensure(layer=20, datatype=0)
+shape.insert_boxes(cell, layer_index=2, boxes_um=[[0,0,20,2],[0,2.1,20,4.1]])
+&rarr; inserted=2, bbox_dbu=[0,0,20000,4100]</div>
+            <figure class="chat-shot">
+              <img src="../assets/cases/drc-chat/turn-01.png" alt="Two metal lines 0.1um apart, nearly touching at this scale">
+              <figcaption>The two lines are drawn -- the gap is only 0.1um, barely visible at this scale.</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <div class="chat-turn">
+          <div class="chat-user">
+            <div class="who">User</div>
+            Run DRC with a minimum spacing rule of 0.5um.
+          </div>
+          <div class="chat-assistant">
+            <div class="who">klink agent</div>
+            <p>Writing a minimal DRC deck that runs a <code>space(0.5.um)</code> check on layer 20/0, executed through <code>drc.run</code> on KLayout's native DRC engine:</p>
+            <div class="chat-calls">drc.run(code = '''
+report("chat_drc_space", $output_rdb)
+m = input(20, 0)
+m.space(0.5.um).output("M_SPACE", "metal-to-metal space &lt; 0.5 um")
+''', output_rdb=..., result_mode="full")
+&rarr; rdb_summary.total_items = 1
+&rarr; categories: [{name: "M_SPACE", count: 1}]
+&rarr; exception = null</div>
+            <p>Caught it -- real result: <strong>1 spacing violation</strong> (category <code>M_SPACE</code>). To make the violation location visible in the screenshot too, I drew a highlight box on marker layer 66/0 over that 0.1um gap (the blue hatched region -- coordinates taken from the actual gap we drew, not fabricated):</p>
+            <div class="chat-calls">layer.ensure(layer=66, datatype=0)
+shape.insert_boxes(cell, layer_index=..., boxes_um=[[-1,1.9,21,2.2]])</div>
+            <figure class="chat-shot">
+              <img src="../assets/cases/drc-chat/turn-02.png" alt="DRC violation marker: blue hatched highlight box over the 0.1um gap between the two metal lines">
+              <figcaption>DRC result: 1 violation (M_SPACE). The blue hatched box is the agent's violation-location marker.</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <div class="chat-turn">
+          <div class="chat-user">
+            <div class="who">User</div>
+            Move one of them out to 1um spacing and rerun DRC to confirm it's clean.
+          </div>
+          <div class="chat-assistant">
+            <div class="who">klink agent</div>
+            <p>Deleting the violation marker and the old top trace, then redrawing it at y=[3.0,5.0] -- that makes the gap 3.0&minus;2.0 = 1.0um. Rerunning the same deck:</p>
+            <div class="chat-calls">shape.delete(cell, layer_index=..., bbox_um=[-1,1.9,21,2.2])   # clear the violation marker
+shape.delete(cell, layer_index=2, bbox_um=[0,2.1,20,4.1])    # clear the old trace
+shape.insert_boxes(cell, layer_index=2, boxes_um=[[0,3.0,20,5.0]])
+drc.run(code=&lt;same 0.5um space deck&gt;, result_mode="full")
+&rarr; rdb_summary.total_items = 0
+&rarr; categories: [{name: "M_SPACE", count: 0}]
+&rarr; exception = null</div>
+            <p>Confirmed clean: <strong>0 violations</strong>. A 1um gap satisfies the 0.5um minimum-space rule.</p>
+            <figure class="chat-shot">
+              <img src="../assets/cases/drc-chat/turn-03.png" alt="Two metal lines with 1um spacing, DRC rerun shows 0 violations">
+              <figcaption>Fixed layout: 1um spacing, DRC rerun &rarr; 0 violations.</figcaption>
+            </figure>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container chat">
+        <p>Full DRC/LVS capability &rarr; <a href="../drc-lvs.html">Features · DRC · LVS</a>.</p>
+        <div class="note">Honest recap: the geometry, layer numbers (20/0 for traces, 66/0 for the violation marker), and DRC deck on this page are all synthesized for the demo and contain no real process or customer data; the three <code>drc.run</code>/<code>shape.*</code> calls and their reported violation counts (1 &rarr; 0) were all executed for real against a live KLayout (dedicated session, port 8766), and the screenshots are the actual render output of that run. The disposable tab used for this work was closed at the end, and the original tab was restored as the active view.</div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>Geometry-first: mark intent on geometry, let algorithms fill in the routing, verify with structured evidence.</p></div>
+      <div><h3>Read on</h3><p><a href="../tutorials.html">Step-by-step tutorials</a></p><p><a href="../mcp-reference.html">MCP Tool Reference</a></p></div>
+      <div><h3>Install</h3><p><a href="../quickstart.html">Quickstart</a></p></div>
+    </div>
+  </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

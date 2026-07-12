@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>对话实战：自定义器件接进数字流程，跑到 LVS match - klink</title>
+  <meta name="description" content="一段真实对话记录：把一个合成背栅器件从范例几何拟合成参数化 PCell,按 4-bit 加法器网表摆放 173 个实例并做详细布线(94/94 全部布通、0 违例),最后跑 live LVS 得到 match=True——每步都是对 live KLayout(专用会话,端口 8767)的真实调用和真实截图。">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="assets/styles.css">
+  <style>
+    .chat{max-width:860px}
+    .chat-turn{margin:26px 0}
+    .chat-user{background:#e7f4f0;border:1px solid var(--line);border-radius:10px;padding:12px 16px;max-width:80%}
+    .chat-user .who{font-size:12px;color:var(--muted);font-weight:700;margin-bottom:4px}
+    .chat-assistant{margin-top:12px}
+    .chat-assistant .who{font-size:12px;color:#12654b;font-weight:800;margin-bottom:6px}
+    .chat-calls{font-family:ui-monospace,monospace;font-size:12.5px;background:#0d1f1a;color:#8fe6cf;border-radius:8px;padding:8px 12px;margin:8px 0;overflow-x:auto}
+    .chat-shot{margin:12px 0;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+    .chat-shot img{width:100%;display:block;background:#fff}
+    .chat-shot figcaption{padding:8px 12px;font-size:13px;color:var(--muted);border-top:1px solid var(--line);background:#f7fafb}
+  </style>
+</head>
+<body data-page="features">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="主导航">
+        <a href="index.html" data-nav="home">首页</a>
+        <a href="quickstart.html" data-nav="quickstart">快速上手</a>
+        <a href="tutorials.html" data-nav="tutorials">教程</a>
+        <a href="features.html" data-nav="features">功能特性</a>
+        <a href="workflows.html" data-nav="workflows">工作流</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP 参考</a>
+        <a href="examples.html" data-nav="examples">示例</a>
+        <a href="architecture.html" data-nav="architecture">架构</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="语言切换">
+          <a class="active" href="case-fit-lvs-chat.html">CN</a>
+          <a href="en/case-fit-lvs-chat.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="打开导航" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Case Study · structdevice · 数字 P&amp;R</div>
+        <h1>对话实战：自定义器件接进数字流程，跑到 LVS match</h1>
+        <p>三句话，三轮真实调用：把一个合成器件的范例几何拟合成参数化 PCell、按网表摆放并详细布线、最后跑 live LVS 确认版图和网表完全一致。</p>
+        <div class="note">这是一段真实对话记录。每句用户请求都是真实用户会说的话；针对每句，klink 的 AI agent 真的驱动了拟合&rarr;摆放&rarr;布线&rarr;LVS 的完整流程，在实时运行的 KLayout 里跑——截图和 LVS match、器件数都是本次真实运行的结果。</div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container chat">
+
+        <div class="chat-turn">
+          <div class="chat-user">
+            <div class="who">用户</div>
+            我有同一个器件在几个不同尺寸下的画法（范例几何），帮我拟合成一个可任意改参数的 PCell。
+          </div>
+          <div class="chat-assistant">
+            <div class="who">klink agent</div>
+            <p>用你 4 个尺寸点的范例几何（合成背栅器件，W=10/50&nbsp;µm × L=4/8&nbsp;µm，两个参数轴都变过）跑拟合筛查：每条角色边做线性回归，分类成 <code>linear</code>（参数驱动）/ <code>constant</code>（不随参数动）/ <code>unexplained</code>（拟合器解释不了、需要你拍板）。筛查干净后出拟合表，注册成真 PCell（<code>demobg</code>），再画 3 个变体验证参数化是真的：<code>dev10_8</code> 是范例点本身，<code>dev20_8</code> 是 W 方向的插值，<code>dev50_3</code> 是 L 方向的外推（超出范例区间）。</p>
+            <div class="chat-calls">pcell_fitter.analyze(exemplars=4, params=["w_um","l_um"])
+&rarr; edges: 14 linear, 2 constant, 0 unexplained  (16 条边全部有解释)
+pcell_fitter.fit_table(report, style="default", sample_order=[...])
+pcell.register_fitted(name="demobg", fit_table=...)
+instance.insert_pcell_many(cell, [
+  dev10_8(w_um=10, l_um=8),   # 范例点
+  dev20_8(w_um=20, l_um=8),   # 插值
+  dev50_3(w_um=50, l_um=3),   # 外推
+])</div>
+            <figure class="chat-shot">
+              <img src="assets/cases/fit-lvs-chat/turn-01.png" alt="三个由同一 PCell 画出的器件变体，dev10_8、dev20_8、dev50_3，尺寸依次不同，橙色栅板、绿色源漏、网格状沟道">
+              <figcaption>Turn 1 &middot; 同一个 <code>demobg</code> PCell 在三组参数下的实例：拟合筛查 16 条边里 14 条 linear、2 条 constant、0 条 unexplained——参数化是拟合出来的，不是硬编码的。</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <div class="chat-turn">
+          <div class="chat-user">
+            <div class="who">用户</div>
+            按一个小网表把这些器件摆放好，并做详细布线。
+          </div>
+          <div class="chat-assistant">
+            <div class="who">klink agent</div>
+            <p>网表是一个内置的 4-bit 加法器（62 个门、173 个器件实例、96 个网）。行列数和行距不是拍脑袋定的，是从这份网表推导出来的：62 个门 &rarr; 8&times;8 网格，行距按器件叠高 + 布线通道算出 170&nbsp;µm。批量摆好 173 个拟合 PCell 实例后，把 96 个网里的信号网交给 FlexDR 详细布线器，在 3 层布线栈上走线；<code>VDD</code>/<code>GND</code> 走电源网格，不算在“信号网”里。</p>
+            <div class="chat-calls">routing.grid.floorplan.derive_grid(gates=62) &rarr; rows=8, cols=8
+routing.grid.floorplan.derive_row_pitch(...) &rarr; row_pitch_um=170.0
+structdevice.layout_engine.place_grid(nl, rows=8, cols=8, profile, row_pitch)
+&rarr; 173 个器件实例
+instance.insert_pcell_many(cell, 173 items)
+structdevice.layout_engine.route_and_draw_flexdr(cell, nl, placement, profile, layers=3, ...)
+&rarr; FlexDR 3.9s ok=True routed=94/94 markers=0 sig_vias=200 pdn_vias=166</div>
+            <figure class="chat-shot">
+              <img src="assets/cases/fit-lvs-chat/turn-02.png" alt="8x8 器件阵列全部布通的整体视图，行间通道里布满横向绿色走线和纵向橙色、灰色走线，四周有电源环，顶部标 GND、底部标 VDD">
+              <figcaption>Turn 2 &middot; 173 个实例摆好，94/94 信号网全部布通、<strong>0 处 DRC 违例</strong>（<code>markers=0</code>）。四周电源环带 <code>GND</code>/<code>VDD</code> 标签，走 166 个 PDN 过孔；信号网另走 200 个过孔跨层。</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <div class="chat-turn">
+          <div class="chat-user">
+            <div class="who">用户</div>
+            跑 LVS，确认画出来的版图和网表连通完全一致。
+          </div>
+          <div class="chat-assistant">
+            <div class="who">klink agent</div>
+            <p>不是“看起来连上了”，是让 KLayout 原生的连通性提取器当裁判：从刚画好的真实几何里提取网络（金属层内连通 + 过孔跨层），和第二步声明的 96 个网逐一对账，再做 173 个器件的 netlist 比对。裁判读的连通性规则和布线器用的是同一份 <code>profile</code> 推导出来的，但提取本身是 KLayout 原生做的，不是布线器自己给自己打分。结果直接标注回版图，方便核对：</p>
+            <div class="chat-calls">structdevice.lvs_check(cell, declared=96 nets, mode="lvsdb",
+    connectivity=profile.connectivity_spec(),
+    terminal_provider=geom_terminal_provider(...),
+    placement=..., device_terms=...)
+&rarr; ok=True
+&rarr; device_lvs.match=True
+&rarr; device_lvs.device_count=173
+shape.insert_text(cell, "LVS match=True  devices=173", layer=6/0)</div>
+            <p>真实结果：<strong>match=True，173 个器件全部对上</strong>——版图里画出来的连通关系和网表声明的完全一致。</p>
+            <figure class="chat-shot">
+              <img src="assets/cases/fit-lvs-chat/turn-03.png" alt="完成的 4-bit 加法器版图全景，底部有红色文字标注 LVS match=True devices=173">
+              <figcaption>Turn 3 &middot; LVS 通过后的成品全景。红色文字是 agent 写回版图的真实结果——<code>LVS match=True  devices=173</code>，坐标取自这次摆放出来的版图边界，不是预先摆好的装饰。</figcaption>
+            </figure>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container chat">
+        <p>想看这条链更完整、每一步都配拟合公式和局部放大细节的分步版本？看 <a href="tutorial-fit-device.html">自定义器件教程</a>。DRC/LVS 的完整能力入口 &rarr; <a href="drc-lvs.html">功能特性 · DRC·LVS</a>。</p>
+        <div class="note">如实复述：本页三轮对话用的器件几何、层号（101/0 栅板、103/0 沟道、104/0 源漏、106/0 布线、6/0 标注文字）、4-bit 加法器网表全部是为演示合成/内置的示例数据，不含任何真实工艺或客户数据；三次拟合/摆放/布线/LVS 调用和其返回的数字（14 linear + 2 constant 边、routed=94/94、markers=0、LVS match=True、devices=173）均对 live KLayout（专用会话，端口 8767）真实执行，截图为该次运行的真实渲染结果。工作用的一次性 tab 已在收尾时关闭，原有 tab 已恢复为当前视图，全程未触碰 8765/8766 上的任何会话。</div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>geometry-first：在几何上标意图，让算法补全布线，用结构化证据验证。</p></div>
+      <div><h3>继续阅读</h3><p><a href="tutorials.html">图文教程</a></p><p><a href="mcp-reference.html">MCP 工具参考</a></p></div>
+      <div><h3>安装</h3><p><a href="quickstart.html">快速上手</a></p></div>
+    </div>
+  </footer>
+  <script src="assets/app.js"></script>
+</body>
+</html>

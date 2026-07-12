@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>对话实战：硅光器件标端口 → 连线 → 拖动重连 - klink</title>
+  <meta name="description" content="一段真实对话记录：给一个自定义硅光器件手绘端口并转成标准 Port，连线到一个 gdsfactory MMI，然后拖动器件、一句'重新连一下'让波导跟着重布线。每步截图都是当时的真实 KLayout 画面。">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="assets/styles.css">
+  <style>
+    .chat{max-width:860px}
+    .chat-turn{margin:26px 0}
+    .chat-user{background:#e7f4f0;border:1px solid var(--line);border-radius:10px;padding:12px 16px;max-width:80%}
+    .chat-user .who{font-size:12px;color:var(--muted);font-weight:700;margin-bottom:4px}
+    .chat-assistant{margin-top:12px}
+    .chat-assistant .who{font-size:12px;color:#12654b;font-weight:800;margin-bottom:6px}
+    .chat-calls{font-family:ui-monospace,monospace;font-size:12.5px;background:#0d1f1a;color:#8fe6cf;border-radius:8px;padding:8px 12px;margin:8px 0;overflow-x:auto;white-space:pre;line-height:1.5}
+    .chat-shot{margin:12px 0;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+    .chat-shot img{width:100%;display:block;background:#fff}
+    .chat-shot figcaption{padding:8px 12px;font-size:13px;color:var(--muted);border-top:1px solid var(--line);background:#f7fafb}
+  </style>
+</head>
+<body data-page="tutorials">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="主导航">
+        <a href="index.html" data-nav="home">首页</a>
+        <a href="quickstart.html" data-nav="quickstart">快速上手</a>
+        <a href="tutorials.html" data-nav="tutorials" class="active">教程</a>
+        <a href="features.html" data-nav="features">功能特性</a>
+        <a href="workflows.html" data-nav="workflows">工作流</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP 参考</a>
+        <a href="examples.html" data-nav="examples">示例</a>
+        <a href="architecture.html" data-nav="architecture">架构</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="语言切换">
+          <a class="active" href="case-gf-reroute-chat.html">CN</a>
+          <a href="en/case-gf-reroute-chat.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="打开导航" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">对话实战 · photonics</div>
+        <h1>对话实战：标端口 → 连线 → 拖动重连</h1>
+        <p>三句话，把一个自定义硅光器件接上一个 gdsfactory MMI，再拖动、重连。</p>
+        <div class="note">这是一段真实对话记录。针对每一句用户请求，klink 的 AI agent 真的调用了列出的工具、在实时 KLayout 里跑出结果——每步截图就是当时的真实画面。想看含"手绘端口三种方式 + 反面教材"的完整版，看 <a href="tutorial-gf-ports.html">gdsfactory 端口图文教程</a>。</div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container chat">
+
+        <div class="chat-turn">
+          <div class="chat-user">
+            <div class="who">用户</div>
+            <div>我画了个自定义器件，在两个波导口上各画了个三角形，帮我转成标准端口。</div>
+          </div>
+          <div class="chat-assistant">
+            <div class="who">klink agent</div>
+            <p>手绘三角形就是端口标记：尖端指朝向、底边等于宽度。一次调用读几何、推出朝向/宽度/位置，转成标准 klink Port，再删掉原三角形。两个口都转成了 0.8 µm 宽的贴边端口。</p>
+            <div class="chat-calls">recognize_handdrawn_ports(cell="GFPORTS", layer="999/99", port_type="optical")
+→ P0 orient=180° width=0.8 ; P1 orient=0° width=0.8  (attached=True)</div>
+            <figure class="chat-shot">
+              <img src="assets/tutorials/gf-ports/gf-2-converted.png" alt="自定义器件的两个波导口变成标注 klink_port.P0 / P1 的标准端口">
+              <figcaption>Turn 1 · 手绘三角形 → 标准 Port（<code>P0</code> / <code>P1</code>，宽度精确 0.8 µm）。</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <div class="chat-turn">
+          <div class="chat-user">
+            <div class="who">用户</div>
+            <div>把它连到右边那个 MMI 的输入口。</div>
+          </div>
+          <div class="chat-assistant">
+            <div class="who">klink agent</div>
+            <p>器件的 <code>P0</code> 和 MMI 的输入 <code>o1</code> 都在 net <code>link0</code> 上、正好相对，直接布一条波导连上，写回 <code>12/0</code> 层。<code>ok=true</code>，一条 40 µm 直波导，0 交叉。</p>
+            <div class="chat-calls">route_gdsfactory_ports(cell="GFLOOP", route_layer="12/0", all_two_port_nets=True)
+→ {ok:true, MMI.o1 → P0, length_um:40, crossings:0}</div>
+            <figure class="chat-shot">
+              <img src="assets/tutorials/gf-ports/gf-8-routed.png" alt="自定义器件和 MMI 之间由一条直波导连接">
+              <figcaption>Turn 2 · 一条直波导把自定义器件接到 MMI 输入。</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <div class="chat-turn">
+          <div class="chat-user">
+            <div class="who">用户</div>
+            <div>我把左边器件往上挪了 20 µm，重新连一下。</div>
+          </div>
+          <div class="chat-assistant">
+            <div class="who">klink agent</div>
+            <p>同一个布线调用重跑一次——它从活的端口位置重新读（<code>P0</code> 已经在新坐标），把旧布线换成一条跟到新位置的波导。器件挪了，线跟上了，一条平滑 S 弯，其它什么都没动。</p>
+            <div class="chat-calls">route_gdsfactory_ports(cell="GFLOOP", route_layer="12/0", all_two_port_nets=True)
+→ {ok:true, MMI.o1 → P0(新位置), length_um:60}   # 直线 40µm → S 弯 60µm</div>
+            <figure class="chat-shot">
+              <img src="assets/tutorials/gf-ports/gf-10-rerouted.png" alt="上移后的器件通过一条平滑 S 形波导重新连回 MMI">
+              <figcaption>Turn 3 · 拖动后一句"重新连一下"：波导跟着重布成一条平滑 S 弯。</figcaption>
+            </figure>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container chat">
+        <h2>这段对话做了什么</h2>
+        <p>三句话：手绘三角形转标准端口 → 连到 MMI → 拖动后重连。核心是"标端口 → 布线 → 拖动 → 重连"的闭环，判断成没成看的是结构化返回（<code>width=0.8</code>、<code>length 40→60</code>、<code>crossings=0</code>），不是"看起来连上了"。</p>
+        <div class="note">诚实复述：以上三轮都是本次会话在一个一次性 KLayout tab 里实跑的，几何是现场决定的合成数值（非任何真实工艺），调用的工具名与上面 <code>.chat-calls</code> 完全一致。完整版（含标准 gdsfactory 自动端口、PDK 黑箱 harvest、以及"底边画错"的反面教材）见 <a href="tutorial-gf-ports.html">gdsfactory 端口图文教程</a>。</div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>标端口 → 布线 → 拖动 → 重连：硅光迭代版图的核心闭环。</p></div>
+      <div><h3>继续阅读</h3><p><a href="tutorial-gf-ports.html">gdsfactory 端口图文教程</a></p><p><a href="tutorial-gf-mzi.html">gdsfactory MZI 接管教程</a></p></div>
+      <div><h3>安装</h3><p><a href="quickstart.html">快速上手</a></p></div>
+    </div>
+  </footer>
+  <script src="assets/app.js"></script>
+</body>
+</html>

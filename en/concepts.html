@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Core Concepts - klink</title>
+  <meta name="description" content="klink's core method is geometry-first: mark intent on geometry (Ports and Anchors) and let routing algorithms complete the wiring. Plus the user-project model, per-domain recipes, and verification habits.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body data-page="tutorials">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="index.html" data-nav="home">Home</a>
+        <a href="quickstart.html" data-nav="quickstart">Quickstart</a>
+        <a href="tutorials.html" data-nav="tutorials" class="active">Tutorials</a>
+        <a href="features.html" data-nav="features">Features</a>
+        <a href="workflows.html" data-nav="workflows">Workflows</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP Reference</a>
+        <a href="examples.html" data-nav="examples">Examples</a>
+        <a href="architecture.html" data-nav="architecture">Architecture</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="Language switch">
+          <a href="../concepts.html">CN</a>
+          <a class="active" href="concepts.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Core concepts</div>
+        <h1>The core idea: geometry-first</h1>
+        <p>klink does not try to "generate a whole layout from a sentence". Its method is <strong>geometry-first</strong>: geometry (hand-drawn or generated) comes first, you mark <strong>intent</strong> on it (Ports and Anchors), routing algorithms complete the wiring, and structured geometry queries plus live LVS decide "done". The human keeps GUI freedom; the agent reads, writes, moves, records, routes, and verifies real geometry. These concepts are the shared background for the <a href="tutorials.html">step-by-step tutorials</a> -- read this once before diving into them.</p>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#geometry-first">The geometry-first idea</a>
+          <a href="#port">Port: connectivity intent</a>
+          <a href="#anchor">Anchor: routing constraint</a>
+          <a href="#loop">Mark → route → verify</a>
+          <a href="#model">The user-project model</a>
+          <a href="#init">Create a project</a>
+          <a href="#recipe">Pick a recipe</a>
+          <a href="#verify">Verification habits</a>
+        </nav>
+      </aside>
+
+      <article class="content">
+        <h2 id="geometry-first" class="anchor-h">The geometry-first idea</h2>
+        <p>Traditional parametric-layout tools (stretch-handle PCells) assume <strong>shapes are rectangles</strong> — pull an edge and that equals a parameter <code>W</code>. CMOS is all boxes, so it works. But photonics, flexible electronics, MEMS and superconducting circuits are not boxes: graded tapers, arc bends, free topologies — there is no "pull that edge = a parameter" mapping.</p>
+        <p>klink takes another path: <strong>lightweight semantic annotation</strong> rather than a complete constraint system. You mark intent at the geometric positions you are sure of; routing algorithms fill in between the markers; if it's wrong, add more marks and re-run. It is an iterative, convergent process, not a one-shot black box. Two kinds of marker:</p>
+        <div class="grid two">
+          <article class="card">
+            <span class="feature-kicker">Port</span>
+            <h3>Connectivity intent (net endpoint)</h3>
+            <p>A <code>klink_Port</code> PCell carrying net + orientation + width. It answers "a wire on some net leaves here, in this direction, at this width".</p>
+          </article>
+          <article class="card">
+            <span class="feature-kicker green">Anchor</span>
+            <h3>Routing constraint</h3>
+            <p>A <code>klink_Anchor</code> PCell whose <code>kind</code> is waypoint_region / bend_region / corridor. It answers "the wire should pass here / bend here / take this channel".</p>
+          </article>
+        </div>
+        <p>These two <strong>are the input to the routing backends</strong>: mark Ports + Anchors, then call one <code>routing.*</code> tool and the wiring geometry is generated. This boundary keeps klink's mechanism layer process-agnostic — all process facts (layers, sizes, spacing) are passed in explicitly at call time.</p>
+
+        <h2 id="port" class="anchor-h">Port: connectivity intent</h2>
+        <p>A Port marks a net endpoint. It is a <code>klink_Port</code> PCell whose <strong>parameters are the single source of truth</strong> (center / orientation / width / target_layer / port_type / net) — the triangle orientation marker and text label are generated by the PCell and never drift from the parameters. Routing backends read Port markers from layer <code>999/99</code> by default.</p>
+        <pre><code>port.mark cell="NET1" name="A" center_um=[0,0]   orientation="E" width_um=2 net="sig"
+port.mark cell="NET1" name="B" center_um=[80,20] orientation="W" width_um=2 net="sig"
+port.list cell="NET1"</code></pre>
+        <p>Naming aligns with gdsfactory conventions (directional <code>E0/N0/W0/S0</code>, typed <code>o1/e1</code>). A triangle/rectangle you draw in the GUI can be snapped into a standard Port too — via direction inference + snapping to the nearest real edge (edge tolerance, 45° grid fallback). A Port is identified by an immutable <code>name</code> and can be <code>update</code>d / <code>transform</code>ed (batch by GUI selection) / <code>unmark</code>ed; duplicate/empty names have <code>port.repair_names</code> as a fallback. Full tools on <a href="mcp-reference.html#d-ports">MCP Reference · Ports &amp; anchors</a>.</p>
+
+        <h2 id="anchor" class="anchor-h">Anchor: routing constraint</h2>
+        <p>An Anchor expresses "how the wire should go". Read from layer <code>999/1</code> by default. Three kinds:</p>
+        <table class="data-table">
+          <thead><tr><th>kind</th><th>Geometry &amp; semantics</th></tr></thead>
+          <tbody>
+            <tr><td><code>waypoint_region</code></td><td>A rectangular <strong>must-pass</strong> region — the wire has to cross it.</td></tr>
+            <tr><td><code>bend_region</code></td><td>A triangle whose incircle is the <strong>bend search area</strong> — the wire makes its arc/corner transition here.</td></tr>
+            <tr><td><code>corridor</code></td><td>A <strong>directional channel</strong> defined by a polyline: the wire must "enter → run along → exit", not simply cross. A plain corridor is <strong>required</strong>; labeling <code>choice_group=BUS</code> makes it an <strong>optional</strong> load-balancing candidate channel for <code>routing.global_channel_cell</code>.</td></tr>
+          </tbody>
+        </table>
+        <pre><code>anchor.mark cell="NET1" kind="waypoint_region" center_um=[40,40] radius_um=6 net="sig"</code></pre>
+        <p>Anchors share Ports' identity model: <code>id</code>/<code>name</code> for locating, <code>label</code> for display, <code>net</code> for connectivity — three separate axes, with <code>anchor.repair_ids</code> as a duplicate/empty-id fallback. The split "thin plugin does create/edit, thick client does the understanding" is deliberate: how to interpret a hand-drawn marker is evolving workflow logic that should not be frozen into the KLayout plugin.</p>
+        <div class="note"><strong>Keepout is not an anchor kind.</strong> Obstacle avoidance is the <code>obstacle_layers</code> you pass to routing tools — your own design's keepout layers. klink ships no default keepout layer (<code>900/0</code> is a reserved keepout layer that structdevice uses internally as scratch).</div>
+
+        <h2 id="loop" class="anchor-h">Mark → route → verify</h2>
+        <p>The minimal geometry-first loop:</p>
+        <div class="flow">
+          <div class="flow-item"><strong>1 · Geometry</strong><span class="muted">Draw or generate device/pad geometry.</span></div>
+          <div class="flow-item"><strong>2 · Mark intent</strong><span class="muted">port.mark + anchor.mark.</span></div>
+          <div class="flow-item"><strong>3 · Route</strong><span class="muted">routing.* generates wiring.</span></div>
+          <div class="flow-item"><strong>4 · Verify</strong><span class="muted">Structured report + live LVS.</span></div>
+        </div>
+        <pre><code>port.mark cell="NET1" name="A" center_um=[0,0]   orientation="E" width_um=2 net="sig"
+port.mark cell="NET1" name="B" center_um=[80,20] orientation="W" width_um=2 net="sig"
+anchor.mark cell="NET1" kind="waypoint_region" center_um=[40,40] radius_um=6 net="sig"
+routing.tapered_hybrid_cell cell="NET1" angle_mode="manhattan" obstacle_layers=["900/0"]
+# check the result: ok=true, obstacle_hit_count=0, no sibling overlap</code></pre>
+        <p>Routing backends divide by topology/quality (tapered hybrid main, tapered polygon continuous taper, steiner multi-terminal, damped strong clearance, global channel global-decision, multilayer escape cross-layer, gdsfactory strategies). See <a href="mcp-reference.html#d-routing">MCP Reference · Routing backends</a>. The many backends <strong>reject "one universal router"</strong>: they share one Port/Anchor planner, and the output differences are "form of expression", not "quality tiers".</p>
+        <p>A few principles run through the routing layer:</p>
+        <ul>
+          <li><strong>Rasterization-free geometric routing.</strong> A visibility graph + Dijkstra yields clean straight segments (not staircase artifacts), with native 0/45/90° angle modes; no dependency on <code>klayout.db</code>.</li>
+          <li><strong>Port launch contract.</strong> A router may not treat a Port as an arbitrary point — it must launch along <code>orientation</code> from the center before entering global search, adding a small perpendicular dogleg if that would fold back, rather than silently rewriting the Port's direction.</li>
+          <li><strong>Results must self-justify.</strong> <code>ok</code> / <code>obstacle_hit_count</code> / sibling overlap / <code>route_count</code> are structural quality gates; zero matches is not success. A parameter the chosen backend can't honor is an <strong>error that names the backends which do</strong> — never silently ignored.</li>
+          <li><strong>Honest about limits.</strong> global channel states it is "not a full rip-up/reroute congestion router"; multilayer escape does not model via enclosure; gdsfactory's astar is fragile, so klink re-verifies and errors on a wall-crossing route.</li>
+        </ul>
+
+        <h2 id="model" class="anchor-h">The user-project model</h2>
+        <p><code>klink</code> and <code>klink_plugin</code> are the <strong>mechanism layer</strong> (installed packages, never edited). Your process, devices, sizes, layer numbers, DRC/LVS rules live in <strong>your project</strong> and are passed explicitly into the mechanism.</p>
+        <pre><code>your-project/
+  pdk.py          your process — the only home for process facts
+  custom_devices/ build scripts / device generators the agent writes
+  specs/          .klink specs, net tables, interaction intent
+  out/            generated GDS / results   (never commit GDS)
+  AGENTS.md       agent rules (CLAUDE.md points to it)
+  mcp.example.json</code></pre>
+        <div class="warning">Your project must <strong>never</strong> contain GDS/PDK content — neither a proprietary foundry PDK nor a device layout. The template <code>.gitignore</code> blocks <code>*.gds</code>/<code>*.oas</code>. Point recipe code at such files at <strong>run time</strong> (open PDKs are fine to depend on, still not committed).</div>
+
+        <h2 id="init" class="anchor-h">Create a project</h2>
+        <p>Scaffold with the CLI bundled in the wheel, then open it with your agent.</p>
+        <pre><code>klink init my-chip
+cd my-chip</code></pre>
+        <p>Describe what you build; the agent identifies the domain, scaffolds <code>pdk.py</code> + a first <code>custom_devices/</code> script from the matching recipe, and passes your process <strong>explicitly</strong> into klink. There is no hard-coded default project — a fresh project must name its domain and geometry tier first.</p>
+        <p>After you upgrade klink, run <code>klink update mychip</code> (or just <code>klink update</code> from inside the project folder) to refresh the starters under <code>example_template/</code>; your own <code>pdk.py</code>, <code>custom_devices/</code>, <code>.klink/</code>, <code>out/</code>, and <code>specs/</code> are never overwritten:</p>
+        <pre><code>python -m pip install -U klayout-klink
+klink update mychip</code></pre>
+
+        <h2 id="recipe" class="anchor-h">Pick a recipe</h2>
+        <p>A recipe is the reference implementation for one domain. The geometry tier says whether it needs your confidential geometry.</p>
+        <table class="data-table">
+          <thead><tr><th>Domain</th><th>Geometry tier</th><th>Public release status</th></tr></thead>
+          <tbody>
+            <tr><td>EBL nanodevice</td><td>Self-contained</td><td>Runs offline, params inside the example.</td></tr>
+            <tr><td>Neural electrode harness</td><td>Self-contained</td><td>Needs live KLayout; public example uses Port/Anchor PCells + tapered-hybrid router.</td></tr>
+            <tr><td>Silicon photonics</td><td>Open or your own</td><td>Public features use the open <code>gf.gpdk</code> (needs gdsfactory); swap your PDK to route yours.</td></tr>
+            <tr><td>Digital P&amp;R → LVS</td><td>Self-contained or your own</td><td>The fit-device demo runs on synthetic exemplars; swap in your device geometry. Verilog→gates needs an external yosys; the flow returns the exact fix if missing.</td></tr>
+          </tbody>
+        </table>
+        <p>A new domain is just a <code>pdk.py</code> shaped for it + a <code>custom_devices/</code> script that imports your process and calls klink explicitly. Copy the closest catalog entry and adapt — <strong>you never edit klink to add a domain</strong>.</p>
+
+        <h2 id="verify" class="anchor-h">Verification habits</h2>
+        <p>klink tutorials <strong>do not treat screenshots as proof of done</strong>. Decide with:</p>
+        <ul>
+          <li><code>layout.info</code>, <code>cell.tree</code>, <code>layer.list</code> for structure.</li>
+          <li><code>shape.query</code>, <code>instance.query</code>, <code>selection.get</code> for geometry.</li>
+          <li>the routing report's <code>ok</code>, overlap, obstacle hit, route count.</li>
+          <li>live LVS <code>match=True</code>.</li>
+        </ul>
+        <p>A route/layout is "done" only when live KLayout LVS returns <code>match=True</code>; marker counts and "looks routed" do not count. Screenshots can show a human the result but never replace structured verification.</p>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>geometry-first: mark intent on geometry, let algorithms complete the wiring, verify with structured evidence.</p></div>
+      <div><h3>Read on</h3><p><a href="tutorials.html">Step-by-step tutorials</a></p><p><a href="mcp-reference.html">MCP Tool Reference</a></p></div>
+      <div><h3>Install</h3><p><a href="quickstart.html">Quickstart</a></p></div>
+    </div>
+  </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

@@ -16,6 +16,7 @@
         <a href="index.html" data-nav="home">Home</a>
         <a href="quickstart.html" data-nav="quickstart">Quickstart</a>
         <a href="tutorials.html" data-nav="tutorials">Tutorials</a>
+        <a href="features.html" data-nav="features">Features</a>
         <a href="workflows.html" data-nav="workflows">Workflows</a>
         <a href="mcp-reference.html" data-nav="mcp-reference">MCP Reference</a>
         <a href="examples.html" data-nav="examples">Examples</a>
@@ -112,6 +113,7 @@
           <article class="card"><h3>structdevice</h3><p>Device extraction, netlists, logic map, layout engine, P&R, LVS-lite, and live LVS integration.</p></article>
           <article class="card"><h3>MCP core</h3><p>Tool discovery, session registry, interaction context, recorder, transfer, and diagnostics.</p></article>
         </div>
+        <p class="note">These domains are built in, but <strong>third parties can extend klink too</strong>: ship a pip package that contributes its own MCP tools, a find_tools domain, and named resources (profile/devices/recipe/stack) through the <code>klink.plugins</code> entry point, with failures isolated per package — an on-ramp for PDK vendors and extension authors, not an end-user feature. See the <a href="plugin-packages.html">extension-package guide</a>.</p>
 
         <h2 id="release">Release boundary</h2>
         <p>This website only documents release-verifiable public content: root READMEs, <code>docs/public</code>, <code>examples_klink/public</code>, package metadata, <code>klink/</code>, and <code>klink_plugin/</code> public entry points.</p>

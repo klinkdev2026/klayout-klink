@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>对话实战：一句话画出一个 Hall bar 器件 - klink</title>
+  <meta name="description" content="一段真实对话记录：用户用三句自然语言请求，klink 的 AI agent 针对每一句真的调用 klink RPC 在 live KLayout 里画出 Hall bar 器件，每步截图都是当时的真实画面。">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="assets/styles.css">
+  <style>
+    .chat{max-width:860px}
+    .chat-turn{margin:26px 0}
+    .chat-user{background:#e7f4f0;border:1px solid var(--line);border-radius:10px;padding:12px 16px;max-width:80%}
+    .chat-user .who{font-size:12px;color:var(--muted);font-weight:700;margin-bottom:4px}
+    .chat-assistant{margin-top:12px}
+    .chat-assistant .who{font-size:12px;color:#12654b;font-weight:800;margin-bottom:6px}
+    .chat-calls{font-family:ui-monospace,monospace;font-size:12.5px;background:#0d1f1a;color:#8fe6cf;border-radius:8px;padding:8px 12px;margin:8px 0;overflow-x:auto}
+    .chat-shot{margin:12px 0;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+    .chat-shot img{width:100%;display:block;background:#fff}
+    .chat-shot figcaption{padding:8px 12px;font-size:13px;color:var(--muted);border-top:1px solid var(--line);background:#f7fafb}
+  </style>
+</head>
+<body data-page="tutorials">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="主导航">
+        <a href="index.html" data-nav="home">首页</a>
+        <a href="quickstart.html" data-nav="quickstart">快速上手</a>
+        <a href="tutorials.html" data-nav="tutorials" class="active">教程</a>
+        <a href="features.html" data-nav="features">功能特性</a>
+        <a href="workflows.html" data-nav="workflows">工作流</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP 参考</a>
+        <a href="examples.html" data-nav="examples">示例</a>
+        <a href="architecture.html" data-nav="architecture">架构</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="语言切换">
+          <a class="active" href="case-hallbar-chat.html">CN</a>
+          <a href="en/case-hallbar-chat.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="打开导航" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">对话实战 · nanodevice</div>
+        <h1>对话实战：一句话画出一个 Hall bar 器件</h1>
+        <p>三句自然语言请求，三轮真实调用，一个从空 cell 画到成品的 Hall bar 器件。</p>
+        <div class="note">这是一段真实对话记录。下面每一句用户请求都是真实用户会说的话；针对每一句，klink 的 AI agent 真的调用了列出的 klink 工具，在实时运行的 KLayout 里画出版图——每一步后的截图就是 KLayout 当时的真实画面，没有预先写好的坐标脚本。</div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container chat">
+
+        <div class="chat-turn">
+          <div class="chat-user">
+            <div class="who">用户</div>
+            <div>帮我画一个 Hall bar 器件：中间一条水平的长条主体，上下两边各伸出 3 个测量接触条。</div>
+          </div>
+          <div class="chat-assistant">
+            <div class="who">klink agent</div>
+            <p>开了一个一次性 tab，建好 4 个层（器件层 <code>1/0</code>、金属层 <code>10/0</code>、标签层 <code>6/0</code>、路由层 <code>12/0</code>），先画中间的 mesa 主体（120 × 8 µm），再一次性批量画出上下各 3 条接触（共 6 条），接触条从 mesa 边缘向外伸出。</p>
+            <div class="chat-calls">view.new_tab(cell_name="HALLBAR_CHAT_DEMO")<br>layer.ensure(1/0, 10/0, 6/0, 12/0)<br>shape.insert_boxes(mesa → 1/0, 1 box)<br>shape.insert_boxes(6 contacts → 10/0)<br>view.zoom_fit</div>
+            <figure class="chat-shot">
+              <img src="assets/cases/hallbar-chat/turn-01.png" alt="居中的粉色长条 mesa，上下各伸出三条金属接触，KLayout 实时截图">
+              <figcaption>Turn 1 · mesa 主体 + 6 条接触条，KLayout 实时截图。</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <div class="chat-turn">
+          <div class="chat-user">
+            <div class="who">用户</div>
+            <div>在每个接触条外面放一个大的探针 pad，再用走线把接触引到对应的 pad。</div>
+          </div>
+          <div class="chat-assistant">
+            <div class="who">klink agent</div>
+            <p>批量画了 6 个 16×16 µm 的探针 pad，摆在每条接触条外侧。然后没有直接手画连线——而是先在接触条尖端和 pad 内边分别标一个 Port（每对接触/pad 共用一个 net 名，比如 <code>hb_t0</code>），再调用 klink 的 tapered-hybrid 路由后端，让它读 Port 规划走线并写回 <code>12/0</code> 层。路由结果 <code>ok=true</code>，6 条走线全部成功、0 次避障碰撞、0 次相互重叠。</p>
+            <div class="chat-calls">shape.insert_boxes(6 pads → 10/0)<br>port.mark_many(12 ports on 999/99, 6 nets: hb_t0..hb_t2, hb_b0..hb_b2)<br>routing.tapered_hybrid_cell(cell="HALLBAR_CHAT_DEMO", port_layer="999/99", obstacle_layers=[])<br>→ {"ok": true, "route_count": 6, "obstacle_hit_count": 0, "sibling_overlap_count": 0}<br>view.zoom_fit</div>
+            <figure class="chat-shot">
+              <img src="assets/cases/hallbar-chat/turn-02.png" alt="每条接触外侧出现大探针 pad，接触和 pad 之间由走线连接，红色 Port 标记仍留在图上，KLayout 实时截图">
+              <figcaption>Turn 2 · 6 个探针 pad + 6 条真实路由走线（<code>routing.tapered_hybrid_cell</code> 的结构化结果 <code>ok=true</code>）。留在图上的红色小方框是 Port 标记本身，不是走线。</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <div class="chat-turn">
+          <div class="chat-user">
+            <div class="who">用户</div>
+            <div>给器件标上名字，缩放到整体给我看最终效果。</div>
+          </div>
+          <div class="chat-assistant">
+            <div class="who">klink agent</div>
+            <p>在器件下方写入标签文字，然后缩放到整体视野。</p>
+            <div class="chat-calls">shape.insert_text(string="HALLBAR_DEMO" → 6/0)<br>view.zoom_fit</div>
+            <figure class="chat-shot">
+              <img src="assets/cases/hallbar-chat/turn-03.png" alt="完整 Hall bar 器件全景：mesa、6 条接触、6 个 pad、6 条走线和器件标签，KLayout 实时截图">
+              <figcaption>Turn 3 · 成品全景：mesa + 6 接触 + 6 pad + 6 条走线 + 标签。红色 Port 标记仍然可见——这是 klink 保留标记层的真实状态，没有为了好看而清理。</figcaption>
+            </figure>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container chat">
+        <h2>这段对话画了什么</h2>
+        <p>三句话、三轮真实调用：先批量画出 mesa + 接触的合成几何，再用 Port 标记意图、交给 <code>routing.tapered_hybrid_cell</code> 规划并写回真实走线（结构化结果 <code>ok=true</code>，而不是"看起来连上了"），最后标名收尾。全程只用了一个一次性 tab，没有碰用户原来打开的其它 KLayout 窗口。</p>
+        <p>想看这个器件更完整、更细的分步版本（含层规划表格、Anchor waypoint、局部放大细节）？看 <a href="tutorial-hallbar.html">Hall bar 图文教程</a>。</p>
+        <div class="note">诚实复述：以上三轮截图都是本次会话里针对同一个一次性 KLayout tab 实跑产生的，几何坐标是本次现场决定的合成数值（非任何真实工艺），调用的 RPC 名称与上面 <code>.chat-calls</code> 列出的完全一致。</div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>geometry-first：在几何上标意图，让算法补全布线，用结构化证据验证。</p></div>
+      <div><h3>继续阅读</h3><p><a href="tutorial-hallbar.html">Hall bar 图文教程</a></p><p><a href="mcp-reference.html">MCP 工具参考</a></p></div>
+      <div><h3>安装</h3><p><a href="quickstart.html">快速上手</a></p></div>
+    </div>
+  </footer>
+  <script src="assets/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>分步教程：gdsfactory 硅光 — 三种拿到端口的方式 + 拖动重连 - klink</title>
+  <meta name="description" content="一段真实对话式教程：三种给器件拿到 klink Port 的方式（手绘三角形转换 / 标准 gdsfactory 自动端口 / PDK 黑箱按 stub 约定 harvest，含一个'底边画错'的反面教材），再走一遍 SEND 选区 → 连线 → 移动器件 → 重新布线的交互闭环。每一步都是 agent 说了什么、调了哪个工具、返回什么结果，配当时的真实 KLayout 截图。">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="assets/styles.css">
+  <style>
+    .chat{max-width:900px}
+    .chat-turn{margin:30px 0;padding-top:8px;border-top:1px dashed var(--line)}
+    .chat-turn:first-of-type{border-top:none}
+    .chat-user{background:#e7f4f0;border:1px solid var(--line);border-radius:10px;padding:12px 16px;max-width:82%}
+    .chat-user .who{font-size:12px;color:var(--muted);font-weight:700;margin-bottom:4px}
+    .chat-assistant{margin-top:12px}
+    .chat-assistant .who{font-size:12px;color:#12654b;font-weight:800;margin-bottom:6px}
+    .chat-calls{font-family:ui-monospace,monospace;font-size:12.5px;background:#0d1f1a;color:#8fe6cf;border-radius:8px;padding:10px 13px;margin:10px 0;overflow-x:auto;white-space:pre;line-height:1.5}
+    .chat-shot{margin:12px 0;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+    .chat-shot img{width:100%;display:block;background:#fff}
+    .chat-shot figcaption{padding:8px 12px;font-size:13px;color:var(--muted);border-top:1px solid var(--line);background:#f7fafb}
+    .shot-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media (max-width:760px){.shot-row{grid-template-columns:1fr}}
+    .tag-bad{display:inline-block;background:#fbe9e7;color:#b3261e;border:1px solid #f0b8b0;border-radius:6px;font-size:12px;font-weight:800;padding:1px 8px;margin-left:6px}
+    .tag-ok{display:inline-block;background:#dff1ee;color:#12654b;border:1px solid #b6ddd4;border-radius:6px;font-size:12px;font-weight:800;padding:1px 8px;margin-left:6px}
+  </style>
+</head>
+<body data-page="tutorials">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="主导航">
+        <a href="index.html" data-nav="home">首页</a>
+        <a href="quickstart.html" data-nav="quickstart">快速上手</a>
+        <a href="tutorials.html" data-nav="tutorials" class="active">教程</a>
+        <a href="features.html" data-nav="features">功能特性</a>
+        <a href="workflows.html" data-nav="workflows">工作流</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP 参考</a>
+        <a href="examples.html" data-nav="examples">示例</a>
+        <a href="architecture.html" data-nav="architecture">架构</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="语言切换">
+          <a class="active" href="tutorial-gf-ports.html">CN</a>
+          <a href="en/tutorial-gf-ports.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="打开导航" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">对话式分步教程 · 硅光 · Port 与布线</div>
+        <h1>gdsfactory 硅光：三种拿到端口的方式 + 拖动重连</h1>
+        <p>要布线，先得让 klink 知道每个器件的端口在哪。这一篇用<strong>对话</strong>的方式走三条拿到 klink Port 的路——<strong>手绘三角形转换</strong>（自定义器件）、<strong>标准 gdsfactory 自动端口</strong>、<strong>PDK 黑箱按 stub 约定 harvest</strong>——中间还专门放一个"三角形底边画错"的<strong>反面教材</strong>；拿到端口后，再走一遍 <strong>SEND 选区 → 连线 → 移动器件 → 重新布线</strong>的交互闭环。每一步都写清楚：agent 说了什么、调了哪个工具、返回什么结果，配当时的真实 KLayout 截图。</p>
+        <div class="note">这是给<strong>人和 agent 同时看</strong>的：每一轮先用人话说清在做什么，再给出具体的工具调用和返回值。所有截图都是本次会话在实时 KLayout 里真跑出来的——版图画布用 <code>view.screenshot</code> 离屏渲染，只有需要展示工具栏按钮（SEND）那一张是整窗口截图。演示只在一次性 tab 里进行，不碰任何已有工作 tab；用到的是几个普通图层（<code>1/0</code> 波导、<code>12/0</code> 布线、<code>999/99</code> 端口标记），不含任何真实工艺 PDK。</div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container chat">
+        <h2 id="ports">第一部分 · 三种拿到 Port 的方式</h2>
+
+        <!-- Turn 1: hand-drawn -->
+        <div class="chat-turn">
+          <div class="chat-user">
+            <div class="who">用户</div>
+            <div>我画了一个自定义器件（不是 PDK 里的），左右各有一条 0.8 µm 的接入波导。帮我在两个波导口上标出端口——我在口上各画了一个小三角形指着外面。</div>
+          </div>
+          <div class="chat-assistant">
+            <div class="who">klink agent</div>
+            <p>手绘端口的约定很简单：<strong>一个三角形（3 个点的多边形）就是一个端口</strong>——三角形的<strong>尖端指向</strong>就是端口朝向，三角形的<strong>底边长度</strong>就是端口宽度。所以底边要和波导等宽（这里 0.8 µm），不能随手乱画。你画的两个三角形底边都正好压在 0.8 µm 波导口上、尖端朝外，标准。下面是转换<strong>之前</strong>的样子（黄色就是你手绘的三角形）：</p>
+            <div class="chat-calls">shape.insert_boxes(器件体 + 两条 0.8µm 波导 → 1/0)
+shape.insert_many(两个三角形 marker → 999/99，底边=0.8µm，尖端朝外)
+view.screenshot(bbox_um=[-13,-4,13,4])</div>
+            <figure class="chat-shot">
+              <img src="assets/tutorials/gf-ports/gf-1-handdrawn.png" alt="一个粉色自定义器件，左右各一条细波导，波导末端各有一个黄色三角形，尖端分别指向左和右">
+              <figcaption>Turn 1 · 自定义器件 + 两个<strong>手绘三角形端口标记</strong>（黄色）。三角形底边 = 波导宽度 0.8 µm，尖端指向端口朝向。</figcaption>
+            </figure>
+            <p>然后一次调用把三角形转成标准 klink Port——它读每个三角形的几何，推出朝向、宽度、位置，标成正式 Port，再把原始三角形删掉：</p>
+            <div class="chat-calls">recognize_handdrawn_ports(cell="GFPORTS", layer="999/99", port_type="optical")
+→ P0  center=[-10,0]  orient=180°  width=0.8  attached=True
+→ P1  center=[ 10,0]  orient=0°    width=0.8  attached=True</div>
+            <figure class="chat-shot">
+              <img src="assets/tutorials/gf-ports/gf-2-converted.png" alt="同一个器件，两个黄三角形不见了，波导末端变成标注 klink_port.P0 和 klink_port.P1 的红色标准端口标记">
+              <figcaption>Turn 1（续）· 转换后：两个标准 Port <code>P0</code> / <code>P1</code>，宽度精确 = 0.8 µm，朝向 180°/0°。因为底边正好压在波导边上，klink 还把它们识别成<strong>贴边端口</strong>（<code>attached=True</code>），路由时可以沿边滑动。</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <!-- Turn 2: error example -->
+        <div class="chat-turn">
+          <div class="chat-user">
+            <div class="who">用户</div>
+            <div>如果三角形底边画得不对会怎样？比如底边画得比波导宽很多。</div>
+          </div>
+          <div class="chat-assistant">
+            <div class="who">klink agent<span class="tag-bad">反面教材</span></div>
+            <p>好问题——正因为<strong>底边=宽度、尖端=朝向</strong>，随手乱画就会翻车。这里在一条 0.8 µm 波导上画一个底边 <strong>2.5 µm</strong>（比波导宽三倍多）的三角形，转换结果就全错了：宽度被读成 1.95 µm（和波导对不上）、朝向被"长边启发式"带偏成 <strong>270°</strong>（指向下，而不是朝外的 0°）、而且因为底边压不到波导边，端口是<strong>悬空</strong>的（<code>attached=False</code>）。</p>
+            <div class="chat-calls">shape.insert_many(三角形 marker，底边=2.5µm ← 画错了)
+recognize_handdrawn_ports(cell="GFERR", layer="999/99")
+→ P0  center=[0.75,0]  orient=270°(✗应为0°)  width=1.95(✗应为0.8)  attached=False(✗悬空)</div>
+            <div class="shot-row">
+              <figure class="chat-shot">
+                <img src="assets/tutorials/gf-ports/gf-3-err-before.png" alt="一条细波导，末端画着一个明显过大的三角形">
+                <figcaption>底边 2.5 µm 的错误三角形（比 0.8 µm 波导宽太多）。</figcaption>
+              </figure>
+              <figure class="chat-shot">
+                <img src="assets/tutorials/gf-ports/gf-3-err-after.png" alt="转换后端口是一个远大于波导的方块，悬在波导末端，明显不匹配">
+                <figcaption>转出来的 Port 是个 ~2.5 µm 的大方块，悬在 0.8 µm 波导口——尺寸、位置、朝向全错。</figcaption>
+              </figure>
+            </div>
+            <p><strong>结论：手绘端口时，三角形底边一定要和波导等宽、尖端明确朝外。</strong>klink 不会替你猜你想要的宽度——它如实地把你画的几何变成端口。画得准，端口就准。</p>
+          </div>
+        </div>
+
+        <!-- Turn 3: auto gf -->
+        <div class="chat-turn">
+          <div class="chat-user">
+            <div class="who">用户</div>
+            <div>如果我用的是标准 gdsfactory 器件呢？比如一个 1×2 MMI 分束器。</div>
+          </div>
+          <div class="chat-assistant">
+            <div class="who">klink agent</div>
+            <p>标准 gdsfactory 器件<strong>自带端口定义</strong>，就不用手绘了。放置组件时，klink 直接从 gdsfactory 的 Port 对象把端口<strong>自动</strong>标成 klink Port，位置、朝向、宽度都跟着组件走。一个 <code>mmi1x2</code> 有 3 个口：输入 <code>o1</code> 朝左、两个输出 <code>o2/o3</code> 朝右。</p>
+            <div class="chat-calls">place_gdsfactory_components(cell="GFAUTO",
+    [{component:"mmi1x2", center_um:[0,0], port_nets:{o1:"in",o2:"out0",o3:"out1"}}])
+→ SPL1.o1  center=[-10,0]     orient=180°  width=0.5
+→ SPL1.o2  center=[15.5,0.62] orient=0°    width=0.5
+→ SPL1.o3  center=[15.5,-0.62] orient=0°   width=0.5</div>
+            <figure class="chat-shot">
+              <img src="assets/tutorials/gf-ports/gf-4-auto.png" alt="一个 gdsfactory MMI 1x2 分束器：左侧输入锥形波导、中间 MMI 体、右侧两个输出锥形波导，三个端口自动标记">
+              <figcaption>Turn 3 · 标准 gdsfactory <code>mmi1x2</code>：3 个端口<strong>自动</strong>标成 klink Port（<code>o1</code> 输入 / <code>o2</code> <code>o3</code> 输出），宽度 0.5 µm = gdsfactory 默认波导宽。没有一笔手绘。</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <!-- Turn 4: blackbox harvest -->
+        <div class="chat-turn">
+          <div class="chat-user">
+            <div class="who">用户</div>
+            <div>那 PDK 给的黑箱器件呢？它就是一坨不透明几何，端口在哪 klink 怎么知道？</div>
+          </div>
+          <div class="chat-assistant">
+            <div class="who">klink agent</div>
+            <p>foundry PDK 的黑箱器件不给你 gdsfactory Port 对象，但通常遵守一个<strong>约定</strong>：在波导层的 cell 边界上放一个个小 <strong>stub 方块</strong>（一种常见约定是 0.5×0.5 µm 的方块），每个 stub 就是一个光学口。klink 的做法是：你把<strong>约定告诉它</strong>（波导层是哪层、stub 多大），它就从<strong>活的实例</strong>几何里 harvest 出端口——端口是派生数据，器件在 GUI 里挪了，重新 harvest 一下就刷新。下面用一个合成的"代工厂风格"黑箱演示（不透明体在 <code>60/0</code>，两个 0.5×0.5 stub 在波导层 <code>1/0</code>）：</p>
+            <div class="chat-calls">port.harvest_blackbox(cell="GFBB",
+    tags={"SYNTH_BB":"bb"}, wg_layer="1/0", stub_size_um=0.5)
+→ bb0_0  center=[-4.25,0]  orient=180°
+→ bb0_1  center=[ 4.25,0]  orient=0°</div>
+            <figure class="chat-shot">
+              <img src="assets/tutorials/gf-ports/gf-5-blackbox.png" alt="一个方形黑箱器件轮廓，标注 SYNTH_BB，左右边界各有一个红色端口标记 bb0_0 和 bb0_1">
+              <figcaption>Turn 4 · 合成黑箱 <code>SYNTH_BB</code>：按 stub 约定 harvest 出 2 个端口（<code>bb0_0</code> / <code>bb0_1</code>），朝向从 stub 位置推出。</figcaption>
+            </figure>
+            <div class="note">这套 harvest 机制是<strong>按约定、逐 PDK 配置</strong>的——不同 foundry 的 stub 层号和尺寸不一样，所以约定由你从自己的 <code>pdk.py</code> 传入，klink 本身不带任何默认。真实 foundry PDK 的黑箱走的是<strong>完全相同</strong>的这条路，只是把 <code>wg_layer</code> / <code>stub_size_um</code> 换成那家 PDK 的真实值。（本站不发布任何具体 foundry 的 PDK 内容。）</div>
+          </div>
+        </div>
+
+        <h2 id="loop">第二部分 · SEND → 连线 → 移动 → 重连</h2>
+        <p>拿到端口之后，就能走 klink 的交互闭环了。下面把上面的自定义器件（手绘端口 <code>P0</code>）和一个 gdsfactory <code>mmi1x2</code> 摆在一起，让它们的两个口对着、共一个 net <code>link0</code>，然后连起来、挪一个、再连。</p>
+
+        <!-- Turn 5: SEND -->
+        <div class="chat-turn">
+          <div class="chat-user">
+            <div class="who">用户</div>
+            <div>这两个口我在 KLayout 里框选中了，用工具栏的 SEND 发给你——把它们连起来。</div>
+          </div>
+          <div class="chat-assistant">
+            <div class="who">klink agent</div>
+            <p>你点 <strong>SEND</strong> 之后，这次选中的两个端口就进了我的会话记忆，拿到一个持久 id——之后你说"我刚发的这两个口"，我就能准确对应到它们，不用你再报坐标。这两个口都在 net <code>link0</code> 上（左边是自定义器件的 <code>P0</code>，右边是 MMI 的输入 <code>o1</code>）。</p>
+            <div class="chat-calls">selection.send_context(source="gf_tutorial")
+→ {status:"sent", count:2, send_seq:2}   # 两个 link0 端口进入 agent 记忆</div>
+            <figure class="chat-shot">
+              <img src="assets/tutorials/gf-ports/gf-7-send.png" alt="KLayout 工具栏，SEND 按钮被红框圈出并有箭头指向说明；左侧 cell 树列出 klink_port.P0 (link0) 和 MMI 的端口">
+              <figcaption>Turn 5 · 点 <code>SEND</code>（红框为标注）把两个 <code>link0</code> 端口发给 agent。左侧 cell 树能看到 <code>klink_port.P0 (link0)</code> 和 MMI 的三个端口。</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <!-- Turn 6: route -->
+        <div class="chat-turn">
+          <div class="chat-user">
+            <div class="who">用户</div>
+            <div>好，连线吧。</div>
+          </div>
+          <div class="chat-assistant">
+            <div class="who">klink agent</div>
+            <p>两个口都在 <code>link0</code>、正好相对，直接布一条波导连上。用 gdsfactory 的 bundle 路由后端，写回 <code>12/0</code> 布线层。这一步之前它们中间是空的（见下图左），布完就接上了（见下图右的深色波导）。</p>
+            <div class="chat-calls">route_gdsfactory_ports(cell="GFLOOP", route_layer="12/0", all_two_port_nets=True)
+→ {ok:true, MMI.o1 → P0, length_um:40, crossings:0}</div>
+            <div class="shot-row">
+              <figure class="chat-shot">
+                <img src="assets/tutorials/gf-ports/gf-6-beforeroute.png" alt="左边自定义器件、右边 MMI，两个端口相对，中间有一段间隙没有连接">
+                <figcaption>连线前：两个 <code>link0</code> 端口相对，中间是空的。</figcaption>
+              </figure>
+              <figure class="chat-shot">
+                <img src="assets/tutorials/gf-ports/gf-8-routed.png" alt="同样的两个器件，中间的间隙现在被一条直波导连上了">
+                <figcaption>连线后：一条 40 µm 直波导（<code>12/0</code>）把两口接上，0 交叉。</figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+
+        <!-- Turn 7: move -->
+        <div class="chat-turn">
+          <div class="chat-user">
+            <div class="who">用户</div>
+            <div>我把左边那个器件往上挪了 20 µm。</div>
+          </div>
+          <div class="chat-assistant">
+            <div class="who">klink agent</div>
+            <p>器件挪了，但刚才那条布线还钉在旧坐标——现在它一端悬空了，和挪走的器件对不上。这就是"刚拖完、还没重新布线"那一刻：布线<strong>过期</strong>了。（这里用一次有记录的 <code>exec.python</code> 复现"拖动"这个 GUI 动作——只改器件位置，不动布线、不动 net。）</p>
+            <div class="chat-calls">exec.python(把器件 A 的几何 + 它的 P0 端口标记 上移 20µm)
+# 布线仍停在 y=0，没有跟着动 → 过期</div>
+            <figure class="chat-shot">
+              <img src="assets/tutorials/gf-ports/gf-9-moved.png" alt="左边器件明显移到了上方，原来的水平布线还停在下方，一端悬空没有连到器件">
+              <figcaption>Turn 7 · 器件 A 上移 20 µm 后：旧布线（底部深色横线）还停在原处，一端悬空——布线已经过期，肉眼可见。</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <!-- Turn 8: reroute -->
+        <div class="chat-turn">
+          <div class="chat-user">
+            <div class="who">用户</div>
+            <div>重新连一下。</div>
+          </div>
+          <div class="chat-assistant">
+            <div class="who">klink agent</div>
+            <p>用<strong>同一个布线调用</strong>重跑一次——它从<strong>活的</strong>端口位置重新读（<code>P0</code> 这时已经在新坐标上了），把旧布线换成一条跟到新位置的波导。器件挪了，线跟上了，一条平滑的 S 弯接上，其它什么都没动。</p>
+            <div class="chat-calls">route_gdsfactory_ports(cell="GFLOOP", route_layer="12/0", all_two_port_nets=True)
+→ {ok:true, MMI.o1 → P0(新位置), length_um:60}   # 从 40µm 直线变成 60µm S 弯</div>
+            <figure class="chat-shot">
+              <img src="assets/tutorials/gf-ports/gf-10-rerouted.png" alt="左边上移的器件现在通过一条平滑的 S 形波导连回到右边的 MMI，版图重新完整">
+              <figcaption>Turn 8 · 重新布线后：一条平滑 S 弯波导从上移后的器件连回 MMI 输入——组件挪了，波导跟着重连。这套"标端口 → 布线 → 拖动 → 重连"就是硅光日常迭代版图的核心循环。</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <h2 id="verify">验证，不是截图</h2>
+        <p>和<a href="concepts.html#verify">核心思路</a>一样，截图是给人看的，真正的完成依据是结构化返回。这一篇里每一步都有可核对的数字：手绘端口转换后 <code>width=0.8</code>（精确 = 波导宽）、反面教材里 <code>width=1.95 / orient=270° / attached=False</code>（如实反映画错的三角形）、自动端口 3 个 / 黑箱 harvest 2 个、连线 <code>length=40</code> → 重连 <code>length=60</code>、<code>crossings=0</code>。图只是让人一眼看懂，判断成没成看的是这些返回值。</p>
+
+        <h2 id="next">下一步</h2>
+        <p>三种拿端口的方式按场景选：自己画的器件用<strong>手绘三角形</strong>（记住底边=宽度）；标准 gdsfactory 器件<strong>自动</strong>就有端口；foundry 黑箱按它的 <strong>stub 约定 harvest</strong>。拿到端口后，SEND / 连线 / 拖动 / 重连的闭环对三种端口一视同仁。想看一个完整 gdsfactory 脚本被<strong>一次接管</strong>进这个闭环（含热光 MZI、倾斜光栅耦合器、电学 net），看 <a href="tutorial-gf-mzi.html">gdsfactory MZI 接管教程</a>；想看 agent 把一句话变成器件 / DRC / LVS 的更多实战对话，看 <a href="tutorials.html#chat-cases">教程页顶部的实战对话案例</a>。</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>先让 klink 知道端口在哪，剩下的布线、拖动、重连都顺着端口走。</p></div>
+      <div><h3>继续阅读</h3><p><a href="tutorial-gf-mzi.html">gdsfactory MZI 接管教程</a></p><p><a href="tutorials.html">教程枢纽</a></p><p><a href="mcp-reference.html#d-photonics">MCP 参考 · 硅光</a></p></div>
+      <div><h3>安装</h3><p><a href="quickstart.html">快速上手</a></p></div>
+    </div>
+  </footer>
+  <script src="assets/app.js"></script>
+</body>
+</html>

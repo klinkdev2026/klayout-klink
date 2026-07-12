@@ -25,6 +25,7 @@
         <a href="index.html" data-nav="home">首页</a>
         <a href="quickstart.html" data-nav="quickstart">快速上手</a>
         <a href="tutorials.html" data-nav="tutorials">教程</a>
+        <a href="features.html" data-nav="features">功能特性</a>
         <a href="workflows.html" data-nav="workflows">工作流</a>
         <a href="mcp-reference.html" data-nav="mcp-reference">MCP 参考</a>
         <a href="examples.html" data-nav="examples">示例</a>
@@ -70,10 +71,10 @@
       <div class="container">
         <div class="section-head">
           <h2>不是普通聊天插件</h2>
-          <p>klink 的核心方法是 <strong>geometry-first</strong>：几何在先，你在几何上标注意图（<a href="tutorials.html#port">Port</a> 连接、<a href="tutorials.html#anchor">Anchor</a> 路由约束），routing 算法据此补全布线，再用结构化查询和 live LVS 判定完成。人保留 GUI 自由，agent 读、写、搬运、录制、路由和验证真实几何。</p>
+          <p>klink 的核心方法是 <strong>geometry-first</strong>：几何在先，你在几何上标注意图（<a href="concepts.html#port">Port</a> 连接、<a href="concepts.html#anchor">Anchor</a> 路由约束），routing 算法据此补全布线，再用结构化查询和 live LVS 判定完成。人保留 GUI 自由，agent 读、写、搬运、录制、路由和验证真实几何。</p>
         </div>
         <div class="grid three">
-          <a class="card" href="tutorials.html#geometry-first">
+          <a class="card" href="concepts.html#geometry-first">
             <span class="feature-kicker">Concept</span>
             <h3>geometry-first 思路</h3>
             <p>标记意图 → 算法布线 → 结构化验证。Port/Anchor 是路由后端的输入，机制层保持工艺无关。</p>
@@ -85,7 +86,7 @@
             <p><code>klink-mcp</code> 把同一套控制目录暴露给 Claude Code、Codex 等——<strong>120+ 个工具、11 个领域</strong>，用 <code>klink.find_tools</code> 导航。</p>
             <span class="card-more">看 MCP 参考 →</span>
           </a>
-          <a class="card" href="tutorials.html#verify">
+          <a class="card" href="concepts.html#verify">
             <span class="feature-kicker amber">Verify</span>
             <h3>结构化验证</h3>
             <p>路由、LVS、DRC 和几何查询返回结构化报告。完成标准是 <code>ok</code>、overlap/hit 计数、LVS <code>match=True</code>，不是截图像不像。</p>

@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chat walkthrough: mark ports → route → drag-to-reroute - klink</title>
+  <meta name="description" content="A real conversation log: hand-draw ports on a custom photonic device and convert them to standard Ports, route to a gdsfactory MMI, then drag the device and reconnect with one 'reroute it'. Each screenshot is the real KLayout view at that moment.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../assets/styles.css">
+  <style>
+    .chat{max-width:860px}
+    .chat-turn{margin:26px 0}
+    .chat-user{background:#e7f4f0;border:1px solid var(--line);border-radius:10px;padding:12px 16px;max-width:80%}
+    .chat-user .who{font-size:12px;color:var(--muted);font-weight:700;margin-bottom:4px}
+    .chat-assistant{margin-top:12px}
+    .chat-assistant .who{font-size:12px;color:#12654b;font-weight:800;margin-bottom:6px}
+    .chat-calls{font-family:ui-monospace,monospace;font-size:12.5px;background:#0d1f1a;color:#8fe6cf;border-radius:8px;padding:8px 12px;margin:8px 0;overflow-x:auto;white-space:pre;line-height:1.5}
+    .chat-shot{margin:12px 0;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+    .chat-shot img{width:100%;display:block;background:#fff}
+    .chat-shot figcaption{padding:8px 12px;font-size:13px;color:var(--muted);border-top:1px solid var(--line);background:#f7fafb}
+  </style>
+</head>
+<body data-page="tutorials">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="index.html" data-nav="home">Home</a>
+        <a href="quickstart.html" data-nav="quickstart">Quickstart</a>
+        <a href="tutorials.html" data-nav="tutorials" class="active">Tutorials</a>
+        <a href="features.html" data-nav="features">Features</a>
+        <a href="workflows.html" data-nav="workflows">Workflows</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP Reference</a>
+        <a href="examples.html" data-nav="examples">Examples</a>
+        <a href="architecture.html" data-nav="architecture">Architecture</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="Language switch">
+          <a href="../case-gf-reroute-chat.html">CN</a>
+          <a class="active" href="case-gf-reroute-chat.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Chat walkthrough · photonics</div>
+        <h1>Chat walkthrough: mark ports → route → drag-to-reroute</h1>
+        <p>Three messages: wire a custom photonic device to a gdsfactory MMI, then drag it and reconnect.</p>
+        <div class="note">This is a real conversation log. For each user request, klink's AI agent genuinely called the listed tools against a live KLayout — each screenshot is the real view at that moment. For the full version (three ways to get ports + a cautionary example), see the <a href="tutorial-gf-ports.html">gdsfactory ports tutorial</a>.</div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container chat">
+
+        <div class="chat-turn">
+          <div class="chat-user">
+            <div class="who">User</div>
+            <div>I drew a custom device with a triangle at each of its two waveguide ends — convert them to standard ports.</div>
+          </div>
+          <div class="chat-assistant">
+            <div class="who">klink agent</div>
+            <p>A hand-drawn triangle is a port marker: apex is orientation, base is width. One call reads the geometry, infers orientation/width/position, marks a standard klink Port, and deletes the raw triangle. Both ends became 0.8 µm edge-attached ports.</p>
+            <div class="chat-calls">recognize_handdrawn_ports(cell="GFPORTS", layer="999/99", port_type="optical")
+→ P0 orient=180° width=0.8 ; P1 orient=0° width=0.8  (attached=True)</div>
+            <figure class="chat-shot">
+              <img src="../assets/tutorials/gf-ports/gf-2-converted.png" alt="The custom device's two waveguide ends become standard ports labelled klink_port.P0 / P1">
+              <figcaption>Turn 1 · hand-drawn triangles → standard Ports (<code>P0</code> / <code>P1</code>, width exactly 0.8 µm).</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <div class="chat-turn">
+          <div class="chat-user">
+            <div class="who">User</div>
+            <div>Connect it to that MMI's input on the right.</div>
+          </div>
+          <div class="chat-assistant">
+            <div class="who">klink agent</div>
+            <p>The device's <code>P0</code> and the MMI's input <code>o1</code> are both on net <code>link0</code> and face each other, so route a waveguide straight across to the <code>12/0</code> layer. <code>ok=true</code>, a 40 µm straight waveguide, 0 crossings.</p>
+            <div class="chat-calls">route_gdsfactory_ports(cell="GFLOOP", route_layer="12/0", all_two_port_nets=True)
+→ {ok:true, MMI.o1 → P0, length_um:40, crossings:0}</div>
+            <figure class="chat-shot">
+              <img src="../assets/tutorials/gf-ports/gf-8-routed.png" alt="A straight waveguide connects the custom device to the MMI">
+              <figcaption>Turn 2 · a straight waveguide wires the custom device to the MMI input.</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <div class="chat-turn">
+          <div class="chat-user">
+            <div class="who">User</div>
+            <div>I moved the left device up 20 µm — reroute it.</div>
+          </div>
+          <div class="chat-assistant">
+            <div class="who">klink agent</div>
+            <p>Re-run the same route call — it re-reads the live port positions (<code>P0</code> is now at its new coordinates) and replaces the old route with a waveguide that follows to the new spot. The device moved, the wire caught up with one smooth S-bend, nothing else changed.</p>
+            <div class="chat-calls">route_gdsfactory_ports(cell="GFLOOP", route_layer="12/0", all_two_port_nets=True)
+→ {ok:true, MMI.o1 → P0(new position), length_um:60}   # 40µm straight → 60µm S-bend</div>
+            <figure class="chat-shot">
+              <img src="../assets/tutorials/gf-ports/gf-10-rerouted.png" alt="The moved-up device reconnects to the MMI through a smooth S-shaped waveguide">
+              <figcaption>Turn 3 · one "reroute it" after the drag: the waveguide re-routes to a smooth S-bend following the device.</figcaption>
+            </figure>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container chat">
+        <h2>What this conversation did</h2>
+        <p>Three messages: hand-drawn triangles to standard ports → route to the MMI → reroute after a drag. The core is the "mark ports → route → drag → reroute" loop, and success is judged on the structured returns (<code>width=0.8</code>, <code>length 40→60</code>, <code>crossings=0</code>), not on "looks connected".</p>
+        <div class="note">Honest recap: all three turns ran live in one throwaway KLayout tab this session; the geometry is synthetic values decided on the spot (not any real process), and the tool names match the <code>.chat-calls</code> above exactly. The full version (standard gdsfactory auto-ports, PDK blackbox harvest, and a "base drawn wrong" cautionary example) is in the <a href="tutorial-gf-ports.html">gdsfactory ports tutorial</a>.</div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>mark ports → route → drag → reroute: the core loop of iterating a photonic layout.</p></div>
+      <div><h3>Read on</h3><p><a href="tutorial-gf-ports.html">gdsfactory ports tutorial</a></p><p><a href="tutorial-gf-mzi.html">gdsfactory MZI takeover</a></p></div>
+      <div><h3>Install</h3><p><a href="quickstart.html">Quickstart</a></p></div>
+    </div>
+  </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

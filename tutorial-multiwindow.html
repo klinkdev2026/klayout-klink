@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>分步教程：跨窗口协作 — 一个 agent，多个 KLayout - klink</title>
+  <meta name="description" content="klink 的多窗口控制面：一个 agent 同时驱动多个 KLayout 窗口，每个窗口一个端口（会话）。图文分步演示 klink 插件工具栏的 SEND（选区变持久记忆）、GFTGT（把 gdsfactory/klive 流量导向某个窗口）、以及跨会话 transfer（两阶段 dry-run→commit 搬运几何）——全部用真实 live 会话的窗口截图 + 标注，真实数字，不是示意图。">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="assets/styles.css">
+  <style>
+    /* Figure styling mirrors tutorial-gf-mzi.html (site card/note language). */
+    .tut-figure { margin: 16px 0 26px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #fff; }
+    .tut-figure img { width: 100%; display: block; background: #fff; }
+    .tut-figure figcaption { padding: 10px 14px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); background: #f7fafb; }
+    .tut-figure-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    @media (max-width: 760px) { .tut-figure-row { grid-template-columns: 1fr; } }
+    .stage-kicker { display: inline-flex; align-items: center; justify-content: center; min-width: 26px; height: 26px; padding: 0 8px; border-radius: 6px; background: #dff1ee; color: #12654b; font-weight: 800; font-size: 13px; margin-right: 10px; }
+  </style>
+</head>
+<body data-page="tutorials">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="主导航">
+        <a href="index.html" data-nav="home">首页</a>
+        <a href="quickstart.html" data-nav="quickstart">快速上手</a>
+        <a href="tutorials.html" data-nav="tutorials" class="active">教程</a>
+        <a href="features.html" data-nav="features">功能特性</a>
+        <a href="workflows.html" data-nav="workflows">工作流</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP 参考</a>
+        <a href="examples.html" data-nav="examples">示例</a>
+        <a href="architecture.html" data-nav="architecture">架构</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="语言切换">
+          <a class="active" href="tutorial-multiwindow.html">CN</a>
+          <a href="en/tutorial-multiwindow.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="打开导航" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Step-by-step tutorial · 控制面 · 跨窗口协作</div>
+        <h1>分步教程：跨窗口协作 — 一个 agent，多个 KLayout</h1>
+        <p>其它教程讲的是"在<strong>一个</strong> KLayout 里画什么"，这一篇讲的是<strong>控制面本身</strong>：一个 agent 可以同时连着多个 KLayout 窗口，每个窗口是一个独立端口（会话）。人和 agent 在这些窗口之间协作，靠的是 klink 插件工具栏上三个按钮——<strong>SEND</strong>（把你框选的东西变成 agent 能引用的持久记忆）、<strong>GFTGT</strong>（把 gdsfactory/klive 流量导向某个指定窗口）、以及<strong>跨会话 transfer</strong>（在窗口之间两阶段安全搬运几何）。这一篇每一张图都是<strong>真实 live 会话的窗口截图</strong>再叠标注，配的数字都是那次实际调用返回的。</p>
+        <div class="note">这一篇和其它教程有一处不同：其它教程的插图是 <code>view.screenshot</code> 截的<strong>版图画布</strong>，而这一篇要讲的是工具栏和窗口本身，所以截的是整个 <strong>KLayout 应用窗口</strong>（含标题栏、工具栏）。演示全程在临时 tab（<code>MW_SRC</code> / <code>MW_DST</code>）里进行，不触碰任何已有的工作 tab。</div>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#prereqs">前置条件</a>
+          <a href="#toolbar">① klink 工具栏解剖</a>
+          <a href="#windows">② 一个 agent，多个窗口</a>
+          <a href="#send">③ SEND：选区变持久记忆</a>
+          <a href="#gftgt">④ GFTGT：把硅光导向某个窗口</a>
+          <a href="#transfer">⑤ 跨窗口 transfer：搬运几何</a>
+          <a href="#verify">验证，不是截图</a>
+          <a href="#next">下一步</a>
+        </nav>
+      </aside>
+
+      <article class="content">
+        <h2 id="prereqs" class="anchor-h">前置条件</h2>
+        <ul>
+          <li>至少<strong>两个</strong> KLayout 窗口在运行，各自加载了 klink 插件、各占一个端口——默认从 <code>8765</code> 起，第二个 <code>8766</code>、第三个 <code>8767</code>，以此类推。每个窗口右上角工具栏会显示自己的端口标志 <code>K876x</code>。</li>
+          <li>agent 一侧（Claude Code / Codex 等）通过 <a href="mcp-reference.html">MCP 桥</a>连接；调用时用 <code>session</code> 参数指定要操作哪个窗口，不指定则默认第一个。</li>
+          <li>这一篇不需要任何工艺 PDK——演示用的是几个普通图层（<code>10/0</code> 金属、<code>20/0</code> pad、<code>1/0</code> 边框、<code>6/0</code> 文字）上的示意几何。</li>
+        </ul>
+
+        <h2 id="toolbar" class="anchor-h"><span class="stage-kicker">1</span>klink 工具栏解剖</h2>
+        <p>每个加载了 klink 插件的 KLayout 窗口，都会在标准工具栏右侧多出一小组控件。这一小组就是人和 agent 协作的入口：</p>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/multiwindow/step-1-toolbar.png" alt="KLayout 窗口顶部工具栏，右侧的 K8765、SEND、GFTGT、REC 四个控件被红框圈出，各自连一条箭头指向说明标签">
+          <figcaption>Stage 1 · klink 插件工具栏（红框为标注叠加，非 KLayout 原生）：<code>K8765</code> 是端口标志，说明这个窗口就是会话 8765；<code>SEND</code> 把当前选区发给 agent 变成持久 id；<code>GFTGT</code> 把本窗口设成 gdsfactory/klive 目标（端口 8082）；<code>REC</code> 录制成可回放脚本。窗口标题栏 <code>[MW_SRC]</code> 是当前显示的 cell 名。</figcaption>
+        </figure>
+        <p>后面三步分别把 <code>SEND</code>、<code>GFTGT</code> 和跨窗口 transfer 走一遍——每一个既是人能点的按钮，也是 agent 能调的 typed 调用。</p>
+
+        <h2 id="windows" class="anchor-h"><span class="stage-kicker">2</span>一个 agent，多个窗口</h2>
+        <p>klink 的会话模型很简单：<strong>每个 KLayout 窗口 = 一个端口 = 一个会话</strong>。一个 agent 通过 MCP 桥可以同时挂着多个窗口，靠端口区分该对谁下手。下面是同一个 agent 眼里的两个窗口——左边 <code>K8765</code> 放着源器件，右边 <code>K8767</code> 是一个空的着陆框：</p>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/multiwindow/step-2-two-windows.png" alt="两个 KLayout 窗口并排，左窗口标志 K8765 里有一个器件，右窗口标志 K8767 里只有一个空边框，两个端口标志各自被红圈圈出">
+          <figcaption>Stage 2 · 两个 live KLayout 窗口并排（各自缩放拼合）：左 <code>K8765</code>（源，含器件），右 <code>K8767</code>（目标，空框）。两个窗口靠工具栏 <code>K876x</code> 标志自我标识——agent 调用时传 <code>session="8765"</code> 或 <code>"8767"</code> 就能分别操作，互不干扰。</figcaption>
+        </figure>
+        <p>因为窗口靠端口而不是靠"当前焦点"来寻址，agent 可以在一个窗口里读、在另一个窗口里写，不需要来回切前台——这正是接下来 SEND / GFTGT / transfer 三步的基础。</p>
+
+        <h2 id="send" class="anchor-h"><span class="stage-kicker">3</span>SEND：把选区变成 agent 的持久记忆</h2>
+        <p>人在 KLayout 里框选一块东西、点一下工具栏的 <code>SEND</code>，这块选区就被记进 agent 侧的会话记忆，拿到一个稳定 id。之后你说"我刚发的那个"、"这块区域"，agent 就能解析到确切的几何，而不用你再描述一遍坐标。agent 侧对应的 typed 调用是 <code>selection.send_context</code>：</p>
+        <pre><code># 人的做法：框选 → 点工具栏 SEND
+# agent 的等价做法（这次演示实际调用的）：
+client.selection_set_box("MW_SRC", [-12000, -2000, 12000, 2000])   # 选中整个器件（单位 dbu）
+snd = client.call("selection.send_context", {"source": "tutorial_demo"})
+# -> {"status": "sent", "count": 5, "send_seq": 5}</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/multiwindow/step-3-send.png" alt="K8765 窗口，SEND 按钮被红框圈出并有箭头指向说明，画布里的器件被青色框圈出标为已选中的 5 个对象">
+          <figcaption>Stage 3 · 在 <code>K8765</code> 里选中器件（青框，5 个对象已高亮）→ SEND。返回 <code>status: sent · count 5 · send_seq 5</code>——这块选区现在成了 agent 记忆里一条持久条目（形如 <code>sel_xxxx</code>），后续对话里"我刚发的那个"就指它。<code>send_seq</code> 单调递增，SEND 会先落盘 journal 再广播，所以就算此刻没有监听者也不会丢。</figcaption>
+        </figure>
+
+        <h2 id="gftgt" class="anchor-h"><span class="stage-kicker">4</span>GFTGT：把 gdsfactory / klive 流量导向某个窗口</h2>
+        <p>多窗口时有个现实问题：你在 Python 里用 gdsfactory 生成一份版图，想让它落进<strong>哪一个</strong> KLayout 窗口？klive 的兼容端口是固定的 <code>8082</code>，<code>GFTGT</code> 按钮就是用来把这条流量指到当前窗口——点一下，本窗口就成了 gdsfactory/klive 的目标，之后经 <code>8082</code> 推来的几何都落在这里。agent 侧对应 <code>session.mark_klive_target</code>：</p>
+        <pre><code># 人的做法：在想接收 gf 版图的窗口上点 GFTGT
+# agent 的等价做法（这次演示实际调用的）：在 K8767 上执行
+client.call("session.mark_klive_target", {})
+# -> {"ok": True, "klive_target_session": "klayout-8767", ...}</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/multiwindow/step-4-gftgt.png" alt="K8767 窗口，GFTGT 按钮被红框圈出并有箭头指向说明标签">
+          <figcaption>Stage 4 · 在 <code>K8767</code> 上点 <code>GFTGT</code>：<code>klive_target_session</code> 被设成 <code>klayout-8767</code>。此后任何经 klive 兼容端口 <code>8082</code> 推来的 gdsfactory 版图，都会落进这个窗口，而不是默认的第一个。想换一个窗口接收，就在那个窗口上再点一次 GFTGT。</figcaption>
+        </figure>
+
+        <h2 id="transfer" class="anchor-h"><span class="stage-kicker">5</span>跨窗口 transfer：两阶段搬运几何</h2>
+        <p>最后一步把几何真正从一个窗口搬到另一个。klink 的跨会话 transfer 是<strong>两阶段</strong>的——先在目标窗口 <code>dry-run</code>（只算不写、给你一份 review），确认无误再 <code>commit</code> 真正写入。这样搬运永远是"先验证后变更"，失败不留半成品。用的是 <a href="mcp-reference.html">MCP 工具</a> <code>klink.transfer_prepare</code>（读源窗选区 → 打包 → 在目标窗口 dry-run）+ <code>klink.transfer_commit</code>（真正落盘）：</p>
+        <pre><code># 源窗口 K8765 里已经 SEND / 选中了那 5 个对象（见 Stage 3）
+# 阶段一：prepare —— 读源选区、打包、在目标窗口 K8767 的 MW_DST 上 dry-run
+prep = transfer_prepare(source_session="8765", target_session="8767",
+                        target_cell="MW_DST", copy_mode="flat_selection")
+# target_dry_run.inserted == 0   （只是演算，没写任何东西）
+
+# 阶段二：commit —— 确认后真正写入
+commit = transfer_commit(package_id=prep["package_id"])
+# write.inserted == 5   （10/0 × 3 + 20/0 × 2）</code></pre>
+        <div class="tut-figure-row">
+          <figure class="tut-figure">
+            <img src="assets/tutorials/multiwindow/step-5-transfer-before.png" alt="K8767 窗口，只有一个空的粉色着陆框和 DST·K8767 文字，框里没有器件">
+            <figcaption>Stage 5a · transfer 之前：<code>K8767</code> 的 <code>MW_DST</code> 里只有一个空着陆框。</figcaption>
+          </figure>
+          <figure class="tut-figure">
+            <img src="assets/tutorials/multiwindow/step-6-transfer-after.png" alt="同一个 K8767 窗口，空框里现在多了从 K8765 搬过来的器件，器件被青色框圈出">
+            <figcaption>Stage 5b · commit 之后：器件从 <code>K8765</code> 落进了 <code>K8767</code>。<code>flat-selection</code> 两阶段：dry-run <code>inserted 0</code> → commit <code>inserted 5</code>（<code>10/0 × 3 + 20/0 × 2</code>），逐层对得上 Stage 3 选中的那 5 个对象。源窗口 <code>K8765</code> 原封不动——transfer 是拷贝，不是剪切。</figcaption>
+          </figure>
+        </div>
+
+        <h2 id="verify" class="anchor-h">验证，不是截图</h2>
+        <p>和<a href="concepts.html#verify">核心思路</a>说的一样，截图是给人看的，真正的完成依据是结构化返回。这次演示三步各自的实际返回：</p>
+        <pre><code>{
+  "send":     {"status": "sent", "count": 5, "send_seq": 5},
+  "gftgt":    {"ok": true, "klive_target_session": "klayout-8767"},
+  "transfer": {
+    "prepare_dry_run": {"cell": "MW_DST", "requested": 5, "inserted": 0, "by_layer": {"10/0": 3, "20/0": 2}},
+    "commit":          {"cell": "MW_DST", "requested": 5, "inserted": 5, "by_layer": {"10/0": 3, "20/0": 2}}
+  }
+}</code></pre>
+        <p><code>requested</code> 与 <code>commit.inserted</code> 都是 <code>5</code>、<code>by_layer</code> 逐层一致——说明源窗口那 5 个对象一个不多一个不少地落进了目标窗口，且 dry-run 阶段 <code>inserted=0</code> 证明"先验证后变更"确实没有在确认前写任何东西。这些数字才是判断成没成的依据，图只是让人一眼看懂发生了什么。</p>
+
+        <h2 id="next" class="anchor-h">下一步</h2>
+        <p>把这套控制面用到你自己的多窗口流程里：一个窗口当"参考/源"、另一个当"工作区"，用 SEND 把源里的选区喂给 agent，用 transfer 两阶段搬过去；用 gdsfactory 生成版图时，先在目标窗口点 GFTGT 定向。这些能力的完整清单见<a href="features.html">功能特性 · 人 · agent 与实时 KLayout</a>，深入的字段说明见<a href="workflows.html">工作流</a>。想看 agent 真正把一句话变成版图 / DRC / LVS 的实战对话，去<a href="tutorials.html#chat-cases">教程页顶部的实战对话案例</a>。</p>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>一个 agent，多个 KLayout：靠端口寻址，靠 SEND / GFTGT / transfer 协作。</p></div>
+      <div><h3>继续阅读</h3><p><a href="features.html">功能特性 · 能力总览</a></p><p><a href="workflows.html">工作流</a></p><p><a href="tutorials.html">教程枢纽</a></p></div>
+      <div><h3>安装</h3><p><a href="quickstart.html">快速上手</a></p></div>
+    </div>
+  </footer>
+  <script src="assets/app.js"></script>
+</body>
+</html>

@@ -62,6 +62,7 @@
         <a href="index.html" data-nav="home">Home</a>
         <a href="quickstart.html" data-nav="quickstart">Quickstart</a>
         <a href="tutorials.html" data-nav="tutorials" class="active">Tutorials</a>
+        <a href="features.html" data-nav="features">Features</a>
         <a href="workflows.html" data-nav="workflows">Workflows</a>
         <a href="mcp-reference.html" data-nav="mcp-reference">MCP Reference</a>
         <a href="examples.html" data-nav="examples">Examples</a>
@@ -215,7 +216,7 @@ commit_tapered_hybrid_many(c, cell, route_result, route_layer="12/0", clear=True
         </div>
 
         <h2 id="verify" class="anchor-h">Verify, don't just look</h2>
-        <p>As the <a href="tutorials.html#verify">tutorials home page</a> says: screenshots are for people, not proof of done. Here's the actual routing report from this run:</p>
+        <p>As the <a href="concepts.html#verify">core concepts</a> says: screenshots are for people, not proof of done. Here's the actual routing report from this run:</p>
         <pre><code>{
   "ok": true,
   "route_count": 6,
@@ -225,7 +226,7 @@ commit_tapered_hybrid_many(c, cell, route_result, route_layer="12/0", clear=True
         <p><code>ok=true</code> with zero <code>obstacle_hits</code> and zero <code>sibling_overlaps</code> means all 6 fanout traces avoid each other and any obstacle layer -- that's what "routing is done" actually rests on, not "it looks connected."</p>
 
         <h2 id="next" class="anchor-h">Next steps</h2>
-        <p>Edit the <code>HallBarSpec</code> parameters in <code>example_template/nanodevice/hallbar.py</code> to your own sizes (contact count, pad spacing, layer numbers), rerun with <code>--live</code>, and confirm the routing report still says <code>ok=true</code>. From there, decide whether you need writefield obstacle avoidance (EBL scenarios) or a <code>drc.run</code> pass. For more on offline devices see <a href="tutorials.html#offline">Core concepts &amp; tutorials · Offline device tutorial</a>; the full Port/Anchor field reference is in the <a href="mcp-reference.html#d-ports">MCP reference</a>.</p>
+        <p>Edit the <code>HallBarSpec</code> parameters in <code>example_template/nanodevice/hallbar.py</code> to your own sizes (contact count, pad spacing, layer numbers), rerun with <code>--live</code>, and confirm the routing report still says <code>ok=true</code>. From there, decide whether you need writefield obstacle avoidance (EBL scenarios) or a <code>drc.run</code> pass. For more on offline devices see <a href="concepts.html#model">Core concepts · The user-project model</a>; the full Port/Anchor field reference is in the <a href="mcp-reference.html#d-ports">MCP reference</a>.</p>
       </article>
     </div>
   </main>

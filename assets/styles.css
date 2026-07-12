@@ -584,6 +584,7 @@ pre {
   border-radius: 8px;
   border: 1px solid var(--line);
   background: #f5f8fa;
+  color: var(--ink);
 }
 
 .warning {
@@ -766,6 +767,15 @@ pre {
 .demo-card .tier {
   display: inline-block;
   margin: 18px 0 0;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 5px;
+  padding: 3px 9px;
+}
+
+.card .tier {
+  display: inline-block;
+  margin: 0 0 10px;
   font-size: 12px;
   font-weight: 700;
   border-radius: 5px;

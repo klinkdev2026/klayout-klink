@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chat walkthrough: draw a Hall bar device in one sentence - klink</title>
+  <meta name="description" content="A real conversation log: for three natural-language requests, klink's AI agent really called klink RPCs to draw a Hall bar device in live KLayout, with a real screenshot after every turn.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../assets/styles.css">
+  <style>
+    .chat{max-width:860px}
+    .chat-turn{margin:26px 0}
+    .chat-user{background:#e7f4f0;border:1px solid var(--line);border-radius:10px;padding:12px 16px;max-width:80%}
+    .chat-user .who{font-size:12px;color:var(--muted);font-weight:700;margin-bottom:4px}
+    .chat-assistant{margin-top:12px}
+    .chat-assistant .who{font-size:12px;color:#12654b;font-weight:800;margin-bottom:6px}
+    .chat-calls{font-family:ui-monospace,monospace;font-size:12.5px;background:#0d1f1a;color:#8fe6cf;border-radius:8px;padding:8px 12px;margin:8px 0;overflow-x:auto}
+    .chat-shot{margin:12px 0;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+    .chat-shot img{width:100%;display:block;background:#fff}
+    .chat-shot figcaption{padding:8px 12px;font-size:13px;color:var(--muted);border-top:1px solid var(--line);background:#f7fafb}
+  </style>
+</head>
+<body data-page="tutorials">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="index.html" data-nav="home">Home</a>
+        <a href="quickstart.html" data-nav="quickstart">Quickstart</a>
+        <a href="tutorials.html" data-nav="tutorials" class="active">Tutorials</a>
+        <a href="features.html" data-nav="features">Features</a>
+        <a href="workflows.html" data-nav="workflows">Workflows</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP Reference</a>
+        <a href="examples.html" data-nav="examples">Examples</a>
+        <a href="architecture.html" data-nav="architecture">Architecture</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="Language switch">
+          <a href="../case-hallbar-chat.html">CN</a>
+          <a class="active" href="case-hallbar-chat.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Chat walkthrough · nanodevice</div>
+        <h1>Chat walkthrough: draw a Hall bar device in one sentence</h1>
+        <p>Three natural-language requests, three real tool-call turns, one Hall bar device drawn from an empty cell to a finished layout.</p>
+        <div class="note">This is a real conversation log. Each user request below is phrasing a real user would actually type; for each one, klink's AI agent really called the listed klink tools to draw geometry in a live, running KLayout instance -- the screenshot after each step is the actual KLayout screen at that moment, not a pre-written coordinate script.</div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container chat">
+
+        <div class="chat-turn">
+          <div class="chat-user">
+            <div class="who">User</div>
+            <div>Draw me a Hall bar device: a horizontal bar body in the middle, with 3 measurement contacts sticking out on each side, top and bottom.</div>
+          </div>
+          <div class="chat-assistant">
+            <div class="who">klink agent</div>
+            <p>I opened a disposable tab, ensured 4 layers (device layer <code>1/0</code>, metal layer <code>10/0</code>, label layer <code>6/0</code>, route layer <code>12/0</code>), drew the mesa body first (120 x 8 &micro;m), then batch-inserted 3 contacts on top and 3 on the bottom (6 total), each sticking outward from the mesa edge.</p>
+            <div class="chat-calls">view.new_tab(cell_name="HALLBAR_CHAT_DEMO")<br>layer.ensure(1/0, 10/0, 6/0, 12/0)<br>shape.insert_boxes(mesa &rarr; 1/0, 1 box)<br>shape.insert_boxes(6 contacts &rarr; 10/0)<br>view.zoom_fit</div>
+            <figure class="chat-shot">
+              <img src="../assets/cases/hallbar-chat/turn-01.png" alt="Centered pink mesa bar with three metal contacts on top and three on the bottom, live KLayout screenshot">
+              <figcaption>Turn 1 - mesa body + 6 contacts, live KLayout screenshot.</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <div class="chat-turn">
+          <div class="chat-user">
+            <div class="who">User</div>
+            <div>Put a big probe pad outside each contact, and route traces connecting each contact to its pad.</div>
+          </div>
+          <div class="chat-assistant">
+            <div class="who">klink agent</div>
+            <p>I batch-inserted 6 probe pads (16x16 &micro;m) just outside each contact. Instead of hand-drawing wires, I marked a Port at each contact tip and each pad's inner edge (one shared net per pair, e.g. <code>hb_t0</code>), then called klink's tapered-hybrid routing backend to plan and write the traces onto layer <code>12/0</code>. The structured result came back <code>ok=true</code>: all 6 routes succeeded, 0 obstacle hits, 0 sibling overlaps.</p>
+            <div class="chat-calls">shape.insert_boxes(6 pads &rarr; 10/0)<br>port.mark_many(12 ports on 999/99, 6 nets: hb_t0..hb_t2, hb_b0..hb_b2)<br>routing.tapered_hybrid_cell(cell="HALLBAR_CHAT_DEMO", port_layer="999/99", obstacle_layers=[])<br>&rarr; {"ok": true, "route_count": 6, "obstacle_hit_count": 0, "sibling_overlap_count": 0}<br>view.zoom_fit</div>
+            <figure class="chat-shot">
+              <img src="../assets/cases/hallbar-chat/turn-02.png" alt="Large probe pads outside each contact, connected by routed traces, red Port markers still visible, live KLayout screenshot">
+              <figcaption>Turn 2 - 6 probe pads + 6 real routed traces (structured result <code>ok=true</code> from <code>routing.tapered_hybrid_cell</code>). The small red boxes still on the layout are the Port markers themselves, not the traces.</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <div class="chat-turn">
+          <div class="chat-user">
+            <div class="who">User</div>
+            <div>Label the device with a name, and zoom out so I can see the final result.</div>
+          </div>
+          <div class="chat-assistant">
+            <div class="who">klink agent</div>
+            <p>I wrote a text label below the device, then zoomed to fit the whole layout.</p>
+            <div class="chat-calls">shape.insert_text(string="HALLBAR_DEMO" &rarr; 6/0)<br>view.zoom_fit</div>
+            <figure class="chat-shot">
+              <img src="../assets/cases/hallbar-chat/turn-03.png" alt="Full Hall bar device overview: mesa, 6 contacts, 6 pads, 6 routed traces and the device label, live KLayout screenshot">
+              <figcaption>Turn 3 - finished overview: mesa + 6 contacts + 6 pads + 6 routed traces + label. The red Port markers are still visible -- that is the real, un-tidied state of klink's reserved marker layer, not a cleaned-up render.</figcaption>
+            </figure>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container chat">
+        <h2>What this conversation actually drew</h2>
+        <p>Three sentences, three real tool-call turns: batch-drawn synthetic geometry for the mesa and contacts, Port markers expressing intent handed to <code>routing.tapered_hybrid_cell</code> to plan and write the real traces (a structured <code>ok=true</code> result, not "looks connected"), then a label to finish. Everything happened in one disposable tab -- none of the user's other open KLayout windows were touched.</p>
+        <p>Want the fuller, more granular step-by-step version of this device (layer-plan table, Anchor waypoints, zoomed-in detail)? See the <a href="tutorial-hallbar.html">Hall bar step-by-step tutorial</a>.</p>
+        <div class="note">Honest recap: all three screenshots above were produced in this session against the same disposable KLayout tab, in one real run. The geometry coordinates are synthetic values decided on the spot (not from any real fab process), and the RPC names called match the <code>.chat-calls</code> lines above exactly.</div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>Geometry-first: mark intent on geometry, let the algorithm finish the routing, verify with structured evidence.</p></div>
+      <div><h3>Read on</h3><p><a href="tutorial-hallbar.html">Hall bar step-by-step tutorial</a></p><p><a href="mcp-reference.html">MCP Tool Reference</a></p></div>
+      <div><h3>Install</h3><p><a href="quickstart.html">Quickstart</a></p></div>
+    </div>
+  </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

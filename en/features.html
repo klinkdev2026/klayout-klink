@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Features - klink</title>
+  <meta name="description" content="klink capability map: control surface & tools, human + agent live collaboration, generate & route, verify & visualize -- four groups, each card links to its deep-dive page.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body data-page="features">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="index.html" data-nav="home">Home</a>
+        <a href="quickstart.html" data-nav="quickstart">Quickstart</a>
+        <a href="tutorials.html" data-nav="tutorials">Tutorials</a>
+        <a href="features.html" data-nav="features">Features</a>
+        <a href="workflows.html" data-nav="workflows">Workflows</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP Reference</a>
+        <a href="examples.html" data-nav="examples">Examples</a>
+        <a href="architecture.html" data-nav="architecture">Architecture</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="Language switch">
+          <a href="../features.html">CN</a>
+          <a class="active" href="features.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Features</div>
+        <h1>Features</h1>
+        <p>A map of what klink can do -- from the MCP tool surface and live human + agent collaboration, to generation, routing, verification, and visualization. Each capability leads to its own detail page.</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-head">
+          <h2>Control surface &amp; tools</h2>
+          <p>klink exposes KLayout operations as a structured MCP tool surface -- agents discover on demand, filter by profile, and fall back to a controlled escape hatch for edge cases.</p>
+        </div>
+        <div class="grid three">
+          <a class="card" href="mcp-reference.html">
+            <span class="feature-kicker">MCP tools</span>
+            <h3>120+ MCP tools</h3>
+            <p>KLayout operations exposed as 120+ MCP tools, organized by domain; <code>klink.find_tools</code> gives progressive disclosure, profiles filter on demand.</p>
+            <span class="card-more">Read MCP reference →</span>
+          </a>
+          <a class="card" href="workflows.html#profiles">
+            <span class="feature-kicker">Profiles</span>
+            <h3>Tool discovery &amp; filtering</h3>
+            <p>read/write/verify/escape filter the tool surface by intent; tools/list always advertises everything, find_tools navigates it.</p>
+            <span class="card-more">Read workflows →</span>
+          </a>
+          <a class="card" href="workflows.html#escape">
+            <span class="feature-kicker">Escape hatch</span>
+            <h3>Controlled pya escape hatch</h3>
+            <p>For corners typed RPCs don't cover, run a controlled pya snippet via <code>exec.python</code>.</p>
+            <span class="card-more">Read workflows →</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section alt">
+      <div class="container">
+        <div class="section-head">
+          <h2>Human + agent + live KLayout</h2>
+          <p>A set of interaction capabilities that let a human and an agent work the same live KLayout together: selection memory, multi-session control, cross-window transfer, record and replay.</p>
+        </div>
+        <div class="grid two">
+          <a class="card" href="workflows.html#send">
+            <span class="feature-kicker">SEND memory</span>
+            <h3>Selection SEND memory</h3>
+            <p>A selection SENT from the KLayout toolbar becomes a durable id, so an agent can resolve "this area" or "the one I just sent."</p>
+            <span class="card-more">Read workflows →</span>
+          </a>
+          <a class="card" href="workflows.html#multi">
+            <span class="feature-kicker">Multi-session</span>
+            <h3>One agent, many KLayouts</h3>
+            <p>One bridge drives multiple KLayout windows/sessions, each on its own port.</p>
+            <span class="card-more">Read workflows →</span>
+          </a>
+          <a class="card" href="workflows.html#transfer">
+            <span class="feature-kicker">Cross-window move</span>
+            <h3>Cross-session transfer</h3>
+            <p>Two-phase dry-run → commit to safely move geometry between sessions.</p>
+            <span class="card-more">Read workflows →</span>
+          </a>
+          <a class="card" href="workflows.html#recorder">
+            <span class="feature-kicker">Recorder</span>
+            <h3>Record → replayable script</h3>
+            <p>Manual edits plus RPC edits are recorded into a replayable Python script (with a standalone pya version).</p>
+            <span class="card-more">Read workflows →</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-head">
+          <h2>Generate &amp; route</h2>
+          <p>From Port/Anchor markers to routing algorithms, a gdsfactory bridge, and batch generation of thousands of objects in one call.</p>
+        </div>
+        <div class="grid three">
+          <a class="card" href="mcp-reference.html#d-routing">
+            <span class="feature-kicker">Routing backends</span>
+            <h3>Routing backends</h3>
+            <p>Tapered/steiner/damped/channel backends on Port/Anchor markers, plus a detailed router for custom-device circuits all the way to LVS.</p>
+            <span class="card-more">Read MCP reference →</span>
+          </a>
+          <a class="card" href="mcp-reference.html#d-photonics">
+            <span class="feature-kicker magenta">gdsfactory bridge</span>
+            <h3>gdsfactory bridge</h3>
+            <p>Full takeover of an existing script via <code>import_gf_component</code>, blackbox port harvest, and a single reroute after dragging a component.</p>
+            <span class="card-more">Read MCP reference →</span>
+          </a>
+          <a class="card" href="mcp-reference.html#d-geometry">
+            <span class="feature-kicker">Batch generation</span>
+            <h3>Batch RPC generation</h3>
+            <p>Batch RPCs for shapes/instances/PCells -- write thousands of objects in a single call.</p>
+            <span class="card-more">Read MCP reference →</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section alt">
+      <div class="container">
+        <div class="section-head">
+          <h2>Verify &amp; visualize</h2>
+          <p>Design-rule checking, layout-vs-schematic comparison, and 3D layer-stack visualization -- each a complete, independent guide.</p>
+        </div>
+        <div class="grid two">
+          <a class="card" href="drc-lvs.html">
+            <span class="feature-kicker">Guide · DRC &amp; LVS</span>
+            <h3>DRC · LVS</h3>
+            <p>From first deck to production runset: a DRC-language crash course, a same-source starter deck, KLayout's native LVS pipeline end to end.</p>
+            <span class="card-more">Read the guide →</span>
+          </a>
+          <a class="card" href="25d-view.html">
+            <span class="feature-kicker green">Guide · 2.5d View</span>
+            <h3>2.5D View</h3>
+            <p>Your layer stack in 3D from one process declaration: a single call drives KLayout's native 2.5d viewer.</p>
+            <span class="card-more">Read the guide →</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <p class="note">For developers: want to extend klink with your own pip package (contribute MCP tools/domains/named resources)? See <a href="architecture.html#domains">Architecture · extending klink</a> and the <a href="plugin-packages.html">plugin package authoring guide</a>.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>Four capability groups, each card links to its deep-dive guide.</p></div>
+      <div><h3>Read on</h3><p><a href="tutorials.html">Step-by-step tutorials</a></p><p><a href="mcp-reference.html">MCP Tool Reference</a></p></div>
+      <div><h3>Install</h3><p><a href="quickstart.html">Quickstart</a></p></div>
+    </div>
+  </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

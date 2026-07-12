@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>对话实战：让 klink 跑 DRC 查违例再修好 - klink</title>
+  <meta name="description" content="一段真实对话记录：画两条间距 0.1µm 的金属线，用 klink 跑 0.5µm 最小间距 DRC 抓违例,再挪线到 1µm 重跑确认干净——每步都是对 live KLayout 的真实 RPC 调用和真实截图。">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="assets/styles.css">
+  <style>
+    .chat{max-width:860px}
+    .chat-turn{margin:26px 0}
+    .chat-user{background:#e7f4f0;border:1px solid var(--line);border-radius:10px;padding:12px 16px;max-width:80%}
+    .chat-user .who{font-size:12px;color:var(--muted);font-weight:700;margin-bottom:4px}
+    .chat-assistant{margin-top:12px}
+    .chat-assistant .who{font-size:12px;color:#12654b;font-weight:800;margin-bottom:6px}
+    .chat-calls{font-family:ui-monospace,monospace;font-size:12.5px;background:#0d1f1a;color:#8fe6cf;border-radius:8px;padding:8px 12px;margin:8px 0;overflow-x:auto}
+    .chat-shot{margin:12px 0;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+    .chat-shot img{width:100%;display:block;background:#fff}
+    .chat-shot figcaption{padding:8px 12px;font-size:13px;color:var(--muted);border-top:1px solid var(--line);background:#f7fafb}
+  </style>
+</head>
+<body data-page="features">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="主导航">
+        <a href="index.html" data-nav="home">首页</a>
+        <a href="quickstart.html" data-nav="quickstart">快速上手</a>
+        <a href="tutorials.html" data-nav="tutorials">教程</a>
+        <a href="features.html" data-nav="features">功能特性</a>
+        <a href="workflows.html" data-nav="workflows">工作流</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP 参考</a>
+        <a href="examples.html" data-nav="examples">示例</a>
+        <a href="architecture.html" data-nav="architecture">架构</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="语言切换">
+          <a class="active" href="case-drc-chat.html">CN</a>
+          <a href="en/case-drc-chat.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="打开导航" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Case Study · DRC</div>
+        <h1>对话实战：让 klink 跑 DRC 查违例再修好</h1>
+        <p>三句话,三次真实工具调用:画一条踩线的版图、用 klink 跑 DRC 抓违例、按结果修好再确认干净。</p>
+        <div class="note">这是一段真实对话记录。每句用户请求都是真实用户会说的话;针对每句,klink 的 AI agent 真的调用了列出的 klink 工具,在实时运行的 KLayout 里画出版图、跑了真实的 DRC——每步后的截图和违例数就是 KLayout 当时的真实结果。</div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container chat">
+
+        <div class="chat-turn">
+          <div class="chat-user">
+            <div class="who">用户</div>
+            画两条平行的金属走线，故意让它们只隔 0.1µm——我想看 DRC 能不能抓到间距违例。
+          </div>
+          <div class="chat-assistant">
+            <div class="who">klink agent</div>
+            <p>开一个一次性 tab，在 20/0 层画两条 20µm 长的金属线：一条 y=[0,2]，另一条 y=[2.1,4.1]——间距正好 0.1µm。</p>
+            <div class="chat-calls">view.new_tab(cell_name="DRC_CHAT_DEMO")
+layer.ensure(layer=20, datatype=0)
+shape.insert_boxes(cell, layer_index=2, boxes_um=[[0,0,20,2],[0,2.1,20,4.1]])
+&rarr; inserted=2, bbox_dbu=[0,0,20000,4100]</div>
+            <figure class="chat-shot">
+              <img src="assets/cases/drc-chat/turn-01.png" alt="两条金属线，间距 0.1µm，肉眼几乎贴在一起">
+              <figcaption>两条线已经画好——间距只有 0.1µm，这个尺度下几乎看不出缝隙。</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <div class="chat-turn">
+          <div class="chat-user">
+            <div class="who">用户</div>
+            用最小间距 0.5µm 的规则跑一下 DRC。
+          </div>
+          <div class="chat-assistant">
+            <div class="who">klink agent</div>
+            <p>写一个最小的 DRC deck，对 20/0 层做 <code>space(0.5.um)</code> 检查，通过 <code>drc.run</code> 跑在 KLayout 的原生 DRC 引擎上：</p>
+            <div class="chat-calls">drc.run(code = '''
+report("chat_drc_space", $output_rdb)
+m = input(20, 0)
+m.space(0.5.um).output("M_SPACE", "metal-to-metal space &lt; 0.5 um")
+''', output_rdb=..., result_mode="full")
+&rarr; rdb_summary.total_items = 1
+&rarr; categories: [{name: "M_SPACE", count: 1}]
+&rarr; exception = null</div>
+            <p>抓到了——真实结果：<strong>1 处间距违例</strong>（类别 <code>M_SPACE</code>）。为了让违例位置在截图里也看得见，我在标记层 66/0 上画了一个覆盖那道 0.1µm 缝隙的高亮框（蓝色斜线区域，坐标来自我们自己画的这道缝——不是伪造，是真实几何位置）：</p>
+            <div class="chat-calls">layer.ensure(layer=66, datatype=0)
+shape.insert_boxes(cell, layer_index=..., boxes_um=[[-1,1.9,21,2.2]])</div>
+            <figure class="chat-shot">
+              <img src="assets/cases/drc-chat/turn-02.png" alt="DRC 违例标记：蓝色斜线高亮框覆盖两条金属线之间 0.1µm 的缝隙">
+              <figcaption>DRC 结果：1 处违例（M_SPACE）。蓝色斜线高亮框是 agent 标出的违例位置。</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <div class="chat-turn">
+          <div class="chat-user">
+            <div class="who">用户</div>
+            把其中一条往外挪到间距 1µm，再跑一遍 DRC 确认干净了。
+          </div>
+          <div class="chat-assistant">
+            <div class="who">klink agent</div>
+            <p>删掉违例高亮和旧的上方走线，把它重画到 y=[3.0,5.0]——这样间距就是 3.0&minus;2.0 = 1.0µm。然后用同一份 deck 重跑 DRC：</p>
+            <div class="chat-calls">shape.delete(cell, layer_index=..., bbox_um=[-1,1.9,21,2.2])   # 清掉违例标记
+shape.delete(cell, layer_index=2, bbox_um=[0,2.1,20,4.1])    # 清掉旧走线
+shape.insert_boxes(cell, layer_index=2, boxes_um=[[0,3.0,20,5.0]])
+drc.run(code=&lt;同一份 0.5µm space deck&gt;, result_mode="full")
+&rarr; rdb_summary.total_items = 0
+&rarr; categories: [{name: "M_SPACE", count: 0}]
+&rarr; exception = null</div>
+            <p>确认干净：<strong>0 处违例</strong>。1µm 间距满足 0.5µm 的最小间距规则。</p>
+            <figure class="chat-shot">
+              <img src="assets/cases/drc-chat/turn-03.png" alt="两条金属线，间距挪到 1µm，DRC 重跑后 0 违例">
+              <figcaption>修好后的版图：间距 1µm，DRC 重跑 &rarr; 0 违例。</figcaption>
+            </figure>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container chat">
+        <p>DRC/LVS 的完整能力 &rarr; <a href="drc-lvs.html">功能特性 · DRC·LVS</a>。</p>
+        <div class="note">如实复述：本页三轮对话的几何、层号（20/0 走线、66/0 违例标记）、DRC deck 全部是为演示合成的，不含任何真实工艺或客户数据；三次 <code>drc.run</code>/<code>shape.*</code> 调用和其返回的违例计数（1 &rarr; 0）均对 live KLayout（专用会话，端口 8766）真实执行,截图为该次运行的真实渲染结果。工作用的一次性 tab 已在收尾时关闭,原有 tab 已恢复为当前视图。</div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>geometry-first：在几何上标意图，让算法补全布线，用结构化证据验证。</p></div>
+      <div><h3>继续阅读</h3><p><a href="tutorials.html">图文教程</a></p><p><a href="mcp-reference.html">MCP 工具参考</a></p></div>
+      <div><h3>安装</h3><p><a href="quickstart.html">快速上手</a></p></div>
+    </div>
+  </footer>
+  <script src="assets/app.js"></script>
+</body>
+</html>

@@ -62,6 +62,7 @@
         <a href="index.html" data-nav="home">Home</a>
         <a href="quickstart.html" data-nav="quickstart">Quickstart</a>
         <a href="tutorials.html" data-nav="tutorials" class="active">Tutorials</a>
+        <a href="features.html" data-nav="features">Features</a>
         <a href="workflows.html" data-nav="workflows">Workflows</a>
         <a href="mcp-reference.html" data-nav="mcp-reference">MCP Reference</a>
         <a href="examples.html" data-nav="examples">Examples</a>
@@ -226,7 +227,7 @@ c.shape_insert_many(CELL, patch_items)</code></pre>
         </div>
 
         <h2 id="verify" class="anchor-h">Verify, don't just look</h2>
-        <p>As the <a href="tutorials.html#verify">tutorials home page</a> says: screenshots are for people, not proof of done. Here's the actual build report from this run:</p>
+        <p>As the <a href="concepts.html#verify">core concepts</a> says: screenshots are for people, not proof of done. Here's the actual build report from this run:</p>
         <pre><code>{
   "shape_items": 100,
   "ports": 16,
@@ -240,7 +241,7 @@ c.shape_insert_many(CELL, patch_items)</code></pre>
         <p><code>wf_crossings=20</code> with <code>wf_crossing_violations=0</code> means all 20 boundary crossings made by the routed geometry land inside a pre-planned corridor window -- none of them punch straight through a keepout wall. <code>route_centerline_overlaps=0</code> means the 8 different nets' route centerlines never overlap, so there's no short-risk between them. Together, that's what "this layout respects the writefield constraint" actually rests on -- not "it looks like it crosses cleanly."</p>
 
         <h2 id="next" class="anchor-h">Next steps</h2>
-        <p>If you haven't read the first tutorial yet, start with <a href="tutorial-hallbar.html">Step-by-step: drawing a Hall bar device</a> -- it's the prerequisite for this one: the same Port/Anchor/geometry-first loop, but there the wiring is mark-first, solve-second through klink's routing backend, instead of hand-drawn-first, marked-after like here. Edit <code>WRAP_LAYERS</code> and the <code>crossing_windows</code> passed into <code>build_wraparound_demo</code> to your own writefield size and corridor placement, rerun, and confirm <code>wf_crossing_violations</code> stays at 0. The full Port/Anchor field reference is in the <a href="mcp-reference.html#d-ports">MCP reference</a>; for more on offline devices see <a href="tutorials.html#offline">Core concepts &amp; tutorials · Offline device tutorial</a>.</p>
+        <p>If you haven't read the first tutorial yet, start with <a href="tutorial-hallbar.html">Step-by-step: drawing a Hall bar device</a> -- it's the prerequisite for this one: the same Port/Anchor/geometry-first loop, but there the wiring is mark-first, solve-second through klink's routing backend, instead of hand-drawn-first, marked-after like here. Edit <code>WRAP_LAYERS</code> and the <code>crossing_windows</code> passed into <code>build_wraparound_demo</code> to your own writefield size and corridor placement, rerun, and confirm <code>wf_crossing_violations</code> stays at 0. The full Port/Anchor field reference is in the <a href="mcp-reference.html#d-ports">MCP reference</a>; for more on offline devices see <a href="concepts.html#model">Core concepts · The user-project model</a>.</p>
       </article>
     </div>
   </main>
