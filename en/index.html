@@ -14,7 +14,60 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="../assets/styles.css">
 </head>
-<body data-page="home">
+<body data-page="home" class="has-sidebar">
+  <aside class="site-sidebar">
+    <a class="sb-brand" href="index.html"><span class="brand-mark">k</span>klink</a>
+    <nav class="sb-nav" aria-label="Site structure">
+      <div class="sb-group">
+        <div class="sb-title">Get started</div>
+        <a href="index.html">Home · what klink is</a>
+        <a href="quickstart.html">Quickstart</a>
+        <a href="concepts.html">Core concepts</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Workflows · human+agent</div>
+        <a href="workflows.html">Workflows in depth (illustrated)</a>
+        <a href="tutorial-multiwindow.html">Multi-window collaboration</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Chat walkthroughs</div>
+        <a href="case-hallbar-chat.html">Hall bar from one sentence</a>
+        <a href="case-drc-chat.html">DRC catch &amp; fix</a>
+        <a href="case-fit-lvs-chat.html">Fit a device to LVS</a>
+        <a href="case-gf-reroute-chat.html">Photonics: ports &amp; drag-reroute</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Step-by-step tutorials</div>
+        <a href="tutorials.html">Tutorials overview</a>
+        <a href="tutorial-hallbar.html">Hall bar device</a>
+        <a href="tutorial-ebl-wraparound.html">EBL wraparound</a>
+        <a href="tutorial-neural-electrode.html">Neural electrode array</a>
+        <a href="tutorial-gf-ports.html">Photonics · three ways to ports</a>
+        <a href="tutorial-gf-mzi.html">Photonics · gf MZI takeover</a>
+        <a href="tutorial-passives.html">Passive templates</a>
+        <a href="tutorial-fit-device.html">Fit device &rarr; PnR &rarr; LVS</a>
+        <a href="tutorial-padframe.html">Probe-card-first padframe</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Guides</div>
+        <a href="drc-lvs.html">DRC · LVS</a>
+        <a href="25d-view.html">2.5D View</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Reference</div>
+        <a href="mcp-reference.html">MCP tool catalog</a>
+        <a href="plugin-packages.html">Writing extension packages</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Architecture</div>
+        <a href="architecture.html">Architecture &amp; boundaries</a>
+      </div>
+    </nav>
+    <div class="sb-foot">
+      <a href="https://github.com/klinkdev2026/klayout-klink">GitHub ↗</a>
+      <a href="../index.html">中文</a>
+    </div>
+  </aside>
   <header class="site-header">
     <div class="nav-shell">
       <a class="brand" href="index.html" aria-label="klink home">
@@ -25,10 +78,8 @@
         <a href="index.html" data-nav="home">Home</a>
         <a href="quickstart.html" data-nav="quickstart">Quickstart</a>
         <a href="tutorials.html" data-nav="tutorials">Tutorials</a>
-        <a href="features.html" data-nav="features">Features</a>
         <a href="workflows.html" data-nav="workflows">Workflows</a>
         <a href="mcp-reference.html" data-nav="mcp-reference">MCP Reference</a>
-        <a href="examples.html" data-nav="examples">Examples</a>
         <a href="architecture.html" data-nav="architecture">Architecture</a>
       </nav>
       <div class="nav-actions">
@@ -54,7 +105,7 @@
         <div class="hero-actions">
           <a class="button" href="quickstart.html">Install</a>
           <a class="button-secondary" href="mcp-reference.html">Browse 120+ tools</a>
-          <a class="button-secondary" href="examples.html">See the examples</a>
+          <a class="button-secondary" href="tutorials.html">See the tutorials</a>
         </div>
         <div class="hero-meta" aria-label="Project facts">
           <span class="chip">Package: klayout-klink</span>
@@ -213,16 +264,16 @@ python example_template/nanodevice/ebl_wraparound.py</code></pre>
       <div class="container">
         <div class="section-head">
           <h2>Capabilities, by domain</h2>
-          <p>klink is a general geometry-first control plane. Below are some current capabilities grouped by domain, each backed by a runnable example script (all with no private GDS). The project is still early and experimental, so coverage will keep changing. Per-example measured detail on <a href="examples.html">Examples</a>.</p>
+          <p>klink is a general geometry-first control plane. Below are some current capabilities grouped by domain, each backed by a runnable example script (all with no private GDS). The project is still early and experimental, so coverage will keep changing. Per-example measured detail on <a href="tutorials.html">Examples</a>.</p>
         </div>
         <div class="grid three">
-          <a class="card" href="examples.html#ebl">
+          <a class="card" href="tutorial-ebl-wraparound.html">
             <span class="feature-kicker">EBL nanodevice</span>
             <h3>EBL nanodevices</h3>
             <p>Electron-beam-lithography device generation: EBL wraparound, Hall bar, with writefield planning, patches and geometry validation. Offline EBL measures 40 electrodes / 0 violations / 0 overlaps.</p>
             <span class="card-more">See EBL / Hall bar →</span>
           </a>
-          <a class="card" href="examples.html#neural">
+          <a class="card" href="tutorial-neural-electrode.html">
             <span class="feature-kicker">Neural electrode</span>
             <h3>Neural electrodes</h3>
             <p>Parametric neural-electrode probe: pad/via geometry → Ports → corridor anchors → tapered-hybrid routing, self-contained with no GDS. 4 rows: 48 ports / 24 nets / overlap 0.</p>
@@ -234,13 +285,13 @@ python example_template/nanodevice/ebl_wraparound.py</code></pre>
             <p>Detect material flakes from a microscope image (needs cv2+numpy), or read a precomputed <code>traces.json</code>, commit them as polygons and derive contact Ports. Built on KlayoutClaw priors.</p>
             <span class="card-more">See nanodevice tools →</span>
           </a>
-          <a class="card" href="examples.html#mzi">
+          <a class="card" href="tutorial-gf-mzi.html">
             <span class="feature-kicker magenta">Silicon photonics</span>
             <h3>Silicon photonics</h3>
             <p>Take an ordinary gdsfactory MZI script into klink in one call; after a GUI drag, one <code>photonics.reroute</code> re-routes optics (incl. sbend / all_angle / dubins) and metal together.</p>
             <span class="card-more">See the gdsfactory MZI →</span>
           </a>
-          <a class="card" href="examples.html#fitdevice">
+          <a class="card" href="tutorial-fit-device.html">
             <span class="feature-kicker green">Digital P&amp;R</span>
             <h3>Custom-device digital P&amp;R → LVS</h3>
             <p>Fit a device from synthetic exemplars, place, detailed-route, verify with live LVS. Measured routed 94/94, <strong>LVS match=True</strong>, 173 devices; the device-agnostic netlist flow is <code>structdevice.*</code>.</p>
@@ -304,9 +355,9 @@ python example_template/nanodevice/ebl_wraparound.py</code></pre>
             <p>All 120+ tools across 11 domains: function, parameters, examples.</p>
             <span class="card-more">Reference →</span>
           </a>
-          <a class="card" href="examples.html">
+          <a class="card" href="tutorials.html">
             <h3>Demos explained</h3>
-            <p>8 public demos: function, command, measured numbers, requirements, how to adapt.</p>
+            <p>Runnable demos: function, command, measured numbers, requirements, how to adapt.</p>
             <span class="card-more">Examples →</span>
           </a>
           <a class="card" href="architecture.html">

@@ -54,7 +54,60 @@
     }
   </style>
 </head>
-<body data-page="tutorials">
+<body data-page="tutorials" class="has-sidebar">
+  <aside class="site-sidebar">
+    <a class="sb-brand" href="index.html"><span class="brand-mark">k</span>klink</a>
+    <nav class="sb-nav" aria-label="站点结构">
+      <div class="sb-group">
+        <div class="sb-title">开始</div>
+        <a href="index.html">首页 · klink 是什么</a>
+        <a href="quickstart.html">快速上手</a>
+        <a href="concepts.html">核心思路</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">工作流 · 人机协作</div>
+        <a href="workflows.html">工作流详解（图文）</a>
+        <a href="tutorial-multiwindow.html">跨窗口协作实战</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">对话案例</div>
+        <a href="case-hallbar-chat.html">一句话画 Hall bar</a>
+        <a href="case-drc-chat.html">DRC 查违例并修好</a>
+        <a href="case-fit-lvs-chat.html">拟合器件跑到 LVS</a>
+        <a href="case-gf-reroute-chat.html">硅光：标端口 · 拖动重连</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">分步教程</div>
+        <a href="tutorials.html">教程总览</a>
+        <a href="tutorial-hallbar.html">Hall bar 器件</a>
+        <a href="tutorial-ebl-wraparound.html">EBL wraparound</a>
+        <a href="tutorial-neural-electrode.html">神经电极阵列</a>
+        <a href="tutorial-gf-ports.html">硅光 · 三种拿端口</a>
+        <a href="tutorial-gf-mzi.html">硅光 · gf MZI 接管</a>
+        <a href="tutorial-passives.html">无源器件模板</a>
+        <a href="tutorial-fit-device.html">拟合器件 → PnR → LVS</a>
+        <a href="tutorial-padframe.html">针卡优先 padframe</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">指南</div>
+        <a href="drc-lvs.html">DRC · LVS</a>
+        <a href="25d-view.html">2.5D 视图</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">参考</div>
+        <a href="mcp-reference.html">MCP 工具全表</a>
+        <a href="plugin-packages.html">编写扩展包</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">架构</div>
+        <a href="architecture.html">架构与边界</a>
+      </div>
+    </nav>
+    <div class="sb-foot">
+      <a href="https://github.com/klinkdev2026/klayout-klink">GitHub ↗</a>
+      <a href="en/index.html">English</a>
+    </div>
+  </aside>
   <header class="site-header">
     <div class="nav-shell">
       <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
@@ -62,10 +115,8 @@
         <a href="index.html" data-nav="home">首页</a>
         <a href="quickstart.html" data-nav="quickstart">快速上手</a>
         <a href="tutorials.html" data-nav="tutorials" class="active">教程</a>
-        <a href="features.html" data-nav="features">功能特性</a>
         <a href="workflows.html" data-nav="workflows">工作流</a>
         <a href="mcp-reference.html" data-nav="mcp-reference">MCP 参考</a>
-        <a href="examples.html" data-nav="examples">示例</a>
         <a href="architecture.html" data-nav="architecture">架构</a>
       </nav>
       <div class="nav-actions">
@@ -84,7 +135,7 @@
       <div class="container">
         <div class="eyebrow">Step-by-step tutorial · structdevice · 数字 P&amp;R</div>
         <h1>分步教程：自定义器件——从范例几何拟合到 PCell 再到 P&amp;R/LVS</h1>
-        <p>对应公开 gallery 里的 <a href="examples.html#fitdevice">fit-device demo</a>。前四篇教程画的都是“一个器件”；这一篇回答下一个问题：<strong>你自己的器件怎么接入数字 place &amp; route 流？</strong>整条链是：几个不同尺寸的范例几何（exemplar）→ 拟合出参数化边模型 → 注册成真 PCell → 按器件级网表摆放 173 个实例 → FlexDR 详细布线 → live LVS <code>match=True</code>。这也是 <strong>process purity</strong> 的活教材：器件形状、层号、线宽、间距全部写在这一个 example 文件里，klink 机制层零工艺常数——换成你自己的器件，就是换这份文件里的数字。</p>
+        <p>对应可跑 demo 里的 <a href="tutorial-fit-device.html">fit-device demo</a>。前四篇教程画的都是“一个器件”；这一篇回答下一个问题：<strong>你自己的器件怎么接入数字 place &amp; route 流？</strong>整条链是：几个不同尺寸的范例几何（exemplar）→ 拟合出参数化边模型 → 注册成真 PCell → 按器件级网表摆放 173 个实例 → FlexDR 详细布线 → live LVS <code>match=True</code>。这也是 <strong>process purity</strong> 的活教材：器件形状、层号、线宽、间距全部写在这一个 example 文件里，klink 机制层零工艺常数——换成你自己的器件，就是换这份文件里的数字。</p>
       </div>
     </section>
 

@@ -54,7 +54,60 @@
     }
   </style>
 </head>
-<body data-page="tutorials">
+<body data-page="tutorials" class="has-sidebar">
+  <aside class="site-sidebar">
+    <a class="sb-brand" href="index.html"><span class="brand-mark">k</span>klink</a>
+    <nav class="sb-nav" aria-label="Site structure">
+      <div class="sb-group">
+        <div class="sb-title">Get started</div>
+        <a href="index.html">Home · what klink is</a>
+        <a href="quickstart.html">Quickstart</a>
+        <a href="concepts.html">Core concepts</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Workflows · human+agent</div>
+        <a href="workflows.html">Workflows in depth (illustrated)</a>
+        <a href="tutorial-multiwindow.html">Multi-window collaboration</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Chat walkthroughs</div>
+        <a href="case-hallbar-chat.html">Hall bar from one sentence</a>
+        <a href="case-drc-chat.html">DRC catch &amp; fix</a>
+        <a href="case-fit-lvs-chat.html">Fit a device to LVS</a>
+        <a href="case-gf-reroute-chat.html">Photonics: ports &amp; drag-reroute</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Step-by-step tutorials</div>
+        <a href="tutorials.html">Tutorials overview</a>
+        <a href="tutorial-hallbar.html">Hall bar device</a>
+        <a href="tutorial-ebl-wraparound.html">EBL wraparound</a>
+        <a href="tutorial-neural-electrode.html">Neural electrode array</a>
+        <a href="tutorial-gf-ports.html">Photonics · three ways to ports</a>
+        <a href="tutorial-gf-mzi.html">Photonics · gf MZI takeover</a>
+        <a href="tutorial-passives.html">Passive templates</a>
+        <a href="tutorial-fit-device.html">Fit device &rarr; PnR &rarr; LVS</a>
+        <a href="tutorial-padframe.html">Probe-card-first padframe</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Guides</div>
+        <a href="drc-lvs.html">DRC · LVS</a>
+        <a href="25d-view.html">2.5D View</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Reference</div>
+        <a href="mcp-reference.html">MCP tool catalog</a>
+        <a href="plugin-packages.html">Writing extension packages</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Architecture</div>
+        <a href="architecture.html">Architecture &amp; boundaries</a>
+      </div>
+    </nav>
+    <div class="sb-foot">
+      <a href="https://github.com/klinkdev2026/klayout-klink">GitHub ↗</a>
+      <a href="../index.html">中文</a>
+    </div>
+  </aside>
   <header class="site-header">
     <div class="nav-shell">
       <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
@@ -62,10 +115,8 @@
         <a href="index.html" data-nav="home">Home</a>
         <a href="quickstart.html" data-nav="quickstart">Quickstart</a>
         <a href="tutorials.html" data-nav="tutorials" class="active">Tutorials</a>
-        <a href="features.html" data-nav="features">Features</a>
         <a href="workflows.html" data-nav="workflows">Workflows</a>
         <a href="mcp-reference.html" data-nav="mcp-reference">MCP Reference</a>
-        <a href="examples.html" data-nav="examples">Examples</a>
         <a href="architecture.html" data-nav="architecture">Architecture</a>
       </nav>
       <div class="nav-actions">
@@ -84,7 +135,7 @@
       <div class="container">
         <div class="eyebrow">Step-by-step tutorial · silicon photonics · gdsfactory bridge</div>
         <h1>Step-by-step: gdsfactory MZI takeover and "drag → reroute"</h1>
-        <p>This walks through <code>example_template/photonics/gf_mzi_module.py</code> from the public gallery (for the demo's function, requirements, and measured numbers, see <a href="examples.html#mzi">Examples · gdsfactory MZI takeover</a>). It's the fourth tutorial, after <a href="tutorial-hallbar.html">Hall bar</a>, <a href="tutorial-ebl-wraparound.html">EBL wraparound</a>, and <a href="tutorial-neural-electrode.html">the neural electrode harness</a> -- and closes out this first batch. The first three all "draw inside KLayout"; this one flips that: you draw in gdsfactory and let klink take the result over. An ordinary gdsfactory thermo-optic MZI script gets taken over into klink's interactive loop with <strong>one</strong> <code>import_gf_component</code> call, and after that you can drag any component in the KLayout GUI and re-route -- <strong>without rebuilding</strong> -- with a single <code>photonics.reroute</code> call (or the script's <code>--reroute</code> flag) that reconnects optics and electrical metal together. This drag-then-reroute loop is the everyday iteration workflow for silicon-photonics users.</p>
+        <p>This walks through <code>example_template/photonics/gf_mzi_module.py</code> from the public gallery (for the demo's function, requirements, and measured numbers, see <a href="tutorial-gf-mzi.html">Examples · gdsfactory MZI takeover</a>). It's the fourth tutorial, after <a href="tutorial-hallbar.html">Hall bar</a>, <a href="tutorial-ebl-wraparound.html">EBL wraparound</a>, and <a href="tutorial-neural-electrode.html">the neural electrode harness</a> -- and closes out this first batch. The first three all "draw inside KLayout"; this one flips that: you draw in gdsfactory and let klink take the result over. An ordinary gdsfactory thermo-optic MZI script gets taken over into klink's interactive loop with <strong>one</strong> <code>import_gf_component</code> call, and after that you can drag any component in the KLayout GUI and re-route -- <strong>without rebuilding</strong> -- with a single <code>photonics.reroute</code> call (or the script's <code>--reroute</code> flag) that reconnects optics and electrical metal together. This drag-then-reroute loop is the everyday iteration workflow for silicon-photonics users.</p>
       </div>
     </section>
 
@@ -129,7 +180,7 @@ with KLinkClient(port=PORT).connect() as client:
     result = import_gf_component(
         client, component, cell=CELL, route_layer=OPTICAL_LAYER, route=False)
     # result: {"ok": True, "nets": [...6...], "instances": 13, "device_cells": [...5...], ...}</code></pre>
-        <p>This one call does three things at once -- per <code>docs/AGENT_TOOL_DESIGN.md</code>'s "one user intention = one call" rule: (1) batch-places <strong>13 device instances</strong> (splitter, combiner, two phase-shifter arms, 5 GCs, 4 pads -- <strong>5 unique device cells</strong>) into KLayout; (2) <strong>collapses</strong> the script's own optical routing into device-level nets (<strong>6</strong> of them), persisted to <code>.klink/specs/GF_MZI_MODULE.nets.json</code>; (3) because <code>route=False</code> was passed, this step only marks <strong>every</strong> harvested port (57 of them) so the wiring can be inspected -- it draws no routes yet. Passing <code>route=True</code> (the demo's default with no flags) would route in the same call; this tutorial splits it in two on purpose, to lay the state out for inspection.</p>
+        <p>This one call does three things at once -- per <code>docs/AGENT_TOOL_DESIGN.md</code>'s "one user intention = one call" rule: (1) batch-places 13 device instances (splitter, combiner, two phase-shifter arms, 5 GCs, 4 pads -- <strong>5 unique device cells</strong>) into KLayout; (2) <strong>collapses</strong> the script's own optical routing into device-level nets (6 of them), persisted to <code>.klink/specs/GF_MZI_MODULE.nets.json</code>; (3) because <code>route=False</code> was passed, this step only marks every harvested port (57 of them) so the wiring can be inspected -- it draws no routes yet. Passing <code>route=True</code> (the demo's default with no flags) would route in the same call; this tutorial splits it in two on purpose, to lay the state out for inspection.</p>
         <figure class="tut-figure">
           <img src="../assets/tutorials/gf-mzi/step-02-placed.png" alt="Scattered devices: two thermal phase-shifter arms, several grating couplers, several pads, with no wiring between them, only small port markers">
           <figcaption>Stage 1 · After <code>import_gf_component(route=False)</code>: all 13 device instances are placed and every port is marked, but not a single route is drawn yet -- the script's own 6 Manhattan routes have already been discarded (the two "line-like" traces visible here are actually the MMI devices' own simplified geometry, not routes). Framed with <code>view.zoom_box(bbox_um=[-150,-290,420,230])</code>.</figcaption>
@@ -176,7 +227,7 @@ table.save()
 
 report = reroute(client, cell="GF_MZI_MODULE")
 # {"ok": True, "routes": 12, "abutted": 0, "crossings": 0, "device_hits": 0}</code></pre>
-        <p>All 12 nets route in one pass: 6 imported optical nets (Manhattan, 2 of them restyled to sbend) + 1 all_angle (the tilted GC) + 1 dubins (the loopback pair) + 4 electrical (2 electrodes per arm across both arms -> 4 pads). <code>ok=true</code>, <code>crossings=0</code>, <code>device_hits=0</code> -- these numbers match exactly what's on record on the <a href="examples.html#mzi">examples page's gf_mzi_module card</a>.</p>
+        <p>All 12 nets route in one pass: 6 imported optical nets (Manhattan, 2 of them restyled to sbend) + 1 all_angle (the tilted GC) + 1 dubins (the loopback pair) + 4 electrical (2 electrodes per arm across both arms -> 4 pads). <code>ok=true</code>, <code>crossings=0</code>, <code>device_hits=0</code> -- these numbers match exactly what's on record on the <a href="tutorial-gf-mzi.html">public demo record's gf_mzi_module card</a>.</p>
         <figure class="tut-figure">
           <img src="../assets/tutorials/gf-mzi/step-04-routed.png" alt="A fully wired MZI: splitter to both arms, both arms to the combiner, smooth curved lines from the combiner to the two offset output GCs, an all-angle connection to the tilted GC on the left, an arc between the two loopback GCs below, and right-angle traces from the heaters to their pads">
           <figcaption>Stage 3 · After one <code>reroute()</code> call: all 12 nets are drawn -- optical on <code>1/0</code> (pink), electrical on <code>49/0</code> (same color family, running between pads and heater electrodes). This is the baseline state for the drag-then-reconnect that follows.</figcaption>
@@ -262,10 +313,10 @@ gc_up_port = next(p for p in ports if p["name"] == "grating_coupler_elliptical4_
            "from_to": [360.0, 30.0, 360.0, 100.0]},
   "post_drag_reroute": {"ok": true, "routes": 12, "abutted": 0, "crossings": 0, "device_hits": 0}
 }</code></pre>
-        <p>The two <code>reroute()</code> reports -- before and after the drag -- are <strong>identical field-for-field</strong>: <code>routes=12</code> (matching the net table's full count), <code>crossings=0</code>, <code>device_hits=0</code> -- meaning all 12 nets paired and routed successfully both times, with no crossings and no collisions with any device's obstacle box. These numbers match the <a href="examples.html#mzi">public record on the examples page</a> exactly -- <code>6 optical nets, 13/5 instances/device cells, 12 reroute routes, 0/0 crossings/device-hits</code> -- this tutorial runs the same public path, nothing special was set up on the side.</p>
+        <p>The two <code>reroute()</code> reports -- before and after the drag -- are <strong>identical field-for-field</strong>: <code>routes=12</code> (matching the net table's full count), <code>crossings=0</code>, <code>device_hits=0</code> -- meaning all 12 nets paired and routed successfully both times, with no crossings and no collisions with any device's obstacle box. These numbers match the <a href="tutorial-gf-mzi.html">public demo record</a> exactly -- <code>6 optical nets, 13/5 instances/device cells, 12 reroute routes, 0/0 crossings/device-hits</code> -- this tutorial runs the same public path, nothing special was set up on the side.</p>
 
         <h2 id="next" class="anchor-h">Next steps</h2>
-        <p>Try this path on your own gdsfactory script: keeping or removing any <code>gf.routing.route_bundle</code> call doesn't affect the takeover -- <code>import_gf_component</code> only cares about device instances and the connections collapsed between them, not how the script itself routed. Switching to your own PDK, the layers, stub convention, and cross-sections all come from your script or <code>pdk.py</code> -- klink itself ships no process layers. If you haven't read the first three yet, read them in order: <a href="tutorial-hallbar.html">"Step-by-step: drawing a Hall bar device"</a> (the geometry-first basics), <a href="tutorial-ebl-wraparound.html">"Step-by-step: drawing an EBL wraparound nanodevice"</a> (writefield obstacle avoidance), and <a href="tutorial-neural-electrode.html">"Step-by-step: drawing a neural electrode harness"</a> (parametric generation + batch RPCs) -- this tutorial's <code>reroute()</code> loop shares the same "mark intent -> route -> verify" skeleton, just with the intent coming from gdsfactory instead of hand-written <code>port.mark</code> calls. Next up (a new batch) is the digital side: a full custom-device flow from netlist to place&amp;route to live LVS. The full commands, dependencies, and public measured numbers are on the <a href="examples.html#mzi">examples page's gdsfactory MZI takeover card</a>; the full <code>NetTable</code>/<code>RouteStyle</code>/<code>reroute</code> field reference is in this repo's <code>klink/domains/photonics/net_intent.py</code> and the <a href="mcp-reference.html#d-photonics">MCP reference · Photonics</a> section.</p>
+        <p>Try this path on your own gdsfactory script: keeping or removing any <code>gf.routing.route_bundle</code> call doesn't affect the takeover -- <code>import_gf_component</code> only cares about device instances and the connections collapsed between them, not how the script itself routed. Switching to your own PDK, the layers, stub convention, and cross-sections all come from your script or <code>pdk.py</code> -- klink itself ships no process layers. If you haven't read the first three yet, read them in order: <a href="tutorial-hallbar.html">"Step-by-step: drawing a Hall bar device"</a> (the geometry-first basics), <a href="tutorial-ebl-wraparound.html">"Step-by-step: drawing an EBL wraparound nanodevice"</a> (writefield obstacle avoidance), and <a href="tutorial-neural-electrode.html">"Step-by-step: drawing a neural electrode harness"</a> (parametric generation + batch RPCs) -- this tutorial's <code>reroute()</code> loop shares the same "mark intent -> route -> verify" skeleton, just with the intent coming from gdsfactory instead of hand-written <code>port.mark</code> calls. Next up (a new batch) is the digital side: a full custom-device flow from netlist to place&amp;route to live LVS. The full commands, dependencies, and public measured numbers are on the <a href="tutorial-gf-mzi.html">public demo record's gdsfactory MZI takeover card</a>; the full <code>NetTable</code>/<code>RouteStyle</code>/<code>reroute</code> field reference is in this repo's <code>klink/domains/photonics/net_intent.py</code> and the <a href="mcp-reference.html#d-photonics">MCP reference · Photonics</a> section.</p>
       </article>
     </div>
   </main>

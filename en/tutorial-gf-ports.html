@@ -25,7 +25,60 @@
     .tag-ok{display:inline-block;background:#dff1ee;color:#12654b;border:1px solid #b6ddd4;border-radius:6px;font-size:12px;font-weight:800;padding:1px 8px;margin-left:6px}
   </style>
 </head>
-<body data-page="tutorials">
+<body data-page="tutorials" class="has-sidebar">
+  <aside class="site-sidebar">
+    <a class="sb-brand" href="index.html"><span class="brand-mark">k</span>klink</a>
+    <nav class="sb-nav" aria-label="Site structure">
+      <div class="sb-group">
+        <div class="sb-title">Get started</div>
+        <a href="index.html">Home · what klink is</a>
+        <a href="quickstart.html">Quickstart</a>
+        <a href="concepts.html">Core concepts</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Workflows · human+agent</div>
+        <a href="workflows.html">Workflows in depth (illustrated)</a>
+        <a href="tutorial-multiwindow.html">Multi-window collaboration</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Chat walkthroughs</div>
+        <a href="case-hallbar-chat.html">Hall bar from one sentence</a>
+        <a href="case-drc-chat.html">DRC catch &amp; fix</a>
+        <a href="case-fit-lvs-chat.html">Fit a device to LVS</a>
+        <a href="case-gf-reroute-chat.html">Photonics: ports &amp; drag-reroute</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Step-by-step tutorials</div>
+        <a href="tutorials.html">Tutorials overview</a>
+        <a href="tutorial-hallbar.html">Hall bar device</a>
+        <a href="tutorial-ebl-wraparound.html">EBL wraparound</a>
+        <a href="tutorial-neural-electrode.html">Neural electrode array</a>
+        <a href="tutorial-gf-ports.html">Photonics · three ways to ports</a>
+        <a href="tutorial-gf-mzi.html">Photonics · gf MZI takeover</a>
+        <a href="tutorial-passives.html">Passive templates</a>
+        <a href="tutorial-fit-device.html">Fit device &rarr; PnR &rarr; LVS</a>
+        <a href="tutorial-padframe.html">Probe-card-first padframe</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Guides</div>
+        <a href="drc-lvs.html">DRC · LVS</a>
+        <a href="25d-view.html">2.5D View</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Reference</div>
+        <a href="mcp-reference.html">MCP tool catalog</a>
+        <a href="plugin-packages.html">Writing extension packages</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Architecture</div>
+        <a href="architecture.html">Architecture &amp; boundaries</a>
+      </div>
+    </nav>
+    <div class="sb-foot">
+      <a href="https://github.com/klinkdev2026/klayout-klink">GitHub ↗</a>
+      <a href="../index.html">中文</a>
+    </div>
+  </aside>
   <header class="site-header">
     <div class="nav-shell">
       <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
@@ -33,10 +86,8 @@
         <a href="index.html" data-nav="home">Home</a>
         <a href="quickstart.html" data-nav="quickstart">Quickstart</a>
         <a href="tutorials.html" data-nav="tutorials" class="active">Tutorials</a>
-        <a href="features.html" data-nav="features">Features</a>
         <a href="workflows.html" data-nav="workflows">Workflows</a>
         <a href="mcp-reference.html" data-nav="mcp-reference">MCP Reference</a>
-        <a href="examples.html" data-nav="examples">Examples</a>
         <a href="architecture.html" data-nav="architecture">Architecture</a>
       </nav>
       <div class="nav-actions">
@@ -55,7 +106,7 @@
       <div class="container">
         <div class="eyebrow">Conversation-style tutorial · photonics · ports &amp; routing</div>
         <h1>gdsfactory photonics: three ways to get ports + drag-to-reroute</h1>
-        <p>Before you can route, klink has to know where each device's ports are. This tutorial walks three ways to get klink Ports onto a device — as a <strong>conversation</strong> — <strong>hand-drawn triangle conversion</strong> (custom devices), <strong>standard gdsfactory auto-ports</strong>, and <strong>PDK blackbox stub-convention harvest</strong> — with a deliberate <strong>cautionary example</strong> where the triangle base is drawn wrong. Once the ports exist, it runs the <strong>SEND selection → route → move device → reroute</strong> interactive loop. Every step spells out what the agent said, which tool it called, and what came back, with the real KLayout screenshot from that moment.</p>
+        <p>Before you can route, klink has to know where each device's ports are. This tutorial walks three ways to get klink Ports onto a device: <strong>hand-drawn triangle conversion</strong> (custom devices), <strong>standard gdsfactory auto-ports</strong>, and <strong>PDK blackbox stub-convention harvest</strong>, with a cautionary example where the triangle base is drawn wrong. Once the ports exist, it runs the SEND selection → route → move device → reroute interactive loop. Every step spells out what the agent said, which tool it called, and what came back, with the real KLayout screenshot from that moment.</p>
         <div class="note">This is written for <strong>humans and agents alike</strong>: each turn first says in plain language what it's doing, then gives the exact tool call and return value. Every screenshot is from this session running against a live KLayout — the layout canvas is rendered offscreen with <code>view.screenshot</code>, and only the one shot that needs to show a toolbar button (SEND) is a full-window capture. The demo runs in throwaway tabs and never touches an existing working tab; it uses a few ordinary layers (<code>1/0</code> waveguide, <code>12/0</code> routing, <code>999/99</code> port markers) and no real process PDK.</div>
       </div>
     </section>
@@ -71,7 +122,7 @@
           </div>
           <div class="chat-assistant">
             <div class="who">klink agent</div>
-            <p>The hand-drawn port convention is simple: <strong>one triangle (a 3-point polygon) is one port</strong> — the triangle's <strong>apex direction</strong> is the port orientation, and the triangle's <strong>base length</strong> is the port width. So the base has to match the waveguide width (0.8 µm here); you can't draw it any old size. Both your triangles sit with their base right on the 0.8 µm waveguide end and their apex pointing out — textbook. Here's the <strong>before</strong> (yellow is your hand-drawn triangles):</p>
+            <p>The hand-drawn port convention is simple: one triangle (a 3-point polygon) is one port — the triangle's <strong>apex direction</strong> is the port orientation, and the triangle's <strong>base length</strong> is the port width. So the base has to match the waveguide width (0.8 µm here); you can't draw it any old size. Both your triangles sit with their base right on the 0.8 µm waveguide end and their apex pointing out — textbook. Here's the before (yellow is your hand-drawn triangles):</p>
             <div class="chat-calls">shape.insert_boxes(device body + two 0.8µm waveguides → 1/0)
 shape.insert_many(two triangle markers → 999/99, base=0.8µm, apex outward)
 view.screenshot(bbox_um=[-13,-4,13,4])</div>
@@ -97,7 +148,7 @@ view.screenshot(bbox_um=[-13,-4,13,4])</div>
           </div>
           <div class="chat-assistant">
             <div class="who">klink agent<span class="tag-bad">cautionary example</span></div>
-            <p>Good question — precisely because <strong>base = width, apex = orientation</strong>, a sloppy triangle goes wrong. Here's a triangle with a <strong>2.5 µm</strong> base (three times too wide) on a 0.8 µm waveguide, and the conversion comes out all wrong: width read as 1.95 µm (doesn't match the waveguide), orientation dragged off to <strong>270°</strong> by the long-edge heuristic (pointing down, not out at 0°), and because the base can't reach the waveguide edge, the port is <strong>floating</strong> (<code>attached=False</code>).</p>
+            <p>Good question — precisely because <strong>base = width, apex = orientation</strong>, a sloppy triangle goes wrong. Here's a triangle with a 2.5 µm base (three times too wide) on a 0.8 µm waveguide, and the conversion comes out all wrong: width read as 1.95 µm (doesn't match the waveguide), orientation dragged off to 270° by the long-edge heuristic (pointing down, not out at 0°), and because the base can't reach the waveguide edge, the port is <strong>floating</strong> (<code>attached=False</code>).</p>
             <div class="chat-calls">shape.insert_many(triangle marker, base=2.5µm ← drawn wrong)
 recognize_handdrawn_ports(cell="GFERR", layer="999/99")
 → P0  center=[0.75,0]  orient=270°(✗ want 0°)  width=1.95(✗ want 0.8)  attached=False(✗ floating)</div>
@@ -142,7 +193,7 @@ recognize_handdrawn_ports(cell="GFERR", layer="999/99")
           </div>
           <div class="chat-assistant">
             <div class="who">klink agent</div>
-            <p>A foundry PDK blackbox doesn't hand you gdsfactory Port objects, but it usually follows a <strong>convention</strong>: small <strong>stub boxes</strong> on the waveguide layer at the cell boundary (one common convention is 0.5×0.5 µm boxes), each stub being one optical port. klink's approach: you <strong>tell it the convention</strong> (which layer is the waveguide, how big the stub is), and it harvests the ports from the <strong>live instance</strong> geometry — ports are derived data, so if you move the device in the GUI, just re-harvest to refresh. Here's a synthetic "foundry-style" blackbox (opaque body on <code>60/0</code>, two 0.5×0.5 stubs on waveguide layer <code>1/0</code>):</p>
+            <p>A foundry PDK blackbox doesn't hand you gdsfactory Port objects, but it usually follows a convention: small <strong>stub boxes</strong> on the waveguide layer at the cell boundary (one common convention is 0.5×0.5 µm boxes), each stub being one optical port. klink's approach: you tell it the convention (which layer is the waveguide, how big the stub is), and it harvests the ports from the <strong>live instance</strong> geometry — ports are derived data, so if you move the device in the GUI, just re-harvest to refresh. Here's a synthetic "foundry-style" blackbox (opaque body on <code>60/0</code>, two 0.5×0.5 stubs on waveguide layer <code>1/0</code>):</p>
             <div class="chat-calls">port.harvest_blackbox(cell="GFBB",
     tags={"SYNTH_BB":"bb"}, wg_layer="1/0", stub_size_um=0.5)
 → bb0_0  center=[-4.25,0]  orient=180°
@@ -236,7 +287,7 @@ recognize_handdrawn_ports(cell="GFERR", layer="999/99")
         <p>As in <a href="concepts.html#verify">Core Concepts</a>, screenshots are for humans; the real proof of done is the structured return. Every step here has checkable numbers: hand-drawn conversion gives <code>width=0.8</code> (exactly the waveguide width), the cautionary example gives <code>width=1.95 / orient=270° / attached=False</code> (faithfully reflecting the wrong triangle), auto-ports 3 / blackbox harvest 2, route <code>length=40</code> → reroute <code>length=60</code>, <code>crossings=0</code>. The images just make it obvious; success is judged on those returns.</p>
 
         <h2 id="next">Next</h2>
-        <p>Pick the port method by situation: your own device → <strong>hand-drawn triangles</strong> (remember base = width); a standard gdsfactory device → ports come <strong>automatically</strong>; a foundry blackbox → <strong>harvest by its stub convention</strong>. Once the ports exist, the SEND / route / drag / reroute loop treats all three the same. To see a whole gdsfactory script <strong>taken over in one call</strong> into this loop (thermo-optic MZI, tilted grating couplers, electrical nets), see the <a href="tutorial-gf-mzi.html">gdsfactory MZI takeover tutorial</a>; for more real conversations of the agent turning a sentence into a device / DRC / LVS, see the <a href="tutorials.html#chat-cases">chat walkthroughs at the top of the tutorials page</a>.</p>
+        <p>Pick the port method by situation: your own device → <strong>hand-drawn triangles</strong> (remember base = width); a standard gdsfactory device → ports come automatically; a foundry blackbox → <strong>harvest by its stub convention</strong>. Once the ports exist, the SEND / route / drag / reroute loop treats all three the same. To see a whole gdsfactory script taken over in one call into this loop (thermo-optic MZI, tilted grating couplers, electrical nets), see the <a href="tutorial-gf-mzi.html">gdsfactory MZI takeover tutorial</a>; for more real conversations of the agent turning a sentence into a device / DRC / LVS, see the <a href="tutorials.html#chat-cases">chat walkthroughs at the top of the tutorials page</a>.</p>
       </div>
     </section>
   </main>

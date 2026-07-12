@@ -17,7 +17,60 @@
     .stage-kicker { display: inline-flex; align-items: center; justify-content: center; min-width: 26px; height: 26px; padding: 0 8px; border-radius: 6px; background: #dff1ee; color: #12654b; font-weight: 800; font-size: 13px; margin-right: 10px; }
   </style>
 </head>
-<body data-page="tutorials">
+<body data-page="tutorials" class="has-sidebar">
+  <aside class="site-sidebar">
+    <a class="sb-brand" href="index.html"><span class="brand-mark">k</span>klink</a>
+    <nav class="sb-nav" aria-label="站点结构">
+      <div class="sb-group">
+        <div class="sb-title">开始</div>
+        <a href="index.html">首页 · klink 是什么</a>
+        <a href="quickstart.html">快速上手</a>
+        <a href="concepts.html">核心思路</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">工作流 · 人机协作</div>
+        <a href="workflows.html">工作流详解（图文）</a>
+        <a href="tutorial-multiwindow.html">跨窗口协作实战</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">对话案例</div>
+        <a href="case-hallbar-chat.html">一句话画 Hall bar</a>
+        <a href="case-drc-chat.html">DRC 查违例并修好</a>
+        <a href="case-fit-lvs-chat.html">拟合器件跑到 LVS</a>
+        <a href="case-gf-reroute-chat.html">硅光：标端口 · 拖动重连</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">分步教程</div>
+        <a href="tutorials.html">教程总览</a>
+        <a href="tutorial-hallbar.html">Hall bar 器件</a>
+        <a href="tutorial-ebl-wraparound.html">EBL wraparound</a>
+        <a href="tutorial-neural-electrode.html">神经电极阵列</a>
+        <a href="tutorial-gf-ports.html">硅光 · 三种拿端口</a>
+        <a href="tutorial-gf-mzi.html">硅光 · gf MZI 接管</a>
+        <a href="tutorial-passives.html">无源器件模板</a>
+        <a href="tutorial-fit-device.html">拟合器件 → PnR → LVS</a>
+        <a href="tutorial-padframe.html">针卡优先 padframe</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">指南</div>
+        <a href="drc-lvs.html">DRC · LVS</a>
+        <a href="25d-view.html">2.5D 视图</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">参考</div>
+        <a href="mcp-reference.html">MCP 工具全表</a>
+        <a href="plugin-packages.html">编写扩展包</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">架构</div>
+        <a href="architecture.html">架构与边界</a>
+      </div>
+    </nav>
+    <div class="sb-foot">
+      <a href="https://github.com/klinkdev2026/klayout-klink">GitHub ↗</a>
+      <a href="en/index.html">English</a>
+    </div>
+  </aside>
   <header class="site-header">
     <div class="nav-shell">
       <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
@@ -25,10 +78,8 @@
         <a href="index.html" data-nav="home">首页</a>
         <a href="quickstart.html" data-nav="quickstart">快速上手</a>
         <a href="tutorials.html" data-nav="tutorials" class="active">教程</a>
-        <a href="features.html" data-nav="features">功能特性</a>
         <a href="workflows.html" data-nav="workflows">工作流</a>
         <a href="mcp-reference.html" data-nav="mcp-reference">MCP 参考</a>
-        <a href="examples.html" data-nav="examples">示例</a>
         <a href="architecture.html" data-nav="architecture">架构</a>
       </nav>
       <div class="nav-actions">
@@ -47,7 +98,7 @@
       <div class="container">
         <div class="eyebrow">Step-by-step tutorial · 控制面 · 跨窗口协作</div>
         <h1>分步教程：跨窗口协作 — 一个 agent，多个 KLayout</h1>
-        <p>其它教程讲的是"在<strong>一个</strong> KLayout 里画什么"，这一篇讲的是<strong>控制面本身</strong>：一个 agent 可以同时连着多个 KLayout 窗口，每个窗口是一个独立端口（会话）。人和 agent 在这些窗口之间协作，靠的是 klink 插件工具栏上三个按钮——<strong>SEND</strong>（把你框选的东西变成 agent 能引用的持久记忆）、<strong>GFTGT</strong>（把 gdsfactory/klive 流量导向某个指定窗口）、以及<strong>跨会话 transfer</strong>（在窗口之间两阶段安全搬运几何）。这一篇每一张图都是<strong>真实 live 会话的窗口截图</strong>再叠标注，配的数字都是那次实际调用返回的。</p>
+        <p>其它教程讲的是"在一个 KLayout 里画什么"，这一篇讲的是控制面本身：一个 agent 可以同时连着多个 KLayout 窗口，每个窗口是一个独立端口（会话）。人和 agent 在这些窗口之间协作，靠的是 klink 插件工具栏上三个按钮——<strong>SEND</strong>（把你框选的东西变成 agent 能引用的持久记忆）、<strong>GFTGT</strong>（把 gdsfactory/klive 流量导向某个指定窗口）、以及<strong>跨会话 transfer</strong>（在窗口之间两阶段安全搬运几何）。这一篇每一张图都是真实 live 会话的窗口截图再叠标注，配的数字都是那次实际调用返回的。</p>
         <div class="note">这一篇和其它教程有一处不同：其它教程的插图是 <code>view.screenshot</code> 截的<strong>版图画布</strong>，而这一篇要讲的是工具栏和窗口本身，所以截的是整个 <strong>KLayout 应用窗口</strong>（含标题栏、工具栏）。演示全程在临时 tab（<code>MW_SRC</code> / <code>MW_DST</code>）里进行，不触碰任何已有的工作 tab。</div>
       </div>
     </section>
@@ -148,7 +199,7 @@ commit = transfer_commit(package_id=prep["package_id"])
         <p><code>requested</code> 与 <code>commit.inserted</code> 都是 <code>5</code>、<code>by_layer</code> 逐层一致——说明源窗口那 5 个对象一个不多一个不少地落进了目标窗口，且 dry-run 阶段 <code>inserted=0</code> 证明"先验证后变更"确实没有在确认前写任何东西。这些数字才是判断成没成的依据，图只是让人一眼看懂发生了什么。</p>
 
         <h2 id="next" class="anchor-h">下一步</h2>
-        <p>把这套控制面用到你自己的多窗口流程里：一个窗口当"参考/源"、另一个当"工作区"，用 SEND 把源里的选区喂给 agent，用 transfer 两阶段搬过去；用 gdsfactory 生成版图时，先在目标窗口点 GFTGT 定向。这些能力的完整清单见<a href="features.html">功能特性 · 人 · agent 与实时 KLayout</a>，深入的字段说明见<a href="workflows.html">工作流</a>。想看 agent 真正把一句话变成版图 / DRC / LVS 的实战对话，去<a href="tutorials.html#chat-cases">教程页顶部的实战对话案例</a>。</p>
+        <p>把这套控制面用到你自己的多窗口流程里：一个窗口当"参考/源"、另一个当"工作区"，用 SEND 把源里的选区喂给 agent，用 transfer 两阶段搬过去；用 gdsfactory 生成版图时，先在目标窗口点 GFTGT 定向。这些能力的深入字段说明见<a href="workflows.html">工作流</a>。想看 agent 真正把一句话变成版图 / DRC / LVS 的实战对话，去<a href="tutorials.html#chat-cases">教程页顶部的实战对话案例</a>。</p>
       </article>
     </div>
   </main>
@@ -156,7 +207,7 @@ commit = transfer_commit(package_id=prep["package_id"])
   <footer class="footer">
     <div class="footer-grid">
       <div><h2>klink</h2><p>一个 agent，多个 KLayout：靠端口寻址，靠 SEND / GFTGT / transfer 协作。</p></div>
-      <div><h3>继续阅读</h3><p><a href="features.html">功能特性 · 能力总览</a></p><p><a href="workflows.html">工作流</a></p><p><a href="tutorials.html">教程枢纽</a></p></div>
+      <div><h3>继续阅读</h3><p><a href="workflows.html">工作流</a></p><p><a href="mcp-reference.html">MCP 工具参考</a></p><p><a href="tutorials.html">教程枢纽</a></p></div>
       <div><h3>安装</h3><p><a href="quickstart.html">快速上手</a></p></div>
     </div>
   </footer>

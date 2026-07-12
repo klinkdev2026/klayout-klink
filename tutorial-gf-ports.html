@@ -25,7 +25,60 @@
     .tag-ok{display:inline-block;background:#dff1ee;color:#12654b;border:1px solid #b6ddd4;border-radius:6px;font-size:12px;font-weight:800;padding:1px 8px;margin-left:6px}
   </style>
 </head>
-<body data-page="tutorials">
+<body data-page="tutorials" class="has-sidebar">
+  <aside class="site-sidebar">
+    <a class="sb-brand" href="index.html"><span class="brand-mark">k</span>klink</a>
+    <nav class="sb-nav" aria-label="站点结构">
+      <div class="sb-group">
+        <div class="sb-title">开始</div>
+        <a href="index.html">首页 · klink 是什么</a>
+        <a href="quickstart.html">快速上手</a>
+        <a href="concepts.html">核心思路</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">工作流 · 人机协作</div>
+        <a href="workflows.html">工作流详解（图文）</a>
+        <a href="tutorial-multiwindow.html">跨窗口协作实战</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">对话案例</div>
+        <a href="case-hallbar-chat.html">一句话画 Hall bar</a>
+        <a href="case-drc-chat.html">DRC 查违例并修好</a>
+        <a href="case-fit-lvs-chat.html">拟合器件跑到 LVS</a>
+        <a href="case-gf-reroute-chat.html">硅光：标端口 · 拖动重连</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">分步教程</div>
+        <a href="tutorials.html">教程总览</a>
+        <a href="tutorial-hallbar.html">Hall bar 器件</a>
+        <a href="tutorial-ebl-wraparound.html">EBL wraparound</a>
+        <a href="tutorial-neural-electrode.html">神经电极阵列</a>
+        <a href="tutorial-gf-ports.html">硅光 · 三种拿端口</a>
+        <a href="tutorial-gf-mzi.html">硅光 · gf MZI 接管</a>
+        <a href="tutorial-passives.html">无源器件模板</a>
+        <a href="tutorial-fit-device.html">拟合器件 → PnR → LVS</a>
+        <a href="tutorial-padframe.html">针卡优先 padframe</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">指南</div>
+        <a href="drc-lvs.html">DRC · LVS</a>
+        <a href="25d-view.html">2.5D 视图</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">参考</div>
+        <a href="mcp-reference.html">MCP 工具全表</a>
+        <a href="plugin-packages.html">编写扩展包</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">架构</div>
+        <a href="architecture.html">架构与边界</a>
+      </div>
+    </nav>
+    <div class="sb-foot">
+      <a href="https://github.com/klinkdev2026/klayout-klink">GitHub ↗</a>
+      <a href="en/index.html">English</a>
+    </div>
+  </aside>
   <header class="site-header">
     <div class="nav-shell">
       <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
@@ -33,10 +86,8 @@
         <a href="index.html" data-nav="home">首页</a>
         <a href="quickstart.html" data-nav="quickstart">快速上手</a>
         <a href="tutorials.html" data-nav="tutorials" class="active">教程</a>
-        <a href="features.html" data-nav="features">功能特性</a>
         <a href="workflows.html" data-nav="workflows">工作流</a>
         <a href="mcp-reference.html" data-nav="mcp-reference">MCP 参考</a>
-        <a href="examples.html" data-nav="examples">示例</a>
         <a href="architecture.html" data-nav="architecture">架构</a>
       </nav>
       <div class="nav-actions">
@@ -55,7 +106,7 @@
       <div class="container">
         <div class="eyebrow">对话式分步教程 · 硅光 · Port 与布线</div>
         <h1>gdsfactory 硅光：三种拿到端口的方式 + 拖动重连</h1>
-        <p>要布线，先得让 klink 知道每个器件的端口在哪。这一篇用<strong>对话</strong>的方式走三条拿到 klink Port 的路——<strong>手绘三角形转换</strong>（自定义器件）、<strong>标准 gdsfactory 自动端口</strong>、<strong>PDK 黑箱按 stub 约定 harvest</strong>——中间还专门放一个"三角形底边画错"的<strong>反面教材</strong>；拿到端口后，再走一遍 <strong>SEND 选区 → 连线 → 移动器件 → 重新布线</strong>的交互闭环。每一步都写清楚：agent 说了什么、调了哪个工具、返回什么结果，配当时的真实 KLayout 截图。</p>
+        <p>要布线，先得让 klink 知道每个器件的端口在哪。这一篇走三条拿到 klink Port 的路：<strong>手绘三角形转换</strong>（自定义器件）、<strong>标准 gdsfactory 自动端口</strong>、<strong>PDK 黑箱按 stub 约定 harvest</strong>，中间放一个"三角形底边画错"的反面教材；拿到端口后，再走一遍 SEND 选区 → 连线 → 移动器件 → 重新布线的交互闭环。每一步都写清楚：agent 说了什么、调了哪个工具、返回什么结果，配当时的真实 KLayout 截图。</p>
         <div class="note">这是给<strong>人和 agent 同时看</strong>的：每一轮先用人话说清在做什么，再给出具体的工具调用和返回值。所有截图都是本次会话在实时 KLayout 里真跑出来的——版图画布用 <code>view.screenshot</code> 离屏渲染，只有需要展示工具栏按钮（SEND）那一张是整窗口截图。演示只在一次性 tab 里进行，不碰任何已有工作 tab；用到的是几个普通图层（<code>1/0</code> 波导、<code>12/0</code> 布线、<code>999/99</code> 端口标记），不含任何真实工艺 PDK。</div>
       </div>
     </section>
@@ -72,7 +123,7 @@
           </div>
           <div class="chat-assistant">
             <div class="who">klink agent</div>
-            <p>手绘端口的约定很简单：<strong>一个三角形（3 个点的多边形）就是一个端口</strong>——三角形的<strong>尖端指向</strong>就是端口朝向，三角形的<strong>底边长度</strong>就是端口宽度。所以底边要和波导等宽（这里 0.8 µm），不能随手乱画。你画的两个三角形底边都正好压在 0.8 µm 波导口上、尖端朝外，标准。下面是转换<strong>之前</strong>的样子（黄色就是你手绘的三角形）：</p>
+            <p>手绘端口的约定很简单：一个三角形（3 个点的多边形）就是一个端口——三角形的<strong>尖端指向</strong>就是端口朝向，三角形的<strong>底边长度</strong>就是端口宽度。所以底边要和波导等宽（这里 0.8 µm），不能随手乱画。你画的两个三角形底边都正好压在 0.8 µm 波导口上、尖端朝外，标准。下面是转换之前的样子（黄色就是你手绘的三角形）：</p>
             <div class="chat-calls">shape.insert_boxes(器件体 + 两条 0.8µm 波导 → 1/0)
 shape.insert_many(两个三角形 marker → 999/99，底边=0.8µm，尖端朝外)
 view.screenshot(bbox_um=[-13,-4,13,4])</div>
@@ -99,7 +150,7 @@ view.screenshot(bbox_um=[-13,-4,13,4])</div>
           </div>
           <div class="chat-assistant">
             <div class="who">klink agent<span class="tag-bad">反面教材</span></div>
-            <p>好问题——正因为<strong>底边=宽度、尖端=朝向</strong>，随手乱画就会翻车。这里在一条 0.8 µm 波导上画一个底边 <strong>2.5 µm</strong>（比波导宽三倍多）的三角形，转换结果就全错了：宽度被读成 1.95 µm（和波导对不上）、朝向被"长边启发式"带偏成 <strong>270°</strong>（指向下，而不是朝外的 0°）、而且因为底边压不到波导边，端口是<strong>悬空</strong>的（<code>attached=False</code>）。</p>
+            <p>好问题——正因为<strong>底边=宽度、尖端=朝向</strong>，随手乱画就会翻车。这里在一条 0.8 µm 波导上画一个底边 2.5 µm（比波导宽三倍多）的三角形，转换结果就全错了：宽度被读成 1.95 µm（和波导对不上）、朝向被"长边启发式"带偏成 270°（指向下，而不是朝外的 0°）、而且因为底边压不到波导边，端口是<strong>悬空</strong>的（<code>attached=False</code>）。</p>
             <div class="chat-calls">shape.insert_many(三角形 marker，底边=2.5µm ← 画错了)
 recognize_handdrawn_ports(cell="GFERR", layer="999/99")
 → P0  center=[0.75,0]  orient=270°(✗应为0°)  width=1.95(✗应为0.8)  attached=False(✗悬空)</div>
@@ -146,7 +197,7 @@ recognize_handdrawn_ports(cell="GFERR", layer="999/99")
           </div>
           <div class="chat-assistant">
             <div class="who">klink agent</div>
-            <p>foundry PDK 的黑箱器件不给你 gdsfactory Port 对象，但通常遵守一个<strong>约定</strong>：在波导层的 cell 边界上放一个个小 <strong>stub 方块</strong>（一种常见约定是 0.5×0.5 µm 的方块），每个 stub 就是一个光学口。klink 的做法是：你把<strong>约定告诉它</strong>（波导层是哪层、stub 多大），它就从<strong>活的实例</strong>几何里 harvest 出端口——端口是派生数据，器件在 GUI 里挪了，重新 harvest 一下就刷新。下面用一个合成的"代工厂风格"黑箱演示（不透明体在 <code>60/0</code>，两个 0.5×0.5 stub 在波导层 <code>1/0</code>）：</p>
+            <p>foundry PDK 的黑箱器件不给你 gdsfactory Port 对象，但通常遵守一个约定：在波导层的 cell 边界上放一个个小 <strong>stub 方块</strong>（一种常见约定是 0.5×0.5 µm 的方块），每个 stub 就是一个光学口。klink 的做法是：你把约定告诉它（波导层是哪层、stub 多大），它就从<strong>活的实例</strong>几何里 harvest 出端口——端口是派生数据，器件在 GUI 里挪了，重新 harvest 一下就刷新。下面用一个合成的"代工厂风格"黑箱演示（不透明体在 <code>60/0</code>，两个 0.5×0.5 stub 在波导层 <code>1/0</code>）：</p>
             <div class="chat-calls">port.harvest_blackbox(cell="GFBB",
     tags={"SYNTH_BB":"bb"}, wg_layer="1/0", stub_size_um=0.5)
 → bb0_0  center=[-4.25,0]  orient=180°
@@ -244,7 +295,7 @@ recognize_handdrawn_ports(cell="GFERR", layer="999/99")
         <p>和<a href="concepts.html#verify">核心思路</a>一样，截图是给人看的，真正的完成依据是结构化返回。这一篇里每一步都有可核对的数字：手绘端口转换后 <code>width=0.8</code>（精确 = 波导宽）、反面教材里 <code>width=1.95 / orient=270° / attached=False</code>（如实反映画错的三角形）、自动端口 3 个 / 黑箱 harvest 2 个、连线 <code>length=40</code> → 重连 <code>length=60</code>、<code>crossings=0</code>。图只是让人一眼看懂，判断成没成看的是这些返回值。</p>
 
         <h2 id="next">下一步</h2>
-        <p>三种拿端口的方式按场景选：自己画的器件用<strong>手绘三角形</strong>（记住底边=宽度）；标准 gdsfactory 器件<strong>自动</strong>就有端口；foundry 黑箱按它的 <strong>stub 约定 harvest</strong>。拿到端口后，SEND / 连线 / 拖动 / 重连的闭环对三种端口一视同仁。想看一个完整 gdsfactory 脚本被<strong>一次接管</strong>进这个闭环（含热光 MZI、倾斜光栅耦合器、电学 net），看 <a href="tutorial-gf-mzi.html">gdsfactory MZI 接管教程</a>；想看 agent 把一句话变成器件 / DRC / LVS 的更多实战对话，看 <a href="tutorials.html#chat-cases">教程页顶部的实战对话案例</a>。</p>
+        <p>三种拿端口的方式按场景选：自己画的器件用<strong>手绘三角形</strong>（记住底边=宽度）；标准 gdsfactory 器件自动就有端口；foundry 黑箱按它的 <strong>stub 约定 harvest</strong>。拿到端口后，SEND / 连线 / 拖动 / 重连的闭环对三种端口一视同仁。想看一个完整 gdsfactory 脚本被一次接管进这个闭环（含热光 MZI、倾斜光栅耦合器、电学 net），看 <a href="tutorial-gf-mzi.html">gdsfactory MZI 接管教程</a>；想看 agent 把一句话变成器件 / DRC / LVS 的更多实战对话，看 <a href="tutorials.html#chat-cases">教程页顶部的实战对话案例</a>。</p>
       </div>
     </section>
   </main>

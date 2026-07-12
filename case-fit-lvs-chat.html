@@ -20,7 +20,60 @@
     .chat-shot figcaption{padding:8px 12px;font-size:13px;color:var(--muted);border-top:1px solid var(--line);background:#f7fafb}
   </style>
 </head>
-<body data-page="features">
+<body data-page="features" class="has-sidebar">
+  <aside class="site-sidebar">
+    <a class="sb-brand" href="index.html"><span class="brand-mark">k</span>klink</a>
+    <nav class="sb-nav" aria-label="站点结构">
+      <div class="sb-group">
+        <div class="sb-title">开始</div>
+        <a href="index.html">首页 · klink 是什么</a>
+        <a href="quickstart.html">快速上手</a>
+        <a href="concepts.html">核心思路</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">工作流 · 人机协作</div>
+        <a href="workflows.html">工作流详解（图文）</a>
+        <a href="tutorial-multiwindow.html">跨窗口协作实战</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">对话案例</div>
+        <a href="case-hallbar-chat.html">一句话画 Hall bar</a>
+        <a href="case-drc-chat.html">DRC 查违例并修好</a>
+        <a href="case-fit-lvs-chat.html">拟合器件跑到 LVS</a>
+        <a href="case-gf-reroute-chat.html">硅光：标端口 · 拖动重连</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">分步教程</div>
+        <a href="tutorials.html">教程总览</a>
+        <a href="tutorial-hallbar.html">Hall bar 器件</a>
+        <a href="tutorial-ebl-wraparound.html">EBL wraparound</a>
+        <a href="tutorial-neural-electrode.html">神经电极阵列</a>
+        <a href="tutorial-gf-ports.html">硅光 · 三种拿端口</a>
+        <a href="tutorial-gf-mzi.html">硅光 · gf MZI 接管</a>
+        <a href="tutorial-passives.html">无源器件模板</a>
+        <a href="tutorial-fit-device.html">拟合器件 → PnR → LVS</a>
+        <a href="tutorial-padframe.html">针卡优先 padframe</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">指南</div>
+        <a href="drc-lvs.html">DRC · LVS</a>
+        <a href="25d-view.html">2.5D 视图</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">参考</div>
+        <a href="mcp-reference.html">MCP 工具全表</a>
+        <a href="plugin-packages.html">编写扩展包</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">架构</div>
+        <a href="architecture.html">架构与边界</a>
+      </div>
+    </nav>
+    <div class="sb-foot">
+      <a href="https://github.com/klinkdev2026/klayout-klink">GitHub ↗</a>
+      <a href="en/index.html">English</a>
+    </div>
+  </aside>
   <header class="site-header">
     <div class="nav-shell">
       <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
@@ -28,10 +81,8 @@
         <a href="index.html" data-nav="home">首页</a>
         <a href="quickstart.html" data-nav="quickstart">快速上手</a>
         <a href="tutorials.html" data-nav="tutorials">教程</a>
-        <a href="features.html" data-nav="features">功能特性</a>
         <a href="workflows.html" data-nav="workflows">工作流</a>
         <a href="mcp-reference.html" data-nav="mcp-reference">MCP 参考</a>
-        <a href="examples.html" data-nav="examples">示例</a>
         <a href="architecture.html" data-nav="architecture">架构</a>
       </nav>
       <div class="nav-actions">
@@ -133,7 +184,7 @@ shape.insert_text(cell, "LVS match=True  devices=173", layer=6/0)</div>
 
     <section class="section">
       <div class="container chat">
-        <p>想看这条链更完整、每一步都配拟合公式和局部放大细节的分步版本？看 <a href="tutorial-fit-device.html">自定义器件教程</a>。DRC/LVS 的完整能力入口 &rarr; <a href="drc-lvs.html">功能特性 · DRC·LVS</a>。</p>
+        <p>想看这条链更完整、每一步都配拟合公式和局部放大细节的分步版本？看 <a href="tutorial-fit-device.html">自定义器件教程</a>。DRC/LVS 的完整能力入口 &rarr; <a href="drc-lvs.html">指南 · DRC·LVS</a>。</p>
         <div class="note">如实复述：本页三轮对话用的器件几何、层号（101/0 栅板、103/0 沟道、104/0 源漏、106/0 布线、6/0 标注文字）、4-bit 加法器网表全部是为演示合成/内置的示例数据，不含任何真实工艺或客户数据；三次拟合/摆放/布线/LVS 调用和其返回的数字（14 linear + 2 constant 边、routed=94/94、markers=0、LVS match=True、devices=173）均对 live KLayout（专用会话，端口 8767）真实执行，截图为该次运行的真实渲染结果。工作用的一次性 tab 已在收尾时关闭，原有 tab 已恢复为当前视图，全程未触碰 8765/8766 上的任何会话。</div>
       </div>
     </section>

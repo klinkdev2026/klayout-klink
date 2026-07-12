@@ -8,7 +8,60 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="assets/styles.css">
 </head>
-<body data-page="mcp-reference">
+<body data-page="mcp-reference" class="has-sidebar">
+  <aside class="site-sidebar">
+    <a class="sb-brand" href="index.html"><span class="brand-mark">k</span>klink</a>
+    <nav class="sb-nav" aria-label="站点结构">
+      <div class="sb-group">
+        <div class="sb-title">开始</div>
+        <a href="index.html">首页 · klink 是什么</a>
+        <a href="quickstart.html">快速上手</a>
+        <a href="concepts.html">核心思路</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">工作流 · 人机协作</div>
+        <a href="workflows.html">工作流详解（图文）</a>
+        <a href="tutorial-multiwindow.html">跨窗口协作实战</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">对话案例</div>
+        <a href="case-hallbar-chat.html">一句话画 Hall bar</a>
+        <a href="case-drc-chat.html">DRC 查违例并修好</a>
+        <a href="case-fit-lvs-chat.html">拟合器件跑到 LVS</a>
+        <a href="case-gf-reroute-chat.html">硅光：标端口 · 拖动重连</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">分步教程</div>
+        <a href="tutorials.html">教程总览</a>
+        <a href="tutorial-hallbar.html">Hall bar 器件</a>
+        <a href="tutorial-ebl-wraparound.html">EBL wraparound</a>
+        <a href="tutorial-neural-electrode.html">神经电极阵列</a>
+        <a href="tutorial-gf-ports.html">硅光 · 三种拿端口</a>
+        <a href="tutorial-gf-mzi.html">硅光 · gf MZI 接管</a>
+        <a href="tutorial-passives.html">无源器件模板</a>
+        <a href="tutorial-fit-device.html">拟合器件 → PnR → LVS</a>
+        <a href="tutorial-padframe.html">针卡优先 padframe</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">指南</div>
+        <a href="drc-lvs.html">DRC · LVS</a>
+        <a href="25d-view.html">2.5D 视图</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">参考</div>
+        <a href="mcp-reference.html">MCP 工具全表</a>
+        <a href="plugin-packages.html">编写扩展包</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">架构</div>
+        <a href="architecture.html">架构与边界</a>
+      </div>
+    </nav>
+    <div class="sb-foot">
+      <a href="https://github.com/klinkdev2026/klayout-klink">GitHub ↗</a>
+      <a href="en/index.html">English</a>
+    </div>
+  </aside>
   <header class="site-header">
     <div class="nav-shell">
       <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
@@ -16,10 +69,8 @@
         <a href="index.html" data-nav="home">首页</a>
         <a href="quickstart.html" data-nav="quickstart">快速上手</a>
         <a href="tutorials.html" data-nav="tutorials">教程</a>
-        <a href="features.html" data-nav="features">功能特性</a>
         <a href="workflows.html" data-nav="workflows">工作流</a>
         <a href="mcp-reference.html" data-nav="mcp-reference">MCP 参考</a>
-        <a href="examples.html" data-nav="examples">示例</a>
         <a href="architecture.html" data-nav="architecture">架构</a>
       </nav>
       <div class="nav-actions">
@@ -453,7 +504,7 @@ lvs.run cell="BLOCK" conductors=["1/0","3/0"] vias=["2/0"] \
         <h2 id="d-structdevice" class="anchor-h">8 · 自定义器件网表 → 自动 P&amp;R → LVS <span class="tool-count">device_structdevice · 7 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="device_structdevice"</span>
-          <p>这是<strong>器件无关</strong>的自定义器件 P&amp;R 流。“器件”=任何带任意参数集 + 端子的 cell；klink 不假设参数名/数量，也没有器件词汇表。器件库、工艺 profile、端子来源都是<strong>示例/PDK 数据显式传入</strong>——MCP 工具不带任何工艺，缺工艺时返回<strong>有指导性的错误</strong>（“写/跑一个 example”），绝不猜。物理模型很紧凑：器件<strong>自己的金属层</strong>同时当路由层用；<code>mode</code> 2L/3L 选用其中 2 或 3 层。</p>
+          <p>这是<strong>器件无关</strong>的自定义器件 P&amp;R 流。“器件”=任何带任意参数集 + 端子的 cell；klink 不假设参数名/数量，也没有器件词汇表。器件库、工艺 profile、端子来源都是示例/PDK 数据显式传入——MCP 工具不带任何工艺，缺工艺时返回<strong>有指导性的错误</strong>（“写/跑一个 example”），绝不猜。物理模型很紧凑：器件自己的金属层同时当路由层用；<code>mode</code> 2L/3L 选用其中 2 或 3 层。</p>
         </div>
         <table class="data-table reftable">
           <thead><tr><th>工具</th><th>参数</th><th>功能</th></tr></thead>
@@ -566,7 +617,7 @@ exec.python code="print(layout.top_cell().name); print(len(list(layout.each_cell
         <p>recorder 产出两个文件：<code>&lt;name&gt;.py</code>（基于 <code>KLinkClient</code> 的回放）和 <code>&lt;name&gt;_pya.py</code>（可在 KLayout 内独立运行的 pya 版）。</p>
 
         <div class="note" style="margin-top:36px">
-          想看这些工具在真实流程里怎么配合？去 <a href="examples.html">示例</a> 看 8 个公开 demo 的逐个详解，或 <a href="tutorials.html">教程</a> 看按领域的上手路径。
+          想看这些工具在真实流程里怎么配合？去 <a href="tutorials.html">教程</a> 看可跑 demo 的逐个详解，或 <a href="tutorials.html">教程</a> 看按领域的上手路径。
         </div>
 
       </article>
@@ -577,7 +628,7 @@ exec.python code="print(layout.top_cell().name); print(len(list(layout.each_cell
     <div class="footer-grid">
       <div><h2>klink</h2><p>一份工具目录，两张脸：typed Python client 与 MCP 工具，都由 live plugin 生成。</p></div>
       <div><h3>相关页面</h3><p><a href="workflows.html">MCP 工作流</a></p><p><a href="architecture.html">架构</a></p></div>
-      <div><h3>上手</h3><p><a href="quickstart.html">快速上手</a></p><p><a href="examples.html">示例</a></p></div>
+      <div><h3>上手</h3><p><a href="quickstart.html">快速上手</a></p><p><a href="tutorials.html">示例</a></p></div>
     </div>
   </footer>
   <script src="assets/app.js"></script>

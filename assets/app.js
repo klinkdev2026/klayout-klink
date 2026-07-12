@@ -17,6 +17,16 @@ if (current) {
   });
 }
 
+// global sidebar: every page has its own direct entry now, so highlight
+// only the exact current file (no section/data-page fallback needed).
+(function () {
+  const here = location.pathname.split("/").pop() || "index.html";
+  document.querySelectorAll(".sb-nav a").forEach((a) => {
+    const f = (a.getAttribute("href") || "").split("#")[0];
+    if (f === here) a.classList.add("current");
+  });
+})();
+
 document.querySelectorAll("pre").forEach((pre) => {
   const isEnglish = document.documentElement.lang && document.documentElement.lang.startsWith("en");
   const idleText = isEnglish ? "Copy" : "复制";

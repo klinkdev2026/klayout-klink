@@ -14,7 +14,60 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="assets/styles.css">
 </head>
-<body data-page="home">
+<body data-page="home" class="has-sidebar">
+  <aside class="site-sidebar">
+    <a class="sb-brand" href="index.html"><span class="brand-mark">k</span>klink</a>
+    <nav class="sb-nav" aria-label="站点结构">
+      <div class="sb-group">
+        <div class="sb-title">开始</div>
+        <a href="index.html">首页 · klink 是什么</a>
+        <a href="quickstart.html">快速上手</a>
+        <a href="concepts.html">核心思路</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">工作流 · 人机协作</div>
+        <a href="workflows.html">工作流详解（图文）</a>
+        <a href="tutorial-multiwindow.html">跨窗口协作实战</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">对话案例</div>
+        <a href="case-hallbar-chat.html">一句话画 Hall bar</a>
+        <a href="case-drc-chat.html">DRC 查违例并修好</a>
+        <a href="case-fit-lvs-chat.html">拟合器件跑到 LVS</a>
+        <a href="case-gf-reroute-chat.html">硅光：标端口 · 拖动重连</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">分步教程</div>
+        <a href="tutorials.html">教程总览</a>
+        <a href="tutorial-hallbar.html">Hall bar 器件</a>
+        <a href="tutorial-ebl-wraparound.html">EBL wraparound</a>
+        <a href="tutorial-neural-electrode.html">神经电极阵列</a>
+        <a href="tutorial-gf-ports.html">硅光 · 三种拿端口</a>
+        <a href="tutorial-gf-mzi.html">硅光 · gf MZI 接管</a>
+        <a href="tutorial-passives.html">无源器件模板</a>
+        <a href="tutorial-fit-device.html">拟合器件 → PnR → LVS</a>
+        <a href="tutorial-padframe.html">针卡优先 padframe</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">指南</div>
+        <a href="drc-lvs.html">DRC · LVS</a>
+        <a href="25d-view.html">2.5D 视图</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">参考</div>
+        <a href="mcp-reference.html">MCP 工具全表</a>
+        <a href="plugin-packages.html">编写扩展包</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">架构</div>
+        <a href="architecture.html">架构与边界</a>
+      </div>
+    </nav>
+    <div class="sb-foot">
+      <a href="https://github.com/klinkdev2026/klayout-klink">GitHub ↗</a>
+      <a href="en/index.html">English</a>
+    </div>
+  </aside>
   <header class="site-header">
     <div class="nav-shell">
       <a class="brand" href="index.html" aria-label="klink 首页">
@@ -25,10 +78,8 @@
         <a href="index.html" data-nav="home">首页</a>
         <a href="quickstart.html" data-nav="quickstart">快速上手</a>
         <a href="tutorials.html" data-nav="tutorials">教程</a>
-        <a href="features.html" data-nav="features">功能特性</a>
         <a href="workflows.html" data-nav="workflows">工作流</a>
         <a href="mcp-reference.html" data-nav="mcp-reference">MCP 参考</a>
-        <a href="examples.html" data-nav="examples">示例</a>
         <a href="architecture.html" data-nav="architecture">架构</a>
       </nav>
       <div class="nav-actions">
@@ -54,7 +105,7 @@
         <div class="hero-actions">
           <a class="button" href="quickstart.html">开始安装</a>
           <a class="button-secondary" href="mcp-reference.html">浏览 120+ 个工具</a>
-          <a class="button-secondary" href="examples.html">看示例</a>
+          <a class="button-secondary" href="tutorials.html">看教程</a>
         </div>
         <div class="hero-meta" aria-label="项目事实">
           <span class="chip">Package: klayout-klink</span>
@@ -213,16 +264,16 @@ python example_template/nanodevice/ebl_wraparound.py</code></pre>
       <div class="container">
         <div class="section-head">
           <h2>按领域划分的能力</h2>
-          <p>klink 是通用的 geometry-first 控制平面。下面按领域列出目前具备的一些能力，每项都有可直接运行的示例脚本（全部无私有 GDS）。项目仍处于早期试验阶段，能力覆盖会继续变化。逐个实测详解见 <a href="examples.html">示例</a>。</p>
+          <p>klink 是通用的 geometry-first 控制平面。下面按领域列出目前具备的一些能力，每项都有可直接运行的示例脚本（全部无私有 GDS）。项目仍处于早期试验阶段，能力覆盖会继续变化。逐个实测详解见 <a href="tutorials.html">示例</a>。</p>
         </div>
         <div class="grid three">
-          <a class="card" href="examples.html#ebl">
+          <a class="card" href="tutorial-ebl-wraparound.html">
             <span class="feature-kicker">EBL 纳米器件</span>
             <h3>EBL 纳米器件</h3>
             <p>电子束光刻器件生成：EBL wraparound、Hall bar，含 writefield 场规划、patch 与几何校验。离线 EBL 实测 40 电极 / 0 violations / 0 overlaps。</p>
             <span class="card-more">看 EBL / Hall bar →</span>
           </a>
-          <a class="card" href="examples.html#neural">
+          <a class="card" href="tutorial-neural-electrode.html">
             <span class="feature-kicker">神经电极</span>
             <h3>神经电极</h3>
             <p>参数化神经电极探针：pad/via 几何 → Port → corridor anchor → tapered-hybrid 路由，自包含无 GDS。4 行时 48 ports / 24 nets / overlap 0。</p>
@@ -234,13 +285,13 @@ python example_template/nanodevice/ebl_wraparound.py</code></pre>
             <p>从显微图检测材料 flake（需 cv2+numpy），或读预算 <code>traces.json</code>，提交为多边形并派生接触 Port。基于 KlayoutClaw 先验。</p>
             <span class="card-more">看 nanodevice 工具 →</span>
           </a>
-          <a class="card" href="examples.html#mzi">
+          <a class="card" href="tutorial-gf-mzi.html">
             <span class="feature-kicker magenta">硅光</span>
             <h3>硅光（silicon photonics）</h3>
             <p>把普通 gdsfactory MZI 脚本一次接管进 klink；GUI 拖动后一次 <code>photonics.reroute</code> 同时重路由光学（含 sbend/all_angle/dubins）和金属。</p>
             <span class="card-more">看 gdsfactory MZI →</span>
           </a>
-          <a class="card" href="examples.html#fitdevice">
+          <a class="card" href="tutorial-fit-device.html">
             <span class="feature-kicker green">数字 P&amp;R</span>
             <h3>自定义器件数字 P&amp;R → LVS</h3>
             <p>从合成 exemplar 拟合器件、放置、detailed routing 到 live LVS。实测 routed 94/94、<strong>LVS match=True</strong>、173 器件；器件无关网表流见 <code>structdevice.*</code>。</p>
@@ -304,9 +355,9 @@ python example_template/nanodevice/ebl_wraparound.py</code></pre>
             <p>120+ 个工具按 11 个领域逐一列出：功能、参数、示例。</p>
             <span class="card-more">参考 →</span>
           </a>
-          <a class="card" href="examples.html">
+          <a class="card" href="tutorials.html">
             <h3>Demo 详解</h3>
-            <p>8 个公开 demo：功能、命令、公开实测数字、依赖、如何改成自己的。</p>
+            <p>可跑 demo：功能、命令、公开实测数字、如何改成自己的。</p>
             <span class="card-more">示例 →</span>
           </a>
           <a class="card" href="architecture.html">

@@ -3,12 +3,65 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Step-by-Step Tutorials - klink</title>
-  <meta name="description" content="klink's 7 step-by-step tutorials, grouped into nanodevice / photonics / passives / digital: each one is a real run of a demo, staged with the klink calls and screenshots behind it.">
+  <title>Tutorials - klink</title>
+  <meta name="description" content="klink's tutorials and runnable demos in one place: chat walkthroughs, step-by-step illustrated tutorials grouped by area (nanodevice / photonics / passives / PnR / control plane), DRC·LVS and 2.5D guides, with the run command and measured numbers on each runnable starter.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="../assets/styles.css">
 </head>
-<body data-page="tutorials">
+<body data-page="tutorials" class="has-sidebar">
+  <aside class="site-sidebar">
+    <a class="sb-brand" href="index.html"><span class="brand-mark">k</span>klink</a>
+    <nav class="sb-nav" aria-label="Site structure">
+      <div class="sb-group">
+        <div class="sb-title">Get started</div>
+        <a href="index.html">Home · what klink is</a>
+        <a href="quickstart.html">Quickstart</a>
+        <a href="concepts.html">Core concepts</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Workflows · human+agent</div>
+        <a href="workflows.html">Workflows in depth (illustrated)</a>
+        <a href="tutorial-multiwindow.html">Multi-window collaboration</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Chat walkthroughs</div>
+        <a href="case-hallbar-chat.html">Hall bar from one sentence</a>
+        <a href="case-drc-chat.html">DRC catch &amp; fix</a>
+        <a href="case-fit-lvs-chat.html">Fit a device to LVS</a>
+        <a href="case-gf-reroute-chat.html">Photonics: ports &amp; drag-reroute</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Step-by-step tutorials</div>
+        <a href="tutorials.html">Tutorials overview</a>
+        <a href="tutorial-hallbar.html">Hall bar device</a>
+        <a href="tutorial-ebl-wraparound.html">EBL wraparound</a>
+        <a href="tutorial-neural-electrode.html">Neural electrode array</a>
+        <a href="tutorial-gf-ports.html">Photonics · three ways to ports</a>
+        <a href="tutorial-gf-mzi.html">Photonics · gf MZI takeover</a>
+        <a href="tutorial-passives.html">Passive templates</a>
+        <a href="tutorial-fit-device.html">Fit device &rarr; PnR &rarr; LVS</a>
+        <a href="tutorial-padframe.html">Probe-card-first padframe</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Guides</div>
+        <a href="drc-lvs.html">DRC · LVS</a>
+        <a href="25d-view.html">2.5D View</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Reference</div>
+        <a href="mcp-reference.html">MCP tool catalog</a>
+        <a href="plugin-packages.html">Writing extension packages</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Architecture</div>
+        <a href="architecture.html">Architecture &amp; boundaries</a>
+      </div>
+    </nav>
+    <div class="sb-foot">
+      <a href="https://github.com/klinkdev2026/klayout-klink">GitHub ↗</a>
+      <a href="../index.html">中文</a>
+    </div>
+  </aside>
   <header class="site-header">
     <div class="nav-shell">
       <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
@@ -16,10 +69,8 @@
         <a href="index.html" data-nav="home">Home</a>
         <a href="quickstart.html" data-nav="quickstart">Quickstart</a>
         <a href="tutorials.html" data-nav="tutorials">Tutorials</a>
-        <a href="features.html" data-nav="features">Features</a>
         <a href="workflows.html" data-nav="workflows">Workflows</a>
         <a href="mcp-reference.html" data-nav="mcp-reference">MCP Reference</a>
-        <a href="examples.html" data-nav="examples">Examples</a>
         <a href="architecture.html" data-nav="architecture">Architecture</a>
       </nav>
       <div class="nav-actions">
@@ -36,10 +87,10 @@
   <main>
     <section class="page-hero">
       <div class="container">
-        <div class="eyebrow">Step-by-step tutorials</div>
-        <h1>Step-by-Step Tutorials</h1>
-        <p>Each tutorial is a real, staged run of one demo -- follow along: every step is actually drawn in a live KLayout session, screenshotted, and paired with the klink calls that produced it, then verified with a structured report, not a screenshot.</p>
-        <div class="note">New here? Read <a href="concepts.html">Core Concepts</a> first: geometry-first, Port/Anchor, the user-project model -- these tutorials assume you already know that background.</div>
+        <div class="eyebrow">Tutorials &amp; runnable demos</div>
+        <h1>Tutorials</h1>
+        <p>Where you learn klink, and where the runnable demos live. Start with the <strong>chat walkthroughs</strong> to feel how the agent turns a sentence into a layout, then follow the <strong>step-by-step tutorials</strong> by area; each runnable starter card gives the run command and measured numbers, so you can just type it and go.</p>
+        <div class="note">New here? Read <a href="concepts.html">Core Concepts</a> first: geometry-first, Port/Anchor, the user-project model — these tutorials assume that background. Cards with a <code>python …</code> command are <strong>wheel-packaged runnable starters</strong> (<code>klink init</code> scaffolds them into your project); running a demo needs <strong>no MCP</strong> — it's an ordinary script talking to KLayout over the plugin port. Use an empty or test session, not your hand-built working tab.</div>
       </div>
     </section>
 
@@ -47,7 +98,7 @@
       <div class="container">
         <div class="section-head">
           <h2 id="chat-cases" class="anchor-h">Chat walkthroughs <span class="tier live">real conversation</span></h2>
-          <p>Not step-by-step instructions but <strong>real conversation logs</strong>: a user asks for something in plain language, and klink's AI agent genuinely calls tools in a live KLayout to draw the layout / run DRC / run LVS -- watch it turn natural language into geometry. For the full follow-along version, see the illustrated tutorials below.</p>
+          <p>Not step-by-step instructions but <strong>real conversation logs</strong>: a user asks for something in plain language, and klink's AI agent genuinely calls tools in a live KLayout to draw the layout / run DRC / run LVS. For the full follow-along version, see the illustrated tutorials below.</p>
         </div>
         <div class="grid three">
           <a class="card" href="case-hallbar-chat.html">
@@ -89,21 +140,27 @@
             <span class="feature-kicker">Getting started · nanodevice</span>
             <span class="tier offline">Offline (--live optional)</span>
             <h3>Hall bar device</h3>
-            <p>The full geometry-first loop end to end: draw the mesa/contacts/pads, mark Port + Anchor intent, route the fanout with one call, verify with the routing report. A fully offline, self-contained device; needs live KLayout to write.</p>
+            <p>The full geometry-first loop: draw the mesa/contacts/pads, mark Port + Anchor intent, route the fanout with one call, verify with the routing report.</p>
+            <p class="card-run"><code>python example_template/nanodevice/hallbar.py</code></p>
+            <p class="card-metric">semantic bundle + routed (<code>--live</code> writes to KLayout)</p>
             <span class="card-more">Read the tutorial →</span>
           </a>
           <a class="card" href="tutorial-ebl-wraparound.html">
             <span class="feature-kicker amber">EBL · writefield</span>
             <span class="tier offline">Fully offline</span>
             <h3>EBL wraparound nanodevice</h3>
-            <p>Hand-drawn routing under writefield constraints: keepout boundaries, pre-planned crossing windows (corridor Anchors), stitch-patch compensation, and marking Port/Anchor after the fact instead of before.</p>
+            <p>Hand-drawn routing under writefield constraints: keepout boundaries, pre-planned crossing windows (corridor Anchors), stitch-patch compensation, and marking Port/Anchor after the fact.</p>
+            <p class="card-run"><code>python example_template/nanodevice/ebl_wraparound.py</code></p>
+            <p class="card-metric">40 electrodes · 12 patches · 0 violations · 0 overlaps</p>
             <span class="card-more">Read the tutorial →</span>
           </a>
           <a class="card" href="tutorial-neural-electrode.html">
             <span class="feature-kicker green">Batch RPC · parametric</span>
             <span class="tier live">live KLayout</span>
             <h3>Neural electrode array harness</h3>
-            <p>Parametrized by <code>--elec-rows</code>; 394 geometry objects written with batched <code>shape.insert_many</code> calls. An almost 8x scale gap between bond pads and electrodes, closed with a corridor Anchor that forces convergence before routing all 24 nets in one pass.</p>
+            <p>Parametrized by <code>--elec-rows</code>; 394 objects written with batched <code>shape.insert_many</code>. An ~8x scale gap between bond pads and electrodes, closed with a corridor Anchor before routing all nets in one pass.</p>
+            <p class="card-run"><code>python example_template/nanodevice/neural_electrode.py --port &lt;port&gt; --elec-rows 4</code></p>
+            <p class="card-metric">48 ports · 24 nets routed · overlap 0 · hit 0</p>
             <span class="card-more">Read the tutorial →</span>
           </a>
         </div>
@@ -114,21 +171,23 @@
       <div class="container">
         <div class="section-head">
           <h2 id="photonics" class="anchor-h">Photonics <code>photonics</code></h2>
-          <p>gdsfactory bridge: an ordinary gdsfactory script taken over into klink's drag-and-reroute loop in one call.</p>
+          <p>gdsfactory bridge: three ways to get ports, and taking over an ordinary gdsfactory script into the drag-and-reroute loop.</p>
         </div>
         <div class="grid two">
-          <a class="card" href="tutorial-gf-mzi.html">
-            <span class="feature-kicker magenta">Photonics · gdsfactory</span>
-            <span class="tier photonics">live KLayout + gdsfactory</span>
-            <h3>gdsfactory MZI takeover and drag-to-reroute</h3>
-            <p>One <code>import_gf_component</code> call takes over an ordinary gdsfactory thermo-optic MZI script; after dragging any component in the GUI, the same <code>photonics.reroute</code> call only re-routes -- it never rebuilds a device. Needs gdsfactory.</p>
-            <span class="card-more">Read the tutorial →</span>
-          </a>
           <a class="card" href="tutorial-gf-ports.html">
             <span class="feature-kicker magenta">Photonics · ports</span>
             <span class="tier photonics">live KLayout + gdsfactory</span>
             <h3>Three ways to get ports + drag-to-reroute</h3>
             <p>A conversation through three ways to get a Port: hand-drawn triangle conversion (with a "base drawn wrong" cautionary example), standard gdsfactory auto-ports, and PDK blackbox stub-convention harvest; then the SEND → route → move → reroute loop. Every step shows the agent's words + the tool call + the result.</p>
+            <span class="card-more">Read the tutorial →</span>
+          </a>
+          <a class="card" href="tutorial-gf-mzi.html">
+            <span class="feature-kicker magenta">Photonics · gdsfactory takeover</span>
+            <span class="tier photonics">live KLayout + gdsfactory</span>
+            <h3>gdsfactory MZI takeover and drag-to-reroute</h3>
+            <p>One <code>import_gf_component</code> call takes over an ordinary gdsfactory thermo-optic MZI script; after dragging any component in the GUI, the same <code>photonics.reroute</code> call only re-routes — it never rebuilds a device.</p>
+            <p class="card-run"><code>python example_template/photonics/gf_mzi_module.py --port &lt;port&gt;</code></p>
+            <p class="card-metric">6 optical nets · reroute 12 routes · 0 crossings</p>
             <span class="card-more">Read the tutorial →</span>
           </a>
         </div>
@@ -146,7 +205,9 @@
             <span class="feature-kicker amber">passives · geometry templates</span>
             <span class="tier offline">Offline (--live optional)</span>
             <h3>Passive-device geometry templates</h3>
-            <p>Four parametric geometry templates -- IDC capacitor, square spiral inductor, SAW IDT filter, BAW/FBAR plan view -- each with a default-parameter and a variant-parameter live screenshot. A <code>passives/</code>-category starter, runs offline, <code>--live</code> pushes to KLayout.</p>
+            <p>Four parametric templates — IDC capacitor, square spiral inductor, SAW IDT filter, BAW/FBAR plan view — each with a default and a variant live screenshot.</p>
+            <p class="card-run"><code>python example_template/passives/&lt;name&gt;.py</code></p>
+            <p class="card-metric">idc_capacitor / spiral_inductor / saw_idt_filter / baw_fbar_planview</p>
             <span class="card-more">Read the tutorial →</span>
           </a>
         </div>
@@ -156,24 +217,44 @@
     <section class="section alt">
       <div class="container">
         <div class="section-head">
-          <h2 id="digital" class="anchor-h">Digital <code>digital</code></h2>
-          <p>Custom-device fit to digital place &amp; route to live LVS -- both tutorials need a live KLayout session.</p>
+          <h2 id="pnr" class="anchor-h">PnR · place &amp; route any device <code>digital/</code></h2>
+          <p>Place, route and live-LVS <strong>any custom device</strong> from a netlist — device-agnostic place &amp; route, not "digital logic". This group each needs a live KLayout session.</p>
         </div>
         <div class="grid two">
           <a class="card" href="tutorial-fit-device.html">
-            <span class="feature-kicker">structdevice · digital P&amp;R</span>
+            <span class="feature-kicker">structdevice · PnR</span>
             <span class="tier live">Needs a live KLayout session</span>
             <h3>Custom device: fit → PCell → P&amp;R → LVS</h3>
-            <p>Fit a parametric edge model from a few exemplar drawings at different sizes, register a real PCell, place 173 instances from a netlist, run FlexDR detailed routing, and finish with live LVS match=True. Starter, needs a live KLayout session.</p>
+            <p>Fit a parametric edge model from a few exemplar drawings at different sizes, register a real PCell, place 173 instances from a netlist, run FlexDR detailed routing, finish with live LVS match=True.</p>
+            <p class="card-run"><code>python example_template/digital/fit_device_pnr_lvs.py --port &lt;port&gt;</code></p>
+            <p class="card-metric">routed 94/94 · LVS match=True · 173 devices</p>
             <span class="card-more">Read the tutorial →</span>
           </a>
           <a class="card" href="tutorial-padframe.html">
             <span class="feature-kicker green">structdevice · padframe</span>
             <span class="tier live">Needs a live KLayout session</span>
             <h3>A probe-card-first padframe</h3>
-            <p>The probe card / pad ring exists first and the circuit must meet it: harvest the pad ring, assign net→pad, place half-in/half-out, split the power grid by region, and finish with both the card and <code>--no-card</code> bare-stub modes each passing live LVS match=True. Starter, needs a live KLayout session.</p>
+            <p>The probe card / pad ring exists first and the circuit must meet it: harvest the ring, assign net→pad, place half-in/half-out, split the power grid by region — both the card and <code>--no-card</code> bare-stub modes pass live LVS match=True.</p>
+            <p class="card-run"><code>python example_template/digital/padframe_pnr_lvs.py --port &lt;port&gt;</code></p>
+            <p class="card-metric">routed 94/94 · LVS match=True · 16 pads connected</p>
             <span class="card-more">Read the tutorial →</span>
           </a>
+          <div class="card">
+            <span class="feature-kicker green">structdevice · scale</span>
+            <span class="tier live">Needs a live KLayout session</span>
+            <h3>Multilayer place &amp; route at scale</h3>
+            <p>A 766-device synthetic netlist (toy 4-bit ALU, 268 gates); a built-in layer-count advisor compares core-area cost on a 3-layer vs a custom 7-layer stack, then a multilayer routing engine wires it. Copy the file, edit <code>PUBLIC_MULTILAYER</code> for your own stack.</p>
+            <p class="card-run"><code>python example_template/digital/multilayer_pnr_lvs.py --port &lt;port&gt;</code></p>
+            <p class="card-metric">routed 405/405 · LVS match=True · 766 devices · ~17s (run the command; no separate step-by-step page)</p>
+          </div>
+          <div class="card">
+            <span class="feature-kicker">structdevice · netlist</span>
+            <span class="tier live">Needs a live KLayout session</span>
+            <h3>Hand-written netlist → lint → P&amp;R → LVS</h3>
+            <p>A 3-stage ring oscillator <strong>hand-written</strong> as a netlist, first <code>lint_netlist</code> (fix-it hints before any geometry exists), then place / route / LVS. A netlist is pure data — any topology, no logic synthesizer needed.</p>
+            <p class="card-run"><code>python example_template/digital/chat_to_netlist_pnr.py --port &lt;port&gt;</code></p>
+            <p class="card-metric">lint 0 err · routed 3/3 · LVS match=True (run the command; no separate step-by-step page)</p>
+          </div>
         </div>
       </div>
     </section>
@@ -189,8 +270,31 @@
             <span class="feature-kicker">control plane · multi-window</span>
             <span class="tier live">Needs 2+ live KLayout windows</span>
             <h3>Multi-window collaboration: one agent, many KLayouts</h3>
-            <p>One agent holds several windows at once, each on its own port. A step-by-step walk through the three toolbar moves: SEND (selection → durable memory), GFTGT (aim gdsfactory/klive at a window), cross-session transfer (two-phase dry-run→commit move of geometry) -- all from real live-session window captures with annotation.</p>
+            <p>One agent holds several windows at once, each on its own port. A step-by-step walk through the three toolbar moves: SEND (selection → durable memory), GFTGT (aim gdsfactory/klive at a window), cross-session transfer (two-phase dry-run→commit move) — all from real live-session window captures with annotation.</p>
             <span class="card-more">Read the tutorial →</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section alt">
+      <div class="container">
+        <div class="section-head">
+          <h2 id="guides" class="anchor-h">Guides <code>guides</code></h2>
+          <p>Standalone, complete guides not tied to one demo: verification and 3D visualization.</p>
+        </div>
+        <div class="grid two">
+          <a class="card" href="drc-lvs.html">
+            <span class="feature-kicker">Guide · DRC &amp; LVS</span>
+            <h3>DRC · LVS</h3>
+            <p>From first deck to production runset: a DRC-language crash course, a same-source starter deck, KLayout's native LVS pipeline end to end.</p>
+            <span class="card-more">Read the guide →</span>
+          </a>
+          <a class="card" href="25d-view.html">
+            <span class="feature-kicker green">Guide · 2.5d View</span>
+            <h3>2.5D View</h3>
+            <p>Your layer stack in 3D from one process declaration: a single call drives KLayout's native 2.5d viewer.</p>
+            <span class="card-more">Read the guide →</span>
           </a>
         </div>
       </div>
@@ -199,8 +303,8 @@
 
   <footer class="footer">
     <div class="footer-grid">
-      <div><h2>klink</h2><p>Each tutorial is a real, staged run of one demo -- follow along.</p></div>
-      <div><h3>Read on</h3><p><a href="concepts.html">Core Concepts</a></p><p><a href="mcp-reference.html">MCP Tool Reference</a></p></div>
+      <div><h2>klink</h2><p>Tutorials = learn klink + runnable demos, all in one place.</p></div>
+      <div><h3>Read on</h3><p><a href="concepts.html">Core Concepts</a></p><p><a href="workflows.html">Workflows</a></p><p><a href="mcp-reference.html">MCP Tool Reference</a></p></div>
       <div><h3>Install</h3><p><a href="quickstart.html">Quickstart</a></p></div>
     </div>
   </footer>

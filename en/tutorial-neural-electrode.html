@@ -54,7 +54,60 @@
     }
   </style>
 </head>
-<body data-page="tutorials">
+<body data-page="tutorials" class="has-sidebar">
+  <aside class="site-sidebar">
+    <a class="sb-brand" href="index.html"><span class="brand-mark">k</span>klink</a>
+    <nav class="sb-nav" aria-label="Site structure">
+      <div class="sb-group">
+        <div class="sb-title">Get started</div>
+        <a href="index.html">Home · what klink is</a>
+        <a href="quickstart.html">Quickstart</a>
+        <a href="concepts.html">Core concepts</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Workflows · human+agent</div>
+        <a href="workflows.html">Workflows in depth (illustrated)</a>
+        <a href="tutorial-multiwindow.html">Multi-window collaboration</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Chat walkthroughs</div>
+        <a href="case-hallbar-chat.html">Hall bar from one sentence</a>
+        <a href="case-drc-chat.html">DRC catch &amp; fix</a>
+        <a href="case-fit-lvs-chat.html">Fit a device to LVS</a>
+        <a href="case-gf-reroute-chat.html">Photonics: ports &amp; drag-reroute</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Step-by-step tutorials</div>
+        <a href="tutorials.html">Tutorials overview</a>
+        <a href="tutorial-hallbar.html">Hall bar device</a>
+        <a href="tutorial-ebl-wraparound.html">EBL wraparound</a>
+        <a href="tutorial-neural-electrode.html">Neural electrode array</a>
+        <a href="tutorial-gf-ports.html">Photonics · three ways to ports</a>
+        <a href="tutorial-gf-mzi.html">Photonics · gf MZI takeover</a>
+        <a href="tutorial-passives.html">Passive templates</a>
+        <a href="tutorial-fit-device.html">Fit device &rarr; PnR &rarr; LVS</a>
+        <a href="tutorial-padframe.html">Probe-card-first padframe</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Guides</div>
+        <a href="drc-lvs.html">DRC · LVS</a>
+        <a href="25d-view.html">2.5D View</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Reference</div>
+        <a href="mcp-reference.html">MCP tool catalog</a>
+        <a href="plugin-packages.html">Writing extension packages</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Architecture</div>
+        <a href="architecture.html">Architecture &amp; boundaries</a>
+      </div>
+    </nav>
+    <div class="sb-foot">
+      <a href="https://github.com/klinkdev2026/klayout-klink">GitHub ↗</a>
+      <a href="../index.html">中文</a>
+    </div>
+  </aside>
   <header class="site-header">
     <div class="nav-shell">
       <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
@@ -62,10 +115,8 @@
         <a href="index.html" data-nav="home">Home</a>
         <a href="quickstart.html" data-nav="quickstart">Quickstart</a>
         <a href="tutorials.html" data-nav="tutorials" class="active">Tutorials</a>
-        <a href="features.html" data-nav="features">Features</a>
         <a href="workflows.html" data-nav="workflows">Workflows</a>
         <a href="mcp-reference.html" data-nav="mcp-reference">MCP Reference</a>
-        <a href="examples.html" data-nav="examples">Examples</a>
         <a href="architecture.html" data-nav="architecture">Architecture</a>
       </nav>
       <div class="nav-actions">
@@ -84,7 +135,7 @@
       <div class="container">
         <div class="eyebrow">Step-by-step tutorial · nanodevice · batch RPC</div>
         <h1>Step-by-step: drawing a neural electrode harness</h1>
-        <p>This walks through <code>example_template/nanodevice/neural_electrode.py</code> from the public gallery (for the demo's function, requirements, and measured numbers, see <a href="examples.html#neural">Examples · Neural electrode</a>). It's the third in the series, after <a href="tutorial-hallbar.html">Hall bar</a> and <a href="tutorial-ebl-wraparound.html">EBL wraparound</a>: same Port/Anchor/geometry-first loop, but this time the headline feature is <strong>parametric generation + batch RPCs</strong> -- one <code>--elec-rows</code> argument changes the electrode array's row count, and across a chip that spans nearly ten thousand microns, 394 geometry objects get written with just 3 staged <code>shape.insert_many</code> calls (1 call in production).</p>
+        <p>This walks through <code>example_template/nanodevice/neural_electrode.py</code> from the public gallery (for the demo's function, requirements, and measured numbers, see <a href="tutorial-neural-electrode.html">Examples · Neural electrode</a>). It's the third in the series, after <a href="tutorial-hallbar.html">Hall bar</a> and <a href="tutorial-ebl-wraparound.html">EBL wraparound</a>: same Port/Anchor/geometry-first loop, but this time the headline feature is <strong>parametric generation + batch RPCs</strong> -- one <code>--elec-rows</code> argument changes the electrode array's row count, and across a chip that spans nearly ten thousand microns, 394 geometry objects get written with just 3 staged <code>shape.insert_many</code> calls (1 call in production).</p>
       </div>
     </section>
 
