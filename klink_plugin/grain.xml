@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <salt-grain>
  <name>klink</name>
- <version>0.1.3</version>
+ <version>0.1.4</version>
  <api-version/>
  <title>KLink - Programmable KLayout RPC Bridge</title>
  <doc>Bidirectional TCP RPC server embedded in KLayout. Exposes layout / cell / shape / selection / exec / DRC operations to external Python clients (and future LLM agents) without blocking the GUI.</doc>

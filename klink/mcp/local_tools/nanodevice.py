@@ -61,7 +61,7 @@ def _tool_nanodevice_hallbar(ctx, arguments: dict) -> dict:
     "Load (or detect) nanodevice flake traces and commit them as polygons "
     "into a live KLayout cell, in one call. Pass traces_path for a "
     "precomputed traces.json, or image (+pixel_size_um) to run detection "
-    "(requires scipy + scikit-learn + scikit-image in this interpreter). "
+    "(requires cv2/opencv + numpy in this interpreter). "
     "State persists on disk; failures return instructions and change "
     "nothing.",
     {

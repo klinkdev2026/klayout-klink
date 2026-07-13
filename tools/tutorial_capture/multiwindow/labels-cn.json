@@ -1,0 +1,16 @@
+{
+  "t_title": "klink 插件工具栏 · 每个 KLayout 窗口右上角",
+  "t_k": "K8765  =  端口标志 · 这个窗口就是会话 8765",
+  "t_send": "SEND  =  选区 → 持久 id (agent 能引用“我刚发的那个”)",
+  "t_gftgt": "GFTGT  =  把本窗口设为 gdsfactory/klive 目标 (端口 8082)",
+  "t_rec": "REC  =  录制 → 可回放脚本",
+  "banner": "一个 agent 同时控制多个 KLayout · 每个窗口 = 一个端口(会话),靠工具栏 K876x 自我标识",
+  "s_title": "① 选中器件 → 点 SEND",
+  "s_detail": "status: sent · 5 个对象 · send_seq 单调递增 → agent 记成 sel_xxxx,以后“我刚发的那个”就指它",
+  "s_sel": "选区(5 个对象,已高亮)",
+  "g_title": "GFTGT: 把本窗口设成 gdsfactory / klive 目标",
+  "g_detail": "klive_target_session = K8767 → 硅光/gf 代码经 klive(8082) 直接写进这个窗口",
+  "b_before": "① transfer 前:K8767 只有一个空着陆框",
+  "a_title": "② 跨窗口 transfer:器件从 K8765 → K8767",
+  "a_detail": "flat-selection 两阶段:dry-run inserted 0 → commit inserted 5 (10/0×3 + 20/0×2)"
+}

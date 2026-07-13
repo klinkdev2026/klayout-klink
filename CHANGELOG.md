@@ -4,8 +4,13 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project does not use dated entries (versions only).
 
-## Unreleased
+## 0.1.4
 
+- New photonics starter `gf_ports` (`example_template/photonics/gf_ports.py`):
+  the three ways to get a klink Port — hand-drawn triangle conversion
+  (including a deliberately-wrong cautionary case), gdsfactory-native
+  auto-ports, and blackbox stub harvesting — plus the SEND / route / drag /
+  `--reroute` loop.
 - Ecosystem extension point: third-party pip packages extend klink through
   the `klink.plugins` entry-point group — contributed MCP tools appear in
   `klink.find_tools` under their own domain, and named resources (profiles,

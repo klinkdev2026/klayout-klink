@@ -270,9 +270,14 @@ DOMAINS: "OrderedDict[str, dict]" = OrderedDict([
             "- nanodevice.detect_commit — commit flake traces as polygons from a "
             "precomputed traces.json, or run live detection from a microscope "
             "image. Live image detection needs cv2 (OpenCV) + numpy in this "
-            "interpreter; the traces.json path needs neither. (The MCP tool's "
-            "own one-line description mis-states the deps as scipy/scikit-* — the "
-            "real imports are cv2 + numpy; tool-description fix pending.)"
+            "interpreter; the traces.json path needs neither.\n"
+            "- EBL wraparound is a runnable starter example, not a one-call "
+            "tool: example_template/nanodevice/ebl_wraparound.py "
+            "(klink.domains.nanodevice.devices.wraparound.build_wraparound_demo). "
+            "There is no nanodevice.wraparound MCP tool — if the user wants a "
+            "wraparound device, point them at running that example (it takes "
+            "process layers explicitly), don't imply an equivalent one-call "
+            "tool exists."
         ),
     }),
     ("device_photonics", {

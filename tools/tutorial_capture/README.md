@@ -41,6 +41,14 @@ gf_mzi_module/draw_gf_mzi_tutorial.py             -> tutorial-gf-mzi.html
   gf_mzi_module/annotate_detail.py
 fit_device/draw_fit_device_tutorial.py            -> tutorial-fit-device.html
   fit_device/annotate_detail.py                   (fit-model arrows on the exemplar crop)
+gf_ports/draw_gf_ports_tutorial.py                -> tutorial-gf-ports.html (see its own README.md --
+                                                      writes straight into the website's asset dir by
+                                                      default, and its Turn-5 SEND figure is a full-window
+                                                      PowerShell screenshot, not a view.screenshot clip)
+multiwindow/draw_multiwindow_tutorial.py          -> tutorial-multiwindow.html + the workflows.html
+                                                      SEND/GFTGT/transfer figures (see its own README.md --
+                                                      drives TWO live sessions at once, all six figures are
+                                                      full-window PowerShell screenshots, CN + EN sets)
 ```
 
 `hallbar/` has no `annotate_detail.py` — its one annotated figure

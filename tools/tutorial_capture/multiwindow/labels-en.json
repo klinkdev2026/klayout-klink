@@ -1,0 +1,16 @@
+{
+  "t_title": "klink plugin toolbar - top-right of every KLayout window",
+  "t_k": "K8765  =  port badge - this window is session 8765",
+  "t_send": "SEND  =  selection -> durable id (agent recalls 'the one I just sent')",
+  "t_gftgt": "GFTGT  =  mark this window as the gdsfactory/klive target (port 8082)",
+  "t_rec": "REC  =  record -> replayable script",
+  "banner": "One agent controls many KLayouts - each window = one port (session), self-identified by the toolbar K876x badge",
+  "s_title": "(1) select the device -> click SEND",
+  "s_detail": "status: sent - 5 objects - send_seq increments monotonically -> agent stores it as sel_xxxx; 'the one I just sent' now points to it",
+  "s_sel": "selection (5 objects, highlighted)",
+  "g_title": "GFTGT: mark this window as the gdsfactory / klive target",
+  "g_detail": "klive_target_session = K8767 -> gf/photonics code writes into this window via klive (8082)",
+  "b_before": "(1) before transfer: K8767 has only an empty landing frame",
+  "a_title": "(2) cross-window transfer: device from K8765 -> K8767",
+  "a_detail": "flat-selection, two phases: dry-run inserted 0 -> commit inserted 5 (10/0 x3 + 20/0 x2)"
+}
