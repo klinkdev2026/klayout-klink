@@ -3,7 +3,8 @@
 > 中文见 [demos.zh-CN.md](demos.zh-CN.md)
 
 The public gallery lives under `examples_klink/public/demos/`, grouped into
-category subfolders (`nanodevice/`, `photonics/`, `digital/`, `passives/`).
+category subfolders (`nanodevice/`, `photonics/`, `digital/`, `passives/`,
+`layout/`).
 None needs confidential geometry from you. Two run fully offline; the digital
 P&R demos need a live KLayout session (but still no external GDS); the
 gdsfactory takeover also needs gdsfactory in the same interpreter. This page is
@@ -21,9 +22,10 @@ process — the flow is identical.
 > | category | starters |
 > |---|---|
 > | `nanodevice/` | ebl_wraparound, hallbar, neural_electrode |
-> | `photonics/` | gf_mzi_module |
+> | `photonics/` | gf_mzi_module, gf_ports |
 > | `passives/` | idc_capacitor, spiral_inductor, saw_idt_filter, baw_fbar_planview |
 > | `digital/` | fit_device_pnr_lvs, padframe_pnr_lvs, chat_to_netlist_pnr, multilayer_pnr_lvs |
+> | `layout/` | fill_region_demo |
 >
 > The `digital/` family does live P&R + LVS, so those need a running KLayout
 > session (`--port <session-port>`); they cross-import within the folder and read
@@ -125,6 +127,24 @@ target): no-two-edges-parallel **true**, pentagon area 1999.996 µm² (within
 1%), top/bottom overlap = 100% of the pentagon, 2 ports (`TOP`/`BOT`).
 
 ## Runs live (KLayout + plugin, still no GDS)
+
+### Fill / tiling — arbitrary regions
+
+```bash
+python -m examples_klink.public.demos.layout.fill_region_demo --port <session-port>
+```
+
+The RPC face of KLayout's Fill Utility (`cell.fill_region`). Tiles a 2×1 µm
+fill cell over five regions in one demo cell: a hand-drawn polygon taken
+straight from a scratch layer (`region_layers`), a full circle, a 90° pie
+sector, a rectangle with gaps, and a spaced-vs-dense circle contrast
+(gap = step − footprint, per direction). Only tiles that fit entirely inside
+a region are placed; each call reports the uncovered rim as
+`remaining_area_um2`, and the printed table self-checks:
+placed × footprint area + remaining == region area. Measured: blob 253,
+circle 187, sector 140, gapped 60, spaced 64 tiles — every row balances
+exactly. Each fill is one undo step; every tile is an instance of the fill
+cell, so hierarchy stays clean.
 
 ### Neural-electrode harness
 

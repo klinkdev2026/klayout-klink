@@ -17,8 +17,8 @@ Contract for anything in here:
 ## Buckets
 
 - `demos/` — the flagship runnable examples + the **STARTERS** (neural_electrode,
-  ebl_wraparound, hallbar) that are ALSO bundled in the wheel / scaffolded by
-  `klink init` into a user project's `example_template/`. `gf_mzi_module.py`
+  ebl_wraparound, hallbar, fill_region_demo, ...) that are ALSO bundled in the
+  wheel / scaffolded by `klink init` into a user project's `example_template/`. `gf_mzi_module.py`
   is the gdsfactory-takeover flagship: a complete thermo-optic MZI (GCs,
   MMIs, heater arms, pads) written as an ordinary gf script, taken over by
   `import_gf_component` — klink re-routes its optics AND heater metal from

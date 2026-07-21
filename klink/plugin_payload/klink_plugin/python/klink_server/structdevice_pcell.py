@@ -345,6 +345,12 @@ def register_fitted_device(name: str, table_path: str) -> dict:
     decl = KlinkFittedDevicePcell(name, table_path, table)
     lib.layout().register_pcell(name, decl)
     _REGISTERED[name] = table_path
+    try:
+        # Push the new declaration into any layout already using the library,
+        # so no manual GUI "refresh libraries" step is needed.
+        lib.refresh()
+    except Exception:
+        pass
     return {
         "library": _LIB_NAME,
         "pcell": name,

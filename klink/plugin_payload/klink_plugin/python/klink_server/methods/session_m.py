@@ -50,9 +50,9 @@ def session_label_set(params, ctx):
     session_id = str(params.get("session_id") or "").strip()
     label = str(params.get("label") or "").strip()
     if not session_id:
-        raise RpcError(ErrorCode.INVALID_PARAMS, "session_id is required")
+        raise RpcError(ErrorCode.BAD_PARAMS, "session_id is required")
     if not label:
-        raise RpcError(ErrorCode.INVALID_PARAMS, "label is required")
+        raise RpcError(ErrorCode.BAD_PARAMS, "label is required")
 
     aliases = [str(a).strip() for a in params.get("aliases", []) if str(a).strip()]
     description = str(params.get("description") or "").strip()

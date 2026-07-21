@@ -17,6 +17,7 @@
       "pcell.libraries",
       "pcell.list",
       "pcell.info",
+      "library.list",
       "selection.get",
       "edit.status"
     ]
@@ -44,6 +45,7 @@
         "structdevice.connect_nets",
         "structdevice.build_from_netlist",
         "structdevice.register_pcell",
+        "library.refresh",
         "structdevice.lvs_check",
         "structdevice.spec_write",
         "nanodevice.hallbar",
@@ -134,7 +136,10 @@
         "@read_core",
         "cell.create",
         "cell.rename",
+        "cell.fill_region",
         "layer.ensure",
+        "library.refresh",
+        "library.register_file",
         "shape.insert_box",
         "shape.insert_boxes",
         "shape.insert_many",

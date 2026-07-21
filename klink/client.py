@@ -591,6 +591,33 @@ class KLinkClient:
     def pcell_info(self, pcell: str, library: str = "Basic") -> dict:
         return self.call("pcell.info", {"library": library, "pcell": pcell})
 
+    def cell_fill_region(self, cell, fill_cell, **kwargs) -> dict:
+        p: dict = {"cell": cell, "fill_cell": fill_cell}
+        p.update({k: v for k, v in kwargs.items() if v is not None})
+        return self.call("cell.fill_region", p)
+
+    # ---- library management ----
+    def library_list(self) -> dict:
+        return self.call("library.list")
+
+    def library_refresh(self, library: Optional[str] = None) -> dict:
+        p = {}
+        if library is not None:
+            p["library"] = library
+        return self.call("library.refresh", p)
+
+    def library_register_file(self, path: str, name: Optional[str] = None,
+                              technology: Optional[str] = None,
+                              description: Optional[str] = None) -> dict:
+        p: dict = {"path": path}
+        if name is not None:
+            p["name"] = name
+        if technology is not None:
+            p["technology"] = technology
+        if description is not None:
+            p["description"] = description
+        return self.call("library.register_file", p)
+
     # ---- M3 Round 5: edit history ----
     def edit_undo(self) -> dict:
         return self.call("edit.undo")

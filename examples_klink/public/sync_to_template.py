@@ -14,6 +14,7 @@ a flat pile:
       nanodevice/  hallbar, ebl_wraparound, neural_electrode
       photonics/   gf_mzi_module
       passives/    idc_capacitor, spiral_inductor, saw_idt_filter, baw_fbar_planview
+      layout/      fill_region_demo
 
 A starter must be fully self-contained: it imports only `klink` (plus
 `klayout.db` for offline geometry), carries its own layers, and needs no bundled
@@ -54,6 +55,10 @@ STARTERS: dict[str, list[tuple[str, str]]] = {
         ("demos/passives", "spiral_inductor.py"),
         ("demos/passives", "saw_idt_filter.py"),
         ("demos/passives", "baw_fbar_planview.py"),
+    ],
+    # generic layout tooling (LIVE: needs a running KLayout with klink loaded)
+    "layout": [
+        ("demos/layout", "fill_region_demo.py"),
     ],
     # digital P&R -> LVS: a self-contained family that cross-imports within the
     # folder and reads its own bundled netlists, so the whole folder ships (the

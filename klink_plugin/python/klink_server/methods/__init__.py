@@ -7,6 +7,8 @@ from . import meta_m  # noqa: F401
 from . import layout_m  # noqa: F401
 from . import cell_m  # noqa: F401
 from . import layer_m  # noqa: F401
+from . import library_m  # noqa: F401
+from . import fill_m  # noqa: F401
 from . import shape_m  # noqa: F401
 from . import instance_m  # noqa: F401
 from . import pcell_m  # noqa: F401
