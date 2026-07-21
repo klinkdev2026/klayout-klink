@@ -593,6 +593,23 @@ class KLinkClient:
     def pcell_info(self, pcell: str, library: str = "Basic") -> dict:
         return self.call("pcell.info", {"library": library, "pcell": pcell})
 
+    def view_highlight(self, *, boxes_um=None, polygons_um=None,
+                       color: Optional[str] = None, line_width: int = 2,
+                       halo: Optional[bool] = None,
+                       expire_s: Optional[float] = None,
+                       clear: bool = True) -> dict:
+        p: dict = {"line_width": int(line_width), "clear": bool(clear)}
+        if boxes_um is not None: p["boxes_um"] = [list(b) for b in boxes_um]
+        if polygons_um is not None:
+            p["polygons_um"] = [[list(pt) for pt in poly] for poly in polygons_um]
+        if color is not None: p["color"] = color
+        if halo is not None: p["halo"] = bool(halo)
+        if expire_s is not None: p["expire_s"] = float(expire_s)
+        return self.call("view.highlight", p)
+
+    def view_highlight_clear(self) -> dict:
+        return self.call("view.highlight_clear")
+
     def cell_fill_region(self, cell, fill_cell, **kwargs) -> dict:
         p: dict = {"cell": cell, "fill_cell": fill_cell}
         p.update({k: v for k, v in kwargs.items() if v is not None})
