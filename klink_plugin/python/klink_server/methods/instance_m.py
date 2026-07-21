@@ -236,6 +236,40 @@ def _validate_batch_items(values, name: str) -> list:
     return values
 
 
+def _resolve_child_cell(ly, child_ref, library=None):
+    """Resolve the cell to instantiate. Without `library` this is an
+    ordinary lookup in the active layout. With `library`, the cell is
+    looked up in that registered library's layout and imported into the
+    active layout as a library proxy (Layout#add_lib_cell — idempotent:
+    repeated placements reuse one proxy), which is how cells from
+    libraries registered via library.register_file become placeable by
+    name without copying their tree in."""
+    if library is None:
+        return _resolve_cell(ly, child_ref)
+    from .pcell_m import _resolve_library
+
+    lib = _resolve_library(str(library))
+    lib_ly = lib.layout()
+    src = None
+    try:
+        src = lib_ly.cell(child_ref if isinstance(child_ref, int) else str(child_ref))
+    except Exception:
+        src = None
+    if src is None:
+        tops = []
+        try:
+            for tc in lib_ly.top_cells()[:20]:
+                tops.append(lib_ly.cell_name(tc.cell_index()))
+        except Exception:
+            pass
+        raise RpcError(
+            ErrorCode.NOT_FOUND,
+            f"library {lib.name()!r} has no cell {child_ref!r}",
+            hint=f"top cells in this library: {tops}; library.list shows all libraries",
+        )
+    return ly.cell(ly.add_lib_cell(lib, src.cell_index()))
+
+
 def _build_cell_inst_array(cell_index: int, trans, array, dbu: float):
     """Build a pya.CellInstArray for `cell_index` with optional array.
 
@@ -337,7 +371,14 @@ def _build_cell_inst_array(cell_index: int, trans, array, dbu: float):
         "required": ["parent", "child"],
         "properties": {
             "parent": {"description": "parent cell (name or index)"},
-            "child":  {"description": "cell to instantiate (name or index)"},
+            "child":  {"description": "cell to instantiate (name or index; "
+                                      "with `library`, a cell name inside "
+                                      "that registered library)"},
+            "library": {"type": "string",
+                        "description": "registered library to take `child` "
+                                       "from (e.g. one made by "
+                                       "library.register_file); imported as "
+                                       "a proxy, not copied"},
             "position_um":  {"type": "array", "minItems": 2, "maxItems": 2},
             "position_dbu": {"type": "array", "minItems": 2, "maxItems": 2},
             "rotation":     {"type": "number", "default": 0, "description": "degrees CCW"},
@@ -378,7 +419,7 @@ def _build_cell_inst_array(cell_index: int, trans, array, dbu: float):
 def instance_insert(params, ctx):
     view, _, ly = _active_layout()
     parent = _resolve_cell(ly, params["parent"])
-    child = _resolve_cell(ly, params["child"])
+    child = _resolve_child_cell(ly, params["child"], params.get("library"))
     if parent.cell_index() == child.cell_index():
         raise RpcError(ErrorCode.BAD_PARAMS, "a cell cannot instantiate itself")
 
@@ -430,6 +471,9 @@ def instance_insert(params, ctx):
                     "required": ["child"],
                     "properties": {
                         "child": {"description": "cell to instantiate (name or index)"},
+                        "library": {"type": "string",
+                                    "description": "registered library to "
+                                                   "take `child` from"},
                         "position_um": {"type": "array", "minItems": 2, "maxItems": 2},
                         "position_dbu": {"type": "array", "minItems": 2, "maxItems": 2},
                         "rotation": {"type": "number", "default": 0},
@@ -469,7 +513,7 @@ def instance_insert_many(params, ctx):
     for i, item in enumerate(items):
         if "child" not in item:
             raise RpcError(ErrorCode.BAD_PARAMS, f"items[{i}]: 'child' is required")
-        child = _resolve_cell(ly, item["child"])
+        child = _resolve_child_cell(ly, item["child"], item.get("library"))
         if parent.cell_index() == child.cell_index():
             raise RpcError(ErrorCode.BAD_PARAMS, f"items[{i}]: a cell cannot instantiate itself")
         trans = _build_trans(item, ly.dbu)

@@ -321,6 +321,7 @@ class KLinkClient:
 
     # ---- M3 instance writes ----
     def instance_insert(self, parent, child, *,
+                        library: Optional[str] = None,
                         position_um=None, position_dbu=None,
                         rotation: float = 0, mirror: bool = False,
                         magnification: float = 1.0,
@@ -331,6 +332,7 @@ class KLinkClient:
             "mirror": bool(mirror),
             "magnification": float(magnification),
         }
+        if library is not None: p["library"] = library
         if position_um is not None: p["position_um"] = list(position_um)
         if position_dbu is not None: p["position_dbu"] = list(position_dbu)
         if array is not None: p["array"] = dict(array)
