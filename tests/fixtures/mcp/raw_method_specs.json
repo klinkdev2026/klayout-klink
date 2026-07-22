@@ -374,6 +374,86 @@
     ]
   },
   {
+    "name": "layout.import_file",
+    "description": "MERGE a layout file (GDS/OASIS/...) into the ACTIVE layout — the load-time mapping workflow (official LoadLayoutOptions), unlike layout.show_file which opens a file in its own tab. `layer_map` remaps layers while reading ([{from: 'L/D', to: 'L/D'}, ...]); `create_other_layers` (default true) controls whether unlisted layers are read too; `on_conflict` decides same-name cells: 'rename' (default, new cells get a $1-style suffix), 'add' (content merged into the existing cell), 'overwrite' (old cell replaced), 'skip' (new cell dropped). One undo step. Returns cells/layers added and the new top cells.",
+    "params": {
+      "type": "object",
+      "required": [
+        "path"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "layer_map": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "from",
+              "to"
+            ],
+            "properties": {
+              "from": {
+                "type": "string"
+              },
+              "to": {
+                "type": "string"
+              }
+            }
+          },
+          "description": "[{from: 'L/D', to: 'L/D'}, ...]"
+        },
+        "create_other_layers": {
+          "type": "boolean",
+          "default": true
+        },
+        "on_conflict": {
+          "type": "string",
+          "enum": [
+            "rename",
+            "add",
+            "overwrite",
+            "skip"
+          ],
+          "default": "rename"
+        }
+      },
+      "additionalProperties": false
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "cells_added": {
+          "type": "integer"
+        },
+        "new_cells": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "layers_added": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "on_conflict": {
+          "type": "string"
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "layout",
+      "write"
+    ]
+  },
+  {
     "name": "cell.list",
     "description": "Flat, paginated list of cells in the active layout. Use this to discover what cells exist. For hierarchy use cell.tree instead. Filtering: 'name_prefix' is a case-sensitive prefix match; 'top_only' restricts to top cells. Pagination: 'offset' + 'limit'.",
     "params": {

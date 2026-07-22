@@ -618,6 +618,16 @@ class KLinkClient:
         p.update({k: v for k, v in kwargs.items() if v is not None})
         return self.call("cell.fill_region", p)
 
+    def layout_import_file(self, path: str, *, layer_map=None,
+                           create_other_layers: bool = True,
+                           on_conflict: str = "rename") -> dict:
+        p: dict = {"path": path,
+                   "create_other_layers": bool(create_other_layers),
+                   "on_conflict": on_conflict}
+        if layer_map is not None:
+            p["layer_map"] = [dict(e) for e in layer_map]
+        return self.call("layout.import_file", p)
+
     # ---- geometry math ----
     def geometry_boolean(self, a: dict, b: dict, op: str,
                          write_to: Optional[dict] = None) -> dict:

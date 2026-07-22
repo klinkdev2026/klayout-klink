@@ -79,6 +79,7 @@
         "view.screenshot",
         "layout.save_file",
         "layout.show_file",
+        "layout.import_file",
         "layout.clear",
         "view.close_tab",
         "cell.delete"
