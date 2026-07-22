@@ -1128,6 +1128,184 @@
     ]
   },
   {
+    "name": "geometry.boolean",
+    "description": "Boolean between two layer sources: `op` is one of and/or/xor/not (not = a minus b). `a` and `b` are {cell, layer} — cells may differ (defaults: b.cell = a.cell), hierarchy is included and inputs are merged. Returns polygon_count / area_um2 / bbox_um of the result; pass `write_to` {cell?, layer} to ALSO write the result polygons (one undo step; default target cell = a.cell). Typical checks: overlap between two layers (op=and, area>0 means a short/contact), difference against an intent region (op=xor, area==0 means exact match).",
+    "params": {
+      "type": "object",
+      "required": [
+        "a",
+        "b",
+        "op"
+      ],
+      "properties": {
+        "a": {
+          "type": "object",
+          "required": [
+            "cell",
+            "layer"
+          ],
+          "properties": {
+            "cell": {},
+            "layer": {}
+          }
+        },
+        "b": {
+          "type": "object",
+          "required": [
+            "layer"
+          ],
+          "properties": {
+            "cell": {},
+            "layer": {}
+          }
+        },
+        "op": {
+          "type": "string",
+          "enum": [
+            "and",
+            "or",
+            "xor",
+            "not"
+          ]
+        },
+        "write_to": {
+          "type": "object",
+          "required": [
+            "layer"
+          ],
+          "properties": {
+            "cell": {},
+            "layer": {}
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "op": {
+          "type": "string"
+        },
+        "polygon_count": {
+          "type": "integer"
+        },
+        "area_um2": {
+          "type": "number"
+        },
+        "bbox_um": {
+          "type": "array"
+        },
+        "written": {
+          "type": [
+            "object",
+            "null"
+          ]
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "geometry",
+      "write"
+    ]
+  },
+  {
+    "name": "geometry.cell_xor",
+    "description": "Geometric diff between two cells, per layer (pure report, writes nothing): for every layer present in either cell, XOR the merged hierarchical geometry and report diff polygon_count / area_um2. `layers` restricts the comparison; `only_differing` (default true) omits identical layers from the listing. equal==true means byte-level geometric identity on every compared layer. THE tool for 'did my edit change only what I intended' — compare a backup/reference cell against the edited one.",
+    "params": {
+      "type": "object",
+      "required": [
+        "cell_a",
+        "cell_b"
+      ],
+      "properties": {
+        "cell_a": {
+          "description": "cell name or index"
+        },
+        "cell_b": {
+          "description": "cell name or index"
+        },
+        "layers": {
+          "type": "array",
+          "description": "['L/D', ...]; default = union of layers present in either cell"
+        },
+        "only_differing": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "equal": {
+          "type": "boolean"
+        },
+        "layers_compared": {
+          "type": "integer"
+        },
+        "layers_differing": {
+          "type": "integer"
+        },
+        "diff": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "tags": [
+      "geometry",
+      "read"
+    ]
+  },
+  {
+    "name": "geometry.density",
+    "description": "Covered-area density of one layer in a cell: merged hierarchical geometry area divided by the window area. `window_um` [l,b,r,t] defaults to the cell's bbox on that layer. Returns area_um2, window_area_um2 and density (0..1). The pre-check for dummy-fill decisions (pair with cell.fill_region).",
+    "params": {
+      "type": "object",
+      "required": [
+        "cell",
+        "layer"
+      ],
+      "properties": {
+        "cell": {
+          "description": "cell name or index"
+        },
+        "layer": {
+          "description": "'L/D' or {layer, datatype}"
+        },
+        "window_um": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4
+        }
+      },
+      "additionalProperties": false
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "area_um2": {
+          "type": "number"
+        },
+        "window_area_um2": {
+          "type": "number"
+        },
+        "density": {
+          "type": "number"
+        }
+      }
+    },
+    "tags": [
+      "geometry",
+      "read"
+    ]
+  },
+  {
     "name": "shape.query",
     "description": "Read shapes from ONE cell (no recursion) as JSON. Strongly recommended: narrow with 'layers' and 'bbox_dbu', and respect pagination via 'limit' (default 500, max 5000). Coordinates are in database units (dbu); multiply by layout dbu (from layout.info) to get microns. The 'truncated' flag means more shapes matched than 'limit' - call again with a tighter bbox.",
     "params": {

@@ -74,7 +74,7 @@ DOMAINS: "OrderedDict[str, dict]" = OrderedDict([
         "title": "Geometry & cell-structure authoring",
         "summary": "Create/inspect layouts, cells, layers, shapes, instances and PCells. The core drawing surface.",
         "prefixes": ["layout", "cell", "layer", "shape", "instance", "pcell",
-                     "library", "edit"],
+                     "library", "geometry", "edit"],
         "usage": (
             "Read first: layout.info, cell.list / cell.tree, layer.list, "
             "shape.query, instance.query, pcell.libraries / list / info.\n"

@@ -618,6 +618,28 @@ class KLinkClient:
         p.update({k: v for k, v in kwargs.items() if v is not None})
         return self.call("cell.fill_region", p)
 
+    # ---- geometry math ----
+    def geometry_boolean(self, a: dict, b: dict, op: str,
+                         write_to: Optional[dict] = None) -> dict:
+        p: dict = {"a": dict(a), "b": dict(b), "op": op}
+        if write_to is not None:
+            p["write_to"] = dict(write_to)
+        return self.call("geometry.boolean", p)
+
+    def geometry_cell_xor(self, cell_a, cell_b, *, layers=None,
+                          only_differing: bool = True) -> dict:
+        p: dict = {"cell_a": cell_a, "cell_b": cell_b,
+                   "only_differing": bool(only_differing)}
+        if layers is not None:
+            p["layers"] = list(layers)
+        return self.call("geometry.cell_xor", p)
+
+    def geometry_density(self, cell, layer, window_um=None) -> dict:
+        p: dict = {"cell": cell, "layer": layer}
+        if window_um is not None:
+            p["window_um"] = list(window_um)
+        return self.call("geometry.density", p)
+
     # ---- layer display (view-side) ----
     def layer_display_list(self) -> dict:
         return self.call("layer.display_list")
