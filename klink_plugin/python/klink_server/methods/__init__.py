@@ -11,6 +11,7 @@ from . import layer_view_m  # noqa: F401
 from . import library_m  # noqa: F401
 from . import fill_m  # noqa: F401
 from . import geometry_m  # noqa: F401
+from . import modify_m  # noqa: F401
 from . import shape_m  # noqa: F401
 from . import instance_m  # noqa: F401
 from . import pcell_m  # noqa: F401

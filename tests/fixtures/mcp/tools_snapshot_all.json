@@ -691,6 +691,159 @@
       }
     },
     {
+      "name": "shape.transform",
+      "description": "Move/rotate/mirror EXISTING shapes in place (no delete+redraw). Filter: `layers` (['L/D', ...]) and/or `bbox_um` (touching) — at least one is required so a bare call cannot silently rewrite the whole cell. Action: `move_um` [dx, dy], `rotation` (degrees CCW), `mirror`. Rotation/mirror happen about the matched set's combined bbox center (GUI-like), then the move applies. One undo step; zero matches is an error, not a silent no-op.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "cell"
+        ],
+        "properties": {
+          "cell": {
+            "description": "cell name or index"
+          },
+          "layers": {
+            "type": "array"
+          },
+          "bbox_um": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4
+          },
+          "move_um": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "rotation": {
+            "type": "number"
+          },
+          "mirror": {
+            "type": "boolean"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20000,
+            "default": 5000
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "shape.change_layer",
+      "description": "Move shapes from one layer to another within a cell (optionally only those touching `bbox_um`). The one-intention version of 'redraw this on the right layer'. One undo step; zero matches is an error.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "cell",
+          "from_layer",
+          "to_layer"
+        ],
+        "properties": {
+          "cell": {
+            "description": "cell name or index"
+          },
+          "from_layer": {
+            "description": "'L/D'"
+          },
+          "to_layer": {
+            "description": "'L/D'"
+          },
+          "bbox_um": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "instance.transform",
+      "description": "Move/rotate/mirror PLACED instances (arrays move as one object). Filter: `child` (cell name) and/or `bbox_um` (touching) — at least one required. Action: `move_um`, `rotation` (degrees CCW), `mirror`; rotation/mirror about the matched set's combined bbox center. One undo step; zero matches is an error.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "parent"
+        ],
+        "properties": {
+          "parent": {
+            "description": "parent cell name or index"
+          },
+          "child": {
+            "description": "only instances of this cell"
+          },
+          "bbox_um": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4
+          },
+          "move_um": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "rotation": {
+            "type": "number"
+          },
+          "mirror": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "cell.flatten",
+      "description": "Flatten a cell's hierarchy: child instances are dissolved into plain shapes inside the cell. `levels` (default -1 = all levels), `prune` (default true: child cells left orphaned are deleted), `dry_run` (default false: only report what would happen). DESTRUCTIVE for the cell's hierarchy — the flatten itself is one undo step; use dry_run first when unsure.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "cell"
+        ],
+        "properties": {
+          "cell": {
+            "description": "cell name or index"
+          },
+          "levels": {
+            "type": "integer",
+            "default": -1
+          },
+          "prune": {
+            "type": "boolean",
+            "default": true
+          },
+          "dry_run": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "pcell.convert_to_static",
+      "description": "Convert a PCell variant into an ordinary static cell (Layout#convert_cell_to_static) and — because KLayout leaves existing placements pointing at the old variant — retarget every instance in the layout to the new static cell, then delete the orphaned variant (`prune_variant`, default true). Afterwards the geometry is frozen: parameter editing no longer applies. One undo step.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "cell"
+        ],
+        "properties": {
+          "cell": {
+            "description": "PCell variant cell name or index"
+          },
+          "prune_variant": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
       "name": "shape.query",
       "description": "Read shapes from ONE cell (no recursion) as JSON. Strongly recommended: narrow with 'layers' and 'bbox_dbu', and respect pagination via 'limit' (default 500, max 5000). Coordinates are in database units (dbu); multiply by layout dbu (from layout.info) to get microns. The 'truncated' flag means more shapes matched than 'limit' - call again with a tighter bbox.",
       "inputSchema": {

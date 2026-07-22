@@ -618,6 +618,36 @@ class KLinkClient:
         p.update({k: v for k, v in kwargs.items() if v is not None})
         return self.call("cell.fill_region", p)
 
+    # ---- modification (edit existing geometry) ----
+    def shape_transform(self, cell, **kwargs) -> dict:
+        return self.call("shape.transform",
+                         {"cell": cell,
+                          **{k: v for k, v in kwargs.items() if v is not None}})
+
+    def shape_change_layer(self, cell, from_layer, to_layer,
+                           bbox_um=None) -> dict:
+        p: dict = {"cell": cell, "from_layer": from_layer,
+                   "to_layer": to_layer}
+        if bbox_um is not None:
+            p["bbox_um"] = list(bbox_um)
+        return self.call("shape.change_layer", p)
+
+    def instance_transform(self, parent, **kwargs) -> dict:
+        return self.call("instance.transform",
+                         {"parent": parent,
+                          **{k: v for k, v in kwargs.items() if v is not None}})
+
+    def cell_flatten(self, cell, levels: int = -1, prune: bool = True,
+                     dry_run: bool = False) -> dict:
+        return self.call("cell.flatten", {
+            "cell": cell, "levels": int(levels), "prune": bool(prune),
+            "dry_run": bool(dry_run)})
+
+    def pcell_convert_to_static(self, cell,
+                                prune_variant: bool = True) -> dict:
+        return self.call("pcell.convert_to_static",
+                         {"cell": cell, "prune_variant": bool(prune_variant)})
+
     def layout_import_file(self, path: str, *, layer_map=None,
                            create_other_layers: bool = True,
                            on_conflict: str = "rename") -> dict:
