@@ -594,6 +594,7 @@ class KLinkClient:
         return self.call("pcell.info", {"library": library, "pcell": pcell})
 
     def view_highlight(self, *, boxes_um=None, polygons_um=None,
+                       circles_um=None,
                        color: Optional[str] = None, line_width: int = 2,
                        halo: Optional[bool] = None,
                        expire_s: Optional[float] = None,
@@ -602,6 +603,8 @@ class KLinkClient:
         if boxes_um is not None: p["boxes_um"] = [list(b) for b in boxes_um]
         if polygons_um is not None:
             p["polygons_um"] = [[list(pt) for pt in poly] for poly in polygons_um]
+        if circles_um is not None:
+            p["circles_um"] = [dict(c) for c in circles_um]
         if color is not None: p["color"] = color
         if halo is not None: p["halo"] = bool(halo)
         if expire_s is not None: p["expire_s"] = float(expire_s)
@@ -653,10 +656,14 @@ class KLinkClient:
     def selection_clear(self) -> dict:
         return self.call("selection.clear")
 
-    def selection_set_box(self, cell, bbox_dbu, **kwargs) -> dict:
-        return self.call("selection.set_box", {
-            "cell": cell, "bbox_dbu": bbox_dbu, **kwargs,
-        })
+    def selection_set_box(self, cell, bbox_dbu=None, *, bbox_um=None,
+                          **kwargs) -> dict:
+        p: dict = {"cell": cell, **kwargs}
+        if bbox_um is not None:
+            p["bbox_um"] = list(bbox_um)
+        elif bbox_dbu is not None:
+            p["bbox_dbu"] = list(bbox_dbu)
+        return self.call("selection.set_box", p)
 
     def transfer_pending_set(self, package: dict) -> dict:
         return self.call("transfer.pending_set", {"package": dict(package)})

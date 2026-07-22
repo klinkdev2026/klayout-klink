@@ -166,18 +166,31 @@ def selection_clear(params, ctx):
 @method(
     "selection.set_box",
     description=(
-        "Select every shape in 'cell' whose bbox intersects 'bbox_dbu' "
-        "on any of the given 'layers' (default: all layers). Replaces "
-        "the current selection. Returns the number of objects selected."
+        "Select every shape in 'cell' whose bbox intersects the given box "
+        "(pass `bbox_um` in microns — preferred — or `bbox_dbu`) on any of "
+        "the given 'layers' (default: all layers). Set "
+        "`include_instances: true` to ALSO select placed child instances "
+        "overlapping the box (GUI box-select parity; an array instance "
+        "selects as one object). Replaces the current selection and shows "
+        "KLayout's native selection rendering. Returns the number of "
+        "objects selected."
     ),
     params_schema={
         "type": "object",
-        "required": ["cell", "bbox_dbu"],
+        "required": ["cell"],
         "properties": {
             "cell": {"description": "Cell name (str) or cell_index (int)"},
+            "bbox_um": {
+                "type": "array", "minItems": 4, "maxItems": 4,
+                "description": "[x1, y1, x2, y2] in microns (preferred)",
+            },
             "bbox_dbu": {
                 "type": "array", "minItems": 4, "maxItems": 4,
                 "description": "[x1, y1, x2, y2] in dbu",
+            },
+            "include_instances": {
+                "type": "boolean", "default": False,
+                "description": "also select child instances in the box",
             },
             "layers": {
                 "type": "array",
@@ -202,9 +215,20 @@ def selection_set_box(params, ctx):
 
     view, cv, ly = _active_layout()
     cell = _resolve_cell(ly, params["cell"])
-    bbox = _box_from_param(params.get("bbox_dbu"))
+    bbox = None
+    if params.get("bbox_um") is not None:
+        try:
+            l, b, r, t = (float(v) for v in params["bbox_um"])
+        except (TypeError, ValueError):
+            raise RpcError(ErrorCode.BAD_PARAMS, "bbox_um must be [l, b, r, t] in microns")
+        dbu = float(ly.dbu)
+        bbox = pya.Box(int(round(l / dbu)), int(round(b / dbu)),
+                       int(round(r / dbu)), int(round(t / dbu)))
+    else:
+        bbox = _box_from_param(params.get("bbox_dbu"))
     if bbox is None:
-        raise RpcError(ErrorCode.BAD_PARAMS, "bbox_dbu is required")
+        raise RpcError(ErrorCode.BAD_PARAMS,
+                       "pass bbox_um (microns, preferred) or bbox_dbu")
 
     layer_idxs = _resolve_layers(ly, params.get("layers"))
     if layer_idxs is None:
@@ -236,6 +260,17 @@ def selection_set_box(params, ctx):
             oip.layer = li
             oip.shape = s
             oip.top = cell.cell_index()
+            objs.append(oip)
+
+    if params.get("include_instances") and not truncated:
+        for inst in cell.each_overlapping_inst(bbox):
+            if len(objs) >= limit:
+                truncated = True
+                break
+            oip = pya.ObjectInstPath()
+            oip.cv_index = cv_index
+            oip.top = cell.cell_index()
+            oip.append_path(pya.InstElement.new(inst))
             objs.append(oip)
 
     view.object_selection = objs

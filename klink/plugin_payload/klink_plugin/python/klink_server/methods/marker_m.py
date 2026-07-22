@@ -88,8 +88,11 @@ def _active_count() -> int:
     description=(
         "Draw transient highlight markers on the current view to point the "
         "user at locations — view-layer overlays that do NOT touch the "
-        "layout, the selection, or undo. Pass `boxes_um` and/or "
-        "`polygons_um` (microns, top-cell coordinates). Style: `color` "
+        "layout, the selection, or undo. Pass `boxes_um`, `polygons_um` "
+        "and/or `circles_um` (microns, top-cell coordinates; circles_um "
+        "takes the SAME {center, radius, start/end_angle_deg} specs as "
+        "cell.fill_region, so a highlighted circle/sector is exactly the "
+        "fillable one — never hand-approximate an arc). Style: `color` "
         "('#RRGGBB', default red), `line_width` px, `halo`. By default "
         "REPLACES previous highlights (`clear: false` accumulates, e.g. "
         "different colors per category). `expire_s` auto-removes this "
@@ -110,6 +113,22 @@ def _active_count() -> int:
                 "items": {"type": "array",
                           "items": {"type": "array", "minItems": 2, "maxItems": 2}},
                 "description": "Highlight polygons as [[x, y], ...] in microns.",
+            },
+            "circles_um": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "required": ["center", "radius"],
+                    "properties": {
+                        "center": {"type": "array", "minItems": 2, "maxItems": 2},
+                        "radius": {"type": "number", "exclusiveMinimum": 0},
+                        "start_angle_deg": {"type": "number"},
+                        "end_angle_deg": {"type": "number"},
+                        "npoints": {"type": "integer", "minimum": 8},
+                    },
+                },
+                "description": "Circles/sectors in microns, same specs as "
+                               "cell.fill_region.",
             },
             "color": {"description": "'#RRGGBB' (default '#FF3030' red)"},
             "line_width": {"type": "integer", "minimum": 1, "default": 2},
@@ -139,14 +158,18 @@ def view_highlight(params, ctx):
     if view is None:
         raise RpcError(ErrorCode.NO_VIEW, "no layout view is open")
 
+    from .fill_m import circle_points_um
+
     boxes = params.get("boxes_um") or []
-    polys = params.get("polygons_um") or []
+    polys = list(params.get("polygons_um") or [])
+    for circ in params.get("circles_um") or []:
+        polys.append(circle_points_um(circ))
     if not boxes and not polys:
         raise RpcError(
             ErrorCode.BAD_PARAMS,
-            "pass at least one of boxes_um / polygons_um. To point at a "
-            "stored selection, read its bbox from interaction.selection.* "
-            "first and pass it as boxes_um.")
+            "pass at least one of boxes_um / polygons_um / circles_um. To "
+            "point at a stored selection, read its bbox from "
+            "interaction.selection.* first and pass it as boxes_um.")
     if len(boxes) + len(polys) > _MAX_MARKERS:
         raise RpcError(
             ErrorCode.BAD_PARAMS,

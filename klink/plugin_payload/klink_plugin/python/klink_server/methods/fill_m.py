@@ -49,6 +49,37 @@ def _parse_layer_spec(spec):
         "exclude layer entry %r must be 'L/D' or {layer, datatype}" % (spec,))
 
 
+def circle_points_um(circ) -> list:
+    """Expand one {center, radius, start_angle_deg?, end_angle_deg?,
+    npoints?} spec into micron polygon points. This is the shared region
+    language for circles/sectors: `cell.fill_region` and `view.highlight`
+    both accept `circles_um` and expand it here, so a highlighted sector
+    is exactly the filled sector."""
+    try:
+        cx, cy = (float(v) for v in circ["center"])
+        radius = float(circ["radius"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise RpcError(ErrorCode.BAD_PARAMS,
+                       "bad circle spec %r: %s" % (circ, exc))
+    a0 = float(circ.get("start_angle_deg", 0.0))
+    a1 = float(circ.get("end_angle_deg", a0 + 360.0))
+    while a1 <= a0:
+        a1 += 360.0
+    span = min(a1 - a0, 360.0)
+    full = span >= 360.0 - 1e-9
+    npts = int(circ.get("npoints") or 64)
+    n_arc = max(8, int(round(npts * span / 360.0)))
+    pts = []
+    if not full:
+        pts.append([cx, cy])
+    for i in range(n_arc + 1):
+        ang = math.radians(a0 + span * i / n_arc)
+        pts.append([cx + radius * math.cos(ang), cy + radius * math.sin(ang)])
+    if full:
+        pts.pop()  # closing point duplicates the first arc sample
+    return pts
+
+
 def _um_box(bbox_um, dbu) -> pya.Box:
     l, b, r, t = (float(v) for v in bbox_um)
     return pya.Box(int(round(l / dbu)), int(round(b / dbu)),
@@ -203,30 +234,10 @@ def cell_fill_region(params, ctx):
             raise RpcError(ErrorCode.BAD_PARAMS,
                            "bad polygon %r: %s" % (pts, exc))
     for circ in circles:
-        try:
-            cx, cy = (float(v) for v in circ["center"])
-            radius = float(circ["radius"])
-        except (KeyError, TypeError, ValueError) as exc:
-            raise RpcError(ErrorCode.BAD_PARAMS,
-                           "bad circle spec %r: %s" % (circ, exc))
-        a0 = float(circ.get("start_angle_deg", 0.0))
-        a1 = float(circ.get("end_angle_deg", a0 + 360.0))
-        while a1 <= a0:
-            a1 += 360.0
-        span = min(a1 - a0, 360.0)
-        full = span >= 360.0 - 1e-9
-        npts = int(circ.get("npoints") or 64)
-        n_arc = max(8, int(round(npts * span / 360.0)))
-        pts = []
-        if not full:
-            pts.append(pya.Point(int(round(cx / dbu)), int(round(cy / dbu))))
-        for i in range(n_arc + 1):
-            ang = math.radians(a0 + span * i / n_arc)
-            pts.append(pya.Point(int(round((cx + radius * math.cos(ang)) / dbu)),
-                                 int(round((cy + radius * math.sin(ang)) / dbu))))
-        if full:
-            pts.pop()  # closing point duplicates the first arc sample
-        region.insert(pya.Polygon(pts))
+        pts = circle_points_um(circ)
+        region.insert(pya.Polygon(
+            [pya.Point(int(round(x / dbu)), int(round(y / dbu)))
+             for x, y in pts]))
 
     for spec in region_layers:
         lnum, dnum = _parse_layer_spec(spec)
