@@ -279,6 +279,261 @@
       }
     },
     {
+      "name": "layer.display_list",
+      "description": "List the current view's layer DISPLAY entries: layer/datatype, `visible`, `fill_color`/`frame_color` ('#RRGGBB'), `dither_pattern` index and `name`. This is the view-side counterpart of layer.list (which lists data layers).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "layer.set_visible",
+      "description": "Show or hide layers in the current view (display only — layout data untouched, no undo involved). `layers` = ['L/D', ...]; `visible` (default true); `exclusive: true` = show ONLY the listed layers and hide every other one (the 'let me see just 1/0 and 3/0' debugging call). Unknown layers are reported, not silently ignored.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "layers"
+        ],
+        "properties": {
+          "layers": {
+            "type": "array",
+            "minItems": 1,
+            "description": "['L/D', ...] or [{layer, datatype}]"
+          },
+          "visible": {
+            "type": "boolean",
+            "default": true
+          },
+          "exclusive": {
+            "type": "boolean",
+            "default": false,
+            "description": "hide all layers NOT listed"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "layer.set_style",
+      "description": "Style one layer's display in the current view: `color` sets fill AND frame ('#RRGGBB'); or set `fill_color` / `frame_color` separately; `dither_pattern` (KLayout stipple index, 0..) and `line_width` optionally. Display only — layout data untouched.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "layer"
+        ],
+        "properties": {
+          "layer": {
+            "description": "'L/D' or {layer, datatype}"
+          },
+          "color": {
+            "description": "'#RRGGBB' for both fill and frame"
+          },
+          "fill_color": {
+            "description": "'#RRGGBB'"
+          },
+          "frame_color": {
+            "description": "'#RRGGBB'"
+          },
+          "dither_pattern": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "line_width": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "layer.load_lyp",
+      "description": "Load a KLayout .lyp layer-properties file into the current view (colors/stipples/visibility for the whole stack in one call).",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "path"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "layer.save_lyp",
+      "description": "Save the current view's layer properties (colors/stipples/visibility) to a KLayout .lyp file.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "path"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "library.list",
+      "description": "List all libraries registered in this KLayout process (Basic, salt/PDK libraries, runtime-registered device or file libraries). Each entry has `name`, `id`, `description`, `technologies`, `cell_count`, `pcell_count` and up to 20 `top_cells` (PCell-only libraries like Basic legitimately have cell_count 0); libraries created by `library.register_file` also carry `source_file`. Use `pcell.list`/`pcell.info` to inspect PCells inside a library.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "library.refresh",
+      "description": "Re-evaluate library content in every layout that uses it (official pya.Library refresh). Pass `library` to refresh one library by name, or omit it to refresh ALL registered libraries. Call this after a library changed (e.g. a PCell was re-registered or a salt library was updated) instead of asking the user to press the GUI refresh button. Read-only layouts are left untouched by KLayout itself.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "library": {
+            "type": "string",
+            "description": "Library name; omit to refresh all libraries."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "library.register_file",
+      "description": "Register a layout file (GDS/OASIS/anything KLayout reads) as a runtime library, so its cells become placeable by name via instance.insert / instance.insert_many with `library` set. `name` defaults to the file stem. The library lives for this KLayout session only (re-register after restart). Refuses a name that is already registered — pick a new name; there is no in-session replace.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "path"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Layout file to read."
+          },
+          "name": {
+            "type": "string",
+            "description": "Library name (default: file stem)."
+          },
+          "technology": {
+            "type": "string",
+            "description": "Optional technology to associate with."
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "cell.fill_region",
+      "description": "Tile a fill cell across a region (KLayout's built-in Fill Utility, pya.Cell#fill_region): dummy fill, device arrays, test-structure tiling. Region = union of `boxes_um`, `polygons_um`, `circles_um` (full circles or angular sectors), and `region_layers` (fill wherever the target cell has geometry on those layers — e.g. a hand-drawn blob on a scratch layer), minus geometry of `exclude_layers` (grown by `exclude_margin_um`). Only tiles that fit ENTIRELY inside the region are placed, so curved boundaries leave an unfilled rim — reported in `remaining_area_um2`. The fill footprint defaults to the fill cell's bbox (`fc_bbox_um` overrides); raster steps default to that footprint (`row_step_um`/`column_step_um` override, e.g. for gaps between tiles). Single pass, one raster — check `remaining_area_um2` in the result for uncovered leftovers. Placed instances are one undo step (Ctrl+Z reverts the whole fill).",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "cell",
+          "fill_cell"
+        ],
+        "properties": {
+          "cell": {
+            "description": "Target cell name (str) or cell_index (int)"
+          },
+          "fill_cell": {
+            "description": "Fill cell name (str) or cell_index (int); must exist in the active layout"
+          },
+          "boxes_um": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "minItems": 4,
+              "maxItems": 4
+            },
+            "description": "Region boxes [l, b, r, t] in microns."
+          },
+          "polygons_um": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2
+              }
+            },
+            "description": "Region polygons as [[x, y], ...] in microns."
+          },
+          "circles_um": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "center",
+                "radius"
+              ],
+              "properties": {
+                "center": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 2
+                },
+                "radius": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "start_angle_deg": {
+                  "type": "number"
+                },
+                "end_angle_deg": {
+                  "type": "number"
+                },
+                "npoints": {
+                  "type": "integer",
+                  "minimum": 8
+                }
+              }
+            },
+            "description": "Circles/sectors in microns. Omit angles for a full circle; give start/end (CCW degrees, 0 = +x) for a pie sector."
+          },
+          "region_layers": {
+            "type": "array",
+            "description": "Layers ('L/D' or {layer,datatype}) whose geometry in the target cell (incl. children) IS the region — e.g. a hand-drawn polygon on a scratch layer."
+          },
+          "exclude_layers": {
+            "type": "array",
+            "description": "Layers ('L/D' or {layer,datatype}) whose geometry in the target cell (incl. children) is subtracted from the region."
+          },
+          "exclude_margin_um": {
+            "type": "number",
+            "minimum": 0
+          },
+          "fc_bbox_um": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4
+          },
+          "row_step_um": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "column_step_um": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "origin_um": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
       "name": "shape.query",
       "description": "Read shapes from ONE cell (no recursion) as JSON. Strongly recommended: narrow with 'layers' and 'bbox_dbu', and respect pagination via 'limit' (default 500, max 5000). Coordinates are in database units (dbu); multiply by layout dbu (from layout.info) to get microns. The 'truncated' flag means more shapes matched than 'limit' - call again with a tighter bbox.",
       "inputSchema": {
@@ -645,7 +900,11 @@
             "description": "parent cell (name or index)"
           },
           "child": {
-            "description": "cell to instantiate (name or index)"
+            "description": "cell to instantiate (name or index; with `library`, a cell name inside that registered library)"
+          },
+          "library": {
+            "type": "string",
+            "description": "registered library to take `child` from (e.g. one made by library.register_file); imported as a proxy, not copied"
           },
           "position_um": {
             "type": "array",
@@ -750,6 +1009,10 @@
               "properties": {
                 "child": {
                   "description": "cell to instantiate (name or index)"
+                },
+                "library": {
+                  "type": "string",
+                  "description": "registered library to take `child` from"
                 },
                 "position_um": {
                   "type": "array",
@@ -1103,22 +1366,32 @@
     },
     {
       "name": "selection.set_box",
-      "description": "Select every shape in 'cell' whose bbox intersects 'bbox_dbu' on any of the given 'layers' (default: all layers). Replaces the current selection. Returns the number of objects selected.",
+      "description": "Select every shape in 'cell' whose bbox intersects the given box (pass `bbox_um` in microns — preferred — or `bbox_dbu`) on any of the given 'layers' (default: all layers). Set `include_instances: true` to ALSO select placed child instances overlapping the box (GUI box-select parity; an array instance selects as one object). Replaces the current selection and shows KLayout's native selection rendering. Returns the number of objects selected.",
       "inputSchema": {
         "type": "object",
         "required": [
-          "cell",
-          "bbox_dbu"
+          "cell"
         ],
         "properties": {
           "cell": {
             "description": "Cell name (str) or cell_index (int)"
+          },
+          "bbox_um": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4,
+            "description": "[x1, y1, x2, y2] in microns (preferred)"
           },
           "bbox_dbu": {
             "type": "array",
             "minItems": 4,
             "maxItems": 4,
             "description": "[x1, y1, x2, y2] in dbu"
+          },
+          "include_instances": {
+            "type": "boolean",
+            "default": false,
+            "description": "also select child instances in the box"
           },
           "layers": {
             "type": "array",
@@ -1371,6 +1644,157 @@
               "l2n"
             ],
             "default": "lvs"
+          }
+        }
+      }
+    },
+    {
+      "name": "view.highlight",
+      "description": "Draw transient highlight markers on the current view to point the user at locations — view-layer overlays that do NOT touch the layout, the selection, or undo. Pass `boxes_um`, `polygons_um` and/or `circles_um` (microns, top-cell coordinates; circles_um takes the SAME {center, radius, start/end_angle_deg} specs as cell.fill_region, so a highlighted circle/sector is exactly the fillable one — never hand-approximate an arc). Style: `color` ('#RRGGBB', default red), `line_width` px, `halo`. By default REPLACES previous highlights (`clear: false` accumulates, e.g. different colors per category). `expire_s` auto-removes this batch after N seconds. Use this instead of selection.set_box when you only want to POINT — set_box clobbers the user's real selection. view.highlight_clear removes everything.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boxes_um": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "minItems": 4,
+              "maxItems": 4
+            },
+            "description": "Highlight boxes [l, b, r, t] in microns."
+          },
+          "polygons_um": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2
+              }
+            },
+            "description": "Highlight polygons as [[x, y], ...] in microns."
+          },
+          "circles_um": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "center",
+                "radius"
+              ],
+              "properties": {
+                "center": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 2
+                },
+                "radius": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "start_angle_deg": {
+                  "type": "number"
+                },
+                "end_angle_deg": {
+                  "type": "number"
+                },
+                "npoints": {
+                  "type": "integer",
+                  "minimum": 8
+                }
+              }
+            },
+            "description": "Circles/sectors in microns, same specs as cell.fill_region."
+          },
+          "color": {
+            "description": "'#RRGGBB' (default '#FF3030' red)"
+          },
+          "line_width": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 2
+          },
+          "halo": {
+            "type": "boolean",
+            "default": true,
+            "description": "contrast halo around the lines"
+          },
+          "expire_s": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "auto-remove this batch after N seconds"
+          },
+          "clear": {
+            "type": "boolean",
+            "default": true,
+            "description": "remove previous highlights first"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "view.highlight_clear",
+      "description": "Remove ALL klink highlight markers (from view.highlight) immediately. Never touches the layout, selection, or undo.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "view.show_25d",
+      "description": "Open KLayout's native 2.5d (extruded 3D) viewer and feed it a display list: one entry per material with a layer, a z range in microns, and optional name/colors. Layers are read from a cell of the active layout (default: the current cell). klink ships no z heights - thickness/elevation are process facts the caller owns (derive the list with klink.stack25d.stack_displays from your StackSpec + z table). Requires a KLayout build with OpenGL.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "displays"
+        ],
+        "properties": {
+          "cell": {
+            "type": "string",
+            "description": "cell to read geometry from (default: current cell)"
+          },
+          "generator": {
+            "type": "string",
+            "description": "label shown by the 2.5d window (default 'klink')"
+          },
+          "displays": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "layer",
+                "zstart_um",
+                "zstop_um"
+              ],
+              "properties": {
+                "layer": {
+                  "type": "string",
+                  "description": "'L/D' source layer"
+                },
+                "zstart_um": {
+                  "type": "number"
+                },
+                "zstop_um": {
+                  "type": "number"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "color": {
+                  "type": "integer",
+                  "description": "0xRRGGBB fill+frame"
+                },
+                "frame_color": {
+                  "type": "integer"
+                },
+                "fill_color": {
+                  "type": "integer"
+                }
+              }
+            }
           }
         }
       }
@@ -2373,63 +2797,6 @@
           }
         },
         "additionalProperties": false
-      }
-    },
-    {
-      "name": "view.show_25d",
-      "description": "Open KLayout's native 2.5d (extruded 3D) viewer and feed it a display list: one entry per material with a layer, a z range in microns, and optional name/colors. Layers are read from a cell of the active layout (default: the current cell). klink ships no z heights - thickness/elevation are process facts the caller owns (derive the list with klink.stack25d.stack_displays from your StackSpec + z table). Requires a KLayout build with OpenGL.",
-      "inputSchema": {
-        "type": "object",
-        "required": [
-          "displays"
-        ],
-        "properties": {
-          "cell": {
-            "type": "string",
-            "description": "cell to read geometry from (default: current cell)"
-          },
-          "generator": {
-            "type": "string",
-            "description": "label shown by the 2.5d window (default 'klink')"
-          },
-          "displays": {
-            "type": "array",
-            "minItems": 1,
-            "items": {
-              "type": "object",
-              "required": [
-                "layer",
-                "zstart_um",
-                "zstop_um"
-              ],
-              "properties": {
-                "layer": {
-                  "type": "string",
-                  "description": "'L/D' source layer"
-                },
-                "zstart_um": {
-                  "type": "number"
-                },
-                "zstop_um": {
-                  "type": "number"
-                },
-                "name": {
-                  "type": "string"
-                },
-                "color": {
-                  "type": "integer",
-                  "description": "0xRRGGBB fill+frame"
-                },
-                "frame_color": {
-                  "type": "integer"
-                },
-                "fill_color": {
-                  "type": "integer"
-                }
-              }
-            }
-          }
-        }
       }
     },
     {

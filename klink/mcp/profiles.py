@@ -95,6 +95,9 @@ def filter_methods(specs: List[dict], profiles: List[str]) -> List[dict]:
             or name in (
                 "view.zoom_fit", "view.zoom_box", "view.show_cell",
                 "view.hier_levels",
+                "view.highlight", "view.highlight_clear",
+                "layer.set_visible", "layer.set_style",
+                "layer.load_lyp", "layer.save_lyp",
                 "recorder.start", "recorder.stop", "recorder.status",
                 "selection.clear", "selection.set_box",
                 "selection.send_context",

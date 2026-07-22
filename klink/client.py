@@ -618,6 +618,27 @@ class KLinkClient:
         p.update({k: v for k, v in kwargs.items() if v is not None})
         return self.call("cell.fill_region", p)
 
+    # ---- layer display (view-side) ----
+    def layer_display_list(self) -> dict:
+        return self.call("layer.display_list")
+
+    def layer_set_visible(self, layers, visible: bool = True,
+                          exclusive: bool = False) -> dict:
+        return self.call("layer.set_visible", {
+            "layers": list(layers), "visible": bool(visible),
+            "exclusive": bool(exclusive)})
+
+    def layer_set_style(self, layer, **kwargs) -> dict:
+        p = {"layer": layer}
+        p.update({k: v for k, v in kwargs.items() if v is not None})
+        return self.call("layer.set_style", p)
+
+    def layer_load_lyp(self, path: str) -> dict:
+        return self.call("layer.load_lyp", {"path": path})
+
+    def layer_save_lyp(self, path: str) -> dict:
+        return self.call("layer.save_lyp", {"path": path})
+
     # ---- library management ----
     def library_list(self) -> dict:
         return self.call("library.list")
