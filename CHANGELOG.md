@@ -4,6 +4,34 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project does not use dated entries (versions only).
 
+## 0.1.5
+
+- Library management RPCs: `library.list` / `library.refresh` /
+  `library.register_file` (the `pya.Library` face); `pcell.register_fitted`
+  now refreshes its library automatically — no manual GUI refresh step.
+  `instance.insert` / `instance.insert_many` accept `library=` to place
+  registered-library cells directly.
+- `cell.fill_region`: KLayout's Fill Utility as one RPC — fill a region
+  given by boxes, polygons, circles/sectors, or hand-drawn scratch-layer
+  geometry (`region_layers`), with `exclude_layers`, margins, row/column
+  step spacing, and honest `remaining_area_um2` accounting. New starter
+  `example_template/layout/fill_region_demo.py` opens the `layout/`
+  starter category.
+- Transient marker overlays: `view.highlight` / `view.highlight_clear`
+  draw boxes, polygons, circles, and rulers on top of the view without
+  touching the layout database. `selection.set_box` selects everything
+  inside a µm bbox (optionally including instances).
+- Layer display control: `layer.display_list` / `layer.set_visible` /
+  `layer.set_style`, plus layer-properties file IO (`layer.load_lyp` /
+  `layer.save_lyp`).
+- Region math as typed RPCs: `geometry.boolean` (and/or/xor/not between
+  two layers, optionally written back to a layer), `geometry.cell_xor`
+  (layer-by-layer comparison of two cells), and `geometry.density`.
+- `layout.import_file`: merge a GDS/OASIS file into the active layout
+  with a `layer_map` and cell-name conflict modes.
+- Modification RPCs: `shape.transform`, `shape.change_layer`,
+  `instance.transform`, `cell.flatten`, `pcell.convert_to_static`.
+
 ## 0.1.4
 
 - New photonics starter `gf_ports` (`example_template/photonics/gf_ports.py`):
