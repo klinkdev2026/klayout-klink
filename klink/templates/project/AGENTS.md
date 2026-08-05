@@ -18,9 +18,11 @@ You may create and edit only:
 
 Read-only (shipped references — run them, don't edit them):
 
-- `example_template/` — runnable, **self-contained** example scripts (neural electrode,
-  EBL nanodevice, Hall bar) that import only `klink` (no process file, no PDK).
-  Run one as-is, then copy it into `custom_devices/` and adapt.
+- `example_template/` — runnable starter scripts grouped by category
+  (nanodevice, passives, photonics, layout, digital). The live list and how to
+  run each is in `example_template/README.md` — read that, don't rely on any
+  enumeration elsewhere. Run one as-is, then copy it into `custom_devices/`
+  and adapt.
 - `recipes/README.md` — the per-domain menu of what klink can build.
 
 **Never edit `klink` or the KLayout plugin.** They are installed packages
@@ -31,19 +33,24 @@ do not patch installed code.
 
 There is no default project. On a fresh project:
 
-1. **Interview the user** about what they are building until you can name the
+1. **Get the map first.** Call `klink.find_tools` with no arguments for the
+   domain index; `klink.find_tools domain=<area>` for that area's tools and
+   detailed usage; `query=<keywords>` to search. Tool descriptions and error
+   `next_action`s are the authoritative, always-current reference — do this
+   before assuming what klink can or cannot do.
+2. **Interview the user** about what they are building until you can name the
    domain (e.g. EBL nanodevice, neural electrode, silicon photonics, digital
    P&R). Ask, don't assume.
-2. **Pick the matching recipe** from `recipes/README.md`. Tell the user the
+3. **Pick the matching recipe** from `recipes/README.md`. Tell the user the
    recipe's *geometry tier* (self-contained / open-or-your-own / bring-your-
-   own) and, if it needs their confidential geometry, ask them to supply it. If
-   a **self-contained** example in `example_template/` already matches (neural
-   electrode, EBL nanodevice, Hall bar), start from it — run it, then adapt a
-   copy in `custom_devices/`.
-3. **Scaffold** `pdk.py` for that process and a first `custom_devices/` script that
+   own) and, if it needs their confidential geometry, ask them to supply it.
+   If a starter in `example_template/` already matches (see
+   `example_template/README.md` for the category list), start from it — run
+   it, then adapt a copy in `custom_devices/`.
+4. **Scaffold** `pdk.py` for that process and a first `custom_devices/` script that
    imports `PROCESS` from `pdk.py` and calls the relevant klink API
    **explicitly** (klink ships no process default).
-4. **Run and verify** with structured geometry/LVS queries (below).
+5. **Run and verify** with structured geometry/LVS queries (below).
 
 The domain the user describes **becomes** this project's default.
 
@@ -56,6 +63,10 @@ read its `next_action` and follow it; do not invent a profile.
 
 ## Working rules (carry over from klink)
 
+- **Own your tab.** Before drawing anything, open your own layout tab with
+  `view.new_tab` and work there. Never draw into, clear, or close a tab you
+  did not create in this conversation — the user's open tabs are their work.
+  If the user asks for edits to *their* layout, confirm which tab/cell first.
 - **Errors are instructions.** klink tool errors carry a `next_action`. Follow
   it. This is the real safety net — it works even if you skip these docs.
 - **Batch RPCs for generated layouts.** Never one RPC per object; use

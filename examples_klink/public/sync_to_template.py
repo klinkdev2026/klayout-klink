@@ -12,9 +12,11 @@ a flat pile:
 
     example_template/
       nanodevice/  hallbar, ebl_wraparound, neural_electrode
-      photonics/   gf_mzi_module
+      photonics/   gf_mzi_module, gf_ports
       passives/    idc_capacitor, spiral_inductor, saw_idt_filter, baw_fbar_planview
       layout/      fill_region_demo
+      digital/     fit_device_pnr_lvs, padframe_pnr_lvs, chat_to_netlist_pnr,
+                   multilayer_pnr_lvs (+ engine/netlists; LIVE, see below)
 
 A starter must be fully self-contained: it imports only `klink` (plus
 `klayout.db` for offline geometry), carries its own layers, and needs no bundled

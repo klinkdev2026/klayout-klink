@@ -66,6 +66,28 @@ class Dispatcher:
             ))
             return
 
+        # Enforce declared required params BEFORE the handler runs, so a
+        # missing param is an instructive BAD_PARAMS (never a KeyError
+        # surfacing as ERR_INTERNAL). Only top-level `required` is checked;
+        # deeper shape errors still surface from the handler.
+        schema = spec.params_schema
+        if isinstance(schema, dict):
+            required = schema.get("required") or []
+            missing = [k for k in required if k not in params]
+            if missing:
+                props = schema.get("properties") or {}
+                parts = []
+                for k in missing:
+                    p = props.get(k)
+                    desc = p.get("description", "") if isinstance(p, dict) else ""
+                    parts.append(f"'{k}'" + (f" ({desc})" if desc else ""))
+                conn.send(make_response_err(
+                    req_id, ErrorCode.BAD_PARAMS,
+                    f"{method}: missing required param(s): " + ", ".join(parts),
+                    hint="call 'meta.methods' for this method's full params schema",
+                ))
+                return
+
         ctx = RequestContext(
             request_id=req_id,
             method=method,

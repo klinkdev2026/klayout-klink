@@ -7,8 +7,9 @@ by category:
 
 ```
 nanodevice/   hallbar, ebl_wraparound, neural_electrode
-photonics/    gf_mzi_module                (needs gdsfactory)
+photonics/    gf_mzi_module, gf_ports      (need gdsfactory + live KLayout)
 passives/     idc_capacitor, spiral_inductor, saw_idt_filter, baw_fbar_planview
+layout/       fill_region_demo             (needs a live KLayout session)
 digital/      fit_device_pnr_lvs, padframe_pnr_lvs, chat_to_netlist_pnr,
               multilayer_pnr_lvs           (custom device -> P&R -> live LVS)
 ```
