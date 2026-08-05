@@ -4,6 +4,19 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project does not use dated entries (versions only).
 
+## 0.1.6
+
+- Dispatcher enforces schema-declared required params before the handler
+  runs: a missing param now returns an instructive `BAD_PARAMS` naming each
+  missing param (with its schema description) instead of a handler `KeyError`
+  surfacing as `ERR_INTERNAL`.
+- Project template (`klink init`) onboarding: AGENTS.md now starts with a
+  `klink.find_tools`-first step (domain index / `domain=` / `query=`), adds
+  an "Own your tab" working rule (open your own tab via `view.new_tab`;
+  never touch tabs you did not create), and defers the starter list to
+  `example_template/README.md` as the single live enumeration (README gains
+  the `gf_ports` and `layout/fill_region_demo` entries).
+
 ## 0.1.5
 
 - Library management RPCs: `library.list` / `library.refresh` /
