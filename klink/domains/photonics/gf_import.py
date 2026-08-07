@@ -28,6 +28,8 @@ import math
 import re
 from typing import Any, Mapping, Sequence
 
+from .blackbox import assign_stable_prefixes
+
 #: gf.routing.* building blocks: instances of these factories are ROUTES,
 #: not devices. Generic gdsfactory knowledge (not process data); override
 #: via ``route_components=`` for exotic PDK route cells.
@@ -196,8 +198,10 @@ def harvest_gf_template_ports(
     The gf-native sibling of ``blackbox.harvest_instance_ports``: the port
     template comes from the imported gf cell's port table (persisted in the
     net spec) instead of a stub-scan. Identity rule is the same —
-    ``{tag}{ordinal}_{gf_port_name}`` with ordinals in parent-iteration
-    order, so names survive GUI drag edits.
+    ``{prefix}_{gf_port_name}`` where ``prefix`` is the instance's stamped
+    ``klink_id`` (written at import; survives save/reload and GUI drags),
+    with a warned ``{tag}{ordinal}``-in-query-order fallback for layouts
+    imported by older klink (see ``assign_stable_prefixes``).
 
     ``mark_policy``: the full port set is ALWAYS available (no information is
     ever dropped from the template) — this only controls what THIS call
@@ -216,20 +220,19 @@ def harvest_gf_template_ports(
             "mark_policy must be 'all' or 'used', got %r" % (mark_policy,))
     dbu = float(client.layout_info().get("dbu", 0.001))
     nets = nets or {}
-    counters: dict[str, int] = {}
     marks: list[dict[str, Any]] = []
     result = client.call("instance.query", {"parent": parent_cell, "limit": 5000})
-    for inst in result.get("instances", []):
+    eligible = [
+        inst for inst in result.get("instances", [])
+        if templates.get(str(inst.get("child") or "")) is not None
+        and str(inst.get("child") or "") in tags
+    ]
+    for inst, prefix in assign_stable_prefixes(eligible, tags):
         child = str(inst.get("child") or "")
-        template = templates.get(child)
-        if template is None or child not in tags:
-            continue
-        tag = tags[child]
-        ordinal = counters.get(tag, 0)
-        counters[tag] = ordinal + 1
+        template = templates[child]
         trans = inst.get("trans") or {}
         for port in template.get("ports", []):
-            name = "%s%d_%s" % (tag, ordinal, port["name"])
+            name = "%s_%s" % (prefix, port["name"])
             net = nets.get(name, "")
             if mark_policy == "used" and not net:
                 continue
@@ -428,8 +431,10 @@ def import_gf_component(
         used_tags.add(tag)
         tags[klay_name] = tag
 
-    # Place ALL device instances in one batch, in sorted netlist-name order:
-    # this order IS the ordinal order the harvest sees (parent-iteration).
+    # Place ALL device instances in one batch. Each instance is STAMPED with
+    # its identity (klink_id user property, GDS-safe integer property key) —
+    # the harvest reads that back, so identity does not depend on KLayout's
+    # each_inst() iteration order, which is NOT stable across save/reload.
     # Re-import is idempotent: the parent is a klink-managed takeover cell,
     # so an existing one is rebuilt from scratch (children are untouched).
     if parent in existing:
@@ -449,6 +454,7 @@ def import_gf_component(
         name_map[netlist_name] = "%s%d" % (tag, ordinal)
         items.append({
             "child": klay_name,
+            "klink_id": name_map[netlist_name],
             "position_um": [float(pl.get("x", 0.0)), float(pl.get("y", 0.0))],
             "rotation": float(pl.get("rotation", 0.0)),
             "mirror": bool(pl.get("mirror", False)),

@@ -40,6 +40,29 @@ from .shape_m import _point_from_um_or_dbu, _scalar_from_um_or_dbu
 _INT_ROT = {0: 0, 90: 1, 180: 2, 270: 3, -90: 3, -180: 2, -270: 1}
 _MAX_BATCH_INSTANCES = 100_000
 
+# Reserved integer user-property key carrying klink's stable instance
+# identity (`klink_id`). INTEGER on purpose: the GDS writer only
+# round-trips numeric PROPATTR keys — string-keyed instance properties
+# are silently dropped on .gds save/reload (OASIS keeps both).
+KLINK_ID_PROPKEY = 9999
+
+
+def _klink_id_from(params: dict, where: str):
+    kid = params.get("klink_id")
+    if kid is None:
+        return None
+    if not isinstance(kid, str) or not kid:
+        raise RpcError(
+            ErrorCode.BAD_PARAMS,
+            f"{where}: 'klink_id' must be a non-empty string",
+        )
+    return kid
+
+
+def _stamp_klink_id(inst, kid) -> None:
+    if kid:
+        inst.set_property(KLINK_ID_PROPKEY, kid)
+
 
 def _build_trans(params: dict, dbu: float):
     """Assemble the KLayout transformation from the usual param set.
@@ -203,6 +226,12 @@ def _instance_to_dict(inst) -> dict:
         "pcell": _pcell_metadata(child),
         "child_shapes_by_layer": _cell_shapes_by_layer(child),
     }
+    try:
+        kid = inst.property(KLINK_ID_PROPKEY)
+    except Exception:
+        kid = None
+    if kid is not None:
+        out["klink_id"] = str(kid)
     try:
         na = int(inst.na)
         nb = int(inst.nb)
@@ -384,6 +413,11 @@ def _build_cell_inst_array(cell_index: int, trans, array, dbu: float):
             "rotation":     {"type": "number", "default": 0, "description": "degrees CCW"},
             "mirror":       {"type": "boolean", "default": False, "description": "mirror across x-axis before rotation"},
             "magnification":{"type": "number", "default": 1.0},
+            "klink_id": {"type": "string",
+                         "description": "optional stable identity stamped on "
+                                        "the instance as a user property; "
+                                        "survives save/reload and GUI drags, "
+                                        "returned by instance.query"},
             "array": {
                 "type": "object",
                 "properties": {
@@ -411,6 +445,7 @@ def _build_cell_inst_array(cell_index: int, trans, array, dbu: float):
             "trans":  {"type": "object"},
             "bbox_dbu": {"type": ["array", "null"]},
             "array":  {"type": ["object", "null"]},
+            "klink_id": {"type": ["string", "null"]},
         },
     },
     mutates=True,
@@ -424,6 +459,7 @@ def instance_insert(params, ctx):
         raise RpcError(ErrorCode.BAD_PARAMS, "a cell cannot instantiate itself")
 
     trans = _build_trans(params, ly.dbu)
+    kid = _klink_id_from(params, "'klink_id'")
 
     inst_spec, array_info = _build_cell_inst_array(
         child.cell_index(), trans, params.get("array"), ly.dbu
@@ -442,6 +478,7 @@ def instance_insert(params, ctx):
                     "references parent) or a cell from a different layout"
                 ),
             )
+        _stamp_klink_id(inst, kid)
 
     return {
         "parent": parent.name,
@@ -449,6 +486,7 @@ def instance_insert(params, ctx):
         "trans": _trans_to_dict(trans),
         "bbox_dbu": _inst_bbox(inst),
         "array": array_info,
+        "klink_id": kid,
     }
 
 
@@ -479,6 +517,11 @@ def instance_insert(params, ctx):
                         "rotation": {"type": "number", "default": 0},
                         "mirror": {"type": "boolean", "default": False},
                         "magnification": {"type": "number", "default": 1.0},
+                        "klink_id": {"type": "string",
+                                     "description": "optional stable identity "
+                                                    "stamped as a user "
+                                                    "property; returned by "
+                                                    "instance.query"},
                         "array": {"type": "object"},
                     },
                 },
@@ -517,24 +560,27 @@ def instance_insert_many(params, ctx):
         if parent.cell_index() == child.cell_index():
             raise RpcError(ErrorCode.BAD_PARAMS, f"items[{i}]: a cell cannot instantiate itself")
         trans = _build_trans(item, ly.dbu)
+        kid = _klink_id_from(item, f"items[{i}]")
         inst_spec, array_info = _build_cell_inst_array(
             child.cell_index(), trans, item.get("array"), ly.dbu
         )
-        ops.append((child, inst_spec, array_info))
+        ops.append((child, inst_spec, array_info, kid))
         by_child[child.name] = by_child.get(child.name, 0) + 1
 
     inserted = []
     if not dry_run:
         with auto_txn(view, f"klink: insert {len(ops)} instances into {parent.name}"):
-            for child, inst_spec, _ in ops:
+            for child, inst_spec, _, kid in ops:
                 try:
-                    inserted.append(parent.insert(inst_spec))
+                    inst = parent.insert(inst_spec)
                 except Exception as e:
                     raise RpcError(
                         ErrorCode.EXEC,
                         f"KLayout rejected instance of {child.name}: {e}",
                         hint="common causes: cyclic hierarchy or a cell from a different layout",
                     )
+                _stamp_klink_id(inst, kid)
+                inserted.append(inst)
 
     return {
         "parent": parent.name,
@@ -674,6 +720,10 @@ def _resolve_library(lib_name: str):
             "rotation":     {"type": "number"},
             "mirror":       {"type": "boolean"},
             "magnification":{"type": "number"},
+            "klink_id": {"type": "string",
+                         "description": "optional stable identity stamped as "
+                                        "a user property; returned by "
+                                        "instance.query"},
             "array": {
                 "type": "object",
                 "description": (
@@ -760,6 +810,7 @@ def instance_insert_pcell(params, ctx):
             )
 
     trans = _build_trans(params, ly.dbu)
+    kid = _klink_id_from(params, "'klink_id'")
 
     # `ly.create_cell(pcell, lib, params)` materialises a PCell variant
     # via the library; this step is inherently non-transactional on
@@ -785,7 +836,8 @@ def instance_insert_pcell(params, ctx):
             inst_spec, array_info = _build_cell_inst_array(
                 variant.cell_index(), trans, params.get("array"), ly.dbu
             )
-            parent.insert(inst_spec)
+            inst = parent.insert(inst_spec)
+            _stamp_klink_id(inst, kid)
         except RpcError:
             raise
         except Exception as e:
@@ -877,6 +929,11 @@ def instance_insert_pcell(params, ctx):
                         "rotation": {"type": "number"},
                         "mirror": {"type": "boolean"},
                         "magnification": {"type": "number"},
+                        "klink_id": {"type": "string",
+                                     "description": "optional stable identity "
+                                                    "stamped as a user "
+                                                    "property; returned by "
+                                                    "instance.query"},
                         "array": {"type": "object"},
                     },
                 },
@@ -922,7 +979,9 @@ def instance_insert_pcell_many(params, ctx):
         _resolve_library(lib_name)
         pcell_params = _adapt_pcell_params(raw_params)
         trans = _build_trans(item, ly.dbu)
-        ops.append((lib_name, pcell_name, pcell_params, trans, item.get("array")))
+        kid = _klink_id_from(item, f"items[{i}]")
+        ops.append((lib_name, pcell_name, pcell_params, trans,
+                    item.get("array"), kid))
         key = f"{lib_name}/{pcell_name}"
         by_pcell[key] = by_pcell.get(key, 0) + 1
 
@@ -931,7 +990,7 @@ def instance_insert_pcell_many(params, ctx):
     inserted_specs = []
     if not dry_run:
         prepared = []
-        for lib_name, pcell_name, pcell_params, trans, array in ops:
+        for lib_name, pcell_name, pcell_params, trans, array, kid in ops:
             try:
                 variant = ly.create_cell(pcell_name, lib_name, pcell_params)
             except Exception as e:
@@ -946,15 +1005,17 @@ def instance_insert_pcell_many(params, ctx):
                     f"pcell {lib_name}.{pcell_name} not found",
                     hint="call pcell.list to see available PCells in the library",
                 )
-            prepared.append((lib_name, pcell_name, variant, trans, array))
+            prepared.append((lib_name, pcell_name, variant, trans, array, kid))
 
         with auto_txn(view, f"klink: insert {len(ops)} pcell instances into {parent.name}"):
-            for lib_name, pcell_name, variant, trans, array in prepared:
+            for lib_name, pcell_name, variant, trans, array, kid in prepared:
                 try:
                     inst_spec, _ = _build_cell_inst_array(
                         variant.cell_index(), trans, array, ly.dbu
                     )
-                    inserted.append(parent.insert(inst_spec))
+                    inst = parent.insert(inst_spec)
+                    _stamp_klink_id(inst, kid)
+                    inserted.append(inst)
                     inserted_specs.append(inst_spec)
                     variants.append({
                         "library": lib_name,

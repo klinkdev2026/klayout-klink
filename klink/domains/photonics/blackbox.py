@@ -6,16 +6,19 @@ boxes on 1/0 at the cell boundary). This module turns that convention into
 klink Ports that are *derived data*: harvested from live instance positions
 at route time, so users can freely drag instances in the GUI and re-route.
 
-Identity rule: a port name is `{tag}{ordinal}_{index}` where `tag` is a
-short name for the child cell, `ordinal` counts instances of that child in
-parent-iteration order (stable under moves in KLayout), and `index` numbers
-the stubs of the child sorted by child-local (x, y). Net intent keyed on
-these names therefore survives drag-and-drop edits.
+Identity rule: a port name is `{prefix}_{index}` where `prefix` is the
+instance's stamped `klink_id` user property (written by instance.insert*
+at import time; survives save/reload and GUI drags) and `index` numbers
+the stubs of the child sorted by child-local (x, y). Instances without a
+stamped id (placed by older klink) fall back to `{tag}{ordinal}` counted
+in instance.query order — that order is KLayout's internal iteration
+order and is NOT stable across save/reload, so the fallback warns.
 """
 
 from __future__ import annotations
 
 import math
+import warnings
 from typing import Any, Sequence
 
 # No process constants here: the waveguide layer and stub size are PDK-specific
@@ -117,6 +120,59 @@ def _apply_trans_angle(orientation: float, trans: dict) -> float:
     return (angle + float(trans.get("rotation_deg", 0.0) or 0.0)) % 360.0
 
 
+def assign_stable_prefixes(
+    instances: Sequence[dict],
+    tags: dict[str, str],
+) -> list[tuple[dict, str]]:
+    """Assign a stable identity prefix to each tagged instance dict.
+
+    Stamped ``klink_id`` user properties win — instance.query returns them
+    and they survive save/reload and GUI drags. Instances without one
+    (placed by older klink) fall back to ``{tag}{ordinal}`` counted in
+    query order, skipping any ordinal already taken by a stamped id; that
+    order can change when the layout is saved and reloaded, so the
+    fallback emits a RuntimeWarning.
+
+    Returns ``(inst, prefix)`` pairs in query order. Raises ValueError on
+    a duplicate stamped id (typically a GUI copy of an imported instance).
+    """
+    tagged = [inst for inst in instances
+              if str(inst.get("child") or "") in tags]
+    stamped: set[str] = set()
+    for inst in tagged:
+        kid = inst.get("klink_id")
+        if kid:
+            if kid in stamped:
+                raise ValueError(
+                    "duplicate klink_id %r on instances of %r — likely a "
+                    "GUI copy of an imported instance; delete the copy, or "
+                    "re-run the import (it rebuilds the cell with unique "
+                    "ids)" % (kid, inst.get("child")))
+            stamped.add(str(kid))
+    counters: dict[str, int] = {}
+    out: list[tuple[dict, str]] = []
+    legacy = 0
+    for inst in tagged:
+        kid = inst.get("klink_id")
+        if kid:
+            out.append((inst, str(kid)))
+            continue
+        tag = tags[str(inst.get("child") or "")]
+        ordinal = counters.get(tag, 0)
+        while "%s%d" % (tag, ordinal) in stamped:
+            ordinal += 1
+        counters[tag] = ordinal + 1
+        out.append((inst, "%s%d" % (tag, ordinal)))
+        legacy += 1
+    if legacy:
+        warnings.warn(
+            "%d instance(s) carry no stamped klink_id; ordinal assignment "
+            "falls back to instance.query order, which may change across "
+            "save/reload — re-run the import to stamp stable ids"
+            % legacy, RuntimeWarning, stacklevel=2)
+    return out
+
+
 def harvest_instance_ports(
     client,
     parent_cell: str,
@@ -136,25 +192,19 @@ def harvest_instance_ports(
     """
     dbu = float(client.layout_info().get("dbu", 0.001))
     templates: dict[str, list[dict]] = {}
-    counters: dict[str, int] = {}
     marks: list[dict[str, Any]] = []
     nets = nets or {}
 
     result = client.call("instance.query", {"parent": parent_cell, "limit": 5000})
-    for inst in result.get("instances", []):
+    for inst, prefix in assign_stable_prefixes(result.get("instances", []), tags):
         child = str(inst.get("child") or "")
-        if child not in tags:
-            continue
         if child not in templates:
             templates[child] = stub_template(
                 client, child, wg_layer=wg_layer, stub_size_um=stub_size_um, dbu=dbu
             )
-        tag = tags[child]
-        ordinal = counters.get(tag, 0)
-        counters[tag] = ordinal + 1
         trans = inst.get("trans") or {}
         for index, stub in enumerate(templates[child]):
-            name = f"{tag}{ordinal}_{index}"
+            name = f"{prefix}_{index}"
             center_um = _apply_trans(stub["center_dbu"], trans, dbu)
             marks.append({
                 "cell": parent_cell,

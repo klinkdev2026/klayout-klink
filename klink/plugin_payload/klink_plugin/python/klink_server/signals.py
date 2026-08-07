@@ -651,6 +651,21 @@ class SignalHub:
     # human-perceivable latency but wide enough to absorb a TCP-paced
     # RPC batch (round trip ~1-5ms on localhost).
     _DIFF_DEBOUNCE_MS = 50
+    # Anti-starvation guards (issue #14): every geometry edit — each
+    # mutation RPC included — fires on_layer_list_changed, and the full
+    # snapshot+diff cost scales with layout size — on a few hundred cells
+    # a single pass is hundreds of ms of GUI-thread work, so an edit
+    # burst (e.g. a reroute) stacked with GUI redraws can starve RPC
+    # handling into client timeouts. Two bounds:
+    # * per-pass budget: once _DIFF_BUDGET_MS is spent, remaining cells
+    #   skip per-shape fingerprinting and fall back to count/bbox (the
+    #   diff treats fps=None as "compare by count/bbox", no false events);
+    # * adaptive debounce: the next diff is scheduled no sooner than
+    #   _DIFF_BACKOFF_FACTOR x the last pass's measured duration (capped),
+    #   bounding diff duty-cycle on layouts too big for the budget alone.
+    _DIFF_BUDGET_MS = 250.0
+    _DIFF_BACKOFF_FACTOR = 4
+    _DIFF_DEBOUNCE_MAX_MS = 5000
 
     def __init__(self, server):
         self.server = server
@@ -668,6 +683,11 @@ class SignalHub:
         # arrive before it fires.
         self._diff_timer = None
         self._diff_pending: bool = False
+        # Wall-clock cost of the last full diff pass (ms) — drives the
+        # adaptive debounce; surfaced via meta.debug_signals.
+        self._last_diff_ms: float = 0.0
+        # Cells that skipped fingerprinting in the last pass (budget hit).
+        self._last_diff_degraded_cells: int = 0
         # Each entry: {"source": str, "cause": {request_id, method, ...} | None}
         # `cause` is snapshotted at schedule time because the diff runs
         # AFTER the RPC's dispatcher frame has popped off the request
@@ -888,7 +908,9 @@ class SignalHub:
         cell_names = {ci: e.get("name") for ci, e in curr_cells.items()}
 
         prev_shape_snap = self._shape_snapshot.get(vid, {})
-        curr_shape_snap = self._snapshot_shapes_all(ly, layers, cell_names)
+        deadline = time.perf_counter() + self._DIFF_BUDGET_MS / 1000.0
+        curr_shape_snap = self._snapshot_shapes_all(ly, layers, cell_names,
+                                                    deadline=deadline)
         self._shape_snapshot[vid] = curr_shape_snap
         changed_layers = self._diff_shape_snap(prev_shape_snap, curr_shape_snap,
                                                layers, cell_names)
@@ -985,7 +1007,7 @@ class SignalHub:
                 self._run_pending_diff()
                 return
         try:
-            timer.start(self._DIFF_DEBOUNCE_MS)
+            timer.start(self._diff_delay_ms())
             self._diff_pending = True
         except Exception as e:
             self._diff_timer_usable = False
@@ -997,6 +1019,16 @@ class SignalHub:
             except Exception as exc:
                 _log.debug("swallowed in _schedule_diff: %s", exc)
             self._run_pending_diff()
+
+    def _diff_delay_ms(self) -> int:
+        """Debounce delay for the next diff: the base window, stretched
+        when the last pass was slow so heavy layouts self-throttle
+        instead of starving RPC handling."""
+        delay = self._DIFF_DEBOUNCE_MS
+        if self._last_diff_ms > delay:
+            delay = min(int(self._last_diff_ms * self._DIFF_BACKOFF_FACTOR),
+                        self._DIFF_DEBOUNCE_MAX_MS)
+        return delay
 
     def _on_diff_timer_fired(self, *args):
         self._diff_pending = False
@@ -1034,10 +1066,12 @@ class SignalHub:
             caused_by.append(c)
 
         self._bump("diff_runs")
+        t0 = time.perf_counter()
         try:
             self._do_full_diff(source=src, caused_by=caused_by or None)
         except Exception as e:
             print(f"[klink] debounced diff error: {e}")
+        self._last_diff_ms = (time.perf_counter() - t0) * 1000.0
 
     # ------------------------------------------------------------------
     # Snapshots
@@ -1067,14 +1101,21 @@ class SignalHub:
             _log.debug("swallowed in _snapshot_cells: %s", exc)
         return snap
 
-    def _snapshot_shapes_all(self, ly, layers, cells) -> dict:
+    def _snapshot_shapes_all(self, ly, layers, cells, deadline=None) -> dict:
         """{cell_index: {"_pcell": bool, layer_index: {count, bbox, fps}}}
         across all cells. Uses per-(cell, layer) fingerprinting with a
         budget so huge PDK cells don't dominate CPU. The "_pcell" flag
         lets diff emit `pcell_derived: true` on shapes belonging to a
         PCell variant cell - those are not user-drawn geometry but
-        PCell evaluation artefacts and should not be replayed."""
+        PCell evaluation artefacts and should not be replayed.
+
+        `deadline` (time.perf_counter() value) is the issue-#14 wall-clock
+        budget: once passed, remaining cells record count/bbox only
+        (fps=None) — the diff falls back to count/bbox comparison for
+        them, trading in-place-edit detection for bounded GUI-thread
+        occupancy."""
         snap: dict = {}
+        self._last_diff_degraded_cells = 0
         if ly is None or not cells:
             return snap
 
@@ -1083,7 +1124,11 @@ class SignalHub:
             cell_ids = cell_ids[: self._MAX_CELLS_PER_DIFF]
 
         layer_idxs = [e["index"] for e in layers]
+        over_budget = False
         for ci in cell_ids:
+            if (not over_budget and deadline is not None
+                    and time.perf_counter() > deadline):
+                over_budget = True
             try:
                 cell = ly.cell(ci)
             except Exception:
@@ -1112,18 +1157,31 @@ class SignalHub:
                 except Exception:
                     bb_tup = None
                 fps = None
-                if 0 <= n <= self._FINGERPRINT_MAX_SHAPES:
+                if not over_budget and 0 <= n <= self._FINGERPRINT_MAX_SHAPES:
                     fps = []
                     try:
-                        for s in shapes.each():
+                        for i, s in enumerate(shapes.each()):
+                            # Re-check the budget every 256 shapes: one
+                            # PDK cell full of 1000-point polygons can
+                            # burn seconds, so cell-boundary checks alone
+                            # overshoot badly.
+                            if (deadline is not None and (i & 0xFF) == 0
+                                    and time.perf_counter() > deadline):
+                                fps = None
+                                over_budget = True
+                                break
                             fps.append(_fingerprint(s))
                     except Exception:
                         fps = None
                 per_layer[idx] = {"count": n, "bbox": bb_tup, "fps": fps}
+            if over_budget:
+                self._last_diff_degraded_cells += 1
             # Only keep this cell in the snapshot if it actually has
             # shapes on some layer - "_pcell" alone is not enough.
             if any(k != "_pcell" for k in per_layer):
                 snap[ci] = per_layer
+        if over_budget:
+            self._bump("diff_degraded")
         return snap
 
     def _snapshot_instances(self, ly, cells) -> dict:

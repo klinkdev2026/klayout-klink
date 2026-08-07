@@ -238,12 +238,16 @@ class FakeReimportClient:
             parent = params.get("parent")
             out = []
             for it in self.instances.get(parent, []):
-                out.append({"child": it["child"], "trans": {
+                row = {"child": it["child"], "trans": {
                     "dx_dbu": int(round(it["position_um"][0] / 0.001)),
                     "dy_dbu": int(round(it["position_um"][1] / 0.001)),
                     "rotation_deg": it.get("rotation", 0.0),
                     "mirror": it.get("mirror", False),
-                }})
+                }}
+                # New plugin echoes the stamped identity back on query.
+                if it.get("klink_id"):
+                    row["klink_id"] = it["klink_id"]
+                out.append(row)
             return {"instances": out}
         return {"ok": True}
 
@@ -298,3 +302,15 @@ def test_reimport_heals_mismatched_cell_and_skips_matching_one(circuit, tmp_path
     # The matching cell was never touched: no delete, no re-insert.
     assert not [c for c in client.shape_delete_calls if c[0] == mmi2x2_name]
     assert not [c for c in client.shape_insert_calls if c[0] == mmi2x2_name]
+
+
+def test_import_stamps_unique_stable_instance_ids(circuit, tmp_path):
+    """Issue-#13 fix, insert side: every imported device instance is stamped
+    with a unique klink_id, so harvest identity never depends on
+    instance.query iteration order (which reshuffles across save/reload)."""
+    client = FakeReimportClient()
+    import_gf_component(client, circuit, cell="TESTGF_IDS",
+                        route=False, spec_root=str(tmp_path))
+    kids = [it.get("klink_id") for it in client.instances["TESTGF_IDS"]]
+    assert all(kids), kids
+    assert len(set(kids)) == len(kids)

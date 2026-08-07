@@ -180,5 +180,9 @@ def meta_debug_signals(params, ctx):
         "current_view_is_tracked": current_tracked,
         "subscribers_per_channel": subs,
         "fire_counts": dict(hub.fire_counts),
+        "diff_last_ms": round(getattr(hub, "_last_diff_ms", 0.0), 1),
+        "diff_next_delay_ms": (hub._diff_delay_ms()
+                               if hasattr(hub, "_diff_delay_ms") else None),
+        "diff_degraded_cells": getattr(hub, "_last_diff_degraded_cells", 0),
         "fired": fired,
     }
