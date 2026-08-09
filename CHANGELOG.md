@@ -4,6 +4,28 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project does not use dated entries (versions only).
 
+## 0.1.7
+
+- Stable instance identity (#13, from a field report): photonics port
+  harvesting no longer derives instance ordinals from instance iteration
+  order, which is not stable across save/reload — after reloading a saved
+  layout, same-type instances with different rotations could swap
+  identities and re-routing failed with wrong port orientations.
+  `instance.insert` / `insert_many` / `insert_pcell` / `insert_pcell_many`
+  accept an optional `klink_id`, stamped on the instance as a GDS-safe
+  integer-keyed user property and echoed back by `instance.query`;
+  `photonics.import_gf` stamps every device instance, and both harvesters
+  key identity on the stamp (layouts imported by older versions fall back
+  to the legacy order with a `RuntimeWarning`; duplicate ids — e.g. a GUI
+  copy — raise an instructive error).
+- Bounded change-diff cost (#14, from a field report): the change-event
+  snapshot+diff pass that runs after every mutation is now bounded — a
+  250ms wall-clock budget degrades remaining cells to count/bbox
+  comparison (no false events), and an adaptive debounce spaces passes by
+  4x the last measured duration, so edit bursts on large layouts no
+  longer starve RPC handling into client timeouts. `meta.debug_signals`
+  reports `diff_last_ms` / `diff_next_delay_ms` / `diff_degraded_cells`.
+
 ## 0.1.6
 
 - Dispatcher enforces schema-declared required params before the handler
