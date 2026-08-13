@@ -58,6 +58,20 @@ artifacts are intentionally not part of a clean release.
 
 ## What's New
 
+### 0.2.2 — PCell fitter: learn it exactly or refuse
+
+The exemplar fitter now handles COUNT-VARYING geometry (contact arrays,
+finger repeats) as a new `klink_fitted_device_pcell_v3` table: counts,
+pitch and positions are fitted as exact integer laws, verified at every
+exemplar, and anything the model cannot express exactly and uniquely is
+REFUSED with an instructive message naming the box family — never a
+silently-wrong PCell. Fit tables record their sampled envelope, the
+byte-exact differential harness lives in
+`klink.domains.structdevice.pcell_diff`, and two one-call routes ship:
+`tcell_workflows.py fit` (L-Edit T-Cell → verified KLayout PCell) and
+the KLayout-native demo `fit_repeat_device.py` (drawn exemplars →
+verified PCell). Details in the [CHANGELOG](./CHANGELOG.md).
+
 ### 0.2.1 — L-Edit bridge hardening
 
 Design-targeting safety from blind-test findings: `new_design`/`open_design`

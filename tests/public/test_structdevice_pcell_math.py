@@ -94,6 +94,115 @@ def test_v1_normalises_to_v2_byte_identical():
         assert sd._edge_value(e["x1"], {"w_um": W, "l_um": L}, po, so) == int(round(old))
 
 
+def _v3_table():
+    # one static role + one repeat group exercising every v3 feature:
+    # param-driven count (floor_linear den>1), param-driven pitch,
+    # fixed x origin, centered y origin
+    z = {"kind": "parametric", "base": 0, "coef": {}}
+    return {
+        "format": "klink_fitted_device_pcell_v3",
+        "param_order": ["W", "P"],
+        "sample_order": [],
+        "styles": {"default": {
+            "roles": {"plate": {"layer": "41/0", "edges": {
+                "x1": {"kind": "parametric", "base": -600, "coef": {}},
+                "y1": {"kind": "parametric", "base": -600, "coef": {}},
+                "x2": {"kind": "parametric", "base": 100, "coef": {"W": 1}},
+                "y2": {"kind": "parametric", "base": 800, "coef": {}},
+            }}},
+            "repeat_groups": {"contacts": {
+                "unit_roles": {"u0": {"layer": "45/0", "edges": {
+                    "x1": z, "y1": z,
+                    "x2": {"kind": "parametric", "base": 220, "coef": {}},
+                    "y2": {"kind": "parametric", "base": 220, "coef": {}},
+                }}},
+                "count": {
+                    "x": {"kind": "floor_linear", "num_base": 0,
+                          "num_coef": {"W": 0, "P": 0}, "den": 1, "plus": 2},
+                    "y": {"kind": "floor_linear", "num_base": -300,
+                          "num_coef": {"W": 1, "P": 0}, "den": 470,
+                          "plus": 1},
+                },
+                "pitch_dbu": {
+                    "x": {"kind": "parametric", "base": 0, "coef": {"P": 1}},
+                    "y": {"kind": "parametric", "base": 470, "coef": {}},
+                },
+                "origin": {
+                    "x": {"kind": "fixed",
+                          "expr": {"kind": "parametric", "base": -110,
+                                   "coef": {}}},
+                    "y": {"kind": "centered",
+                          "expr": {"kind": "parametric", "base": -220,
+                                   "coef": {}}},
+                },
+            }},
+        }},
+    }
+
+
+def test_v3_repeat_group_parity_plugin_vs_klink():
+    # The plugin's _count_value/_group_boxes and klink's eval_count/
+    # eval_repeat_group/render_table must never drift: same boxes, same
+    # errors, byte for byte, or a fitted device silently changes geometry.
+    from klink.domains.structdevice import pcell_repeat as R
+
+    t = _v3_table()
+    po = t["param_order"]
+    group = t["styles"]["default"]["repeat_groups"]["contacts"]
+    for W, P in [(770, 800), (1239, 900), (1240, 1000), (2100, 850)]:
+        params = {"W": W, "P": P}
+        plugin = sorted(_plugin_group_boxes(group, params, po))
+        klink_side = sorted(
+            (layer, tuple(box)) for layer, box in
+            R.eval_repeat_group(group, params, po, []))
+        assert plugin == klink_side, (W, P)
+        # render_table agrees with a manual plugin-side expansion
+        rendered = R.render_table(t, params)
+        assert sorted(rendered["45/0"]) == sorted(
+            [list(b) for _, b in plugin])
+
+
+def _plugin_group_boxes(group, params, po):
+    return [(layer, tuple(box))
+            for layer, box in sd._group_boxes(group, params, po, [])]
+
+
+def test_v3_count_law_errors_match_between_ends():
+    from klink.domains.structdevice.pcell_repeat import eval_count
+
+    bad = {"kind": "floor_linear", "num_base": 0, "num_coef": {"W": 333},
+           "den": 1, "plus": 0}
+    for fn in (sd._count_value, eval_count):
+        with pytest.raises(ValueError, match="non-integer numerator"):
+            fn(bad, {"W": 0.5}, ["W"])
+
+
+def test_v3_table_validates_and_v2_ignores_sampled_block():
+    import json
+    import tempfile
+    import os
+
+    # v3 loads through the plugin loader; a v2 table with the tier-1
+    # 'sampled' metadata block still loads (unknown top-level keys are
+    # ignored by design)
+    v2 = _v2_table()
+    v2["sampled"] = {"params": {"w_um": {"min": 7, "max": 14}}, "points": []}
+    for table in (v2, _v3_table()):
+        fd, path = tempfile.mkstemp(suffix=".json")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                json.dump(table, fh)
+            loaded = sd._load_table(path)
+            assert loaded["format"] == table["format"]
+        finally:
+            os.unlink(path)
+    # a v3 group missing an axis is refused with an instructive error
+    broken = _v3_table()
+    del broken["styles"]["default"]["repeat_groups"]["contacts"]["count"]["y"]
+    with pytest.raises(ValueError, match="has no 'y' axis"):
+        sd._validate_v3(broken)
+
+
 def test_klink_eval_edge_matches_plugin_edge_value():
     # The klink package ships its own edge evaluator (klink.domains.structdevice
     # .pcell_fitter.eval_edge) so device EXAMPLES stay decoupled from the KLayout

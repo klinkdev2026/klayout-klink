@@ -15,8 +15,13 @@ unexplained edges come back in ``decisions_needed`` as instructions, so the
 intelligence is in the PROCESS, not in the operator's head.
 
 ``fit_table`` emits the canonical ``klink_fitted_device_pcell_v2`` table
-(``base + sum(coef[p]*param[p])`` per edge; a constant edge is just coef 0), so
-the fitted device draws at ANY parameter values, not only the exemplar points.
+(``base + sum(coef[p]*param[p])`` per edge; a constant edge is just coef 0).
+Validity is INTERPOLATION within the sampled envelope (recorded in the table's
+``sampled`` block); extrapolation beyond it is UNVERIFIED. The linear box-edge
+model cannot express count-varying geometry (contact arrays, finger repeats):
+when exemplars never cross a count threshold the fit is wrong outside the
+sampled bin, which is why ``analyze`` flags repetition suspects and why any
+fitted PCell should pass a differential check against ground truth before use.
 
 klink ships ZERO device data: the exemplars (which cells, which sizes, which
 layers) are example/process input. This module only does the math.
@@ -107,13 +112,18 @@ class FitReport:
     param_names: List[str]
     edges: List[EdgeFit]
     decisions_needed: List[str] = field(default_factory=list)
+    #: sampling envelope: {"params": {name: {"min": .., "max": ..}},
+    #: "points": [{name: value}, ...]} — what the fit has actually seen.
+    sampled: Dict[str, Any] = field(default_factory=dict)
 
     def summary(self) -> str:
         n_lin = sum(e.classification == "linear" for e in self.edges)
         n_con = sum(e.classification == "constant" for e in self.edges)
         n_un = sum(e.classification == "unexplained" for e in self.edges)
         lines = [f"parameters: {self.param_names}",
-                 f"edges: {n_lin} linear, {n_con} constant, {n_un} unexplained"]
+                 f"edges: {n_lin} linear, {n_con} constant, {n_un} unexplained",
+                 "validity: interpolation within sampled envelope; "
+                 "extrapolation UNVERIFIED"]
         for msg in self.decisions_needed:
             lines.append("  DECIDE: " + msg)
         return "\n".join(lines)
@@ -153,13 +163,38 @@ def analyze(
     if len(exemplars) < 2:
         raise FitterError("need >= 2 exemplars at different parameter values")
     roles = _exemplar_roles(exemplars)
-    # design matrix rows: [1, p1, p2, ...] per exemplar
-    xs = [[1.0] + [float(ex["params"][p]) for p in param_names] for ex in exemplars]
     param_cols = {p: [float(ex["params"][p]) for ex in exemplars]
                   for p in param_names}
 
     edges: List[EdgeFit] = []
     decisions: List[str] = []
+    # Screening honesty (BEFORE any regression): a single-valued parameter is
+    # invisible to the fit (its column is collinear with the bias), so it is
+    # excluded from the design matrix, its coefficient pinned to 0, and the
+    # blind spot surfaced as a decision instead of a silent wrong claim.
+    varying: List[str] = []
+    for p in param_names:
+        col = param_cols[p]
+        if max(col) - min(col) < 1e-12:
+            decisions.append(
+                f"param {p} has a single sampled value ({col[0]:g}); its "
+                f"effect is NOT captured (coefficient pinned to 0). If the "
+                f"geometry depends on {p}, add exemplars at other {p} values "
+                f"and re-run.")
+        else:
+            varying.append(p)
+    for p in param_names:
+        col = param_cols[p]
+        if all(abs(v - round(v)) < 1e-9 for v in col):
+            decisions.append(
+                f"param {p} is integer-valued at every exemplar — possible "
+                f"STRUCTURAL parameter (count/repetition). The linear "
+                f"box-edge model cannot express count-varying geometry; make "
+                f"sure the exemplars cross at least one count threshold and "
+                f"verify the fitted PCell differentially against ground "
+                f"truth before trusting it.")
+    # design matrix rows: [1, p1, p2, ...] over the VARYING parameters only
+    xs = [[1.0] + [float(ex["params"][p]) for p in varying] for ex in exemplars]
     for role in roles:
         layer = str(exemplars[0]["roles"][role]["layer"])
         for ei, ename in enumerate(_EDGES):
@@ -170,7 +205,8 @@ def analyze(
             corrs = {p: _corr(param_cols[p], ys) for p in param_names}
             spread = max(ys) - min(ys)
             base = coef[0]
-            coef_map = {p: coef[i + 1] for i, p in enumerate(param_names)}
+            coef_map = {p: 0.0 for p in param_names}
+            coef_map.update({p: coef[i + 1] for i, p in enumerate(varying)})
             if spread < 1e-6:
                 cls = "constant"
                 coef_map = {p: 0.0 for p in param_names}
@@ -190,7 +226,13 @@ def analyze(
                     f"re-run; otherwise the constant is correct.")
             edges.append(EdgeFit(role, ename, layer, base, coef_map, r2,
                                  corrs, cls))
-    return FitReport(param_names, edges, decisions)
+    sampled = {
+        "params": {p: {"min": min(param_cols[p]), "max": max(param_cols[p])}
+                   for p in param_names},
+        "points": [{p: float(ex["params"][p]) for p in param_names}
+                   for ex in exemplars],
+    }
+    return FitReport(param_names, edges, decisions, sampled)
 
 
 # --------------------------------------------------------------------------- #
@@ -254,9 +296,12 @@ def fit_table(
 ) -> Dict[str, Any]:
     """Emit a canonical ``klink_fitted_device_pcell_v2`` fit table from an
     analyzed report. Every edge becomes a parametric edge
-    ``base + sum(coef[p]*param[p])`` (a constant edge has all-zero coef), so the
-    device draws at ANY parameter values. ``keep_roles`` (optional) restricts
-    which roles are emitted -- e.g. drop a contact-lead role you do not want."""
+    ``base + sum(coef[p]*param[p])`` (a constant edge has all-zero coef). The
+    table records the report's sampling envelope in a ``sampled`` block:
+    interpolation inside it is what the exemplars support; extrapolation
+    beyond it is UNVERIFIED (differential-check against ground truth before
+    trusting it). ``keep_roles`` (optional) restricts which roles are
+    emitted -- e.g. drop a contact-lead role you do not want."""
 
     roles: Dict[str, Any] = {}
     for ef in report.edges:
@@ -280,6 +325,9 @@ def fit_table(
         "sample_order": [dict(s) for s in sample_order],
         "styles": {style: {"roles": roles}},
     }
+    if report.sampled:
+        # additive metadata: v2 readers ignore unknown top-level keys
+        table["sampled"] = report.sampled
     if param_units:
         table["param_units"] = dict(param_units)
     return table

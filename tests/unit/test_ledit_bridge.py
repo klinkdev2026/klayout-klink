@@ -307,14 +307,10 @@ def test_variant_factory_caches_by_params():
     assert len(gen_calls) == 2                   # cache hit for v2
 
 
-def test_verify_differential_byte_exact_and_mismatch():
-    truth = lambda p: {"A": [[0, 0, int(p["W"] * 1000), 1000]]}
-    good = lambda p: {"A": [[0, 0, int(p["W"] * 1000), 1000]]}
-    off_by_one = lambda p: {"A": [[0, 0, int(p["W"] * 1000) + 1, 1000]]}
-
-    r = verify_differential(good, truth, [{"W": 1}, {"W": 2.5}])
-    assert r.all_ok and "ALL BYTE-EXACT" in r.summary()
-
-    r = verify_differential(off_by_one, truth, [{"W": 1}])
-    assert not r.all_ok
-    assert "first diff" in r.summary()
+def test_verify_differential_reexported_from_bridge():
+    # canonical home moved to klink.domains.structdevice.pcell_diff
+    # (harness tests live in tests/public/test_pcell_diff.py); the bridge
+    # keeps the name as a backward-compatible re-export.
+    from klink.domains.structdevice.pcell_diff import (
+        verify_differential as canonical)
+    assert verify_differential is canonical

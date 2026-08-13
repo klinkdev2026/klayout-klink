@@ -108,3 +108,49 @@ def test_needs_two_exemplars_and_independent_params():
         F.analyze([], ["w"])
     with pytest.raises(F.FitterError):
         F.analyze(_exemplars()[:1], ["w", "l", "h"])
+
+
+# --------------------------------------------------------------------------- #
+# tier 1 honesty layer: sampled envelope + blind-spot warnings
+# --------------------------------------------------------------------------- #
+
+def test_sampled_envelope_in_report_and_table():
+    rep = F.analyze(_exemplars(), ["w", "l", "h"])
+    assert rep.sampled["params"]["w"] == {"min": 10.0, "max": 20.0}
+    assert rep.sampled["params"]["h"] == {"min": 2.0, "max": 6.0}
+    assert {"w": 10.0, "l": 4.0, "h": 2.0} in rep.sampled["points"]
+    assert len(rep.sampled["points"]) == len(_SIZES)
+    table = F.fit_table(rep)
+    assert table["sampled"] == rep.sampled
+    assert "validity" in rep.summary()
+    assert "extrapolation UNVERIFIED" in rep.summary()
+
+
+def test_single_valued_param_warns_and_pins_coef_to_zero():
+    # every exemplar has m=1 -> previously a singular-matrix crash; now the
+    # blind spot is excluded from the regression and surfaced as a decision
+    exemplars = _exemplars()
+    for ex in exemplars:
+        ex["params"]["m"] = 1
+    rep = F.analyze(exemplars, ["w", "l", "h", "m"])
+    assert any("param m has a single sampled value" in d
+               for d in rep.decisions_needed)
+    assert all(e.coef_dbu["m"] == 0.0 for e in rep.edges)
+    # the varying parameters still fit exactly
+    mx1 = _edge(rep, "metal", "x1")
+    assert mx1.classification == "linear"
+    assert mx1.coef_dbu["w"] == pytest.approx(-500.0)
+
+
+def test_integer_param_flagged_as_repetition_suspect():
+    # w/l/h are integer at every exemplar -> structural-parameter suspects
+    rep = F.analyze(_exemplars(), ["w", "l", "h"])
+    assert any("param w is integer-valued" in d for d in rep.decisions_needed)
+    # a genuinely fractional parameter is NOT flagged
+    exemplars = _exemplars()
+    for i, ex in enumerate(exemplars):
+        ex["params"]["t"] = 0.5 + 0.25 * i
+        ex["roles"]["metal"]["box_um"][3] += ex["params"]["t"]
+    rep = F.analyze(exemplars, ["w", "l", "h", "t"])
+    assert not any("param t is integer-valued" in d
+                   for d in rep.decisions_needed)

@@ -33,7 +33,9 @@ Exchange dir: %LOCALAPPDATA%\klink\ledit_bridge\default\
 - `tcell_workflows.py` — the T-Cell loop (needs `pip install
   klayout-klink`; the package imports as `klink` — the client is
   `from klink.bridges.ledit import LEditBridgeClient`):
-  `read` / `variants` / `writeback` / `verify` (byte-exact differential).
+  `read` / `variants` / `writeback` / `verify` (byte-exact differential) /
+  `fit` (geometry-only: harvest → v3 repeat-group fit → byte-exact gate →
+  KLayout PCell).
 - `tcell_template.cpp` — byte-exact-verified COPY-AND-ADAPT template for
   generator code you write back. Do not hand-write UPI C++ from scratch.
 
@@ -96,6 +98,8 @@ python tcell_workflows.py read NFET_Generator          # params + defaults
 python tcell_workflows.py variants NFET_Generator --paramsets "[...]" --out ex.json
 python tcell_workflows.py writeback MyGen --code gen.cpp --params "[...]"
 python tcell_workflows.py verify MyGen --reference ref.py:boxes --paramsets "[...]"
+python tcell_workflows.py fit MyGen --paramsets "[...]" --check "[...]" ^
+    --out fit.json --register MY_DEVICE
 ```
 
 `read` parses the generator source (stored in the cell's
@@ -112,6 +116,45 @@ ported/parameterized cell counts as done ONLY on an ALL-BYTE-EXACT
 report. 写回请以 `tcell_template.cpp` 为底稿改；验收标准=逐字节一致，
 别的都不算数。
 
+**Fit a T-Cell into a KLayout PCell (geometry-only) / 拟合成 KLayout
+PCell**: `fit` is the one-call route when you want the T-Cell usable in
+KLayout WITHOUT porting its code: it harvests exemplars at your
+`--paramsets`, fits the v3 repeat-group model (counts/pitch/positions as
+exact integer laws), byte-verifies against FRESH L-Edit variants at the
+held-out `--check` points, and with `--register NAME` registers the
+KLayout PCell and byte-verifies a live placement too. Read the output —
+it is the workflow:
+
+- `REFUSED: <family> ...` — the geometry has structure the model cannot
+  express exactly and uniquely. The message names the box family and the
+  options. Alternating/parity structure is refused BY DESIGN — and it is
+  NORMAL in real devices: MOSFET-style finger arrays almost always route
+  odd/even fingers differently (source vs drain), so expect the
+  finger-count axis of such a T-Cell to refuse. That is not a dead end:
+  **pin the refusing parameter to one value and re-fit** — the fit then
+  learns every other axis and the table is honest about the envelope
+  (you get the single-value DECIDE warning). For the full axis, use
+  `writeback` + `verify` (code handles anything). 叉指器件的奇偶交替是
+  常态：把引发 REFUSE 的参数钉在单值重拟合（其余轴照学，包络如实记录），
+  要完整轴就走代码移植路线。
+- `DECIDE: param X has a single sampled value` — that axis was not
+  learned; the fit is only valid at that value. Add exemplars if you
+  need the axis.
+- `MISMATCH - iterate` at a `--check` point — usually the point crossed
+  a count threshold your exemplars never crossed. Find the threshold
+  with `variants` (the printed box COUNT changes at the step; bisect the
+  parameter until you have it to your finest unit), then add TWO
+  exemplars straddling the step (last value before, first value after) —
+  that pins the count law uniquely — and re-run.
+
+Sampling rules of thumb: vary EVERY parameter you want learned (>= 2
+values); for count-like axes include exemplars on BOTH sides of at least
+one count step, ideally straddling it. A fit that only interpolates is
+still honest — the table records its sampled envelope and the check
+gate refuses extrapolation it cannot prove. 采样规则：要学的参数至少两个
+取值；数量型参数必须跨档位，最好骑缝取样（档位前最后一个值+档位后第一
+个值），数量律才能唯一钉死。`REFUSED`/`MISMATCH` 输出就是下一步操作指南。
+
 ## Command reference (schema 1)
 
 `ping` · `get_layers` · `ensure_layer` · `set_layer_style` ·
@@ -125,7 +168,15 @@ the header comment of `ledit_bridge.cpp`.
 ## Landmines / 已知地雷（都踩过，按此绕行）
 
 - **Heartbeat stalls (`hello.json` stale)**: a MODAL DIALOG is open in
-  L-Edit (often a T-Cell compile error). Close it; the bridge resumes.
+  L-Edit (a T-Cell compile error, or a GENERATOR error from instancing a
+  T-Cell at invalid parameter values). A human must close it — there is
+  NO programmatic recovery, by design (it is a GUI EDA tool). Agents /
+  headless runs: treat a stale heartbeat as "stop and tell the user to
+  close the dialog in L-Edit", and prevent it up front — keep parameter
+  values physically plausible (start from the defaults `read` prints and
+  move gradually; e.g. don't instance a MOSFET at W below its contact
+  size). 心跳停摆=有人必须去 L-Edit 关弹窗，没有程序化恢复；预防=参数
+  取值从 `read` 给的默认值出发渐进探索，别喂物理上不成立的值。
 - **Stale T-Cell variants**: after changing a T-Cell's code, identical
   parameter values return the CACHED old variant. Use fresh values or
   Tools → Regenerate T-Cells.

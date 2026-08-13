@@ -94,11 +94,15 @@ that owns its own process (layers / spacing / vias) and a synthetic device is:
 
 ```text
 examples_klink/public/demos/digital/fit_device_pnr_lvs.py
+examples_klink/public/demos/digital/fit_repeat_device.py
 ```
 
-It fits a parametric device PCell from exemplar geometry, places it, runs
-detailed routing, and verifies with live LVS — importing only `klink`. Copy it
-and edit the numbers for YOUR process.
+The first fits a parametric device PCell from exemplar geometry, places it,
+runs detailed routing, and verifies with live LVS — importing only `klink`.
+The second is the count-varying route (v3 repeat groups): drawn exemplar
+family → exact-law fit (or an instructive REFUSE) → registered PCell,
+byte-verified at never-sampled counts. Copy either and edit the numbers for
+YOUR process.
 
 Agent-facing consequence: the `structdevice.*` MCP tools ship NO process, device
 library, or terminal recipe. Called without them they return an INSTRUCTIVE
