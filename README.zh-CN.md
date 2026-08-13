@@ -4,6 +4,20 @@
   <a href="./README.md">English</a> | <a href="./README.zh-CN.md">中文</a>
 </p>
 
+**0.2.0 新亮点 —— L-Edit 桥。** klink 现在可以驱动正在运行的 Tanner
+L-Edit：一个源码即装载的 UPI 宏（零编译、无套接字）+ JSON 文件交换传输，
+白盒读取选区、整 cell（含对象级属性树）、端口、标签、整套 DRC 规则表，并
+**双向**操作 T-Cell——读生成器代码、程序化传参实例化、把生成的代码写回成
+原生参数化 T-Cell。验收标准是逐字节一致：移植的单元只有在每个箱体都与
+L-Edit 自己生成的几何完全相等时才算数。`klink init` 后见
+`example_template/ledit_bridge/`，MCP 域 `bridge_ledit`，网站指南见
+<https://klinkdev2026.github.io/klayout-klink/ledit-bridge.html>。
+
+![Load ledit_bridge.cpp in L-Edit: Tools > Macro > Load Macro, then the Tools menu gains klink Bridge Start/Stop/Status](https://raw.githubusercontent.com/klinkdev2026/klayout-klink/main/docs/public/assets/ledit_bridge_load.png)
+
+*把 L-Edit 连上 agent：Tools → Macro → Load 装载宏源码一次即可——
+桥立即开始轮询（Tools 菜单出现 klink Bridge Start/Stop/Status）。*
+
 klink 是一个面向 [KLayout](https://www.klayout.de/) 的 AI-native 控制面。它把正在运行的 KLayout GUI 变成一个可由外部 Python 进程、MCP 客户端和 AI agent 稳定操控的版图编辑内核。
 
 📖 **文档网站**（中文；English 见 `/en/`）：

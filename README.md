@@ -1,5 +1,21 @@
 # klink
 
+**New in 0.2.0 — L-Edit bridge.** klink now drives a running Tanner L-Edit
+through a file-exchange RPC bridge: one source-loaded UPI macro (zero
+compile, no sockets), full white-box readout (selections, whole cells with
+property trees, ports, labels, the design's entire DRC rule table), and
+T-Cells in **both directions** — read generator code, instance
+programmatically with parameters, and write generated code back as a
+native parametric T-Cell. Acceptance is byte-exact: a ported cell counts
+only when every box matches L-Edit's own generated geometry. See
+`example_template/ledit_bridge/` after `klink init`, MCP domain
+`bridge_ledit`, and the [website guide](https://klinkdev2026.github.io/klayout-klink/en/ledit-bridge.html).
+
+![Load ledit_bridge.cpp in L-Edit: Tools > Macro > Load Macro, then the Tools menu gains klink Bridge Start/Stop/Status](https://raw.githubusercontent.com/klinkdev2026/klayout-klink/main/docs/public/assets/ledit_bridge_load.png)
+
+*Connecting L-Edit to your agent: load the macro source once — the
+bridge starts polling immediately (Tools menu: klink Bridge Start/Stop/Status).*
+
 <p align="right">
   <a href="./README.md">English</a> | <a href="./README.zh-CN.md">中文</a>
 </p>
