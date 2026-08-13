@@ -411,6 +411,10 @@ One-call tools:
 Deeper work (whole-cell readout, DRC-rule export, T-Cell read/instance/
 write-back) uses the Python API `klink.bridges.ledit` and the template's
 `tcell_workflows.py` (verbs: read / variants / writeback / verify).
+Write-back generator code MUST start from the template's
+`tcell_template.cpp` (byte-exact-verified pattern) — hand-written UPI
+C++ usually fails L-Edit's in-place compile, and the compile-error
+dialog pauses the bridge until the user closes it.
 Discipline for any parametric port or write-back: it counts as DONE only
 on an ALL-BYTE-EXACT `verify` report against L-Edit-generated ground
 truth. Landmines (variant cache, EXCLUDE_LEDIT_LEGACY_UPI, GDS-number

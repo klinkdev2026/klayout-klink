@@ -48,6 +48,14 @@ klink 是一个面向 [KLayout](https://www.klayout.de/) 的 AI-native 控制面
 
 ## 更新亮点
 
+### 0.2.1 —— L-Edit 桥加固
+
+盲测抓出的设计归属安全修复：`new_design`/`open_design` 现在会激活新建/
+打开的设计，激活失败即报错拒绝（此前后续写入可能静默落进当时活动的
+设计）；所有文件绑定命令回显 `result.file`，可选 `expect_file` 参数
+拒写其他设计。模板新增 `tcell_template.cpp`——写回 T-Cell 生成器代码
+的逐字节验证过的起稿模板。详见 [CHANGELOG](./CHANGELOG.md)。
+
 ### 0.2.0 —— L-Edit 桥
 
 klink 现在可以驱动正在运行的 Tanner

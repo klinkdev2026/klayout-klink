@@ -193,13 +193,35 @@ class LEditBridgeClient:
     def get_drc_rules(self):
         return self.call("get_drc_rules")["rules"]
 
+    def _verify_switched(self, out: Dict[str, Any], before: str,
+                         what: str) -> Dict[str, Any]:
+        # Defense in depth for macros < 0.5.1: they could create/open a
+        # design yet leave the previously active one (often the user's)
+        # receiving every subsequent write. Macro >= 0.5.1 fails server-side.
+        after = self.ping().get("file", "")
+        if not after or after == before:
+            raise LEditBridgeError(
+                f"{what} returned ok but the active design is still "
+                f"'{before or 'none'}'",
+                "update/reload the bridge macro (>=0.5.1) or switch to the "
+                "new design in L-Edit (Window menu); ping must report the "
+                "new 'file' before any drawing")
+        out.setdefault("file", after)
+        return out
+
     def new_design(self, name: str = "klink_design",
                    setup_from_visible: bool = False) -> Dict[str, Any]:
-        return self.call("new_design", {
+        before = self.ping().get("file", "")
+        out = self.call("new_design", {
             "name": name, "setup_from_visible": setup_from_visible})
+        return self._verify_switched(out, before, "new_design")
 
     def open_design(self, path: str) -> Dict[str, Any]:
-        return self.call("open_design", {"path": path})
+        before = self.ping().get("file", "")
+        out = self.call("open_design", {"path": path})
+        if out.get("file", "") and out["file"] == before:
+            return out          # re-opening the already-active design is fine
+        return self._verify_switched(out, before, "open_design")
 
     def save_design(self, path: str = "") -> Dict[str, Any]:
         p: Dict[str, Any] = {}
