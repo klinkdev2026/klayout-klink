@@ -251,6 +251,36 @@ DOMAINS: "OrderedDict[str, dict]" = OrderedDict([
             "without a process returns an INSTRUCTIVE error, not a guess."
         ),
     }),
+    ("bridge_ledit", {
+        "title": "L-Edit bridge (file-exchange RPC)",
+        "summary": "Read selections/cells from a live Tanner L-Edit, import them into KLayout (parametric where possible), and push KLayout geometry back — via the ledit_bridge.cpp macro.",
+        "prefixes": ["ledit"],
+        "usage": (
+            "Requires L-Edit running with the bridge macro loaded as SOURCE "
+            "(example_template/ledit_bridge/ledit_bridge.cpp via Tools > "
+            "Macro > Load Macro...; zero compile; old-version API subset - "
+            "older versions by design, tested on v16.x). Transport is a JSON file exchange under "
+            "%LOCALAPPDATA%\\klink\\ledit_bridge\\<namespace>; one namespace "
+            "per L-Edit instance, and only ONE L-Edit may hold a namespace "
+            "at a time.\n"
+            "- ledit.status — discovery + handshake: heartbeat age, macro "
+            "version/capabilities, current .tdb + cell. Call FIRST when "
+            "anything misbehaves; errors name the exact fix.\n"
+            "- ledit.import_selection — fresh GET of the user's current "
+            "L-Edit selection -> new KLayout landing cell. Capability-"
+            "matched conversion (box/wire/circle/outline-fallback), layer "
+            "NAMES + GDS numbers migrate, non-convertibles reported.\n"
+            "- ledit.push_cell — flat KLayout cell -> L-Edit cell through "
+            "the bridge (boxes/paths/polygons; append-only on the L-Edit "
+            "side, use a fresh target cell to regenerate).\n"
+            "Deeper T-Cell workflows (parameter discovery, programmatic "
+            "variants, byte-exact differential verification, writing "
+            "generator code back) live in the Python API "
+            "klink.bridges.ledit — drive them from an example/script, and "
+            "accept a parametric port ONLY on an ALL-BYTE-EXACT "
+            "verify_differential report."
+        ),
+    }),
     ("device_nanodevice", {
         "title": "Nanodevices (Hall bar, EBL, flake traces)",
         "summary": "Build/route a Hall bar device, or detect & commit nanodevice flake traces, in one call.",

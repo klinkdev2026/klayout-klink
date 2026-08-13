@@ -2244,6 +2244,10 @@
           "type": "number",
           "default": 1.0
         },
+        "klink_id": {
+          "type": "string",
+          "description": "optional stable identity stamped on the instance as a user property; survives save/reload and GUI drags, returned by instance.query"
+        },
         "array": {
           "type": "object",
           "properties": {
@@ -2322,6 +2326,12 @@
             "object",
             "null"
           ]
+        },
+        "klink_id": {
+          "type": [
+            "string",
+            "null"
+          ]
         }
       }
     },
@@ -2380,6 +2390,10 @@
               "magnification": {
                 "type": "number",
                 "default": 1.0
+              },
+              "klink_id": {
+                "type": "string",
+                "description": "optional stable identity stamped as a user property; returned by instance.query"
               },
               "array": {
                 "type": "object"
@@ -2465,6 +2479,10 @@
         },
         "magnification": {
           "type": "number"
+        },
+        "klink_id": {
+          "type": "string",
+          "description": "optional stable identity stamped as a user property; returned by instance.query"
         },
         "array": {
           "type": "object",
@@ -2618,6 +2636,10 @@
               },
               "magnification": {
                 "type": "number"
+              },
+              "klink_id": {
+                "type": "string",
+                "description": "optional stable identity stamped as a user property; returned by instance.query"
               },
               "array": {
                 "type": "object"

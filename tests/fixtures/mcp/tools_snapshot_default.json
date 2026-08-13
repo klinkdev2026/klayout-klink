@@ -1240,6 +1240,10 @@
             "type": "number",
             "default": 1.0
           },
+          "klink_id": {
+            "type": "string",
+            "description": "optional stable identity stamped on the instance as a user property; survives save/reload and GUI drags, returned by instance.query"
+          },
           "array": {
             "type": "object",
             "properties": {
@@ -1346,6 +1350,10 @@
                   "type": "number",
                   "default": 1.0
                 },
+                "klink_id": {
+                  "type": "string",
+                  "description": "optional stable identity stamped as a user property; returned by instance.query"
+                },
                 "array": {
                   "type": "object"
                 }
@@ -1398,6 +1406,10 @@
           },
           "magnification": {
             "type": "number"
+          },
+          "klink_id": {
+            "type": "string",
+            "description": "optional stable identity stamped as a user property; returned by instance.query"
           },
           "array": {
             "type": "object",
@@ -1501,6 +1513,10 @@
                 },
                 "magnification": {
                   "type": "number"
+                },
+                "klink_id": {
+                  "type": "string",
+                  "description": "optional stable identity stamped as a user property; returned by instance.query"
                 },
                 "array": {
                   "type": "object"
@@ -3130,6 +3146,7 @@
               "routing_backends",
               "drc_and_lvs_verification",
               "device_structdevice",
+              "bridge_ledit",
               "device_nanodevice",
               "device_photonics",
               "escape_hatch"
@@ -3225,6 +3242,73 @@
         "properties": {
           "include_current_selection": {
             "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "ledit.status",
+      "description": "Discover L-Edit bridge namespaces and report liveness + handshake for one: hello heartbeat age, macro version/capabilities, current .tdb file and cell. Start here when any ledit.* call misbehaves; errors name the exact fix (load/reload the macro, close a modal dialog, ...).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "namespace": {
+            "type": "string",
+            "default": "default",
+            "description": "Bridge namespace (one per L-Edit instance)."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "ledit.import_selection",
+      "description": "Import the CURRENT L-Edit selection into a fresh KLayout landing cell (fresh GET each call — never stale geometry). Generic capability matching: box->box, wire->path, circle->Basic.CIRCLE PCell (stays parametric), any other outline->polygon; non-convertible objects are reported, never silently dropped. Layers migrate by NAME + GDS number (L-Edit's own table; unmapped layers get auto-assigned numbers, reported).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "target_cell": {
+            "type": "string",
+            "default": "from_ledit_selection",
+            "description": "KLayout landing cell (recreated each call)."
+          },
+          "namespace": {
+            "type": "string",
+            "default": "default"
+          },
+          "session": {
+            "type": "string",
+            "description": "KLayout session id/label/alias (default: primary)."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "ledit.push_cell",
+      "description": "Push a KLayout cell's flat geometry into an L-Edit cell through the bridge: boxes, paths (->wires) and polygons transfer; text and sub-instances are counted and reported, not silently dropped. Layers are created in L-Edit with the KLayout layer NAME when one exists (else L<gds>D<dt>) plus the GDS numbers. Draw is append-only on the L-Edit side — pass a fresh ledit_cell to regenerate.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "cell"
+        ],
+        "properties": {
+          "cell": {
+            "type": "string",
+            "description": "KLayout source cell (flat shapes only; flatten first if hierarchical)."
+          },
+          "ledit_cell": {
+            "type": "string",
+            "description": "Target L-Edit cell name (default: same as cell)."
+          },
+          "namespace": {
+            "type": "string",
+            "default": "default"
+          },
+          "session": {
+            "type": "string",
+            "description": "KLayout session id/label/alias (default: primary)."
           }
         },
         "additionalProperties": false

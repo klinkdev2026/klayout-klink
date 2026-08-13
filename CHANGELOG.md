@@ -4,6 +4,39 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project does not use dated entries (versions only).
 
+## 0.2.0
+
+- L-Edit bridge (new): drive a running Tanner L-Edit through a
+  file-exchange RPC bridge. One source-loaded UPI macro
+  (`example_template/ledit_bridge/ledit_bridge.cpp`, zero compile, no
+  sockets, no extra DLLs; written against the old-version API subset —
+  tested on v16.x) exposes design files (`new_design`/`open_design`/
+  `save_design`), layers (GDS numbers stamped, new layers auto-colored),
+  cells, batch drawing, instances/arrays, deep readout (selection and
+  whole cells with per-object property trees, ports, labels; wires with
+  cap/join; torus/pie with exact params), the design's full DRC rule
+  table (`get_drc_rules`), and T-Cells in both directions: read generator
+  code, instance programmatically with parameters, and write generator
+  code back as a native parametric T-Cell.
+- `klink.bridges.ledit` (new Python package): bridge client with
+  heartbeat liveness and instructive errors; generic L-Edit→KLayout
+  conversion (capability-matched, polygon fallback, layer-name merge
+  policy `existing|incoming`); T-Cell toolkit — parameter parsing from
+  generator code, a variant factory, and `verify_differential`, the
+  byte-exact acceptance harness (a parametric port counts as done only
+  when every box matches L-Edit's own generated geometry exactly).
+- MCP: new `bridge_ledit` domain with one-call tools `ledit.status`
+  (discovery/triage), `ledit.import_selection` (live selection → KLayout,
+  circles stay parametric, layer names migrate), `ledit.push_cell`
+  (flat KLayout cell → L-Edit).
+- Template: `klink init` scaffolds `example_template/ledit_bridge/`
+  (macro source + dependency-free driver + `tcell_workflows.py` with
+  read/variants/writeback/verify verbs + bilingual README covering the
+  known landmines).
+- Fixed: smoke example 17 asserted a hard-coded `port.*` RPC count and
+  broke when `port.mark_many` was added; it now checks the expected
+  names as a subset.
+
 ## 0.1.7
 
 - Stable instance identity (#13, from a field report): photonics port

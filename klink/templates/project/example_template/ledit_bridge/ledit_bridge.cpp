@@ -1,0 +1,1813 @@
+// ============================================================================
+// ledit_bridge.cpp — klink <-> L-Edit file-exchange RPC bridge  (v0.1.0)
+//
+// Architecture (deliberately boring, replaces the v15 socket design):
+//   - ONE thread: the L-Edit UI thread. A SetTimer callback polls an inbox
+//     directory every 200 ms. No worker threads, no message queues, no
+//     helper DLLs. All UPI calls happen on the UI thread by construction.
+//   - Transport: JSON files. Agent writes  <ns>\inbox\req_<id>.json,
+//     bridge writes <ns>\outbox\resp_<id>.json (atomic: .tmp + rename).
+//     <ns> = %LOCALAPPDATA%\klink\ledit_bridge\default
+//   - Extensibility: one command = one handler function + one row in
+//     g_commands[]. Nothing else to touch.
+//
+// Request : {"schema":1, "id":"req_xxx", "cmd":"ping", "params":{...}}
+// Response: {"schema":1, "id":"req_xxx", "ok":true,  "result":{...}}
+//         | {"schema":1, "id":"req_xxx", "ok":false,
+//            "error":{"code":"...", "message":"...", "next_action":"..."}}
+//
+// Commands v0.1 (units: ALL coordinates/sizes in microns, doubles):
+//   ping            -> {proto, macro_version, cell, microns_per_intu}
+//   get_layers      -> {layers:[{name, gds_layer, gds_datatype}]}
+//   ensure_layer    {name, gds_layer?, gds_datatype?} -> {created:bool}
+//   create_cell     {name} -> {created:bool}   (existing cell = ok, created:false)
+//   draw            {cell?, items:[
+//                      {kind:"box",     layer, bbox_um:[x0,y0,x1,y1]}
+//                      {kind:"polygon", layer, points_um:[[x,y],...]}
+//                      {kind:"wire",    layer, points_um:[[x,y],...], width_um,
+//                                       cap?:"butt"|"round"|"extend"}
+//                      {kind:"circle",  layer, center_um:[x,y], radius_um}
+//                    ]} -> {drawn, layers_created}
+//   get_selection   -> {cell, count, objects:[...], skipped:{kind:count}}
+//   place_instance  {cell?, child, x_um, y_um, orient?, mirror_x?,
+//                    nx?, ny?, dx_um?, dy_um?} -> {placed:true}
+//   set_layer_style {layer, fill_rgb?:[r,g,b], fill?:"solid"|"none",
+//                    outline_rgb?:[r,g,b]} -> {fill_rgb_used, ...}
+//                   (colors snap to the nearest design-palette entry)
+//   get_cell        {cell} -> full inventory: shapes (same forms as
+//                   get_selection) + instances (name/master/is_tcell/
+//                   transform/repeat/properties). T-Cell harvesting entry.
+//   clear_cell      {cell} -> delete ALL shapes+instances in that cell.
+//                   cell is REQUIRED (the visible cell is never cleared
+//                   implicitly).
+//   list_cells      -> {cells:[{name, is_tcell, hidden?}]}
+//   instance_tcell  {cell?, tcell, params:{name:value}, x_um?, y_um?}
+//                   -> generated instance (incl. the auto-variant cell name)
+//   set_tcell_code  {cell, code, language?=5} -> EXPERIMENTAL write of
+//                   T-Cell generator source into System.TCell Code
+//   new_design      {name?, setup_from_visible?} -> create a fresh .tdb
+//                   (works with NO design open; setup_from_visible
+//                   inherits the open design's technology/layers)
+//   open_design     {path} -> open an existing .tdb
+//   save_design     {path?} -> Save (or SaveAs when path given)
+//   get_tcell_params {cell, names:[...]} -> per-name default/previous
+//   get_drc_rules   -> the design's full DRC rule table (type, layers,
+//                   distance) - the tdb's process knowledge
+//
+// v0.5 readout depth: every converted object carries its property tree
+// (dotted names = nesting); wires report cap/join; torus/pie report exact
+// params; get_cell adds ports[] + labels[]; get_layers adds fill_rgb/fill
+// + layer properties.
+//
+// v0.2 selection/get_cell semantics: instances are serialized (not
+// skipped); unknown shape kinds with a vertex outline degrade to
+// kind:"polygon" + source_kind; only outline-less kinds are counted in
+// skipped{kind:count}. ping/hello report the .tdb file name so users can
+// confirm the bridge is attached to the right design.
+//
+// Load (no separate compile step — L-Edit builds source macros itself):
+//   L-Edit: Tools > Macro > Load Macro... -> select THIS .cpp file.
+//   The bridge starts polling automatically on load; Tools menu gets
+//   "klink: Bridge Status" / "klink: Bridge Stop" / "klink: Bridge Start".
+//
+// API discipline: old-version subset only (v9.30/Ex99/Ex830-era calls)
+// for maximum version reach. Verified on Tanner v16.3; older versions are
+// compatible BY DESIGN but untested - report issues if one rejects it.
+// Known v0.1 limits (by design, round 2 material): no TTL/idempotency
+// journal reload across L-Edit restarts, no chunking (>4 MiB responses),
+// single fixed namespace "default".
+// ============================================================================
+
+#include <windows.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <string>
+#include <vector>
+#include <set>
+#include <utility>
+
+#include <ldata.h>   // L-Edit UPI (user-supplied SDK include path)
+
+#define BRIDGE_PROTO         1
+#define BRIDGE_MACRO_VERSION "0.5.0"
+#define POLL_INTERVAL_MS     200
+#define HELLO_EVERY_TICKS    10      // refresh hello.json every ~2 s
+
+// v15.cpp-proven export style for source-loaded macros: a plain extern "C"
+// declaration block; definitions carry no decoration. No __declspec.
+extern "C" {
+    void klink_bridge_start(void);
+    void klink_bridge_stop(void);
+    void klink_bridge_status(void);
+    int  UPI_Entry_Point(void);
+}
+
+// ----------------------------------------------------------------------------
+// Minimal JSON value + parser + serializer (C++03, no dependencies).
+// Supports: null, bool, number(double), string(UTF-8), array, object.
+// ----------------------------------------------------------------------------
+
+struct JVal {
+    enum T { JNULL, JBOOL, JNUM, JSTR, JARR, JOBJ };
+    T t;
+    bool b;
+    double num;
+    std::string str;
+    std::vector<JVal> arr;
+    std::vector<std::pair<std::string, JVal> > obj;
+
+    JVal() : t(JNULL), b(false), num(0.0) {}
+
+    static JVal N(double d)              { JVal v; v.t = JNUM; v.num = d; return v; }
+    static JVal B(bool x)                { JVal v; v.t = JBOOL; v.b = x; return v; }
+    static JVal S(const std::string& s)  { JVal v; v.t = JSTR; v.str = s; return v; }
+    static JVal A()                      { JVal v; v.t = JARR; return v; }
+    static JVal O()                      { JVal v; v.t = JOBJ; return v; }
+
+    void set(const std::string& k, const JVal& v) {
+        obj.push_back(std::make_pair(k, v));
+    }
+    const JVal* get(const char* k) const {
+        for (size_t i = 0; i < obj.size(); ++i)
+            if (obj[i].first == k) return &obj[i].second;
+        return 0;
+    }
+    double num_or(const char* k, double def) const {
+        const JVal* v = get(k);
+        return (v && v->t == JNUM) ? v->num : def;
+    }
+    std::string str_or(const char* k, const char* def) const {
+        const JVal* v = get(k);
+        return (v && v->t == JSTR) ? v->str : std::string(def);
+    }
+    bool bool_or(const char* k, bool def) const {
+        const JVal* v = get(k);
+        return (v && v->t == JBOOL) ? v->b : def;
+    }
+};
+
+class JParser {
+public:
+    JParser(const std::string& s) : s_(s), p_(0), ok_(true) {}
+    bool parse(JVal& out) {
+        skip();
+        parse_value(out);
+        skip();
+        return ok_ && p_ == s_.size();
+    }
+private:
+    const std::string& s_;
+    size_t p_;
+    bool ok_;
+
+    void fail() { ok_ = false; p_ = s_.size(); }
+    int  peek() { return p_ < s_.size() ? (unsigned char)s_[p_] : -1; }
+    int  next() { return p_ < s_.size() ? (unsigned char)s_[p_++] : -1; }
+    void skip() {
+        while (p_ < s_.size()) {
+            char c = s_[p_];
+            if (c == ' ' || c == '\t' || c == '\r' || c == '\n') ++p_;
+            else break;
+        }
+    }
+    bool lit(const char* w) {
+        size_t n = strlen(w);
+        if (s_.compare(p_, n, w) == 0) { p_ += n; return true; }
+        fail(); return false;
+    }
+    void parse_value(JVal& v) {
+        if (!ok_) return;
+        switch (peek()) {
+            case '{': parse_obj(v); break;
+            case '[': parse_arr(v); break;
+            case '"': v.t = JVal::JSTR; parse_str(v.str); break;
+            case 't': if (lit("true"))  { v.t = JVal::JBOOL; v.b = true;  } break;
+            case 'f': if (lit("false")) { v.t = JVal::JBOOL; v.b = false; } break;
+            case 'n': if (lit("null"))  { v.t = JVal::JNULL; } break;
+            default:  parse_num(v); break;
+        }
+    }
+    void parse_obj(JVal& v) {
+        v.t = JVal::JOBJ; next(); skip();
+        if (peek() == '}') { next(); return; }
+        for (;;) {
+            std::string key;
+            skip();
+            if (peek() != '"') { fail(); return; }
+            parse_str(key);
+            skip();
+            if (next() != ':') { fail(); return; }
+            skip();
+            JVal child;
+            parse_value(child);
+            if (!ok_) return;
+            v.obj.push_back(std::make_pair(key, child));
+            skip();
+            int c = next();
+            if (c == ',') continue;
+            if (c == '}') return;
+            fail(); return;
+        }
+    }
+    void parse_arr(JVal& v) {
+        v.t = JVal::JARR; next(); skip();
+        if (peek() == ']') { next(); return; }
+        for (;;) {
+            JVal child;
+            skip();
+            parse_value(child);
+            if (!ok_) return;
+            v.arr.push_back(child);
+            skip();
+            int c = next();
+            if (c == ',') continue;
+            if (c == ']') return;
+            fail(); return;
+        }
+    }
+    void parse_str(std::string& out) {
+        out.clear();
+        if (next() != '"') { fail(); return; }
+        for (;;) {
+            int c = next();
+            if (c < 0) { fail(); return; }
+            if (c == '"') return;
+            if (c == '\\') {
+                int e = next();
+                switch (e) {
+                    case '"':  out += '"';  break;
+                    case '\\': out += '\\'; break;
+                    case '/':  out += '/';  break;
+                    case 'b':  out += '\b'; break;
+                    case 'f':  out += '\f'; break;
+                    case 'n':  out += '\n'; break;
+                    case 'r':  out += '\r'; break;
+                    case 't':  out += '\t'; break;
+                    case 'u': {
+                        unsigned int cp = 0;
+                        for (int i = 0; i < 4; ++i) {
+                            int h = next();
+                            cp <<= 4;
+                            if (h >= '0' && h <= '9') cp |= (h - '0');
+                            else if (h >= 'a' && h <= 'f') cp |= (h - 'a' + 10);
+                            else if (h >= 'A' && h <= 'F') cp |= (h - 'A' + 10);
+                            else { fail(); return; }
+                        }
+                        // encode BMP code point as UTF-8 (surrogates unsupported)
+                        if (cp < 0x80) out += (char)cp;
+                        else if (cp < 0x800) {
+                            out += (char)(0xC0 | (cp >> 6));
+                            out += (char)(0x80 | (cp & 0x3F));
+                        } else {
+                            out += (char)(0xE0 | (cp >> 12));
+                            out += (char)(0x80 | ((cp >> 6) & 0x3F));
+                            out += (char)(0x80 | (cp & 0x3F));
+                        }
+                        break;
+                    }
+                    default: fail(); return;
+                }
+            } else {
+                out += (char)c;
+            }
+        }
+    }
+    void parse_num(JVal& v) {
+        size_t start = p_;
+        if (peek() == '-') next();
+        while (peek() >= '0' && peek() <= '9') next();
+        if (peek() == '.') { next(); while (peek() >= '0' && peek() <= '9') next(); }
+        if (peek() == 'e' || peek() == 'E') {
+            next();
+            if (peek() == '+' || peek() == '-') next();
+            while (peek() >= '0' && peek() <= '9') next();
+        }
+        if (p_ == start) { fail(); return; }
+        v.t = JVal::JNUM;
+        v.num = atof(s_.substr(start, p_ - start).c_str());
+    }
+};
+
+static void jesc(const std::string& in, std::string& out) {
+    out += '"';
+    for (size_t i = 0; i < in.size(); ++i) {
+        unsigned char c = (unsigned char)in[i];
+        switch (c) {
+            case '"':  out += "\\\""; break;
+            case '\\': out += "\\\\"; break;
+            case '\b': out += "\\b";  break;
+            case '\f': out += "\\f";  break;
+            case '\n': out += "\\n";  break;
+            case '\r': out += "\\r";  break;
+            case '\t': out += "\\t";  break;
+            default:
+                if (c < 0x20) {
+                    char buf[8];
+                    sprintf(buf, "\\u%04x", (int)c);
+                    out += buf;
+                } else {
+                    out += (char)c;   // UTF-8 bytes pass through
+                }
+        }
+    }
+    out += '"';
+}
+
+static void jdump(const JVal& v, std::string& out) {
+    char buf[64];
+    switch (v.t) {
+        case JVal::JNULL: out += "null"; break;
+        case JVal::JBOOL: out += v.b ? "true" : "false"; break;
+        case JVal::JNUM:
+            if (v.num == (double)(long long)v.num &&
+                v.num > -1e15 && v.num < 1e15)
+                sprintf(buf, "%lld", (long long)v.num);
+            else
+                sprintf(buf, "%.10g", v.num);
+            out += buf;
+            break;
+        case JVal::JSTR: jesc(v.str, out); break;
+        case JVal::JARR:
+            out += '[';
+            for (size_t i = 0; i < v.arr.size(); ++i) {
+                if (i) out += ',';
+                jdump(v.arr[i], out);
+            }
+            out += ']';
+            break;
+        case JVal::JOBJ:
+            out += '{';
+            for (size_t i = 0; i < v.obj.size(); ++i) {
+                if (i) out += ',';
+                jesc(v.obj[i].first, out);
+                out += ':';
+                jdump(v.obj[i].second, out);
+            }
+            out += '}';
+            break;
+    }
+}
+
+// ----------------------------------------------------------------------------
+// Bridge state + filesystem plumbing
+// ----------------------------------------------------------------------------
+
+static UINT_PTR g_timerId = 0;
+static bool     g_inTick  = false;          // re-entrancy guard
+static unsigned g_tick    = 0;
+static std::string g_root, g_inbox, g_outbox, g_logPath;
+static std::set<std::string> g_processed;   // in-memory idempotency (v0.1)
+
+static void bridge_log(const char* msg) {
+    if (!g_logPath.empty()) {
+        FILE* f = fopen(g_logPath.c_str(), "a");
+        if (f) {
+            SYSTEMTIME st; GetLocalTime(&st);
+            fprintf(f, "%04d-%02d-%02d %02d:%02d:%02d.%03d %s\n",
+                    st.wYear, st.wMonth, st.wDay,
+                    st.wHour, st.wMinute, st.wSecond, st.wMilliseconds, msg);
+            fclose(f);
+        }
+    }
+    LUpi_LogMessage(msg);   // also to L-Edit's own log window
+}
+
+static bool ensure_dir(const std::string& path) {
+    if (CreateDirectoryA(path.c_str(), NULL)) return true;
+    return GetLastError() == ERROR_ALREADY_EXISTS;
+}
+
+static bool init_paths() {
+    char buf[MAX_PATH] = {0};
+    DWORD n = GetEnvironmentVariableA("LOCALAPPDATA", buf, MAX_PATH);
+    std::string base;
+    if (n > 0 && n < MAX_PATH) base = buf;
+    else base = "C:\\klink_bridge";          // fallback if env unavailable
+    // build up the namespace tree piece by piece (no recursive mkdir on WinAPI)
+    std::string p = base;
+    ensure_dir(p);
+    p += "\\klink";           if (!ensure_dir(p)) return false;
+    p += "\\ledit_bridge";    if (!ensure_dir(p)) return false;
+    p += "\\default";         if (!ensure_dir(p)) return false;
+    g_root   = p;
+    g_inbox  = p + "\\inbox";  if (!ensure_dir(g_inbox))  return false;
+    g_outbox = p + "\\outbox"; if (!ensure_dir(g_outbox)) return false;
+    g_logPath = p + "\\bridge.log";
+    return true;
+}
+
+static bool read_file(const std::string& path, std::string& out) {
+    FILE* f = fopen(path.c_str(), "rb");
+    if (!f) return false;
+    fseek(f, 0, SEEK_END);
+    long sz = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    if (sz < 0 || sz > 64 * 1024) { fclose(f); return false; }  // request cap
+    out.resize((size_t)sz);
+    size_t rd = sz ? fread(&out[0], 1, (size_t)sz, f) : 0;
+    fclose(f);
+    return rd == (size_t)sz;
+}
+
+// atomic publish: write .tmp, then rename into place
+static bool write_file_atomic(const std::string& path, const std::string& data) {
+    std::string tmp = path + ".tmp";
+    FILE* f = fopen(tmp.c_str(), "wb");
+    if (!f) return false;
+    size_t wr = data.empty() ? 0 : fwrite(&data[0], 1, data.size(), f);
+    fclose(f);
+    if (wr != data.size()) { DeleteFileA(tmp.c_str()); return false; }
+    if (!MoveFileExA(tmp.c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING)) {
+        DeleteFileA(tmp.c_str());
+        return false;
+    }
+    return true;
+}
+
+static void append_processed(const std::string& id) {
+    g_processed.insert(id);
+    FILE* f = fopen((g_root + "\\processed.jsonl").c_str(), "a");
+    if (f) { fprintf(f, "{\"id\":\"%s\"}\n", id.c_str()); fclose(f); }
+}
+
+// ----------------------------------------------------------------------------
+// UPI helpers (units, layers, cells)
+// ----------------------------------------------------------------------------
+
+struct Ctx {                 // resolved once per request
+    LFile file;
+    LCell cell;              // target cell (visible cell unless params say else)
+};
+
+static LCoord um2i(LFile f, double um) { return LFile_MicronsToIntU(f, um); }
+static double i2um(LFile f, LCoord v)  { return LFile_IntUtoMicrons(f, v); }
+
+// default style for BRIDGE-CREATED layers: deterministic palette color by
+// name hash, solid fill, NO outline (owner ruling: borderless fills keep
+// the selection highlight legible). Existing layers are never restyled.
+static void auto_style_new_layer(LFile file, LLayer layer,
+                                 const std::string& name) {
+    LRenderingAttribute ra;
+    memset(&ra, 0, sizeof(ra));
+    if (LLayer_GetRenderingAttribute(layer, raiObject, &ra) != LStatusOK)
+        return;
+    int n = LFile_GetColorPaletteNumColors(file);
+    if (n <= 1) return;
+    unsigned h = 5381;
+    for (size_t i = 0; i < name.size(); ++i)
+        h = h * 33 + (unsigned char)name[i];
+    ra.mFillColorIndex = 1 + (h % (unsigned)(n - 1));   // skip entry 0
+    memset(ra.mFillPattern, 0xFF, sizeof(LStipple));
+    memset(ra.mOutlinePattern, 0x00, sizeof(LStipple));
+    LLayer_SetRenderingAttribute(layer, raiObject, &ra);
+}
+
+// find layer by name; optionally create it and stamp GDS numbers
+static LLayer ensure_layer_impl(LFile file, const std::string& name,
+                                int gdsLayer, int gdsType, bool* created) {
+    if (created) *created = false;
+    LLayer layer = LLayer_Find(file, name.c_str());
+    if (!layer) {
+        LLayer_New(file, NULL, name.c_str());
+        layer = LLayer_Find(file, name.c_str());
+        if (created && layer) {
+            *created = true;
+            auto_style_new_layer(file, layer, name);
+        }
+    }
+    if (layer && gdsLayer >= 0) {
+        LLayerParamEx830 lp;
+        memset(&lp, 0, sizeof(lp));
+        if (LLayer_GetParametersEx830(layer, &lp) == LStatusOK) {
+            lp.GDSNumber   = (short)gdsLayer;
+            lp.GDSDataType = (short)(gdsType >= 0 ? gdsType : 0);
+            LLayer_SetParametersEx830(layer, &lp);
+        }
+    }
+    return layer;
+}
+
+static std::string layer_name_of(LLayer layer) {
+    char buf[256] = {0};
+    LLayer_GetName(layer, buf, sizeof(buf) - 1);
+    return std::string(buf);
+}
+
+static std::string cell_name_of(LCell cell) {
+    char buf[256] = {0};
+    LCell_GetName(cell, buf, sizeof(buf) - 1);
+    return std::string(buf);
+}
+
+static std::string file_name_of(LFile file) {
+    char buf[512] = {0};
+    LFile_GetName(file, buf, sizeof(buf) - 1);
+    return std::string(buf);
+}
+
+static const char* shape_kind_name(LShapeType t) {
+    switch (t) {
+        case LBox:         return "box";
+        case LCircle:      return "circle";
+        case LWire:        return "wire";
+        case LPolygon:     return "polygon";
+        case LTorus:       return "torus";
+        case LPie:         return "pie";
+        case LObjInstance: return "instance";
+        case LObjPort:     return "port";
+        case LObjRuler:    return "ruler";
+        case LObjLabel:    return "label";
+        case LVia:         return "via";
+        default:           return "other";
+    }
+}
+
+// special-layer detection via the API (never by name matching)
+static bool is_special_layer(LFile file, LLayer layer) {
+    static const LSpecialLayer kSpecials[] = {
+        GridLayer, OriginLayer, CellOutlineLayer, ErrorLayer,
+        IconLayer, DragBoxLayer,
+    };
+    for (size_t i = 0; i < sizeof(kSpecials) / sizeof(kSpecials[0]); ++i)
+        if (LLayer_GetSpecial(file, kSpecials[i]) == layer) return true;
+    return false;
+}
+
+// enumerate an entity's properties into a JSON object (T-Cell parameters
+// surface here); unsupported value types are reported, not dropped
+static JVal props_to_json(LEntity entity) {
+    JVal out = JVal::O();
+    for (const char* name = LEntity_GetFirstProperty(entity); name;
+         name = LEntity_GetNextProperty()) {
+        LPropertyType type = L_unassigned;
+        if (LEntity_GetPropertyType(entity, name, &type) != LStatusOK)
+            continue;
+        if (type == L_string) {
+            unsigned int sz = LEntity_GetPropertyValueSize(entity, name);
+            if (sz > 65536) { out.set(name, JVal::S("<oversized string>")); continue; }
+            std::vector<char> buf((size_t)sz + 2, 0);
+            if (LEntity_GetPropertyValue(entity, name, &buf[0], sz + 1) == LStatusOK)
+                out.set(name, JVal::S(std::string(&buf[0])));
+        } else if (type == L_int) {
+            long v = 0;
+            if (LEntity_GetPropertyValue(entity, name, &v, sizeof(v)) == LStatusOK)
+                out.set(name, JVal::N((double)v));
+        } else if (type == L_real) {
+            double v = 0.0;
+            if (LEntity_GetPropertyValue(entity, name, &v, sizeof(v)) == LStatusOK)
+                out.set(name, JVal::N(v));
+        } else if (type == L_bool) {
+            long v = 0;
+            if (LEntity_GetPropertyValue(entity, name, &v, sizeof(v)) == LStatusOK)
+                out.set(name, JVal::B(v != 0));
+        } else {
+            char note[48];
+            sprintf(note, "<unsupported property type %d>", (int)type);
+            out.set(name, JVal::S(note));
+        }
+    }
+    return out;
+}
+
+static void bump(JVal& counter, const std::string& key) {
+    for (size_t i = 0; i < counter.obj.size(); ++i)
+        if (counter.obj[i].first == key) {
+            counter.obj[i].second.num += 1;
+            return;
+        }
+    counter.set(key, JVal::N(1));
+}
+
+// ----------------------------------------------------------------------------
+// Command handlers.
+// Contract: return true + fill result, or return false + fill err/next_action.
+// ----------------------------------------------------------------------------
+
+typedef bool (*CmdHandler)(Ctx&, const JVal& params, JVal& result,
+                           std::string& err, std::string& next);
+
+static bool resolve_ctx(const JVal& params, Ctx& ctx, bool needs_file,
+                        bool needs_cell,
+                        std::string& err, std::string& next) {
+    ctx.file = LFile_GetVisible();
+    ctx.cell = 0;
+    if (!ctx.file) {
+        if (!needs_file) return true;   // e.g. ping/new_design on fresh L-Edit
+        err  = "no visible design file in L-Edit";
+        next = "open a .tdb in L-Edit, or call new_design to create one";
+        return false;
+    }
+    std::string cellName = params.str_or("cell", "");
+    if (cellName.empty()) {
+        ctx.cell = LCell_GetVisible();
+        if (!ctx.cell && needs_cell) {
+            err  = "no visible cell";
+            next = "click into a layout window (or open a cell), or pass params.cell";
+            return false;
+        }
+    } else {
+        ctx.cell = LCell_Find(ctx.file, cellName.c_str());
+        // a create-if-missing command (needs_cell=false) resolves its own
+        // target; only cell-consuming commands hard-fail here
+        if (!ctx.cell && needs_cell) {
+            err  = "cell not found: " + cellName;
+            next = "call create_cell first, or check get_selection.cell for the exact name";
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool cmd_ping(Ctx& ctx, const JVal&, JVal& result,
+                     std::string&, std::string&) {
+    result.set("proto", JVal::N(BRIDGE_PROTO));
+    result.set("macro_version", JVal::S(BRIDGE_MACRO_VERSION));
+    result.set("file", JVal::S(ctx.file ? file_name_of(ctx.file)
+                                        : std::string("")));
+    result.set("cell", JVal::S(ctx.cell ? cell_name_of(ctx.cell)
+                                        : std::string("")));
+    result.set("design_ready", JVal::B(ctx.file != 0));
+    if (ctx.file)
+        result.set("microns_per_intu", JVal::N(i2um(ctx.file, 1)));
+    JVal caps = JVal::A();
+    caps.arr.push_back(JVal::S("ping"));
+    caps.arr.push_back(JVal::S("get_layers"));
+    caps.arr.push_back(JVal::S("ensure_layer"));
+    caps.arr.push_back(JVal::S("create_cell"));
+    caps.arr.push_back(JVal::S("draw"));
+    caps.arr.push_back(JVal::S("get_selection"));
+    caps.arr.push_back(JVal::S("place_instance"));
+    caps.arr.push_back(JVal::S("set_layer_style"));
+    caps.arr.push_back(JVal::S("get_cell"));
+    caps.arr.push_back(JVal::S("clear_cell"));
+    caps.arr.push_back(JVal::S("list_cells"));
+    caps.arr.push_back(JVal::S("instance_tcell"));
+    caps.arr.push_back(JVal::S("set_tcell_code"));
+    caps.arr.push_back(JVal::S("new_design"));
+    caps.arr.push_back(JVal::S("open_design"));
+    caps.arr.push_back(JVal::S("save_design"));
+    caps.arr.push_back(JVal::S("get_tcell_params"));
+    caps.arr.push_back(JVal::S("get_drc_rules"));
+    result.set("capabilities", caps);
+    return true;
+}
+
+static bool cmd_get_layers(Ctx& ctx, const JVal&, JVal& result,
+                           std::string&, std::string&) {
+    JVal layers = JVal::A();
+    for (LLayer layer = LLayer_GetList(ctx.file); layer;
+         layer = LLayer_GetNext(layer)) {
+        JVal e = JVal::O();
+        e.set("name", JVal::S(layer_name_of(layer)));
+        LLayerParamEx830 lp;
+        memset(&lp, 0, sizeof(lp));
+        if (LLayer_GetParametersEx830(layer, &lp) == LStatusOK) {
+            e.set("gds_layer", JVal::N(lp.GDSNumber));
+            e.set("gds_datatype", JVal::N(lp.GDSDataType));
+        }
+        e.set("special", JVal::B(is_special_layer(ctx.file, layer)));
+        // display style: fill color resolved through the design palette
+        LRenderingAttribute ra;
+        memset(&ra, 0, sizeof(ra));
+        if (LLayer_GetRenderingAttribute(layer, raiObject, &ra) == LStatusOK) {
+            LColor col;
+            memset(&col, 0, sizeof(col));
+            if (LFile_GetColorPalette(ctx.file, &col,
+                                      (int)ra.mFillColorIndex) == LStatusOK) {
+                JVal rgb = JVal::A();
+                rgb.arr.push_back(JVal::N(col.LRed));
+                rgb.arr.push_back(JVal::N(col.LGreen));
+                rgb.arr.push_back(JVal::N(col.LBlue));
+                e.set("fill_rgb", rgb);
+            }
+            bool solid = true, none = true;
+            for (int k = 0; k < 8; ++k) {
+                if (ra.mFillPattern[k] != 0xFF) solid = false;
+                if (ra.mFillPattern[k] != 0x00) none = false;
+            }
+            e.set("fill", JVal::S(solid ? "solid" : none ? "none" : "stipple"));
+        }
+        JVal lprops = props_to_json((LEntity)layer);
+        if (!lprops.obj.empty()) e.set("properties", lprops);
+        layers.arr.push_back(e);
+    }
+    result.set("layers", layers);
+    return true;
+}
+
+static bool cmd_ensure_layer(Ctx& ctx, const JVal& params, JVal& result,
+                             std::string& err, std::string& next) {
+    std::string name = params.str_or("name", "");
+    if (name.empty()) {
+        err  = "params.name is required";
+        next = "pass {\"name\":\"Metal1\", \"gds_layer\":1, \"gds_datatype\":0}";
+        return false;
+    }
+    int gdsLayer = (int)params.num_or("gds_layer", -1);
+    int gdsType  = (int)params.num_or("gds_datatype", -1);
+    bool created = false;
+    LLayer layer = ensure_layer_impl(ctx.file, name, gdsLayer, gdsType, &created);
+    if (!layer) {
+        err  = "could not create layer: " + name;
+        next = "check the name for characters L-Edit rejects, or create it manually once";
+        return false;
+    }
+    result.set("created", JVal::B(created));
+    return true;
+}
+
+static bool cmd_create_cell(Ctx& ctx, const JVal& params, JVal& result,
+                            std::string& err, std::string& next) {
+    std::string name = params.str_or("name", "");
+    if (name.empty()) {
+        err  = "params.name is required";
+        next = "pass {\"name\":\"klink_gen_1\"}";
+        return false;
+    }
+    LCell existing = LCell_Find(ctx.file, name.c_str());
+    if (existing) {
+        result.set("created", JVal::B(false));
+        return true;
+    }
+    LCell cell = LCell_New(ctx.file, name.c_str());
+    if (!cell) {
+        err  = "LCell_New failed for: " + name;
+        next = "check for duplicate/illegal cell name in this design";
+        return false;
+    }
+    result.set("created", JVal::B(true));
+    return true;
+}
+
+// read [[x,y],...] (µm) into an LPoint vector.
+// NOTE: LPoint's struct layout is {y,x} — always build via LPoint_Set(x,y).
+static bool read_points(Ctx& ctx, const JVal* pts, std::vector<LPoint>& out) {
+    if (!pts || pts->t != JVal::JARR || pts->arr.size() < 1) return false;
+    for (size_t i = 0; i < pts->arr.size(); ++i) {
+        const JVal& p = pts->arr[i];
+        if (p.t != JVal::JARR || p.arr.size() != 2 ||
+            p.arr[0].t != JVal::JNUM || p.arr[1].t != JVal::JNUM) return false;
+        out.push_back(LPoint_Set(um2i(ctx.file, p.arr[0].num),
+                                 um2i(ctx.file, p.arr[1].num)));
+    }
+    return true;
+}
+
+static bool cmd_draw(Ctx& ctx, const JVal& params, JVal& result,
+                     std::string& err, std::string& next) {
+    const JVal* items = params.get("items");
+    if (!items || items->t != JVal::JARR || items->arr.empty()) {
+        err  = "params.items must be a non-empty array";
+        next = "pass items:[{\"kind\":\"box\",\"layer\":\"Metal1\",\"bbox_um\":[0,0,10,10]}]";
+        return false;
+    }
+    int drawn = 0, layersCreated = 0;
+    for (size_t i = 0; i < items->arr.size(); ++i) {
+        const JVal& it = items->arr[i];
+        char where[64];
+        sprintf(where, "items[%d]", (int)i);
+        std::string kind      = it.str_or("kind", "");
+        std::string layerName = it.str_or("layer", "");
+        if (layerName.empty()) {
+            err  = std::string(where) + ": layer is required";
+            next = "every draw item needs a layer name; see get_layers";
+            return false;
+        }
+        bool created = false;
+        LLayer layer = ensure_layer_impl(ctx.file, layerName,
+                                         (int)it.num_or("gds_layer", -1),
+                                         (int)it.num_or("gds_datatype", -1),
+                                         &created);
+        if (!layer) {
+            err  = std::string(where) + ": cannot find/create layer " + layerName;
+            next = "check layer name; call get_layers for the current table";
+            return false;
+        }
+        if (created) ++layersCreated;
+
+        if (kind == "box") {
+            const JVal* bb = it.get("bbox_um");
+            if (!bb || bb->t != JVal::JARR || bb->arr.size() != 4) {
+                err  = std::string(where) + ": box needs bbox_um:[x0,y0,x1,y1]";
+                next = "fix the item and resend the draw request";
+                return false;
+            }
+            if (!LBox_New(ctx.cell, layer,
+                          um2i(ctx.file, bb->arr[0].num),
+                          um2i(ctx.file, bb->arr[1].num),
+                          um2i(ctx.file, bb->arr[2].num),
+                          um2i(ctx.file, bb->arr[3].num))) {
+                err  = std::string(where) + ": LBox_New failed";
+                next = "check bbox coordinates (x0<x1, y0<y1) and layer lock state";
+                return false;
+            }
+        } else if (kind == "polygon") {
+            std::vector<LPoint> pts;
+            if (!read_points(ctx, it.get("points_um"), pts) || pts.size() < 3) {
+                err  = std::string(where) + ": polygon needs points_um:[[x,y],...] with >=3 points";
+                next = "fix the item and resend the draw request";
+                return false;
+            }
+            if (!LPolygon_New(ctx.cell, layer, &pts[0], (int)pts.size())) {
+                err  = std::string(where) + ": LPolygon_New failed";
+                next = "check for self-intersecting outline or a locked layer";
+                return false;
+            }
+        } else if (kind == "wire") {
+            std::vector<LPoint> pts;
+            if (!read_points(ctx, it.get("points_um"), pts) || pts.size() < 2) {
+                err  = std::string(where) + ": wire needs points_um:[[x,y],...] with >=2 points";
+                next = "fix the item and resend the draw request";
+                return false;
+            }
+            double widthUm = it.num_or("width_um", 0.0);
+            if (widthUm <= 0.0) {
+                err  = std::string(where) + ": wire needs width_um > 0";
+                next = "fix the item and resend the draw request";
+                return false;
+            }
+            LWireConfig cfg;
+            memset(&cfg, 0, sizeof(cfg));
+            cfg.width = um2i(ctx.file, widthUm);
+            std::string cap = it.str_or("cap", "butt");
+            cfg.cap = (cap == "round")  ? LCapRound  :
+                      (cap == "extend") ? LCapExtend : LCapButt;
+            if (!LWire_New(ctx.cell, layer, &cfg,
+                           LSetWireWidth | LSetWireCap,
+                           &pts[0], (int)pts.size())) {
+                err  = std::string(where) + ": LWire_New failed";
+                next = "check points/width and layer lock state";
+                return false;
+            }
+        } else if (kind == "circle") {
+            const JVal* c = it.get("center_um");
+            double r = it.num_or("radius_um", 0.0);
+            if (!c || c->t != JVal::JARR || c->arr.size() != 2 || r <= 0.0) {
+                err  = std::string(where) + ": circle needs center_um:[x,y] and radius_um>0";
+                next = "fix the item and resend the draw request";
+                return false;
+            }
+            if (!LCircle_New(ctx.cell, layer,
+                             LPoint_Set(um2i(ctx.file, c->arr[0].num),
+                                        um2i(ctx.file, c->arr[1].num)),
+                             um2i(ctx.file, r))) {
+                err  = std::string(where) + ": LCircle_New failed";
+                next = "check center/radius and layer lock state";
+                return false;
+            }
+        } else {
+            err  = std::string(where) + ": unknown kind '" + kind + "'";
+            next = "supported kinds: box, polygon, wire, circle";
+            return false;
+        }
+        ++drawn;
+    }
+    result.set("drawn", JVal::N(drawn));
+    result.set("layers_created", JVal::N(layersCreated));
+    result.set("cell", JVal::S(cell_name_of(ctx.cell)));
+    return true;
+}
+
+static JVal points_to_json(Ctx& ctx, LObject obj) {
+    JVal pts = JVal::A();
+    long n = LVertex_GetCount(obj);
+    if (n > 0) {
+        std::vector<LPoint> raw((size_t)n);
+        long got = LVertex_GetArray(obj, &raw[0], (int)n);
+        for (long i = 0; i < got; ++i) {
+            JVal p = JVal::A();
+            p.arr.push_back(JVal::N(i2um(ctx.file, raw[(size_t)i].x)));
+            p.arr.push_back(JVal::N(i2um(ctx.file, raw[(size_t)i].y)));
+            pts.arr.push_back(p);
+        }
+    }
+    return pts;
+}
+
+static JVal rect_to_json(Ctx& ctx, const LRect& r) {
+    JVal bb = JVal::A();
+    bb.arr.push_back(JVal::N(i2um(ctx.file, r.x0)));
+    bb.arr.push_back(JVal::N(i2um(ctx.file, r.y0)));
+    bb.arr.push_back(JVal::N(i2um(ctx.file, r.x1)));
+    bb.arr.push_back(JVal::N(i2um(ctx.file, r.y1)));
+    return bb;
+}
+
+static JVal instance_to_json(Ctx& ctx, LInstance inst) {
+    JVal e = JVal::O();
+    e.set("kind", JVal::S("instance"));
+    char nbuf[256] = {0};
+    LInstance_GetName(inst, nbuf, sizeof(nbuf) - 1);
+    e.set("instance_name", JVal::S(nbuf));
+    LCell master = LInstance_GetCell(inst);
+    if (master) {
+        e.set("cell", JVal::S(cell_name_of(master)));
+        e.set("is_tcell", JVal::B(LCell_IsTCell(master) ? true : false));
+        JVal cellProps = props_to_json((LEntity)master);
+        if (!cellProps.obj.empty()) e.set("cell_properties", cellProps);
+    }
+    LTransform_Ex99 tf = LInstance_GetTransform_Ex99(inst);
+    e.set("x_um", JVal::N(i2um(ctx.file, tf.translation.x)));
+    e.set("y_um", JVal::N(i2um(ctx.file, tf.translation.y)));
+    e.set("orient", JVal::N(tf.orientation));
+    if (tf.magnification.denom)
+        e.set("mag", JVal::N((double)tf.magnification.num /
+                             (double)tf.magnification.denom));
+    LPoint rep = LInstance_GetRepeatCount(inst);
+    JVal repA = JVal::A();
+    repA.arr.push_back(JVal::N(rep.x));
+    repA.arr.push_back(JVal::N(rep.y));
+    e.set("repeat", repA);
+    LPoint d = LInstance_GetDelta(inst);
+    JVal dA = JVal::A();
+    dA.arr.push_back(JVal::N(i2um(ctx.file, d.x)));
+    dA.arr.push_back(JVal::N(i2um(ctx.file, d.y)));
+    e.set("delta_um", dA);
+    e.set("bbox_um", rect_to_json(ctx, LInstance_GetMbb(inst)));
+    JVal props = props_to_json((LEntity)inst);
+    if (!props.obj.empty()) e.set("properties", props);
+    return e;
+}
+
+// one L-Edit object -> JSON. Returns false (+skippedKind) only when the
+// object has no usable geometry at all.
+static bool object_to_json(Ctx& ctx, LCell cell, LObject obj, JVal& e,
+                           std::string& skippedKind) {
+    LShapeType shape = LObject_GetShape(obj);
+    if (shape == LObjInstance) {
+        LInstance inst = LObject_GetInstance(obj);
+        if (!inst) { skippedKind = "instance"; return false; }
+        e = instance_to_json(ctx, inst);
+        return true;
+    }
+    LLayer layer = LObject_GetLayer(cell, obj);
+    e = JVal::O();
+    if (layer) e.set("layer", JVal::S(layer_name_of(layer)));
+
+    if (shape == LBox) {
+        e.set("kind", JVal::S("box"));
+        e.set("bbox_um", rect_to_json(ctx, LBox_GetRect(obj)));
+    } else if (shape == LPolygon) {
+        e.set("kind", JVal::S("polygon"));
+        e.set("points_um", points_to_json(ctx, obj));
+    } else if (shape == LWire) {
+        e.set("kind", JVal::S("wire"));
+        e.set("points_um", points_to_json(ctx, obj));
+        e.set("width_um", JVal::N(i2um(ctx.file, LWire_GetWidth(obj))));
+        LCapType cap = LWire_GetCapType(obj);
+        e.set("cap", JVal::S(cap == LCapRound ? "round" :
+                             cap == LCapExtend ? "extend" : "butt"));
+        LJoinType join = LWire_GetJoinType(obj);
+        e.set("join", JVal::N((double)join));
+    } else if (shape == LCircle) {
+        LPoint c = LCircle_GetCenter(obj);
+        e.set("kind", JVal::S("circle"));
+        JVal cc = JVal::A();
+        cc.arr.push_back(JVal::N(i2um(ctx.file, c.x)));
+        cc.arr.push_back(JVal::N(i2um(ctx.file, c.y)));
+        e.set("center_um", cc);
+        e.set("radius_um", JVal::N(i2um(ctx.file, LCircle_GetRadius(obj))));
+    } else if (shape == LTorus) {
+        LTorusParams tp;
+        if (LTorus_GetParams(obj, &tp) == LStatusOK) {
+            e.set("kind", JVal::S("torus"));
+            JVal cc = JVal::A();
+            cc.arr.push_back(JVal::N(i2um(ctx.file, tp.ptCenter.x)));
+            cc.arr.push_back(JVal::N(i2um(ctx.file, tp.ptCenter.y)));
+            e.set("center_um", cc);
+            e.set("inner_radius_um", JVal::N(i2um(ctx.file, tp.nInnerRadius)));
+            e.set("outer_radius_um", JVal::N(i2um(ctx.file, tp.nOuterRadius)));
+            e.set("start_angle", JVal::N(tp.dStartAngle));
+            e.set("stop_angle", JVal::N(tp.dStopAngle));
+        } else {
+            skippedKind = "torus";
+            return false;
+        }
+    } else if (shape == LPie) {
+        LPieParams pp;
+        if (LPie_GetParams(obj, &pp) == LStatusOK) {
+            e.set("kind", JVal::S("pie"));
+            JVal cc = JVal::A();
+            cc.arr.push_back(JVal::N(i2um(ctx.file, pp.ptCenter.x)));
+            cc.arr.push_back(JVal::N(i2um(ctx.file, pp.ptCenter.y)));
+            e.set("center_um", cc);
+            e.set("radius_um", JVal::N(i2um(ctx.file, pp.nRadius)));
+            e.set("start_angle", JVal::N(pp.dStartAngle));
+            e.set("stop_angle", JVal::N(pp.dStopAngle));
+        } else {
+            skippedKind = "pie";
+            return false;
+        }
+    } else {
+        // generic fallback: any exotic kind exposing a vertex outline
+        // degrades to a polygon, tagged with its origin
+        if (LVertex_GetCount(obj) >= 3) {
+            e.set("kind", JVal::S("polygon"));
+            e.set("source_kind", JVal::S(shape_kind_name(shape)));
+            e.set("points_um", points_to_json(ctx, obj));
+        } else {
+            skippedKind = shape_kind_name(shape);
+            return false;
+        }
+    }
+    // object-level properties (nested via dotted names, e.g. "A.B.C");
+    // reported on every converted object, never silently dropped
+    JVal oprops = props_to_json((LEntity)obj);
+    if (!oprops.obj.empty()) e.set("properties", oprops);
+    return true;
+}
+
+static bool cmd_get_selection(Ctx& ctx, const JVal&, JVal& result,
+                              std::string&, std::string&) {
+    JVal objects = JVal::A();
+    JVal skipped = JVal::O();   // kind -> count; never silently drop
+    int count = 0;
+    for (LSelection sel = LSelection_GetList(); sel;
+         sel = LSelection_GetNext(sel)) {
+        LObject obj = LSelection_GetObject(sel);
+        if (!obj) continue;
+        ++count;
+        JVal e;
+        std::string sk;
+        if (object_to_json(ctx, ctx.cell, obj, e, sk))
+            objects.arr.push_back(e);
+        else
+            bump(skipped, sk);
+    }
+    result.set("cell", JVal::S(cell_name_of(ctx.cell)));
+    result.set("count", JVal::N(count));
+    result.set("objects", objects);
+    result.set("skipped", skipped);
+    return true;
+}
+
+static bool cmd_get_cell(Ctx& ctx, const JVal&, JVal& result,
+                         std::string&, std::string&) {
+    JVal objects = JVal::A();
+    JVal skipped = JVal::O();
+    int count = 0;
+    for (LLayer layer = LLayer_GetList(ctx.file); layer;
+         layer = LLayer_GetNext(layer)) {
+        for (LObject obj = LObject_GetList(ctx.cell, layer); obj;
+             obj = LObject_GetNext(obj)) {
+            ++count;
+            JVal e;
+            std::string sk;
+            if (object_to_json(ctx, ctx.cell, obj, e, sk))
+                objects.arr.push_back(e);
+            else
+                bump(skipped, sk);
+        }
+    }
+    for (LInstance inst = LInstance_GetList(ctx.cell); inst;
+         inst = LInstance_GetNext(inst)) {
+        ++count;
+        objects.arr.push_back(instance_to_json(ctx, inst));
+    }
+    // ports and labels are first-class content, enumerated separately
+    JVal ports = JVal::A();
+    for (LPort port = LPort_GetList(ctx.cell); port;
+         port = LPort_GetNext(port)) {
+        JVal e = JVal::O();
+        char text[512] = {0};
+        LPort_GetText(port, text, sizeof(text) - 1);
+        e.set("text", JVal::S(text));
+        e.set("rect_um", rect_to_json(ctx, LPort_GetRect(port)));
+        ports.arr.push_back(e);
+    }
+    result.set("ports", ports);
+    JVal labels = JVal::A();
+    for (LLabel label = LLabel_GetList(ctx.cell); label;
+         label = LLabel_GetNext(label)) {
+        JVal e = JVal::O();
+        char text[512] = {0};
+        LLabel_GetName(label, text, sizeof(text) - 1);
+        e.set("text", JVal::S(text));
+        LLayer llayer = LLabel_GetLayer(label);
+        if (llayer) e.set("layer", JVal::S(layer_name_of(llayer)));
+        LPoint pos = LLabel_GetPosition(label);
+        JVal pp = JVal::A();
+        pp.arr.push_back(JVal::N(i2um(ctx.file, pos.x)));
+        pp.arr.push_back(JVal::N(i2um(ctx.file, pos.y)));
+        e.set("position_um", pp);
+        e.set("text_size_um", JVal::N(i2um(ctx.file,
+                                           LLabel_GetTextSize(label))));
+        labels.arr.push_back(e);
+    }
+    result.set("labels", labels);
+    result.set("cell", JVal::S(cell_name_of(ctx.cell)));
+    result.set("is_tcell", JVal::B(LCell_IsTCell(ctx.cell) ? true : false));
+    JVal cellProps = props_to_json((LEntity)ctx.cell);
+    if (!cellProps.obj.empty()) result.set("properties", cellProps);
+    result.set("count", JVal::N(count));
+    result.set("objects", objects);
+    result.set("skipped", skipped);
+    return true;
+}
+
+static bool cmd_list_cells(Ctx& ctx, const JVal&, JVal& result,
+                           std::string&, std::string&) {
+    JVal cells = JVal::A();
+    for (LCell cell = LCell_GetList(ctx.file); cell;
+         cell = LCell_GetNext(cell)) {
+        JVal e = JVal::O();
+        e.set("name", JVal::S(cell_name_of(cell)));
+        e.set("is_tcell", JVal::B(LCell_IsTCell(cell) ? true : false));
+        // auto-generated T-Cell variants carry System.Hide In Lists
+        long hidden = 0;
+        if (LEntity_PropertyExists((LEntity)cell, "System.Hide In Lists")
+                == LStatusOK &&
+            LEntity_GetPropertyValue((LEntity)cell, "System.Hide In Lists",
+                                     &hidden, sizeof(hidden)) == LStatusOK &&
+            hidden)
+            e.set("hidden", JVal::B(true));
+        cells.arr.push_back(e);
+    }
+    result.set("cells", cells);
+    return true;
+}
+
+// programmatic T-Cell instancing with parameters (LInstance_GenerateV);
+// returns the generated variant cell name so the caller can harvest it
+static bool cmd_instance_tcell(Ctx& ctx, const JVal& params, JVal& result,
+                               std::string& err, std::string& next) {
+    std::string tcellName = params.str_or("tcell", "");
+    if (tcellName.empty()) {
+        err  = "params.tcell (T-Cell generator name) is required";
+        next = "call list_cells and pick a cell with is_tcell:true";
+        return false;
+    }
+    LCell tcell = LCell_Find(ctx.file, tcellName.c_str());
+    if (!tcell) {
+        err  = "T-Cell not found: " + tcellName;
+        next = "call list_cells for exact names (case-sensitive)";
+        return false;
+    }
+    // params.params -> ["name","value",...,NULL]; all values stringified
+    std::vector<std::string> kv;
+    const JVal* pp = params.get("params");
+    if (pp && pp->t == JVal::JOBJ) {
+        for (size_t i = 0; i < pp->obj.size(); ++i) {
+            kv.push_back(pp->obj[i].first);
+            const JVal& v = pp->obj[i].second;
+            if (v.t == JVal::JSTR) kv.push_back(v.str);
+            else if (v.t == JVal::JNUM) {
+                char buf[64];
+                if (v.num == (double)(long long)v.num)
+                    sprintf(buf, "%lld", (long long)v.num);
+                else
+                    sprintf(buf, "%.10g", v.num);
+                kv.push_back(buf);
+            } else if (v.t == JVal::JBOOL) kv.push_back(v.b ? "1" : "0");
+            else {
+                err  = "unsupported param value type for: " + pp->obj[i].first;
+                next = "pass numbers, strings or booleans";
+                return false;
+            }
+        }
+    }
+    std::vector<char*> argv;
+    for (size_t i = 0; i < kv.size(); ++i)
+        argv.push_back(const_cast<char*>(kv[i].c_str()));
+    argv.push_back((char*)0);
+
+    LInstance inst = LInstance_GenerateV(ctx.cell, tcell, &argv[0]);
+    if (!inst) {
+        err  = "LInstance_GenerateV failed for: " + tcellName;
+        next = "check parameter names against the T-Cell's DO-NOT-EDIT code "
+               "section (get_cell reports System.TCell Code)";
+        return false;
+    }
+    // reposition if requested (generate places at a default location)
+    if (params.get("x_um") || params.get("y_um")) {
+        LTransform_Ex99 tf = LInstance_GetTransform_Ex99(inst);
+        tf.translation = LPoint_Set(
+            um2i(ctx.file, params.num_or("x_um", 0.0)),
+            um2i(ctx.file, params.num_or("y_um", 0.0)));
+        LInstance_Set_Ex99(ctx.cell, inst, tf,
+                           LPoint_Set(1, 1), LPoint_Set(0, 0));
+    }
+    LDisplay_Refresh();
+    result = instance_to_json(ctx, inst);
+    return true;
+}
+
+// EXPERIMENTAL: write T-Cell generator code into a cell's System properties.
+// Empirically the code lives in "System.TCell Code" (string) +
+// "System.TCell Code Language" (int); whether L-Edit accepts externally
+// written code is exactly what this command exists to test.
+static bool cmd_set_tcell_code(Ctx& ctx, const JVal& params, JVal& result,
+                               std::string& err, std::string& next) {
+    std::string cellName = params.str_or("cell", "");
+    std::string code = params.str_or("code", "");
+    if (cellName.empty() || code.empty()) {
+        err  = "params.cell and params.code are required";
+        next = "pass the target cell name and the full generator source text";
+        return false;
+    }
+    LCell cell = LCell_Find(ctx.file, cellName.c_str());
+    bool created = false;
+    if (!cell) {
+        cell = LCell_New(ctx.file, cellName.c_str());
+        created = true;
+    }
+    if (!cell) {
+        err  = "cannot find or create cell: " + cellName;
+        next = "check the cell name";
+        return false;
+    }
+    long language = (long)params.num_or("language", 5);  // 5 = C++ (observed)
+    if (LEntity_AssignProperty((LEntity)cell, "System.TCell Code",
+                               L_string, code.c_str()) != LStatusOK) {
+        err  = "LEntity_AssignProperty failed for System.TCell Code";
+        next = "the cell may be locked, or property writing is restricted here";
+        return false;
+    }
+    if (LEntity_AssignProperty((LEntity)cell, "System.TCell Code Language",
+                               L_int, &language) != LStatusOK) {
+        err  = "failed to set System.TCell Code Language";
+        next = "code was written; language tag failed - inspect the cell in L-Edit";
+        return false;
+    }
+    // optional parameter-table definition:
+    // params: [{name, type: "bool"|"int"|"float"|"string"|"layer", default}]
+    const JVal* defs = params.get("params");
+    int nParams = 0;
+    if (defs && defs->t == JVal::JARR) {
+        for (size_t i = 0; i < defs->arr.size(); ++i) {
+            const JVal& d = defs->arr[i];
+            std::string pname = d.str_or("name", "");
+            std::string ptype = d.str_or("type", "float");
+            std::string pdef  = d.str_or("default", "");
+            if (d.get("default") && d.get("default")->t == JVal::JNUM) {
+                char buf[64];
+                double dv = d.get("default")->num;
+                if (dv == (double)(long long)dv)
+                    sprintf(buf, "%lld", (long long)dv);
+                else
+                    sprintf(buf, "%.10g", dv);
+                pdef = buf;
+            }
+            if (pname.empty()) {
+                err  = "params[].name is required";
+                next = "each parameter needs {name, type, default}";
+                return false;
+            }
+            LTCellParameterType t =
+                (ptype == "bool")   ? LTC_bool  :
+                (ptype == "int")    ? LTC_int   :
+                (ptype == "string") ? LTC_string :
+                (ptype == "layer")  ? LTC_layer : LTC_float;
+            if (LCell_AddTCellParameter(cell, pname.c_str(), t,
+                                        pdef.c_str()) != LStatusOK) {
+                err  = "LCell_AddTCellParameter failed for: " + pname;
+                next = "parameter may already exist with another type; "
+                       "inspect the cell's T-Cell Parameters tab";
+                return false;
+            }
+            ++nParams;
+        }
+    }
+    result.set("params_added", JVal::N(nParams));
+    result.set("cell", JVal::S(cell_name_of(cell)));
+    result.set("created", JVal::B(created));
+    result.set("is_tcell", JVal::B(LCell_IsTCell(cell) ? true : false));
+    result.set("code_bytes", JVal::N((double)code.size()));
+    return true;
+}
+
+// T-Cell parameter defaults/previous values for caller-supplied names
+// (names come from parsing the DO-NOT-EDIT code section client-side)
+static bool cmd_get_tcell_params(Ctx& ctx, const JVal& params, JVal& result,
+                                 std::string& err, std::string& next) {
+    const JVal* names = params.get("names");
+    if (!names || names->t != JVal::JARR || names->arr.empty()) {
+        err  = "params.names must be a non-empty array of parameter names";
+        next = "parse them from System.TCell Code (get_cell) and pass here";
+        return false;
+    }
+    if (!LCell_IsTCell(ctx.cell)) {
+        err  = "cell is not a T-Cell: " + cell_name_of(ctx.cell);
+        next = "call list_cells and pick a cell with is_tcell:true";
+        return false;
+    }
+    JVal out = JVal::O();
+    for (size_t i = 0; i < names->arr.size(); ++i) {
+        if (names->arr[i].t != JVal::JSTR) continue;
+        const std::string& pname = names->arr[i].str;
+        JVal entry = JVal::O();
+        char buf[512] = {0};
+        if (LCell_GetTCellDefaultValue(ctx.cell, pname.c_str(), buf,
+                                       sizeof(buf) - 1) == LStatusOK)
+            entry.set("default", JVal::S(buf));
+        memset(buf, 0, sizeof(buf));
+        if (LCell_GetTCellPreviousValue(ctx.cell, pname.c_str(), buf,
+                                        sizeof(buf) - 1) == LStatusOK)
+            entry.set("previous", JVal::S(buf));
+        out.set(pname, entry);
+    }
+    result.set("cell", JVal::S(cell_name_of(ctx.cell)));
+    result.set("params", out);
+    return true;
+}
+
+// full design-rule table: the process knowledge the tdb carries
+static bool cmd_get_drc_rules(Ctx& ctx, const JVal&, JVal& result,
+                              std::string&, std::string&) {
+    static const char* kRuleNames[] = {
+        "MIN_WIDTH", "EXACT_WIDTH", "OVERLAP", "EXTENSION",
+        "NOT_EXISTS", "SPACING", "SURROUND", "DENSITY",
+    };
+    JVal rules = JVal::A();
+    for (LDrcRule rule = LDrcRule_GetList(ctx.file); rule;
+         rule = LDrcRule_GetNext(rule)) {
+        LDesignRuleParam rp;
+        memset(&rp, 0, sizeof(rp));
+        if (!LDrcRule_GetParameters(rule, &rp)) continue;
+        JVal e = JVal::O();
+        if (rp.name) e.set("name", JVal::S(rp.name));
+        int t = (int)rp.rule_type;
+        e.set("type", JVal::S((t >= 0 && t < 8) ? kRuleNames[t] : "?"));
+        if (rp.layer1) e.set("layer1", JVal::S(rp.layer1));
+        if (rp.layer2) e.set("layer2", JVal::S(rp.layer2));
+        e.set("enabled", JVal::B(rp.enable != 0));
+        if (rp.use_internal_units)
+            e.set("distance_um", JVal::N(i2um(ctx.file, (LCoord)rp.distance)));
+        else
+            e.set("distance_raw", JVal::N((double)rp.distance));
+        rules.arr.push_back(e);
+        LDrcRule_DestroyParameter(&rp);
+    }
+    result.set("rules", rules);
+    return true;
+}
+
+// open the first cell of a file so subsequent commands have a visible cell
+static void open_first_cell(LFile file, JVal& result) {
+    LCell first = LCell_GetList(file);
+    if (first) {
+        std::string cname = cell_name_of(first);
+        LFile_OpenCell(file, cname.c_str());
+        result.set("cell", JVal::S(cname));
+    }
+}
+
+static bool cmd_new_design(Ctx&, const JVal& params, JVal& result,
+                           std::string& err, std::string& next) {
+    std::string name = params.str_or("name", "klink_design");
+    LFile setup = 0;
+    if (params.bool_or("setup_from_visible", false)) {
+        setup = LFile_GetVisible();
+        if (!setup) {
+            err  = "setup_from_visible requested but no design is open";
+            next = "omit setup_from_visible, or open the template design first";
+            return false;
+        }
+    }
+    LFile nf = LFile_New(setup, name.c_str());
+    if (!nf) {
+        err  = "LFile_New failed for: " + name;
+        next = "check the name (no path separators) and try again";
+        return false;
+    }
+    result.set("file", JVal::S(file_name_of(nf)));
+    open_first_cell(nf, result);
+    LDisplay_Refresh();
+    return true;
+}
+
+static bool cmd_open_design(Ctx&, const JVal& params, JVal& result,
+                            std::string& err, std::string& next) {
+    std::string path = params.str_or("path", "");
+    if (path.empty()) {
+        err  = "params.path is required";
+        next = "pass the absolute path of a .tdb file";
+        return false;
+    }
+    LFile f = LFile_Open(path.c_str(), LTdbFile);
+    if (!f) {
+        err  = "LFile_Open failed for: " + path;
+        next = "check the path exists and is a .tdb (GDS import is a separate flow)";
+        return false;
+    }
+    result.set("file", JVal::S(file_name_of(f)));
+    open_first_cell(f, result);
+    LDisplay_Refresh();
+    return true;
+}
+
+static bool cmd_save_design(Ctx& ctx, const JVal& params, JVal& result,
+                            std::string& err, std::string& next) {
+    std::string path = params.str_or("path", "");
+    LStatus st = path.empty() ? LFile_Save(ctx.file)
+                              : LFile_SaveAs(ctx.file, path.c_str(), LTdbFile);
+    if (st != LStatusOK) {
+        err  = "save failed";
+        next = path.empty()
+            ? "the design may never have been saved; pass params.path for save-as"
+            : "check the target path is writable";
+        return false;
+    }
+    result.set("file", JVal::S(file_name_of(ctx.file)));
+    result.set("saved_as", JVal::S(path));
+    return true;
+}
+
+static bool cmd_clear_cell(Ctx& ctx, const JVal& params, JVal& result,
+                           std::string& err, std::string& next) {
+    if (params.str_or("cell", "").empty()) {
+        err  = "clear_cell requires an explicit params.cell (destructive op)";
+        next = "pass {\"cell\":\"<name>\"}; the visible cell is never cleared implicitly";
+        return false;
+    }
+    int nShapes = 0, nInst = 0;
+    for (LLayer layer = LLayer_GetList(ctx.file); layer;
+         layer = LLayer_GetNext(layer)) {
+        for (LObject obj = LObject_GetList(ctx.cell, layer); obj; ) {
+            LObject nextObj = LObject_GetNext(obj);
+            if (LObject_Delete(ctx.cell, obj) == LStatusOK) ++nShapes;
+            obj = nextObj;
+        }
+    }
+    for (LInstance inst = LInstance_GetList(ctx.cell); inst; ) {
+        LInstance nextInst = LInstance_GetNext(inst);
+        if (LInstance_Delete(ctx.cell, inst) == LStatusOK) ++nInst;
+        inst = nextInst;
+    }
+    LDisplay_Refresh();
+    result.set("cell", JVal::S(cell_name_of(ctx.cell)));
+    result.set("deleted_shapes", JVal::N(nShapes));
+    result.set("deleted_instances", JVal::N(nInst));
+    return true;
+}
+
+static bool cmd_place_instance(Ctx& ctx, const JVal& params, JVal& result,
+                               std::string& err, std::string& next) {
+    std::string childName = params.str_or("child", "");
+    if (childName.empty()) {
+        err  = "params.child (cell name to instance) is required";
+        next = "create/draw the child cell first, then place it";
+        return false;
+    }
+    LCell child = LCell_Find(ctx.file, childName.c_str());
+    if (!child) {
+        err  = "child cell not found: " + childName;
+        next = "call create_cell + draw first; names are case-sensitive";
+        return false;
+    }
+    double x = params.num_or("x_um", 0.0), y = params.num_or("y_um", 0.0);
+    int    orient  = (int)params.num_or("orient", 0);
+    bool   mirrorX = params.bool_or("mirror_x", false);
+    int    nx = (int)params.num_or("nx", 1), ny = (int)params.num_or("ny", 1);
+    double dx = params.num_or("dx_um", 0.0), dy = params.num_or("dy_um", 0.0);
+    if (nx < 1 || ny < 1) {
+        err  = "nx/ny must be >= 1";
+        next = "fix the array counts and resend";
+        return false;
+    }
+    if ((nx > 1 && dx <= 0.0) || (ny > 1 && dy <= 0.0)) {
+        err  = "array placement needs dx_um/dy_um > 0 for nx/ny > 1";
+        next = "pass the array pitch in microns";
+        return false;
+    }
+    // orientation encoding per ldata.h defines:
+    //   plain: 0/90/180/270; mirrored-X: 0->-360, 90->-90, 180->-180, 270->-270
+    float o;
+    if (!mirrorX) o = (float)orient;
+    else          o = (orient == 0) ? -360.0f : (float)(-orient);
+
+    LTransform_Ex99 tf;
+    tf.translation = LPoint_Set(um2i(ctx.file, x), um2i(ctx.file, y));
+    tf.orientation = o;
+    tf.magnification.num = 1;
+    tf.magnification.denom = 1;
+
+    LInstance inst = LInstance_New_Ex99(
+        ctx.cell, child, tf,
+        LPoint_Set(nx, ny),
+        LPoint_Set(um2i(ctx.file, dx), um2i(ctx.file, dy)));
+    if (!inst) {
+        err  = "LInstance_New_Ex99 failed";
+        next = "check the child is not an ancestor of the target cell (no recursive instancing)";
+        return false;
+    }
+    result.set("placed", JVal::B(true));
+    result.set("cell", JVal::S(cell_name_of(ctx.cell)));
+    return true;
+}
+
+// nearest palette entry to an RGB request (L-Edit colors are palette-indexed;
+// we never rewrite the palette itself — other layers may share entries)
+static int nearest_palette_index(LFile file, int r, int g, int b,
+                                 LColor* matched) {
+    int n = LFile_GetColorPaletteNumColors(file);
+    int best = 0;
+    long bestd = 0x7FFFFFFF;
+    for (int i = 0; i < n; ++i) {
+        LColor c;
+        if (LFile_GetColorPalette(file, &c, i) != LStatusOK) continue;
+        long dr = (long)c.LRed - r, dg = (long)c.LGreen - g,
+             db = (long)c.LBlue - b;
+        long d = dr * dr + dg * dg + db * db;
+        if (d < bestd) {
+            bestd = d;
+            best = i;
+            if (matched) *matched = c;
+        }
+    }
+    return best;
+}
+
+static bool read_rgb(const JVal* v, int rgb[3]) {
+    if (!v || v->t != JVal::JARR || v->arr.size() != 3) return false;
+    for (int i = 0; i < 3; ++i) {
+        if (v->arr[(size_t)i].t != JVal::JNUM) return false;
+        rgb[i] = (int)v->arr[(size_t)i].num;
+        if (rgb[i] < 0) rgb[i] = 0;
+        if (rgb[i] > 255) rgb[i] = 255;
+    }
+    return true;
+}
+
+static bool cmd_set_layer_style(Ctx& ctx, const JVal& params, JVal& result,
+                                std::string& err, std::string& next) {
+    std::string name = params.str_or("layer", "");
+    if (name.empty()) {
+        err  = "params.layer is required";
+        next = "pass {\"layer\":\"WL\", \"fill_rgb\":[0,90,255]}";
+        return false;
+    }
+    LLayer layer = LLayer_Find(ctx.file, name.c_str());
+    if (!layer) {
+        err  = "layer not found: " + name;
+        next = "call ensure_layer first; see get_layers for the current table";
+        return false;
+    }
+    LRenderingAttribute ra;
+    memset(&ra, 0, sizeof(ra));
+    if (LLayer_GetRenderingAttribute(layer, raiObject, &ra) != LStatusOK) {
+        err  = "LLayer_GetRenderingAttribute failed for: " + name;
+        next = "this layer may be a special/system layer; style a mask layer instead";
+        return false;
+    }
+
+    int rgb[3];
+    if (read_rgb(params.get("fill_rgb"), rgb)) {
+        LColor got;
+        memset(&got, 0, sizeof(got));
+        ra.mFillColorIndex =
+            (unsigned int)nearest_palette_index(ctx.file, rgb[0], rgb[1],
+                                                rgb[2], &got);
+        // fill_rgb implies you want to SEE the fill: default to solid.
+        // Outline defaults to NONE (owner ruling: borderless fills make the
+        // selection highlight legible); pass outline_rgb to opt in.
+        memset(ra.mFillPattern, 0xFF, sizeof(LStipple));
+        if (!params.get("outline_rgb"))
+            memset(ra.mOutlinePattern, 0x00, sizeof(LStipple));
+        JVal used = JVal::A();
+        used.arr.push_back(JVal::N(got.LRed));
+        used.arr.push_back(JVal::N(got.LGreen));
+        used.arr.push_back(JVal::N(got.LBlue));
+        result.set("fill_rgb_used", used);
+        result.set("fill_color_index", JVal::N(ra.mFillColorIndex));
+    }
+    std::string fill = params.str_or("fill", "");
+    if (fill == "none")       memset(ra.mFillPattern, 0x00, sizeof(LStipple));
+    else if (fill == "solid") memset(ra.mFillPattern, 0xFF, sizeof(LStipple));
+    else if (!fill.empty()) {
+        err  = "unknown fill mode: " + fill;
+        next = "supported: \"solid\", \"none\" (or omit fill and pass fill_rgb)";
+        return false;
+    }
+    if (read_rgb(params.get("outline_rgb"), rgb)) {
+        LColor got;
+        memset(&got, 0, sizeof(got));
+        ra.mOutlineColorIndex =
+            (unsigned int)nearest_palette_index(ctx.file, rgb[0], rgb[1],
+                                                rgb[2], &got);
+        memset(ra.mOutlinePattern, 0xFF, sizeof(LStipple));
+        result.set("outline_color_index", JVal::N(ra.mOutlineColorIndex));
+    }
+
+    if (LLayer_SetRenderingAttribute(layer, raiObject, &ra) != LStatusOK) {
+        err  = "LLayer_SetRenderingAttribute failed for: " + name;
+        next = "check the layer is not locked/protected";
+        return false;
+    }
+    LDisplay_Refresh();
+    result.set("layer", JVal::S(name));
+    return true;
+}
+
+struct Command {
+    const char* name;
+    CmdHandler  handler;
+    bool        needs_file;
+    bool        needs_cell;
+};
+static const Command g_commands[] = {
+    // name             handler            needs_file  needs_cell
+    { "ping",            cmd_ping,            false, false },
+    { "get_layers",      cmd_get_layers,      true,  false },
+    { "ensure_layer",    cmd_ensure_layer,    true,  false },
+    { "create_cell",     cmd_create_cell,     true,  false },
+    { "draw",            cmd_draw,            true,  true  },
+    { "get_selection",   cmd_get_selection,   true,  true  },
+    { "place_instance",  cmd_place_instance,  true,  true  },
+    { "set_layer_style", cmd_set_layer_style, true,  false },
+    { "get_cell",        cmd_get_cell,        true,  true  },
+    { "clear_cell",      cmd_clear_cell,      true,  true  },
+    { "list_cells",      cmd_list_cells,      true,  false },
+    { "instance_tcell",  cmd_instance_tcell,  true,  true  },
+    { "set_tcell_code",  cmd_set_tcell_code,  true,  false },
+    { "new_design",      cmd_new_design,      false, false },
+    { "open_design",     cmd_open_design,     false, false },
+    { "save_design",     cmd_save_design,     true,  false },
+    { "get_tcell_params", cmd_get_tcell_params, true, true  },
+    { "get_drc_rules",   cmd_get_drc_rules,   true,  false },
+};
+
+// ----------------------------------------------------------------------------
+// Request processing + polling loop
+// ----------------------------------------------------------------------------
+
+static void write_response(const std::string& id, bool ok,
+                           const JVal& payload,
+                           const std::string& err, const std::string& next) {
+    JVal resp = JVal::O();
+    resp.set("schema", JVal::N(1));
+    resp.set("id", JVal::S(id));
+    resp.set("ok", JVal::B(ok));
+    if (ok) {
+        resp.set("result", payload);
+    } else {
+        JVal e = JVal::O();
+        e.set("code", JVal::S("ERR_BRIDGE"));
+        e.set("message", JVal::S(err));
+        e.set("next_action", JVal::S(next));
+        resp.set("error", e);
+    }
+    std::string body;
+    jdump(resp, body);
+    write_file_atomic(g_outbox + "\\resp_" + id + ".json", body);
+}
+
+static void process_request_file(const std::string& fname) {
+    std::string path = g_inbox + "\\" + fname;
+    std::string body;
+    if (!read_file(path, body)) return;   // partially written? next tick retries
+    DeleteFileA(path.c_str());            // consume before handling
+
+    // derive a fallback id from the file name: req_<id>.json -> whole stem
+    std::string fallbackId = fname;
+    size_t dot = fallbackId.rfind(".json");
+    if (dot != std::string::npos) fallbackId.erase(dot);
+
+    JVal req;
+    JParser parser(body);
+    if (!parser.parse(req) || req.t != JVal::JOBJ) {
+        write_response(fallbackId, false, JVal(),
+                       "request is not valid JSON",
+                       "resend the request as a single UTF-8 JSON object");
+        return;
+    }
+    std::string id  = req.str_or("id", fallbackId.c_str());
+    std::string cmd = req.str_or("cmd", "");
+    if (g_processed.count(id)) return;    // duplicate: v0.1 drops silently
+    append_processed(id);
+
+    char logbuf[512];
+    _snprintf(logbuf, sizeof(logbuf) - 1, "request id=%s cmd=%s",
+              id.c_str(), cmd.c_str());
+    logbuf[sizeof(logbuf) - 1] = 0;
+    bridge_log(logbuf);
+
+    const JVal* paramsPtr = req.get("params");
+    JVal empty = JVal::O();
+    const JVal& params = (paramsPtr && paramsPtr->t == JVal::JOBJ)
+                         ? *paramsPtr : empty;
+
+    for (size_t i = 0; i < sizeof(g_commands) / sizeof(g_commands[0]); ++i) {
+        if (cmd == g_commands[i].name) {
+            Ctx ctx;
+            std::string err, next;
+            JVal result = JVal::O();
+            bool ok = resolve_ctx(params, ctx, g_commands[i].needs_file,
+                                  g_commands[i].needs_cell, err, next) &&
+                      g_commands[i].handler(ctx, params, result, err, next);
+            write_response(id, ok, result, err, next);
+            return;
+        }
+    }
+    std::string known;
+    for (size_t i = 0; i < sizeof(g_commands) / sizeof(g_commands[0]); ++i) {
+        if (i) known += ", ";
+        known += g_commands[i].name;
+    }
+    write_response(id, false, JVal(),
+                   "unknown cmd: " + cmd,
+                   "supported commands: " + known);
+}
+
+static void write_hello() {
+    JVal hello = JVal::O();
+    hello.set("schema", JVal::N(1));
+    hello.set("proto", JVal::N(BRIDGE_PROTO));
+    hello.set("macro_version", JVal::S(BRIDGE_MACRO_VERSION));
+    hello.set("pid", JVal::N((double)GetCurrentProcessId()));
+    hello.set("tick", JVal::N((double)g_tick));
+    hello.set("tick_ms", JVal::N((double)GetTickCount()));
+    LFile file = LFile_GetVisible();
+    hello.set("file", JVal::S(file ? file_name_of(file) : ""));
+    LCell cell = LCell_GetVisible();
+    hello.set("cell", JVal::S(cell ? cell_name_of(cell) : ""));
+    std::string body;
+    jdump(hello, body);
+    write_file_atomic(g_root + "\\hello.json", body);
+}
+
+static void CALLBACK BridgeTimerProc(HWND, UINT, UINT_PTR, DWORD) {
+    if (g_inTick) return;      // a tick arriving mid-request is skipped, not nested
+    g_inTick = true;
+    ++g_tick;
+    // exceptions must never escape into L-Edit's message loop
+    try {
+        if (g_tick % HELLO_EVERY_TICKS == 1) write_hello();
+
+        WIN32_FIND_DATAA fd;
+        HANDLE h = FindFirstFileA((g_inbox + "\\*.json").c_str(), &fd);
+        if (h != INVALID_HANDLE_VALUE) {
+            std::vector<std::string> names;
+            do {
+                if (!(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+                    names.push_back(fd.cFileName);
+            } while (FindNextFileA(h, &fd));
+            FindClose(h);
+            for (size_t i = 0; i < names.size(); ++i)
+                process_request_file(names[i]);
+        }
+    } catch (...) {
+        bridge_log("EXCEPTION in bridge tick (request skipped)");
+    }
+    g_inTick = false;
+}
+
+// ----------------------------------------------------------------------------
+// Menu entry points + UPI entry
+// ----------------------------------------------------------------------------
+
+void klink_bridge_start(void) {
+    if (g_timerId) {
+        bridge_log("bridge already running");
+        return;
+    }
+    if (!init_paths()) {
+        LUpi_LogMessage("klink bridge: FAILED to create exchange directories");
+        return;
+    }
+    g_timerId = SetTimer(NULL, 0, POLL_INTERVAL_MS, BridgeTimerProc);
+    if (g_timerId) {
+        write_hello();
+        char buf[512];
+        _snprintf(buf, sizeof(buf) - 1, "klink bridge polling %s every %d ms",
+                  g_inbox.c_str(), POLL_INTERVAL_MS);
+        buf[sizeof(buf) - 1] = 0;
+        bridge_log(buf);
+    } else {
+        bridge_log("ERROR: SetTimer failed, bridge not running");
+    }
+}
+
+void klink_bridge_stop(void) {
+    if (g_timerId) {
+        KillTimer(NULL, g_timerId);
+        g_timerId = 0;
+        bridge_log("klink bridge stopped");
+    } else {
+        bridge_log("klink bridge was not running");
+    }
+}
+
+void klink_bridge_status(void) {
+    char buf[1024];
+    _snprintf(buf, sizeof(buf) - 1,
+              "klink bridge: %s | namespace: %s | tick: %u | processed: %u",
+              g_timerId ? "RUNNING" : "STOPPED",
+              g_root.empty() ? "(uninitialized)" : g_root.c_str(),
+              g_tick, (unsigned)g_processed.size());
+    buf[sizeof(buf) - 1] = 0;
+    bridge_log(buf);
+    LDialog_MsgBox(buf);
+}
+
+int UPI_Entry_Point(void) {
+    LMacro_BindToMenuAndHotKey_v9_30("Tools", NULL, "klink: Bridge Start",
+                                     "klink_bridge_start", NULL);
+    LMacro_BindToMenuAndHotKey_v9_30("Tools", NULL, "klink: Bridge Stop",
+                                     "klink_bridge_stop", NULL);
+    LMacro_BindToMenuAndHotKey_v9_30("Tools", NULL, "klink: Bridge Status",
+                                     "klink_bridge_status", NULL);
+    klink_bridge_start();   // auto-start on load; menu items remain as manual controls
+    return 1;
+}

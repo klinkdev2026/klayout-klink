@@ -58,3 +58,4 @@ gf_skill_ref.md
 # examples_klink holds only real example code now; screenshots are
 # throwaway artifacts and must not be committed there.
 examples_klink/*.png
+~$*

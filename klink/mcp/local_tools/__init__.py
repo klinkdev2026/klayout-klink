@@ -70,6 +70,7 @@ def get_local_tool(name: str) -> LocalTool | None:
 # ---------------------------------------------------------------------------
 from . import discovery  # noqa: E402,F401
 from . import interaction  # noqa: E402,F401
+from . import upi_ledit  # noqa: E402,F401
 from . import nanodevice  # noqa: E402,F401
 from . import photonics  # noqa: E402,F401
 from . import routing  # noqa: E402,F401

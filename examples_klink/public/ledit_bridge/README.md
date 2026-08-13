@@ -1,0 +1,125 @@
+# klink ↔ L-Edit bridge (file-exchange RPC)
+
+Connect an AI agent (or any script) to a running Tanner L-Edit: manage
+design files and layers, draw geometry, read everything (selection, whole
+cells, properties, ports, labels, DRC rules), and work with T-Cells in
+both directions — over a plain JSON-files-in-a-folder transport. No
+sockets, no firewall prompts, no extra DLLs, nothing to compile.
+
+本目录是 klink 的 L-Edit 桥：通过「JSON 文件交换」让 agent/脚本驱动正在
+运行的 L-Edit——管理设计文件与图层、画图、读取一切（选区/整 cell/属性/
+端口/标签/DRC 规则表）、双向操作 T-Cell。无套接字、无防火墙弹窗、无 DLL、
+无需编译。
+
+```
+agent / klink                     L-Edit (ledit_bridge.cpp, load as SOURCE)
+    │  write inbox\req_*.json          │  SetTimer polls inbox (200 ms)
+    │ ────────────────────────────────▶│  executes UPI calls on UI thread
+    │  read outbox\resp_*.json         │  writes response atomically
+    │ ◀──────────────────────────────── │
+Exchange dir: %LOCALAPPDATA%\klink\ledit_bridge\default\
+```
+
+## Files / 文件
+
+- `ledit_bridge.cpp` — the ONE-file UPI macro. Load the SOURCE directly:
+  **Tools → Macro → Load Macro…** (L-Edit compiles it itself). Written
+  against the old-version UPI subset — older versions compatible by
+  design; tested environment is v16.x. We ship zero Siemens/Tanner
+  files — the SDK header comes from YOUR L-Edit installation.
+- `driver.py` — standalone smoke-test driver (stdlib only):
+  `python driver.py ping | demo | selection | layers | cell <name>`
+- `tcell_workflows.py` — the T-Cell loop (needs `pip install klayout-klink`):
+  `read` / `variants` / `writeback` / `verify` (byte-exact differential).
+
+## Quickstart / 快速上手
+
+1. L-Edit: **Tools → Macro → Load Macro…** → pick `ledit_bridge.cpp`.
+   The bridge starts immediately (Tools menu gains *klink: Bridge
+   Start/Stop/Status*).
+2. `python driver.py ping` → shows macro version, current file/cell and
+   the capability list. `"design_ready": false` means no design is open —
+   that is fine: call `new_design` (below) and keep going.
+3. With klink's MCP configured, agents get `ledit.status`,
+   `ledit.import_selection`, `ledit.push_cell` as one-call tools
+   (domain `bridge_ledit` in `klink.find_tools`).
+
+## Core flows / 核心流程
+
+**Bootstrap with no design open / 零设计自举**: `ping` reports
+`design_ready:false`; call `new_design {name, setup_from_visible?}` to
+create a .tdb (optionally inheriting the open design's technology), then
+proceed. `open_design {path}` / `save_design {path?}` round out file
+management. 没开 tdb 也能开工：`new_design` 直接建库。
+
+**Draw / 画图**: `ensure_layer` (GDS numbers stamped; NEW layers are
+auto-colored — solid fill, no outline, deterministic by name) →
+`create_cell` → `draw` (box/polygon/wire/circle, batch) →
+`place_instance` (single or nx×ny array). Draw is APPEND-ONLY: to
+regenerate, `clear_cell {cell}` (explicit cell name required) or use a
+fresh cell.
+
+**Read everything / 全量读取**: `list_cells` (T-Cell + hidden-variant
+flags) → `get_cell {cell}` returns shapes (with per-object property
+trees), instances (transform/array/properties), ports, labels; wires
+carry cap/join; torus/pie carry exact params. `get_selection` reads the
+user's live selection the same way. `get_layers` includes GDS numbers,
+fill color, special-layer flags. `get_drc_rules` exports the design's
+whole DRC rule table (machine-readable process knowledge).
+
+**Exchange with KLayout / 与 KLayout 互导**: MCP tools
+`ledit.import_selection` (selection → KLayout cell; circles stay
+parametric as CIRCLE PCells; layer NAMES migrate — conflicts append
+`existing|incoming`, never overwrite) and `ledit.push_cell` (flat
+KLayout cell → L-Edit; sub-instances are counted, flatten first).
+
+**T-Cells / 参数化单元**:
+
+```bat
+python tcell_workflows.py read NFET_Generator          # params + defaults
+python tcell_workflows.py variants NFET_Generator --paramsets "[...]" --out ex.json
+python tcell_workflows.py writeback MyGen --code gen.cpp --params "[...]"
+python tcell_workflows.py verify MyGen --reference ref.py:boxes --paramsets "[...]"
+```
+
+`read` parses the generator source (stored in the cell's
+`System.TCell Code` property). `variants` makes L-Edit itself generate
+exemplars (its code runs — geometry is authoritative). `writeback`
+turns your generated C++ into a NATIVE parametric T-Cell. `verify` is
+the acceptance bar: a ported/parameterized cell counts as done ONLY on
+an ALL-BYTE-EXACT report. 验收标准=逐字节一致，别的都不算数。
+
+## Command reference (schema 1)
+
+`ping` · `get_layers` · `ensure_layer` · `set_layer_style` ·
+`create_cell` · `clear_cell` · `list_cells` · `draw` · `place_instance` ·
+`get_selection` · `get_cell` · `get_tcell_params` · `get_drc_rules` ·
+`instance_tcell` · `set_tcell_code` · `new_design` · `open_design` ·
+`save_design` — all coordinates in microns (doubles); errors carry
+`next_action` (read it; it names the fix). Full parameter shapes are in
+the header comment of `ledit_bridge.cpp`.
+
+## Landmines / 已知地雷（都踩过，按此绕行）
+
+- **Heartbeat stalls (`hello.json` stale)**: a MODAL DIALOG is open in
+  L-Edit (often a T-Cell compile error). Close it; the bridge resumes.
+- **Stale T-Cell variants**: after changing a T-Cell's code, identical
+  parameter values return the CACHED old variant. Use fresh values or
+  Tools → Regenerate T-Cells.
+- **`EXCLUDE_LEDIT_LEGACY_UPI`**: don't define it in generator code that
+  stamps GDS numbers — the Ex830 layer-parameter calls live in that
+  header section.
+- **One namespace, one L-Edit**: two L-Edit instances with the macro
+  loaded would fight over the same inbox. Keep one.
+- **GDS numbers are tape-out critical**: bridge-created layers stamp
+  them; generator code written back must stamp them too (`need_layer`
+  pattern in `tcell_workflows` docs). A layer showing `-1` will not
+  export correctly.
+
+## Scope honesty / 边界说明
+
+Parametric intelligence lives on the klink/KLayout side (fitting,
+transpilation, verification); L-Edit receives native results (static
+cells or real T-Cells). Not yet: TTL/idempotency journal reload across
+restarts, response chunking, multi-instance namespaces, DRC-marker
+readback.

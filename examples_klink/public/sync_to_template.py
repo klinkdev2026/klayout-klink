@@ -62,6 +62,16 @@ STARTERS: dict[str, list[tuple[str, str]]] = {
     "layout": [
         ("demos/layout", "fill_region_demo.py"),
     ],
+    # L-Edit bridge: single-file UPI macro source + standalone test driver.
+    # Not a klink example — the user compiles the .cpp against their OWN
+    # L-Edit UPI SDK (we ship zero Siemens/Tanner files). Lives in the
+    # template so `klink init` users can find it.
+    "ledit_bridge": [
+        ("ledit_bridge", "ledit_bridge.cpp"),
+        ("ledit_bridge", "driver.py"),
+        ("ledit_bridge", "tcell_workflows.py"),
+        ("ledit_bridge", "README.md"),
+    ],
     # digital P&R -> LVS: a self-contained family that cross-imports within the
     # folder and reads its own bundled netlists, so the whole folder ships (the
     # demos fall back to a same-dir sibling import when scaffolded). These are

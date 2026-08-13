@@ -383,6 +383,40 @@ needed to rebuild the final layout.
 Before starting a recording, check `recorder.status`. Do not stop or overwrite
 a user recording that is already active.
 
+## L-Edit Bridge (domain: bridge_ledit)
+
+klink can drive a running Tanner L-Edit through a file-exchange bridge.
+Prerequisite: the user loaded `example_template/ledit_bridge/
+ledit_bridge.cpp` as SOURCE in L-Edit (Tools > Macro > Load Macro...).
+Start every L-Edit task with `ledit.status`:
+
+- `macro_alive: false` -> tell the user to load/reload the macro.
+- `design_ready: false` -> no .tdb open; that is fine — the bridge's
+  `new_design` command creates one (drive it via the template's
+  `driver.py raw` or `klink.bridges.ledit` Python API).
+- heartbeat stale but L-Edit running -> a MODAL DIALOG is open in
+  L-Edit (often a T-Cell compile error); ask the user to close it.
+
+One-call tools:
+
+- `ledit.import_selection` — the user selects in L-Edit, you import into
+  a fresh KLayout cell. Circles stay parametric (CIRCLE PCells); layer
+  names migrate (conflicts append `old|new`, never overwrite); anything
+  non-convertible is listed in the result — report it, don't ignore it.
+- `ledit.push_cell` — flat KLayout cell -> L-Edit. Sub-instances are NOT
+  pushed (counted in `skipped.instance`): flatten first if needed.
+  L-Edit draw is APPEND-ONLY — push into a fresh `ledit_cell` to
+  regenerate.
+
+Deeper work (whole-cell readout, DRC-rule export, T-Cell read/instance/
+write-back) uses the Python API `klink.bridges.ledit` and the template's
+`tcell_workflows.py` (verbs: read / variants / writeback / verify).
+Discipline for any parametric port or write-back: it counts as DONE only
+on an ALL-BYTE-EXACT `verify` report against L-Edit-generated ground
+truth. Landmines (variant cache, EXCLUDE_LEDIT_LEGACY_UPI, GDS-number
+stamping) are documented in the template README — read it before T-Cell
+work.
+
 ## Destructive Operations
 
 Only call `layout.clear` or `view.close_tab` on disposable test tabs/layouts
