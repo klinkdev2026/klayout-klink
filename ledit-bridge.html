@@ -131,8 +131,10 @@
         <pre><code>python tcell_workflows.py read NFET_Generator      # 参数与默认值
 python tcell_workflows.py variants NFET_Generator --paramsets "[...]" --out ex.json
 python tcell_workflows.py writeback MyGen --code gen.cpp --params "[...]"
-python tcell_workflows.py verify MyGen --reference ref.py:boxes --paramsets "[...]"</code></pre>
+python tcell_workflows.py verify MyGen --reference ref.py:boxes --paramsets "[...]"
+python tcell_workflows.py fit MyGen --paramsets "[...]" --check "[...]" --out fit.json --register MY_DEVICE</code></pre>
         <ul>
+          <li><strong>T-Cell → KLayout（纯几何路线）</strong>：<code>fit</code>（v0.2.2）采样样本并拟合 v3 重复组模型——数量、间距、位置全部是精确整数律，在留出检查点上与 L-Edit 新鲜变体逐字节对决，然后注册为 KLayout PCell（放置同样逐字节验证）。模型表达不了或钉不死的结构一律 REFUSE 并点名箱族——交替/奇偶结构请走下面的代码移植路线。</li>
           <li><strong>T-Cell → KLayout</strong>：读代码 → agent 移植为 KLayout 侧生成器/PCell → <code>verify</code> 在跨越重复阈值的参数网格上逐字节对决。</li>
           <li><strong>KLayout → T-Cell</strong>：agent 生成 UPI 代码 → <code>writeback</code> 写入（同时定义参数表）→ L-Edit 现场编译 → 得到和手写无异的原生参数化 T-Cell。</li>
         </ul>

@@ -130,8 +130,10 @@
         <pre><code>python tcell_workflows.py read NFET_Generator      # params + defaults
 python tcell_workflows.py variants NFET_Generator --paramsets "[...]" --out ex.json
 python tcell_workflows.py writeback MyGen --code gen.cpp --params "[...]"
-python tcell_workflows.py verify MyGen --reference ref.py:boxes --paramsets "[...]"</code></pre>
+python tcell_workflows.py verify MyGen --reference ref.py:boxes --paramsets "[...]"
+python tcell_workflows.py fit MyGen --paramsets "[...]" --check "[...]" --out fit.json --register MY_DEVICE</code></pre>
         <ul>
+          <li><strong>T-Cell → KLayout, geometry-only</strong>: <code>fit</code> (v0.2.2) harvests exemplars and fits the v3 repeat-group model — counts, pitch and positions as exact integer laws, byte-verified against fresh L-Edit variants at held-out points, then registered as a live KLayout PCell (placement byte-verified too). What the model cannot express exactly and uniquely it REFUSES, naming the box family — alternating/parity structure stays on the code route below.</li>
           <li><strong>T-Cell → KLayout</strong>: read the code → the agent ports the logic to a KLayout-side generator/PCell → <code>verify</code> byte-exact on a grid that crosses repetition thresholds.</li>
           <li><strong>KLayout → T-Cell</strong>: the agent emits UPI code → <code>writeback</code> (also defines the parameter table) → L-Edit compiles it in place → a native parametric T-Cell, indistinguishable from a hand-written one.</li>
         </ul>
