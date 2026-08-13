@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>L-Edit Bridge — drive Tanner L-Edit both ways with an agent - klink</title>
+  <meta name="description" content="klink's L-Edit bridge: a load-as-source UPI macro plus JSON file-exchange transport. Agents create designs/layers, draw, read selections and whole cells, exchange with KLayout, and work T-Cells in both directions (read generator code, instance with parameters, write back native parametric T-Cells) — accepted only on byte-exact verification.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body data-page="tutorials" class="has-sidebar">
+  <aside class="site-sidebar">
+    <a class="sb-brand" href="index.html"><span class="brand-mark">k</span>klink</a>
+    <nav class="sb-nav" aria-label="Site structure">
+      <div class="sb-group">
+        <div class="sb-title">Get started</div>
+        <a href="index.html">Home · what klink is</a>
+        <a href="quickstart.html">Quickstart</a>
+        <a href="concepts.html">Core concepts</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Workflows · human+agent</div>
+        <a href="workflows.html">Workflows in depth (illustrated)</a>
+        <a href="tutorial-multiwindow.html">Multi-window collaboration</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Chat walkthroughs</div>
+        <a href="case-hallbar-chat.html">Hall bar from one sentence</a>
+        <a href="case-drc-chat.html">DRC catch &amp; fix</a>
+        <a href="case-fit-lvs-chat.html">Fit a device to LVS</a>
+        <a href="case-gf-reroute-chat.html">Photonics: ports &amp; drag-reroute</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Step-by-step tutorials</div>
+        <a href="tutorials.html">Tutorials overview</a>
+        <a href="tutorial-hallbar.html">Hall bar device</a>
+        <a href="tutorial-ebl-wraparound.html">EBL wraparound</a>
+        <a href="tutorial-neural-electrode.html">Neural electrode array</a>
+        <a href="tutorial-gf-ports.html">Photonics · three ways to ports</a>
+        <a href="tutorial-gf-mzi.html">Photonics · gf MZI takeover</a>
+        <a href="tutorial-passives.html">Passive templates</a>
+        <a href="tutorial-fit-device.html">Fit device &rarr; PnR &rarr; LVS</a>
+        <a href="tutorial-padframe.html">Probe-card-first padframe</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Guides</div>
+        <a href="drc-lvs.html">DRC · LVS</a>
+        <a href="25d-view.html">2.5D View</a>
+        <a href="ledit-bridge.html" class="active">L-Edit Bridge</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Reference</div>
+        <a href="mcp-reference.html">MCP tool catalog</a>
+        <a href="plugin-packages.html">Writing extension packages</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Architecture</div>
+        <a href="architecture.html">Architecture &amp; boundaries</a>
+      </div>
+    </nav>
+    <div class="sb-foot">
+      <a href="https://github.com/klinkdev2026/klayout-klink">GitHub ↗</a>
+      <a href="../ledit-bridge.html">中文</a>
+    </div>
+  </aside>
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="index.html" data-nav="home">Home</a>
+        <a href="quickstart.html" data-nav="quickstart">Quickstart</a>
+        <a href="tutorials.html" data-nav="tutorials" class="active">Tutorials</a>
+        <a href="workflows.html" data-nav="workflows">Workflows</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP Reference</a>
+        <a href="architecture.html" data-nav="architecture">Architecture</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="Language switch">
+          <a href="../ledit-bridge.html">CN</a>
+          <a class="active" href="ledit-bridge.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Guide · L-Edit Bridge</div>
+        <h1>Drive Tanner L-Edit both ways with an agent</h1>
+        <p class="lede">A <strong>load-as-source</strong> UPI macro plus a JSON file-exchange transport: no sockets, no firewall prompts, nothing to compile; written against the old-version API subset (older versions compatible by design — tested on v16.x). Agents get white-box read/write access — all the way down to T-Cell generator code.</p>
+      </div>
+    </section>
+
+    <div class="container">
+      <article class="prose">
+        <h2>Loading: one file, zero compile</h2>
+        <p>After <code>pip install klayout-klink</code>, <code>klink init</code> scaffolds <code>example_template/ledit_bridge/</code>:</p>
+        <ul>
+          <li><code>ledit_bridge.cpp</code> — the single macro file. In L-Edit: <strong>Tools → Macro → Load Macro…</strong> and pick the source file itself (L-Edit compiles it in place; the macro uses only the old-version API subset — older installs compatible by design, tested on v16.x; klink ships zero Siemens/Tanner files — the SDK header comes from your own L-Edit installation).</li>
+          <li><code>driver.py</code> — dependency-free smoke driver: <code>python driver.py ping</code> shows macro version, current design, and the capability list.</li>
+          <li><code>tcell_workflows.py</code> — the T-Cell loop CLI (below).</li>
+        </ul>
+        <p>Transport is an inbox/outbox JSON file pair under <code>%LOCALAPPDATA%\klink\ledit_bridge\</code>; the macro polls on the UI thread every 200 ms and answers atomically. A <code>hello.json</code> heartbeat provides liveness.</p>
+
+        <h2>Capability surface</h2>
+        <table>
+          <thead><tr><th>Area</th><th>Commands</th></tr></thead>
+          <tbody>
+            <tr><td>Design files</td><td><code>new_design</code> (bootstraps a .tdb even with nothing open) · <code>open_design</code> · <code>save_design</code></td></tr>
+            <tr><td>Layers</td><td><code>ensure_layer</code> (GDS numbers stamped; new layers auto-colored: solid fill, no outline) · <code>set_layer_style</code> · <code>get_layers</code> (fill color, special-layer flags)</td></tr>
+            <tr><td>Drawing</td><td><code>create_cell</code> · <code>draw</code> (box/polygon/wire/circle, batch) · <code>place_instance</code> (incl. nx×ny arrays) · <code>clear_cell</code></td></tr>
+            <tr><td>Full readout</td><td><code>get_selection</code> · <code>get_cell</code> (shapes + per-object property trees + instances + ports + labels; wires carry cap/join, torus/pie carry exact params) · <code>list_cells</code></td></tr>
+            <tr><td>Process knowledge</td><td><code>get_drc_rules</code> — the design's whole rule table, machine-readable</td></tr>
+            <tr><td>T-Cells</td><td><code>get_tcell_params</code> · <code>instance_tcell</code> (programmatic, parameterized) · <code>set_tcell_code</code> (write generator code back as a native T-Cell)</td></tr>
+          </tbody>
+        </table>
+
+        <h2>Exchanging with KLayout (one-call MCP tools)</h2>
+        <ul>
+          <li><code>ledit.status</code> — discovery and triage: macro liveness, whether a design is open, heartbeat age. Call it first when anything misbehaves; errors name the fix.</li>
+          <li><code>ledit.import_selection</code> — you select in L-Edit, the agent imports into a fresh KLayout cell: circles stay parametric (CIRCLE PCells), layers migrate <strong>by name and GDS number</strong> (conflicts append, never overwrite), non-convertibles are listed, never dropped.</li>
+          <li><code>ledit.push_cell</code> — flat KLayout cell back into L-Edit (layers created by name there too).</li>
+        </ul>
+
+        <h2>T-Cells: parametric in both directions</h2>
+        <p>A T-Cell's generator source lives in a cell property the bridge can read whole; parameter names parse deterministically from the generated DO-NOT-EDIT section. That opens both directions, with a single acceptance bar: <strong>byte-exact</strong> (sorted integer-nanometer boxes, element for element, with L-Edit's own generated geometry as ground truth).</p>
+        <pre><code>python tcell_workflows.py read NFET_Generator      # params + defaults
+python tcell_workflows.py variants NFET_Generator --paramsets "[...]" --out ex.json
+python tcell_workflows.py writeback MyGen --code gen.cpp --params "[...]"
+python tcell_workflows.py verify MyGen --reference ref.py:boxes --paramsets "[...]"</code></pre>
+        <ul>
+          <li><strong>T-Cell → KLayout</strong>: read the code → the agent ports the logic to a KLayout-side generator/PCell → <code>verify</code> byte-exact on a grid that crosses repetition thresholds.</li>
+          <li><strong>KLayout → T-Cell</strong>: the agent emits UPI code → <code>writeback</code> (also defines the parameter table) → L-Edit compiles it in place → a native parametric T-Cell, indistinguishable from a hand-written one.</li>
+        </ul>
+
+        <h2>Known boundaries &amp; troubleshooting</h2>
+        <table>
+          <thead><tr><th>Symptom / boundary</th><th>Meaning / fix</th></tr></thead>
+          <tbody>
+            <tr><td>Heartbeat stalls (stale <code>hello.json</code>)</td><td>A modal dialog is open in L-Edit (often a T-Cell compile error) — close it and the bridge resumes</td></tr>
+            <tr><td>Changed T-Cell code but geometry unchanged</td><td>L-Edit caches variants: use fresh parameter values or Tools → Regenerate T-Cells</td></tr>
+            <tr><td>Drawing into an existing cell doubles content</td><td>draw is append-only — regenerate via <code>clear_cell</code> or a fresh cell</td></tr>
+            <tr><td>Two L-Edit instances with the macro</td><td>single namespace for now; keep one instance</td></tr>
+            <tr><td>A layer shows GDS <code>-1</code></td><td>it will not export correctly — bridge-created layers stamp numbers; written-back code should follow the <code>need_layer</code> pattern</td></tr>
+          </tbody>
+        </table>
+        <p>Scope: parametric intelligence (fitting, porting, verification) runs on the klink/KLayout side; L-Edit receives native results (static cells or real T-Cells). The bridge is an external adapter shipped with klink, not an L-Edit plugin.</p>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>geometry-first: mark intent on geometry, let algorithms complete the routes, verify with structured evidence.</p></div>
+      <div><h3>Keep reading</h3><p><a href="tutorials.html">Concepts &amp; tutorials</a></p><p><a href="mcp-reference.html">MCP tool reference</a></p></div>
+      <div><h3>Install</h3><p><a href="quickstart.html">Quickstart</a></p></div>
+    </div>
+  </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

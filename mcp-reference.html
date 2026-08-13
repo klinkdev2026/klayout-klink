@@ -46,6 +46,7 @@
         <div class="sb-title">指南</div>
         <a href="drc-lvs.html">DRC · LVS</a>
         <a href="25d-view.html">2.5D 视图</a>
+        <a href="ledit-bridge.html">L-Edit 桥</a>
       </div>
       <div class="sb-group">
         <div class="sb-title">参考</div>
@@ -109,7 +110,8 @@
           <a href="#d-structdevice">8 · 自定义器件 P&amp;R</a>
           <a href="#d-nanodevice">9 · 纳米器件</a>
           <a href="#d-photonics">10 · 硅光</a>
-          <a href="#d-escape">11 · Escape hatch</a>
+          <a href="#d-ledit">11 · L-Edit 桥</a>
+          <a href="#d-escape">12 · Escape hatch</a>
         </nav>
       </aside>
 
@@ -128,6 +130,7 @@
           <a href="#d-structdevice">device_structdevice</a>
           <a href="#d-nanodevice">device_nanodevice</a>
           <a href="#d-photonics">device_photonics</a>
+          <a href="#d-ledit">bridge_ledit</a>
           <a href="#d-escape">escape_hatch</a>
         </div>
 
@@ -587,7 +590,22 @@ photonics.connect recent_sends=4 cell="MZI" radius_um=10 separation_um=5</code><
 
 
         <!-- ================= 11 escape ================= -->
-        <h2 id="d-escape" class="anchor-h">11 · Escape hatch（pya exec、事件、recorder） <span class="tool-count">escape_hatch · 8 tools</span></h2>
+        
+        <!-- ================= 11 ledit bridge ================= -->
+        <h2 id="d-ledit" class="anchor-h">11 · L-Edit 桥（文件交换 RPC） <span class="tool-count">bridge_ledit · 3 tools</span></h2>
+        <div class="domain-intro">
+          <span class="token">klink.find_tools domain="bridge_ledit"</span>
+          <p>让 agent 驱动正在运行的 Tanner L-Edit：前提是用户把 <code>example_template/ledit_bridge/ledit_bridge.cpp</code> 以<strong>源码</strong>方式装载进 L-Edit（Tools → Macro → Load Macro…，零编译）。传输是 <code>%LOCALAPPDATA%</code> 下的 JSON 文件交换，单命名空间——同时只保留一个装宏的 L-Edit。更深的 T-Cell 工作流（读生成器代码、程序化实例化、写回原生 T-Cell、逐字节差分验证）走 Python API <code>klink.bridges.ledit</code> 和模板里的 <code>tcell_workflows.py</code>；详见<a href="ledit-bridge.html">《L-Edit 桥》指南</a>。</p>
+        </div>
+        <table class="data-table reftable">
+          <thead><tr><th>工具</th><th>参数</th><th>功能</th></tr></thead>
+          <tbody>
+            <tr><td><code>ledit.status</code></td><td>namespace</td><td>发现与分诊：宏活性（心跳年龄）、设计是否打开、宏版本与能力表、当前 .tdb 与 cell。任何 ledit.* 异常先叫它——错误信息直接写明下一步（装宏 / 关掉模态对话框 / new_design）。</td></tr>
+            <tr><td><code>ledit.import_selection</code></td><td>target_cell, namespace, session</td><td>把用户当前在 L-Edit 里的选区导入 KLayout 新落地 cell（每次现拉，绝不用陈旧几何）。能力匹配转换：box→box、wire→path、circle→CIRCLE PCell（保持参数化）、其余有轮廓一律 polygon 兜底；层<strong>连名带号</strong>迁移（重名追加 <code>旧|新</code> 不覆盖）；不可转换对象如实列出。</td></tr>
+            <tr><td><code>ledit.push_cell</code></td><td>cell*, ledit_cell, namespace, session</td><td>把 KLayout 平坦 cell 推回 L-Edit（box/path→wire/polygon；层带名建立并盖 GDS 号）。子实例计入 <code>skipped.instance</code> 不静默丢——层次结构先 flatten。L-Edit 侧 draw 是追加式：重新生成请换新 <code>ledit_cell</code>。</td></tr>
+          </tbody>
+        </table>
+        <h2 id="d-escape" class="anchor-h">12 · Escape hatch（pya exec、事件、recorder） <span class="tool-count">escape_hatch · 8 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="escape_hatch"</span>
           <p><strong>优先用 typed RPC。</strong> <code>exec.python</code> 跑原始 pya，仅用于没有 typed RPC 覆盖的操作 / 调试 / 紧凑一次性——它仍会触发 recorder + layout-diff 检测。<code>events.*</code> 是桥为 SEND 记忆订阅的 live 事件流（通常你改读 <code>interaction.*</code>）。<code>recorder.*</code> 生成回放<strong>脚本</strong>（不是字面 RPC 日志）；测试前先看 <code>recorder.status</code>，别覆盖用户正在录的东西。</p>

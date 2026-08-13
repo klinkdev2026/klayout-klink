@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>L-Edit 桥——让 agent 双向驱动 Tanner L-Edit - klink</title>
+  <meta name="description" content="klink 的 L-Edit 桥：一个源码即装载的 UPI 宏 + JSON 文件交换传输，agent 可以建库建层画图、读取选区与整 cell、导入导出 KLayout、双向操作 T-Cell（读生成器代码、程序化传参实例化、写回原生参数化 T-Cell），并以逐字节一致为验收标准。">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body data-page="tutorials" class="has-sidebar">
+  <aside class="site-sidebar">
+    <a class="sb-brand" href="index.html"><span class="brand-mark">k</span>klink</a>
+    <nav class="sb-nav" aria-label="站点结构">
+      <div class="sb-group">
+        <div class="sb-title">开始</div>
+        <a href="index.html">首页 · klink 是什么</a>
+        <a href="quickstart.html">快速上手</a>
+        <a href="concepts.html">核心思路</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">工作流 · 人机协作</div>
+        <a href="workflows.html">工作流详解（图文）</a>
+        <a href="tutorial-multiwindow.html">跨窗口协作实战</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">对话案例</div>
+        <a href="case-hallbar-chat.html">一句话画 Hall bar</a>
+        <a href="case-drc-chat.html">DRC 查违例并修好</a>
+        <a href="case-fit-lvs-chat.html">拟合器件跑到 LVS</a>
+        <a href="case-gf-reroute-chat.html">硅光：标端口 · 拖动重连</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">分步教程</div>
+        <a href="tutorials.html">教程总览</a>
+        <a href="tutorial-hallbar.html">Hall bar 器件</a>
+        <a href="tutorial-ebl-wraparound.html">EBL wraparound</a>
+        <a href="tutorial-neural-electrode.html">神经电极阵列</a>
+        <a href="tutorial-gf-ports.html">硅光 · 三种拿端口</a>
+        <a href="tutorial-gf-mzi.html">硅光 · gf MZI 接管</a>
+        <a href="tutorial-passives.html">无源器件模板</a>
+        <a href="tutorial-fit-device.html">拟合器件 → PnR → LVS</a>
+        <a href="tutorial-padframe.html">针卡优先 padframe</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">指南</div>
+        <a href="drc-lvs.html">DRC · LVS</a>
+        <a href="25d-view.html">2.5D 视图</a>
+        <a href="ledit-bridge.html" class="active">L-Edit 桥</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">参考</div>
+        <a href="mcp-reference.html">MCP 工具全表</a>
+        <a href="plugin-packages.html">编写扩展包</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">架构</div>
+        <a href="architecture.html">架构与边界</a>
+      </div>
+    </nav>
+    <div class="sb-foot">
+      <a href="https://github.com/klinkdev2026/klayout-klink">GitHub ↗</a>
+      <a href="en/ledit-bridge.html">English</a>
+    </div>
+  </aside>
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="主导航">
+        <a href="index.html" data-nav="home">首页</a>
+        <a href="quickstart.html" data-nav="quickstart">快速上手</a>
+        <a href="tutorials.html" data-nav="tutorials" class="active">教程</a>
+        <a href="workflows.html" data-nav="workflows">工作流</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP 参考</a>
+        <a href="architecture.html" data-nav="architecture">架构</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="语言切换">
+          <a class="active" href="ledit-bridge.html">CN</a>
+          <a href="en/ledit-bridge.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="打开导航" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">指南 · L-Edit 桥</div>
+        <h1>让 agent 双向驱动 Tanner L-Edit</h1>
+        <p class="lede">一个<strong>源码即装载</strong>的 UPI 宏 + JSON 文件交换传输：无套接字、无防火墙弹窗、无需编译；按老版本 API 子集编写（理论兼容旧版，实测环境 v16.x）。agent 由此获得对 L-Edit 的白盒读写——直到 T-Cell 的生成器代码本身。</p>
+      </div>
+    </section>
+
+    <div class="container">
+      <article class="prose">
+        <h2>装载：一个文件，零编译</h2>
+        <p><code>pip install klayout-klink</code> 后 <code>klink init</code> 会在项目里铺出 <code>example_template/ledit_bridge/</code>：</p>
+        <ul>
+          <li><code>ledit_bridge.cpp</code> —— 唯一的宏文件。在 L-Edit 里 <strong>Tools → Macro → Load Macro…</strong> 直接选它（L-Edit 自己现场编译；宏只用老版本 API 子集编写，理论兼容旧版、实测环境 v16.x；klink 不携带任何 Siemens/Tanner 文件，SDK 头文件来自你自己的 L-Edit 安装）。</li>
+          <li><code>driver.py</code> —— 免依赖冒烟驱动：<code>python driver.py ping</code> 看到宏版本、当前设计与能力表即为连通。</li>
+          <li><code>tcell_workflows.py</code> —— T-Cell 工作流 CLI（下文）。</li>
+        </ul>
+        <p>传输是 <code>%LOCALAPPDATA%\klink\ledit_bridge\</code> 下的 inbox/outbox JSON 文件对，宏在 UI 线程 200ms 轮询、原子写回；心跳文件 <code>hello.json</code> 提供活性判定。</p>
+
+        <h2>能力面</h2>
+        <table>
+          <thead><tr><th>类别</th><th>命令</th></tr></thead>
+          <tbody>
+            <tr><td>设计文件</td><td><code>new_design</code>（没开 tdb 也能自举建库）· <code>open_design</code> · <code>save_design</code></td></tr>
+            <tr><td>图层</td><td><code>ensure_layer</code>（盖 GDS 号；新层自动配色：实心无边框）· <code>set_layer_style</code> · <code>get_layers</code>（含填充色与特殊层标记）</td></tr>
+            <tr><td>绘制</td><td><code>create_cell</code> · <code>draw</code>（box/polygon/wire/circle 批量）· <code>place_instance</code>（含 nx×ny 阵列）· <code>clear_cell</code></td></tr>
+            <tr><td>全量读取</td><td><code>get_selection</code> · <code>get_cell</code>（图形+对象级属性树+实例+端口+标签；wire 带端帽/拐角，torus/pie 带精确参数）· <code>list_cells</code></td></tr>
+            <tr><td>工艺知识</td><td><code>get_drc_rules</code> —— 整套设计规则表机读导出</td></tr>
+            <tr><td>T-Cell</td><td><code>get_tcell_params</code> · <code>instance_tcell</code>（程序化传参实例化）· <code>set_tcell_code</code>（把生成器代码写回成原生 T-Cell）</td></tr>
+          </tbody>
+        </table>
+
+        <h2>与 KLayout 互导（MCP 一调用）</h2>
+        <p>配好 klink MCP 后，agent 直接获得 <code>bridge_ledit</code> 域的三个意图级工具：</p>
+        <ul>
+          <li><code>ledit.status</code> —— 发现与分诊：宏活性、设计是否打开、心跳年龄。任何异常先叫它，错误信息会直接写明下一步。</li>
+          <li><code>ledit.import_selection</code> —— 你在 L-Edit 里选中，agent 导入 KLayout 新 cell：圆保持参数化（CIRCLE PCell）、层<strong>连名带号</strong>迁移（重名追加不覆盖）、不可转换对象如实列出。</li>
+          <li><code>ledit.push_cell</code> —— KLayout 平坦 cell 推回 L-Edit（层同样带名建立）。</li>
+        </ul>
+
+        <h2>T-Cell：双向参数化</h2>
+        <p>T-Cell 的生成器代码存在 cell 属性里，桥可以整段读出——参数名从代码的 DO-NOT-EDIT 段稳定解析。由此打通两个方向，验收标准只有一个：<strong>逐字节一致</strong>（整数纳米坐标逐箱相等，以 L-Edit 实际生成的几何为真值）。</p>
+        <pre><code>python tcell_workflows.py read NFET_Generator      # 参数与默认值
+python tcell_workflows.py variants NFET_Generator --paramsets "[...]" --out ex.json
+python tcell_workflows.py writeback MyGen --code gen.cpp --params "[...]"
+python tcell_workflows.py verify MyGen --reference ref.py:boxes --paramsets "[...]"</code></pre>
+        <ul>
+          <li><strong>T-Cell → KLayout</strong>：读代码 → agent 移植为 KLayout 侧生成器/PCell → <code>verify</code> 在跨越重复阈值的参数网格上逐字节对决。</li>
+          <li><strong>KLayout → T-Cell</strong>：agent 生成 UPI 代码 → <code>writeback</code> 写入（同时定义参数表）→ L-Edit 现场编译 → 得到和手写无异的原生参数化 T-Cell。</li>
+        </ul>
+
+        <h2>已知边界与排障</h2>
+        <table>
+          <thead><tr><th>症状 / 边界</th><th>含义 / 修法</th></tr></thead>
+          <tbody>
+            <tr><td>心跳停了（hello.json 变旧）</td><td>L-Edit 弹了模态对话框（常见于 T-Cell 编译错误）——关掉即恢复</td></tr>
+            <tr><td>改了 T-Cell 代码但几何没变</td><td>L-Edit 缓存变体：换一组参数值，或 Tools → Regenerate T-Cells</td></tr>
+            <tr><td>画进已有 cell 内容翻倍</td><td>draw 是追加式——重新生成请用 <code>clear_cell</code> 或新 cell</td></tr>
+            <tr><td>两个 L-Edit 同时开桥</td><td>当前单命名空间，只保留一个装宏的实例</td></tr>
+            <tr><td>层的 GDS 号是 -1</td><td>导出 GDS 会错——桥建层会盖号；写回代码请沿用模板的 <code>need_layer</code> 范式</td></tr>
+          </tbody>
+        </table>
+        <p>范围说明：参数化的智能（拟合、移植、验证）在 klink/KLayout 侧完成，L-Edit 收到的是原生结果（静态 cell 或真 T-Cell）。桥不是 L-Edit 插件，是随 klink 发行的外部适配层。</p>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>geometry-first：在几何上标意图，让算法补全布线，用结构化证据验证。</p></div>
+      <div><h3>继续阅读</h3><p><a href="tutorials.html">核心思路与教程</a></p><p><a href="mcp-reference.html">MCP 工具参考</a></p></div>
+      <div><h3>安装</h3><p><a href="quickstart.html">快速上手</a></p></div>
+    </div>
+  </footer>
+  <script src="assets/app.js"></script>
+</body>
+</html>

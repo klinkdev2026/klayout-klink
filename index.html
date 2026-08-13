@@ -52,6 +52,7 @@
         <div class="sb-title">指南</div>
         <a href="drc-lvs.html">DRC · LVS</a>
         <a href="25d-view.html">2.5D 视图</a>
+        <a href="ledit-bridge.html">L-Edit 桥</a>
       </div>
       <div class="sb-group">
         <div class="sb-title">参考</div>
@@ -239,6 +240,11 @@ python example_template/nanodevice/ebl_wraparound.py</code></pre>
             <h3>跨会话搬运</h3>
             <p>两阶段、确认安全：先 prepare + 目标 dry-run，确认再 commit，搬错目标在 dry-run 阶段被抓住。</p>
             <span class="card-more">搬运 →</span>
+          </a>
+          <a class="card" href="ledit-bridge.html">
+            <h3>L-Edit 双向桥</h3>
+            <p>源码即装载的宏 + 文件交换 RPC：读选区/整 cell、互导 KLayout、双向操作 T-Cell（含写回原生参数化 T-Cell），验收标准=逐字节一致。</p>
+            <span class="card-more">L-Edit 桥 →</span>
           </a>
           <a class="card" href="workflows.html#klive">
             <h3>8082 klive 显示</h3>

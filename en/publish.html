@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Publishing - klink</title>
+  <meta name="description" content="How to deploy the klink website with GitHub Pages, whether to buy a domain, and how to promote a developer-tool site.">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body data-page="publish" class="has-sidebar">
+  <aside class="site-sidebar">
+    <a class="sb-brand" href="index.html"><span class="brand-mark">k</span>klink</a>
+    <nav class="sb-nav" aria-label="Site structure">
+      <div class="sb-group">
+        <div class="sb-title">Get started</div>
+        <a href="index.html">Home · what klink is</a>
+        <a href="quickstart.html">Quickstart</a>
+        <a href="concepts.html">Core concepts</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Workflows · human+agent</div>
+        <a href="workflows.html">Workflows in depth (illustrated)</a>
+        <a href="tutorial-multiwindow.html">Multi-window collaboration</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Chat walkthroughs</div>
+        <a href="case-hallbar-chat.html">Hall bar from one sentence</a>
+        <a href="case-drc-chat.html">DRC catch &amp; fix</a>
+        <a href="case-fit-lvs-chat.html">Fit a device to LVS</a>
+        <a href="case-gf-reroute-chat.html">Photonics: ports &amp; drag-reroute</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Step-by-step tutorials</div>
+        <a href="tutorials.html">Tutorials overview</a>
+        <a href="tutorial-hallbar.html">Hall bar device</a>
+        <a href="tutorial-ebl-wraparound.html">EBL wraparound</a>
+        <a href="tutorial-neural-electrode.html">Neural electrode array</a>
+        <a href="tutorial-gf-ports.html">Photonics · three ways to ports</a>
+        <a href="tutorial-gf-mzi.html">Photonics · gf MZI takeover</a>
+        <a href="tutorial-passives.html">Passive templates</a>
+        <a href="tutorial-fit-device.html">Fit device &rarr; PnR &rarr; LVS</a>
+        <a href="tutorial-padframe.html">Probe-card-first padframe</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Guides</div>
+        <a href="drc-lvs.html">DRC · LVS</a>
+        <a href="25d-view.html">2.5D View</a>
+        <a href="ledit-bridge.html">L-Edit Bridge</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Reference</div>
+        <a href="mcp-reference.html">MCP tool catalog</a>
+        <a href="plugin-packages.html">Writing extension packages</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Architecture</div>
+        <a href="architecture.html">Architecture &amp; boundaries</a>
+      </div>
+    </nav>
+    <div class="sb-foot">
+      <a href="https://github.com/klinkdev2026/klayout-klink">GitHub ↗</a>
+      <a href="../index.html">中文</a>
+    </div>
+  </aside>
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="index.html" data-nav="home">Home</a>
+        <a href="quickstart.html" data-nav="quickstart">Quickstart</a>
+        <a href="tutorials.html" data-nav="tutorials">Tutorials</a>
+        <a href="workflows.html" data-nav="workflows">Workflows</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP Reference</a>
+        <a href="architecture.html" data-nav="architecture">Architecture</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="Language switch">
+          <a href="../publish.html">CN</a>
+          <a class="active" href="publish.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Publishing</div>
+        <h1>Launch first, buy a domain later</h1>
+        <p>You do not need a domain on day one. For an open-source developer tool, a clear GitHub Pages site with runnable commands is more important than branding polish.</p>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#domain">Need a domain?</a>
+          <a href="#github-pages">GitHub Pages</a>
+          <a href="#custom-domain">Custom domain</a>
+          <a href="#content">Content structure</a>
+          <a href="#promotion">Promotion</a>
+          <a href="#next">Next steps</a>
+        </nav>
+      </aside>
+      <article class="content">
+        <h2 id="domain">Do you need a domain?</h2>
+        <p>Not immediately. A free GitHub Pages URL is enough for the first release:</p>
+        <pre><code>https://&lt;account&gt;.github.io/&lt;repo&gt;/</code></pre>
+        <p>Use that URL in the README, PyPI project links, GitHub About, issue templates, and posts. Buy a short domain after the project name, package name, and site structure are stable.</p>
+        <div class="note">The first goal is not brand polish. The first goal is that a new visitor can install, run, and understand klink in three minutes.</div>
+
+        <h2 id="github-pages">Deploy with GitHub Pages</h2>
+        <h3>Option A: separate website repository</h3>
+        <pre><code>git init
+git add .
+git commit -m "Add klink website"
+git remote add origin https://github.com/&lt;account&gt;/klink-website.git
+git push -u origin main</code></pre>
+        <p>Then enable Pages in repository Settings and publish from the `main` branch root.</p>
+        <h3>Option B: inside the main repository</h3>
+        <p>You can place this site under `website/` or `docs/` in the main repository. Because the project already has `docs/public/`, a separate `website/` folder or separate repository is clearer.</p>
+
+        <h2 id="custom-domain">Bind a custom domain</h2>
+        <ol>
+          <li>Enter the custom domain in GitHub Pages settings.</li>
+          <li>Add a root `CNAME` file containing one domain, such as `docs.example.dev`.</li>
+          <li>Add DNS records at the registrar. Subdomains usually use CNAME; apex domains use the A/AAAA records specified by GitHub Pages documentation.</li>
+        </ol>
+        <p>Domain availability changes constantly. Check availability at the registrar before committing to a name.</p>
+
+        <h2 id="content">What a developer-tool site needs</h2>
+        <table class="data-table">
+          <thead><tr><th>Page</th><th>Purpose</th><th>This site</th></tr></thead>
+          <tbody>
+            <tr><td>Home</td><td>Explain what the project is and what can run in 30 seconds.</td><td>`index.html`</td></tr>
+            <tr><td>Quickstart</td><td>Install, plugin, smoke test, first demo.</td><td>`quickstart.html`</td></tr>
+            <tr><td>Tutorials</td><td>Move from template project to your own PDK/device flow.</td><td>`tutorials.html`</td></tr>
+            <tr><td>Workflows</td><td>MCP, SEND, sessions, transfer, recorder.</td><td>`workflows.html`</td></tr>
+            <tr><td>Examples</td><td>Public runnable demos and feature gallery.</td><td>`tutorials.html`</td></tr>
+            <tr><td>Architecture</td><td>Explain the design and process-purity contract.</td><td>`architecture.html`</td></tr>
+          </tbody>
+        </table>
+
+        <h2 id="promotion">Promotion path</h2>
+        <ol>
+          <li>Use the headline: turn custom KLayout work into verifiable, reusable design intent.</li>
+          <li>Keep one shortest demo: `klink init` -> run starter -> see structured output.</li>
+          <li>Show one live demo: KLayout plugin -> agent reads/writes geometry -> structured verification.</li>
+          <li>Pick one vertical showcase: photonics, nanodevice, or custom-device P&R.</li>
+          <li>Add a “Start here” link near the top of the GitHub README.</li>
+          <li>Point GitHub release notes, PyPI project URLs, and the repository About URL to the same site.</li>
+        </ol>
+
+        <h2 id="next">Recommended next steps</h2>
+        <div class="steps">
+          <div class="step"><div><h3>Deploy GitHub Pages first</h3><p>Do not wait for a domain. Give users a better entry point than a long README.</p></div></div>
+          <div class="step"><div><h3>Add real screenshots or short clips</h3><p>The site has a generated hero image. Later, add actual KLayout live-demo screenshots or GIFs.</p></div></div>
+          <div class="step"><div><h3>Keep release docs and site in sync</h3><p>When public docs change, re-check install commands, demo commands, and dependency boundaries here.</p></div></div>
+          <div class="step"><div><h3>Bind a domain after the project stabilizes</h3><p>Choose a short domain once the package name and positioning are settled.</p></div></div>
+        </div>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>Lower onboarding cost first; expand the brand later.</p></div>
+      <div><h3>Site</h3><p><a href="index.html">Home</a></p><p><a href="quickstart.html">Quickstart</a></p></div>
+      <div><h3>Source</h3><p><a href="https://github.com/klinkdev2026/klayout-klink">GitHub</a></p></div>
+    </div>
+  </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

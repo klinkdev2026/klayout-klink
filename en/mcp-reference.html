@@ -46,6 +46,7 @@
         <div class="sb-title">Guides</div>
         <a href="drc-lvs.html">DRC · LVS</a>
         <a href="25d-view.html">2.5D View</a>
+        <a href="ledit-bridge.html">L-Edit Bridge</a>
       </div>
       <div class="sb-group">
         <div class="sb-title">Reference</div>
@@ -109,7 +110,8 @@
           <a href="#d-structdevice">8 · Custom-device P&amp;R</a>
           <a href="#d-nanodevice">9 · Nanodevices</a>
           <a href="#d-photonics">10 · Photonics</a>
-          <a href="#d-escape">11 · Escape hatch</a>
+          <a href="#d-ledit">11 · L-Edit Bridge</a>
+          <a href="#d-escape">12 · Escape hatch</a>
         </nav>
       </aside>
 
@@ -127,6 +129,7 @@
           <a href="#d-structdevice">device_structdevice</a>
           <a href="#d-nanodevice">device_nanodevice</a>
           <a href="#d-photonics">device_photonics</a>
+          <a href="#d-ledit">bridge_ledit</a>
           <a href="#d-escape">escape_hatch</a>
         </div>
         <h3>Reading conventions</h3>
@@ -479,7 +482,22 @@ port.harvest_blackbox cell="MZI" tags=["gc","mmi"] wg_layer="1/0" stub_size_um=0
 photonics.connect recent_sends=4 cell="MZI" radius_um=10 separation_um=5</code></pre>
 
         <!-- 11 escape -->
-        <h2 id="d-escape" class="anchor-h">11 · Escape hatch (pya exec, events, recorder) <span class="tool-count">escape_hatch · 8 tools</span></h2>
+        
+        <!-- ================= 11 ledit bridge ================= -->
+        <h2 id="d-ledit" class="anchor-h">11 · L-Edit Bridge (file-exchange RPC) <span class="tool-count">bridge_ledit · 3 tools</span></h2>
+        <div class="domain-intro">
+          <span class="token">klink.find_tools domain="bridge_ledit"</span>
+          <p>Drive a running Tanner L-Edit. Prerequisite: the user loads <code>example_template/ledit_bridge/ledit_bridge.cpp</code> as <strong>source</strong> in L-Edit (Tools → Macro → Load Macro…, zero compile). Transport is a JSON file exchange under <code>%LOCALAPPDATA%</code>, single namespace — keep one macro-loaded L-Edit at a time. Deeper T-Cell workflows (reading generator code, programmatic instancing, writing back native T-Cells, byte-exact differential verification) use the Python API <code>klink.bridges.ledit</code> plus the template's <code>tcell_workflows.py</code>; see the <a href="ledit-bridge.html">L-Edit Bridge guide</a>.</p>
+        </div>
+        <table class="data-table reftable">
+          <thead><tr><th>Tool</th><th>Args</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><code>ledit.status</code></td><td>namespace</td><td>Discovery and triage: macro liveness (heartbeat age), whether a design is open, macro version/capabilities, current .tdb and cell. Call first when any ledit.* misbehaves — errors name the exact fix (load the macro / close a modal dialog / new_design).</td></tr>
+            <tr><td><code>ledit.import_selection</code></td><td>target_cell, namespace, session</td><td>Import the user's CURRENT L-Edit selection into a fresh KLayout landing cell (fresh GET every call, never stale geometry). Capability-matched conversion: box→box, wire→path, circle→CIRCLE PCell (stays parametric), any other outline→polygon; layers migrate <strong>by name and GDS number</strong> (conflicts append <code>old|new</code>, never overwrite); non-convertibles are listed, never dropped.</td></tr>
+            <tr><td><code>ledit.push_cell</code></td><td>cell*, ledit_cell, namespace, session</td><td>Push a flat KLayout cell into L-Edit (box / path→wire / polygon; layers created by name with GDS numbers stamped). Sub-instances are counted in <code>skipped.instance</code>, not silently dropped — flatten hierarchies first. L-Edit draw is append-only: regenerate into a fresh <code>ledit_cell</code>.</td></tr>
+          </tbody>
+        </table>
+        <h2 id="d-escape" class="anchor-h">12 · Escape hatch (pya exec, events, recorder) <span class="tool-count">escape_hatch · 8 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="escape_hatch"</span>
           <p><strong>Prefer typed RPCs.</strong> <code>exec.python</code> runs raw pya for what no typed RPC covers — it still schedules recorder + layout-diff detection. <code>events.*</code> is the live event stream (usually read <code>interaction.*</code> instead). <code>recorder.*</code> generates a replay script; check <code>recorder.status</code> before tests so you never clobber a user recording.</p>

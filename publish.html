@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>发布与推广 - klink</title>
+  <meta name="description" content="如何把 klink 文档站部署到 GitHub Pages，是否需要域名，以及推广一个开发者工具网站的内容结构。">
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body data-page="publish" class="has-sidebar">
+  <aside class="site-sidebar">
+    <a class="sb-brand" href="index.html"><span class="brand-mark">k</span>klink</a>
+    <nav class="sb-nav" aria-label="站点结构">
+      <div class="sb-group">
+        <div class="sb-title">开始</div>
+        <a href="index.html">首页 · klink 是什么</a>
+        <a href="quickstart.html">快速上手</a>
+        <a href="concepts.html">核心思路</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">工作流 · 人机协作</div>
+        <a href="workflows.html">工作流详解（图文）</a>
+        <a href="tutorial-multiwindow.html">跨窗口协作实战</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">对话案例</div>
+        <a href="case-hallbar-chat.html">一句话画 Hall bar</a>
+        <a href="case-drc-chat.html">DRC 查违例并修好</a>
+        <a href="case-fit-lvs-chat.html">拟合器件跑到 LVS</a>
+        <a href="case-gf-reroute-chat.html">硅光：标端口 · 拖动重连</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">分步教程</div>
+        <a href="tutorials.html">教程总览</a>
+        <a href="tutorial-hallbar.html">Hall bar 器件</a>
+        <a href="tutorial-ebl-wraparound.html">EBL wraparound</a>
+        <a href="tutorial-neural-electrode.html">神经电极阵列</a>
+        <a href="tutorial-gf-ports.html">硅光 · 三种拿端口</a>
+        <a href="tutorial-gf-mzi.html">硅光 · gf MZI 接管</a>
+        <a href="tutorial-passives.html">无源器件模板</a>
+        <a href="tutorial-fit-device.html">拟合器件 → PnR → LVS</a>
+        <a href="tutorial-padframe.html">针卡优先 padframe</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">指南</div>
+        <a href="drc-lvs.html">DRC · LVS</a>
+        <a href="25d-view.html">2.5D 视图</a>
+        <a href="ledit-bridge.html">L-Edit 桥</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">参考</div>
+        <a href="mcp-reference.html">MCP 工具全表</a>
+        <a href="plugin-packages.html">编写扩展包</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">架构</div>
+        <a href="architecture.html">架构与边界</a>
+      </div>
+    </nav>
+    <div class="sb-foot">
+      <a href="https://github.com/klinkdev2026/klayout-klink">GitHub ↗</a>
+      <a href="en/index.html">English</a>
+    </div>
+  </aside>
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="主导航">
+        <a href="index.html" data-nav="home">首页</a>
+        <a href="quickstart.html" data-nav="quickstart">快速上手</a>
+        <a href="tutorials.html" data-nav="tutorials">教程</a>
+        <a href="workflows.html" data-nav="workflows">工作流</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP 参考</a>
+        <a href="architecture.html" data-nav="architecture">架构</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="语言切换">
+          <a class="active" href="publish.html">CN</a>
+          <a href="en/publish.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="打开导航" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Publishing</div>
+        <h1>先上线，再买域名</h1>
+        <p>推广开发者工具不一定先注册域名。更有效的顺序是：先把可读教程、可复制命令、可跑 demo 和 GitHub 链接上线，再根据反馈决定域名和长期文档框架。</p>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#domain">需要域名吗</a>
+          <a href="#github-pages">GitHub Pages</a>
+          <a href="#custom-domain">绑定自定义域名</a>
+          <a href="#content">内容结构</a>
+          <a href="#promotion">推广路径</a>
+          <a href="#next">下一步</a>
+        </nav>
+      </aside>
+
+      <article class="content">
+        <h2 id="domain">需要注册域名吗</h2>
+        <p>不需要一开始就买。对开源工具来说，第一阶段可以直接用 GitHub Pages 的免费地址：</p>
+        <pre><code>https://&lt;account&gt;.github.io/&lt;repo&gt;/</code></pre>
+        <p>这个地址足够放在 README、PyPI project URLs、GitHub About、issue 模板和社交媒体里。等站点内容稳定、项目名确定、搜索结果开始积累后，再买一个简短域名更划算。</p>
+        <div class="note">
+          如果目标是长期对外推广，域名有价值，但不是首要 blocker。首要问题是让第一次访问的人能在 3 分钟内安装、运行、理解 klink 解决什么问题。
+        </div>
+
+        <h2 id="github-pages">用 GitHub Pages 上线</h2>
+        <p>这个站点是纯静态文件，可以直接部署。推荐两种方式：</p>
+        <h3>方式 A：独立网站仓库</h3>
+        <pre><code>git init
+git add .
+git commit -m "Add klink website"
+git remote add origin https://github.com/&lt;account&gt;/klink-website.git
+git push -u origin main</code></pre>
+        <p>然后在 GitHub 仓库 Settings -> Pages，选择 `main` 分支和 `/root`。</p>
+        <h3>方式 B：放进主仓库 `docs/`</h3>
+        <p>如果希望网站跟代码仓同仓管理，可以把这些文件放到主仓库的 `docs/` 或 `website/`，再配置 Pages 来源。主仓已有 `docs/public/` 时要避免命名混乱，建议用独立 `website/` 或单独仓库。</p>
+
+        <h2 id="custom-domain">绑定自定义域名</h2>
+        <p>买域名之后，通常需要做三件事：</p>
+        <ol>
+          <li>在 GitHub Pages 设置里填写 custom domain。</li>
+          <li>在仓库根目录添加 `CNAME` 文件，内容是一行域名，例如 `klink.dev` 或 `docs.klink.dev`。</li>
+          <li>在域名 DNS 面板添加记录。子域名常用 CNAME 指向 GitHub Pages 地址；根域名通常使用 GitHub Pages 文档指定的 A/AAAA 记录。</li>
+        </ol>
+        <p>域名是否可注册会变化，注册前需要在域名服务商处实时查询。不要在文档里承诺某个域名可用。</p>
+
+        <h2 id="content">开发者工具网站应有的内容</h2>
+        <table class="data-table">
+          <thead><tr><th>页面</th><th>作用</th><th>klink 当前站点对应</th></tr></thead>
+          <tbody>
+            <tr><td>首页</td><td>30 秒讲清楚项目是什么、适合谁、能跑什么。</td><td>`index.html`</td></tr>
+            <tr><td>快速上手</td><td>安装、插件、smoke test、第一条 demo。</td><td>`quickstart.html`</td></tr>
+            <tr><td>教程</td><td>从模板项目到自己的 PDK / device flow。</td><td>`tutorials.html`</td></tr>
+            <tr><td>工作流</td><td>MCP、SEND、session、transfer、recorder。</td><td>`workflows.html`</td></tr>
+            <tr><td>示例</td><td>公开可跑 demo 和 feature gallery。</td><td>`tutorials.html`</td></tr>
+            <tr><td>架构</td><td>解释为什么这么设计，强调 process purity。</td><td>`architecture.html`</td></tr>
+          </tbody>
+        </table>
+
+        <h2 id="promotion">推广路径</h2>
+        <p>对 klink 这种工具，推广时不要先追求大而泛的 “AI EDA platform”。更实用的传播路径是：</p>
+        <ol>
+          <li>首页主张：把 KLayout 中的自定义版图工作变成可验证、可复用的设计意图。</li>
+          <li>一条最短 demo：`klink init` -> 运行 starter -> 看到结构化结果。</li>
+          <li>一条 live demo：打开 KLayout -> plugin 监听 -> agent 读写几何并验证。</li>
+          <li>一条垂直 demo：硅光、纳米器件或 custom-device P&R 中选一个最强的做成 GIF/短视频。</li>
+          <li>README 顶部增加“Start here”链接，指向快速上手页。</li>
+          <li>GitHub release / PyPI project description / About URL 都指向同一个站点。</li>
+        </ol>
+
+        <h2 id="next">下一步建议</h2>
+        <div class="steps">
+          <div class="step">
+            <div>
+              <h3>先部署 GitHub Pages</h3>
+              <p>不用等域名。先让 README 和 GitHub About 链到一个比 README 更友好的入口。</p>
+            </div>
+          </div>
+          <div class="step">
+            <div>
+              <h3>补真实截图或短视频</h3>
+              <p>当前站点已有生成主视觉。后续最好加入 KLayout live demo 的真实截图、录屏或 GIF。</p>
+            </div>
+          </div>
+          <div class="step">
+            <div>
+              <h3>把公开 docs 同步成站点内容</h3>
+              <p>以后 release docs 更新时，同步检查网站页面，尤其是安装命令、demo 命令和依赖边界。</p>
+            </div>
+          </div>
+          <div class="step">
+            <div>
+              <h3>域名稳定后再绑定</h3>
+              <p>项目名、包名和站点结构稳定后，再选择短域名并配置 CNAME。</p>
+            </div>
+          </div>
+        </div>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>先降低上手成本，再做品牌扩展。</p></div>
+      <div><h3>站点</h3><p><a href="index.html">首页</a></p><p><a href="quickstart.html">快速上手</a></p></div>
+      <div><h3>源码</h3><p><a href="https://github.com/klinkdev2026/klayout-klink">GitHub</a></p></div>
+    </div>
+  </footer>
+  <script src="assets/app.js"></script>
+</body>
+</html>

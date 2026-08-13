@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://klinkdev2026.github.io/klayout-klink/25d-view.html</loc></url>
+  <url><loc>https://klinkdev2026.github.io/klayout-klink/ledit-bridge.html</loc></url>
   <url><loc>https://klinkdev2026.github.io/klayout-klink/architecture.html</loc></url>
   <url><loc>https://klinkdev2026.github.io/klayout-klink/concepts.html</loc></url>
   <url><loc>https://klinkdev2026.github.io/klayout-klink/drc-lvs.html</loc></url>
@@ -18,6 +19,7 @@
   <url><loc>https://klinkdev2026.github.io/klayout-klink/tutorials.html</loc></url>
   <url><loc>https://klinkdev2026.github.io/klayout-klink/workflows.html</loc></url>
   <url><loc>https://klinkdev2026.github.io/klayout-klink/en/25d-view.html</loc></url>
+  <url><loc>https://klinkdev2026.github.io/klayout-klink/en/ledit-bridge.html</loc></url>
   <url><loc>https://klinkdev2026.github.io/klayout-klink/en/architecture.html</loc></url>
   <url><loc>https://klinkdev2026.github.io/klayout-klink/en/concepts.html</loc></url>
   <url><loc>https://klinkdev2026.github.io/klayout-klink/en/drc-lvs.html</loc></url>
