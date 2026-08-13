@@ -28,9 +28,14 @@ Exchange dir: %LOCALAPPDATA%\klink\ledit_bridge\default\
   design; tested environment is v16.x. We ship zero Siemens/Tanner
   files — the SDK header comes from YOUR L-Edit installation.
 - `driver.py` — standalone smoke-test driver (stdlib only):
-  `python driver.py ping | demo | selection | layers | cell <name>`
-- `tcell_workflows.py` — the T-Cell loop (needs `pip install klayout-klink`):
+  `python driver.py ping | demo | selection | layers | cell <name>`;
+  importable as `from driver import call`.
+- `tcell_workflows.py` — the T-Cell loop (needs `pip install
+  klayout-klink`; the package imports as `klink` — the client is
+  `from klink.bridges.ledit import LEditBridgeClient`):
   `read` / `variants` / `writeback` / `verify` (byte-exact differential).
+- `tcell_template.cpp` — byte-exact-verified COPY-AND-ADAPT template for
+  generator code you write back. Do not hand-write UPI C++ from scratch.
 
 ## Quickstart / 快速上手
 
@@ -45,6 +50,17 @@ Exchange dir: %LOCALAPPDATA%\klink\ledit_bridge\default\
    (domain `bridge_ledit` in `klink.find_tools`).
 
 ## Core flows / 核心流程
+
+**Design targeting / 设计归属**: every command runs against the ACTIVE
+design — normal workflow is to draw in the design the user already has
+open, NOT to create new ones. Every file-bound command echoes the design
+it touched as `result.file`; pass `expect_file` in params to make a
+write refuse any other design. Reach for `new_design` only to bootstrap
+(no design open) or for an isolated scratch experiment; `new_design` /
+`open_design` activate the new file and FAIL if it could not become the
+active design (macro ≥ 0.5.1), so a returned `ok` means later writes go
+where you intended. 常规=在用户当前设计里画；`result.file` 回显归属，
+`expect_file` 拒写别的设计；`new_design` 只用于零设计自举或隔离实验。
 
 **Bootstrap with no design open / 零设计自举**: `ping` reports
 `design_ready:false`; call `new_design {name, setup_from_visible?}` to
@@ -83,11 +99,18 @@ python tcell_workflows.py verify MyGen --reference ref.py:boxes --paramsets "[..
 ```
 
 `read` parses the generator source (stored in the cell's
-`System.TCell Code` property). `variants` makes L-Edit itself generate
-exemplars (its code runs — geometry is authoritative). `writeback`
-turns your generated C++ into a NATIVE parametric T-Cell. `verify` is
-the acceptance bar: a ported/parameterized cell counts as done ONLY on
-an ALL-BYTE-EXACT report. 验收标准=逐字节一致，别的都不算数。
+`System.TCell Code` property; parameters are discovered from the typed
+`LCell_GetParameterAs*` getter calls). `variants` makes L-Edit itself
+generate exemplars (its code runs — geometry is authoritative).
+`writeback` turns your generated C++ into a NATIVE parametric T-Cell —
+**start from `tcell_template.cpp`**: the template's pattern (need_layer
+GDS stamping, typed getters, integer internal units, degenerate-input
+guard) is byte-exact-verified; hand-written UPI C++ usually fails
+L-Edit's in-place compile, and the compile-error dialog pauses the
+bridge until closed. `verify` is the acceptance bar: a
+ported/parameterized cell counts as done ONLY on an ALL-BYTE-EXACT
+report. 写回请以 `tcell_template.cpp` 为底稿改；验收标准=逐字节一致，
+别的都不算数。
 
 ## Command reference (schema 1)
 
@@ -113,7 +136,7 @@ the header comment of `ledit_bridge.cpp`.
   loaded would fight over the same inbox. Keep one.
 - **GDS numbers are tape-out critical**: bridge-created layers stamp
   them; generator code written back must stamp them too (`need_layer`
-  pattern in `tcell_workflows` docs). A layer showing `-1` will not
+  pattern in `tcell_template.cpp`). A layer showing `-1` will not
   export correctly.
 
 ## Scope honesty / 边界说明

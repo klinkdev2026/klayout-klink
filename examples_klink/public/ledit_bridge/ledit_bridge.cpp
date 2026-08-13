@@ -65,6 +65,14 @@
 // skipped{kind:count}. ping/hello report the .tdb file name so users can
 // confirm the bridge is attached to the right design.
 //
+// v0.5.1 design-targeting safety (blind-test findings): new_design /
+// open_design now activate the new file and FAIL if it could not be made
+// the visible design (v0.5.0 could leave the user's design active and
+// silently receive all writes); open_design pre-checks the path (a failed
+// LFile_Open pops a modal dialog, which freezes the bridge timer) and
+// falls back to path+".tdb"; every file-bound command echoes result.file;
+// optional params.expect_file refuses to touch any other design.
+//
 // Load (no separate compile step — L-Edit builds source macros itself):
 //   L-Edit: Tools > Macro > Load Macro... -> select THIS .cpp file.
 //   The bridge starts polling automatically on load; Tools menu gets
@@ -90,7 +98,7 @@
 #include <ldata.h>   // L-Edit UPI (user-supplied SDK include path)
 
 #define BRIDGE_PROTO         1
-#define BRIDGE_MACRO_VERSION "0.5.0"
+#define BRIDGE_MACRO_VERSION "0.5.1"
 #define POLL_INTERVAL_MS     200
 #define HELLO_EVERY_TICKS    10      // refresh hello.json every ~2 s
 
@@ -587,6 +595,19 @@ static void bump(JVal& counter, const std::string& key) {
 typedef bool (*CmdHandler)(Ctx&, const JVal& params, JVal& result,
                            std::string& err, std::string& next);
 
+// expect_file matching: unsaved designs report a bare name, saved designs a
+// full path — accept an exact match or a trailing path component match.
+static bool file_matches(const std::string& active, const std::string& expect) {
+    if (_stricmp(active.c_str(), expect.c_str()) == 0) return true;
+    if (expect.size() < active.size()) {
+        size_t off = active.size() - expect.size();
+        char sep = active[off - 1];
+        if ((sep == '\\' || sep == '/') &&
+            _stricmp(active.c_str() + off, expect.c_str()) == 0) return true;
+    }
+    return false;
+}
+
 static bool resolve_ctx(const JVal& params, Ctx& ctx, bool needs_file,
                         bool needs_cell,
                         std::string& err, std::string& next) {
@@ -597,6 +618,20 @@ static bool resolve_ctx(const JVal& params, Ctx& ctx, bool needs_file,
         err  = "no visible design file in L-Edit";
         next = "open a .tdb in L-Edit, or call new_design to create one";
         return false;
+    }
+    // Optional guard: refuse to touch a design the caller did not intend.
+    // A failed/forgotten new_design otherwise silently redirects every write
+    // into whatever design happens to be active (e.g. the user's).
+    std::string expect = params.str_or("expect_file", "");
+    if (needs_file && !expect.empty()) {
+        std::string cur = file_name_of(ctx.file);
+        if (!file_matches(cur, expect)) {
+            err  = "active design is '" + cur + "' but expect_file is '" +
+                   expect + "'";
+            next = "call open_design/new_design (or switch designs in "
+                   "L-Edit), ping to confirm 'file', then retry";
+            return false;
+        }
     }
     std::string cellName = params.str_or("cell", "");
     if (cellName.empty()) {
@@ -1343,14 +1378,32 @@ static bool cmd_get_drc_rules(Ctx& ctx, const JVal&, JVal& result,
     return true;
 }
 
-// open the first cell of a file so subsequent commands have a visible cell
-static void open_first_cell(LFile file, JVal& result) {
+// Make `file` the visible/active design and verify it took. Every command
+// resolves its target via LFile_GetVisible(), so a created-but-not-activated
+// design silently redirects all subsequent writes into the previously active
+// design (v0.5.0 bug, caught by blind test: a fresh LFile_New has no open
+// window, so the user's design stayed active and a demo drew into it).
+static bool activate_design(LFile file, JVal& result,
+                            std::string& err, std::string& next) {
     LCell first = LCell_GetList(file);
+    if (!first) first = LCell_New(file, "Cell0");
     if (first) {
         std::string cname = cell_name_of(first);
         LFile_OpenCell(file, cname.c_str());
+        LCell_MakeVisible(first);
         result.set("cell", JVal::S(cname));
     }
+    LDisplay_Refresh();
+    if (LFile_GetVisible() != file) {
+        err  = "design '" + file_name_of(file) + "' was created/opened but "
+               "could not be made the active design; the previous design is "
+               "still active and would receive all writes";
+        next = "switch to it manually in L-Edit (Window menu), then ping and "
+               "confirm 'file' changed before drawing";
+        return false;
+    }
+    result.set("file", JVal::S(file_name_of(file)));
+    return true;
 }
 
 static bool cmd_new_design(Ctx&, const JVal& params, JVal& result,
@@ -1371,10 +1424,7 @@ static bool cmd_new_design(Ctx&, const JVal& params, JVal& result,
         next = "check the name (no path separators) and try again";
         return false;
     }
-    result.set("file", JVal::S(file_name_of(nf)));
-    open_first_cell(nf, result);
-    LDisplay_Refresh();
-    return true;
+    return activate_design(nf, result, err, next);
 }
 
 static bool cmd_open_design(Ctx&, const JVal& params, JVal& result,
@@ -1385,16 +1435,29 @@ static bool cmd_open_design(Ctx&, const JVal& params, JVal& result,
         next = "pass the absolute path of a .tdb file";
         return false;
     }
+    // Pre-check existence ourselves: a failed LFile_Open pops a modal error
+    // dialog, and a modal dialog freezes the bridge timer (heartbeat stall).
+    FILE* probe = fopen(path.c_str(), "rb");
+    if (!probe && path.size() >= 4 &&
+        _stricmp(path.c_str() + path.size() - 4, ".tdb") != 0) {
+        std::string withExt = path + ".tdb";
+        probe = fopen(withExt.c_str(), "rb");
+        if (probe) path = withExt;
+    }
+    if (!probe) {
+        err  = "design file not found: " + path;
+        next = "pass the absolute path of an existing .tdb "
+               "(new_design creates a fresh one; GDS import is a separate flow)";
+        return false;
+    }
+    fclose(probe);
     LFile f = LFile_Open(path.c_str(), LTdbFile);
     if (!f) {
         err  = "LFile_Open failed for: " + path;
-        next = "check the path exists and is a .tdb (GDS import is a separate flow)";
+        next = "check the file is a valid .tdb (GDS import is a separate flow)";
         return false;
     }
-    result.set("file", JVal::S(file_name_of(f)));
-    open_first_cell(f, result);
-    LDisplay_Refresh();
-    return true;
+    return activate_design(f, result, err, next);
 }
 
 static bool cmd_save_design(Ctx& ctx, const JVal& params, JVal& result,
@@ -1696,6 +1759,11 @@ static void process_request_file(const std::string& fname) {
             bool ok = resolve_ctx(params, ctx, g_commands[i].needs_file,
                                   g_commands[i].needs_cell, err, next) &&
                       g_commands[i].handler(ctx, params, result, err, next);
+            // Echo the design every file-bound command actually wrote to /
+            // read from, so callers can detect targeting drift.
+            if (ok && g_commands[i].needs_file && ctx.file &&
+                !result.get("file"))
+                result.set("file", JVal::S(file_name_of(ctx.file)));
             write_response(id, ok, result, err, next);
             return;
         }

@@ -70,6 +70,7 @@ STARTERS: dict[str, list[tuple[str, str]]] = {
         ("ledit_bridge", "ledit_bridge.cpp"),
         ("ledit_bridge", "driver.py"),
         ("ledit_bridge", "tcell_workflows.py"),
+        ("ledit_bridge", "tcell_template.cpp"),
         ("ledit_bridge", "README.md"),
     ],
     # digital P&R -> LVS: a self-contained family that cross-imports within the

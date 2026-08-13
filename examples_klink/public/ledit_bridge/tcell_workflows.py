@@ -8,7 +8,10 @@ Four verbs cover the agent-facing T-Cell loop:
             generated variant's geometry to JSON (exemplar collection
             for fitting or for verifying a transpilation)
   writeback write generator code (a .cpp file you or your agent wrote)
-            into a cell, defining its parameter table -> native T-Cell
+            into a cell, defining its parameter table -> native T-Cell.
+            START FROM tcell_template.cpp (byte-exact-verified pattern);
+            hand-written UPI C++ usually fails L-Edit's compile, and the
+            error dialog pauses the bridge until closed
   verify    BYTE-EXACT differential check of a Python reference
             generator against what L-Edit actually generates
 
@@ -63,7 +66,9 @@ def cmd_read(bridge, args):
     params = parse_tcell_params(code)
     print(f"{args.tcell}: {len(code)} bytes of generator code")
     if not params:
-        print("no parameters found in the DO-NOT-EDIT section")
+        print("no parameters found: the parser looks for typed getter "
+              "calls (LCell_GetParameterAsDouble/Int/Coord) in the "
+              "generator code — see tcell_template.cpp for the pattern")
         return
     defaults = bridge.get_tcell_params(args.tcell, list(params))
     for name, typ in params.items():

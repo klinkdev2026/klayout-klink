@@ -125,6 +125,40 @@ def test_error_envelope_surfaces_next_action(live_bridge):
     assert e.value.next_action == "open a cell"
 
 
+def test_new_design_refuses_when_active_design_unchanged(live_bridge):
+    # macro < 0.5.1 could create the design yet leave the user's design
+    # active (all writes would land there) — the client must refuse.
+    def handler(req):
+        if req["cmd"] == "ping":
+            return {"ok": True, "result": {"file": "user_design.tdb"}}
+        return {"ok": True, "result": {"file": "scratch"}}
+    c = live_bridge(handler)
+    with pytest.raises(LEditBridgeError) as e:
+        c.new_design("scratch")
+    assert "0.5.1" in str(e.value)
+    assert "user_design.tdb" in str(e.value)
+
+
+def test_new_design_ok_when_active_design_switches(live_bridge):
+    state = {"file": "user_design.tdb"}
+
+    def handler(req):
+        if req["cmd"] == "new_design":
+            state["file"] = req["params"]["name"]
+            return {"ok": True, "result": {"file": state["file"]}}
+        return {"ok": True, "result": {"file": state["file"]}}
+    c = live_bridge(handler)
+    out = c.new_design("scratch")
+    assert out["file"] == "scratch"
+
+
+def test_open_design_reopening_active_design_is_fine(live_bridge):
+    c = live_bridge(lambda req: {
+        "ok": True, "result": {"file": "user_design.tdb"}})
+    out = c.open_design(r"C:\x\user_design.tdb")
+    assert out["file"] == "user_design.tdb"
+
+
 def test_timeout_is_instructive(tmp_path):
     root = make_ns(tmp_path)  # hello fresh but nobody answers
     c = LEditBridgeClient(root=root, poll_s=0.02)

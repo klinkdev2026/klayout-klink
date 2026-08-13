@@ -4,6 +4,34 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project does not use dated entries (versions only).
 
+## 0.2.1
+
+- L-Edit bridge design-targeting safety (macro v0.5.1, from blind-test
+  findings): `new_design`/`open_design` now activate the created/opened
+  design and FAIL with instructions if it could not become the active
+  design — previously a fresh design could be created without a window,
+  leaving the user's open design active and silently receiving every
+  subsequent write (the shipped demo could draw into it). `open_design`
+  pre-checks the path (a failed open pops a modal dialog, which freezes
+  the bridge heartbeat) and falls back to `path + ".tdb"`. Every
+  file-bound command echoes the design it touched as `result.file`, and
+  an optional `expect_file` parameter makes a command refuse any other
+  design. `driver.py demo` now creates its own scratch design, verifies
+  the switch, and guards every write with `expect_file`; the Python
+  client verifies the active design actually switched (defense in depth
+  for older macros).
+- `tcell_template.cpp` (new in the `ledit_bridge` template): a
+  byte-exact-verified copy-and-adapt starting point for T-Cell generator
+  code written back through the bridge (need_layer GDS stamping, typed
+  parameter getters, integer internal units, degenerate-input guard) —
+  hand-written UPI C++ usually fails L-Edit's in-place compile.
+- Docs: bridge README gains a Design-targeting section (active-design
+  semantics, `result.file`, `expect_file`, when `new_design` is
+  appropriate) and names the import path (`pip install klayout-klink`,
+  `import klink`, `klink.bridges.ledit.LEditBridgeClient`); clearer
+  no-parameters-found message in `tcell_workflows.py`; `driver.py` is
+  documented as importable (`from driver import call`).
+
 ## 0.2.0
 
 - L-Edit bridge (new): drive a running Tanner L-Edit through a

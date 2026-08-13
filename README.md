@@ -58,6 +58,17 @@ artifacts are intentionally not part of a clean release.
 
 ## What's New
 
+### 0.2.1 — L-Edit bridge hardening
+
+Design-targeting safety from blind-test findings: `new_design`/`open_design`
+now activate the created design and fail loudly if they cannot (previously
+later writes could silently land in whatever design was active), every
+file-bound command echoes `result.file`, and an optional `expect_file`
+parameter refuses writes to any other design. The template gains
+`tcell_template.cpp`, a byte-exact-verified starting point for T-Cell
+generator code written back through the bridge. Details in the
+[CHANGELOG](./CHANGELOG.md).
+
 ### 0.2.0 — L-Edit bridge
 
 klink now drives a running Tanner L-Edit
