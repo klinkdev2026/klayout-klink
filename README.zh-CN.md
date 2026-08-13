@@ -48,6 +48,18 @@ klink 是一个面向 [KLayout](https://www.klayout.de/) 的 AI-native 控制面
 
 ## 更新亮点
 
+### 0.2.2 —— PCell 拟合器：要么学对，要么明说
+
+样本拟合器现在能处理**数量随参数变化**的几何（接触孔阵列、叉指重复），
+新表格式 `klink_fitted_device_pcell_v3`：数量、间距、位置全部拟合为精确
+整数律，在每个样本上逐一验证；模型表达不了或钉不死的结构一律 REFUSE，
+错误信息点名具体箱族并给出出路——绝不产出静默错误的 PCell。拟合表记录
+采样包络；逐字节差分 harness 移至
+`klink.domains.structdevice.pcell_diff`；两条一键路线随包发布：
+`tcell_workflows.py fit`（L-Edit T-Cell → 逐字节验证的 KLayout PCell）
+与 KLayout 本地 demo `fit_repeat_device.py`（画出的样本族 → 验证过的
+PCell）。详见 [CHANGELOG](./CHANGELOG.md)。
+
 ### 0.2.1 —— L-Edit 桥加固
 
 盲测抓出的设计归属安全修复：`new_design`/`open_design` 现在会激活新建/

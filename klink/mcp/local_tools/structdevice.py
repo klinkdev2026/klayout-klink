@@ -258,12 +258,24 @@ def _tool_structdevice_build_from_netlist(ctx, arguments: dict) -> dict:
     "changes, zero reloads: the PCell lands in library "
     "'klink_structdevice' and is immediately usable in the GUI and "
     "via instance.insert_pcell. Call AFTER the fitter produced the "
-    "table; the table encodes user geometry and stays local.",
+    "table; the table encodes user geometry and stays local. "
+    "Recommended protocol: run the byte-exact differential harness "
+    "(klink.domains.structdevice.pcell_diff.verify_differential) "
+    "against ground truth FIRST and pass its outcome as diff_report "
+    "so the registration carries its acceptance evidence.",
     {
         "type": "object",
         "properties": {
             "name": {"type": "string", "description": "PCell name (unique per KLayout session)."},
             "fit_table": {"type": "string", "description": "Absolute path to pcell_fit.json."},
+            "diff_report": {
+                "type": "object",
+                "description": "Optional provenance: differential-acceptance "
+                               "outcome (e.g. {'all_ok': true, 'points': N, "
+                               "'grid': [...]}) recorded verbatim into the "
+                               "result. Not enforced, but a registration "
+                               "without one is an UNVERIFIED abstraction.",
+            },
             "session": {"type": "string", "description": "KLayout session id/label/alias (default: primary)."},
         },
         "required": ["name", "fit_table"],
@@ -278,6 +290,8 @@ def _tool_structdevice_register_pcell(ctx, arguments: dict) -> dict:
             result = client.call("pcell.register_fitted", {
                 "name": str(arguments["name"]),
                 "fit_table": str(arguments["fit_table"])})
+            if arguments.get("diff_report") is not None:
+                result["diff_report"] = dict(arguments["diff_report"])
             result["next_action"] = (
                 "instance.insert_pcell {parent: '<cell>', pcell: "
                 f"'{arguments['name']}', library: 'klink_structdevice', "

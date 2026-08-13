@@ -4695,7 +4695,7 @@
     },
     {
       "name": "structdevice.register_pcell",
-      "description": "Register a fitted-device PCell at runtime from a fit table (produced by the exemplar fitter). One call, zero plugin changes, zero reloads: the PCell lands in library 'klink_structdevice' and is immediately usable in the GUI and via instance.insert_pcell. Call AFTER the fitter produced the table; the table encodes user geometry and stays local.",
+      "description": "Register a fitted-device PCell at runtime from a fit table (produced by the exemplar fitter). One call, zero plugin changes, zero reloads: the PCell lands in library 'klink_structdevice' and is immediately usable in the GUI and via instance.insert_pcell. Call AFTER the fitter produced the table; the table encodes user geometry and stays local. Recommended protocol: run the byte-exact differential harness (klink.domains.structdevice.pcell_diff.verify_differential) against ground truth FIRST and pass its outcome as diff_report so the registration carries its acceptance evidence.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -4706,6 +4706,10 @@
           "fit_table": {
             "type": "string",
             "description": "Absolute path to pcell_fit.json."
+          },
+          "diff_report": {
+            "type": "object",
+            "description": "Optional provenance: differential-acceptance outcome (e.g. {'all_ok': true, 'points': N, 'grid': [...]}) recorded verbatim into the result. Not enforced, but a registration without one is an UNVERIFIED abstraction."
           },
           "session": {
             "type": "string",

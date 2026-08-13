@@ -4,6 +4,52 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project does not use dated entries (versions only).
 
+## 0.2.2
+
+- PCell fitter upgrade (three tiers). The exemplar fitter now either
+  learns geometry exactly or says exactly what it cannot learn — never a
+  silently-wrong abstraction:
+  - Honesty layer: fit tables record their sampling envelope (`sampled`
+    block; additive, v2 readers unaffected); `analyze()` warns on
+    single-valued parameters (excluded from the regression, coefficient
+    pinned to 0 — previously a singular-matrix crash) and flags
+    integer-valued parameters as repetition/count suspects; summaries
+    state "interpolation within sampled envelope; extrapolation
+    UNVERIFIED".
+  - Differential acceptance: the byte-exact harness
+    (`verify_differential`) moves to its canonical home
+    `klink.domains.structdevice.pcell_diff` (the L-Edit bridge re-exports
+    it; public API unchanged); `structdevice.register_pcell` accepts an
+    optional `diff_report` recorded into the result as acceptance
+    provenance.
+  - Repeat-group model (`klink_fitted_device_pcell_v3`): count-varying
+    geometry — contact arrays, finger repeats — is fitted as exact
+    integer laws: `floor((num_base + Σ coef·param)/den) + plus` counts,
+    arithmetic pitch, fixed or centered origins, per-group 2-D grids.
+    Every law is exact-verified at every exemplar (rational arithmetic,
+    then the same float pipeline the renderers use); a den>1 count law is
+    emitted only when exemplars pin it uniquely (sample both sides of a
+    count step). Anything outside the model — alternating/parity
+    structure, non-grid positions — is REFUSED with an instructive error
+    naming the box family and the way out. Count-invariant families fall
+    back to plain per-box linear edges. The KLayout plugin renders v3
+    with byte-identical arithmetic; v2 tables render exactly as before.
+- `tcell_workflows.py` gains verb 5, `fit`: harvest T-Cell exemplars →
+  v3 fit → byte-exact differential gate against fresh L-Edit variants at
+  held-out `--check` points → optional `--register` = live KLayout PCell
+  whose placement is byte-verified too. Refusals exit 2 with the family
+  named; layer names map only to GDS numbers already assigned in L-Edit.
+  `--paramsets`/`--check` accept a JSON file path as well as inline JSON;
+  each parameter set is announced before instancing so a generator error
+  (modal dialog in L-Edit) names its culprit.
+- New demo `examples_klink/public/demos/digital/fit_repeat_device.py`:
+  the KLayout-native geometry-only route — draw an exemplar family, fit
+  v3, register, place at never-sampled contact counts, byte-compare.
+- Docs: bridge README documents the fit recipe (sampling rules, count
+  thresholds, straddling exemplars) and the honest modal-dialog landmine
+  (no programmatic recovery; prevent by exploring parameters gradually
+  from the `read` defaults).
+
 ## 0.2.1
 
 - L-Edit bridge design-targeting safety (macro v0.5.1, from blind-test
