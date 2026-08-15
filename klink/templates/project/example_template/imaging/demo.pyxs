@@ -1,0 +1,24 @@
+# Demo process recipe for the klink imaging examples (EXAMPLE-owned:
+# klink ships no recipes). A tiny 2-mask flow with klink-step markers —
+# each marker names the step that FOLLOWS it; imaging.xsection_run with
+# steps=true renders one section per step.
+#
+# NOTE: .pyxs recipes are trusted Python code executed in-process.
+
+lwell = layer("1/0")
+lmetal = layer("2/0")
+
+# klink-step: substrate
+pbulk = bulk()
+
+# klink-step: well implant
+well = mask(lwell).grow(0.4, -0.05, mode='round', into=pbulk)
+
+# klink-step: conformal oxide
+ox = deposit(0.12, 0.12)
+
+# klink-step: contact etch
+mask(lmetal).etch(0.12, into=ox, taper=5)
+
+# klink-step: metallization
+metal = deposit(0.15, 0.15)

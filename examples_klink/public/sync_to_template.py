@@ -66,6 +66,15 @@ STARTERS: dict[str, list[tuple[str, str]]] = {
     # Not a klink example — the user compiles the .cpp against their OWN
     # L-Edit UPI SDK (we ship zero Siemens/Tanner files). Lives in the
     # template so `klink init` users can find it.
+    "imaging": [
+        ("imaging", "demo_stack.py"),
+        ("imaging", "demo.pyxs"),
+        ("imaging", "xsection_demo.py"),
+        ("imaging", "render3d_demo.py"),
+        ("imaging", "sem_demo.py"),
+        ("imaging", "blender_demo.py"),
+        ("imaging", "README.md"),
+    ],
     "ledit_bridge": [
         ("ledit_bridge", "ledit_bridge.cpp"),
         ("ledit_bridge", "driver.py"),
