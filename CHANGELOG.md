@@ -4,6 +4,20 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project does not use dated entries (versions only).
 
+## 0.3.3
+
+- `klink init` (and `klink update` for existing projects) now scaffolds
+  an `imaging/` starter category: `demo_stack.py` and `demo.pyxs` — the
+  two process files YOU own and an agent edits interactively — plus
+  runnable demos for every exit (cross-section + per-step film, 3D GLB
+  + self-contained viewer, SEM top views incl. a per-mask sequence, and
+  the optional Blender figure) and a bilingual README with the complete
+  optional-dependency command list. The starters run both in place and
+  as bare copied scripts. Demo docstrings now front-load the full
+  install commands (numpy/scipy/pillow for rendering; mapbox-earcut for
+  3D) that 0.3.2 surfaced only through runtime errors. No library code
+  changes.
+
 ## 0.3.2
 
 - Fix: the 3D exit's instructive install error was incomplete —
