@@ -4,6 +4,48 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project does not use dated entries (versions only).
 
+## 0.3.0
+
+- New `imaging` domain: process-realistic imaging exits driven by ONE
+  declaration (`klink_visual_stack_v1`: per layer z0_um/z1_um, colors,
+  material kind solid|lattice|dielectric, SEM response, and the .pyxs
+  recipe variable it corresponds to; optional `recipe_styles` for
+  engine-only materials). klink ships the mechanism; stacks and recipes
+  are example/project-owned. Four MCP tools, all runnable offline from
+  a gds path or against the live session, all with deterministic output
+  contracts (`output_dir`+`basename`, `overwrite=false` by default,
+  `klink_imaging_result_v1` sidecars with stable key order):
+  - `imaging.xsection_run` — headless process cross-sections from a
+    `.pyxs` recipe along an explicit `cut_um` line (engine:
+    `klayout-pyxs==0.1.13`, optional dependency, instructive install
+    error; GDS written without timestamps so identical inputs are
+    byte-identical). `steps=true` + `# klink-step: <name>` recipe
+    markers produce one section per process step; `render=true` adds
+    material-colored PNGs and assembles a per-step film strip + GIF.
+    `.pyxs` recipes are trusted Python executed in-process.
+  - `imaging.render3d` — GLB + a SELF-CONTAINED interactive viewer
+    page (vendored model-viewer inlined, model embedded; opens offline
+    by double-click; per-layer color/metallic/roughness panel, tone
+    mapping incl. agx, PNG export). `mode=fast` extrudes the declared
+    stack; `mode=process` sweeps the cross-section engine so LOCOS,
+    conformal layers and CMP topography are real; `fraction<1` gives a
+    cutaway exposing a true section face.
+  - `imaging.sem_top` — SEM-style top views (greyscale + false color):
+    per-layer emission levels and topography edge glow, litho corner
+    rounding, seeded grain/scanlines/vignette (same seed = identical
+    image); `layers=[...]` renders the masks printed at a given step.
+  - `imaging.blender` — paper-grade renders via headless Blender
+    (`pip install bpy`, optional; executed in a subprocess). `mode=die`
+    restages a render3d GLB on transparent film with a shadow catcher;
+    `mode=figure` builds a device figure at 1:1 layout coordinates
+    where `kind='lattice'` layers render as the material's atomic
+    structure (graphene / MoS2 motif library with literature lattice
+    constants documented). Saves a hand-editable `.blend` next to the
+    PNG.
+- Third-party: the @google/model-viewer 3.5.0 bundle (BSD-3/MIT) is
+  vendored for the self-contained viewer pages; notices preserved in
+  the file header and THIRD_PARTY_NOTICES.md.
+
 ## 0.2.2
 
 - PCell fitter upgrade (three tiers). The exemplar fitter now either

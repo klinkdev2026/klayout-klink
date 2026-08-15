@@ -3146,6 +3146,7 @@
               "routing_backends",
               "drc_and_lvs_verification",
               "device_structdevice",
+              "imaging",
               "bridge_ledit",
               "device_nanodevice",
               "device_photonics",
@@ -3154,6 +3155,325 @@
             "description": "Restrict to one domain (also returns its detailed usage)."
           }
         },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "imaging.blender",
+      "description": "Paper-grade Blender render (headless bpy, executed in a SUBPROCESS — bpy never lives in the server). mode='die': import a GLB from imaging.render3d, stand it flat, filmic + transparent film + shadow catcher. mode='figure': GDS-driven device figure at 1:1 layout coordinates — kind='lattice' stack layers render as the material's ATOMIC STRUCTURE (graphene/MoS2 motifs), solids as exact layout prisms, plus explicit substrate/oxide 'slabs'. Both write <basename>.png (RGBA) + <basename>.blend (open in desktop Blender to adjust by hand) + sidecar. Needs pip install bpy (~300MB; instructive error if missing). Renders are not byte-deterministic (Cycles).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "die",
+              "figure"
+            ]
+          },
+          "glb": {
+            "type": "string",
+            "description": "mode='die': GLB path (from imaging.render3d)."
+          },
+          "gds": {
+            "type": "string",
+            "description": "mode='figure': layout path. Omit to use the live KLayout session."
+          },
+          "cell": {
+            "type": "string"
+          },
+          "stack": {
+            "type": "string",
+            "description": "mode='figure': klink_visual_stack_v1 JSON path."
+          },
+          "slabs": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "mode='figure': explicit carriers, each {name,z0_um,z1_um,color[,alpha][,metallic]}."
+          },
+          "lattice_a_um": {
+            "type": "number",
+            "default": 0.08,
+            "description": "Figure-scale lattice constant (visual parameter; real constants are in the motif library docs)."
+          },
+          "camera": {
+            "type": "string",
+            "enum": [
+              "default",
+              "face",
+              "top"
+            ],
+            "default": "default"
+          },
+          "samples": {
+            "type": "integer",
+            "default": 96
+          },
+          "transparent": {
+            "type": "boolean",
+            "default": true
+          },
+          "output_dir": {
+            "type": "string"
+          },
+          "basename": {
+            "type": "string",
+            "default": "blender"
+          },
+          "overwrite": {
+            "type": "boolean",
+            "default": false
+          },
+          "timeout_s": {
+            "type": "integer",
+            "default": 600
+          },
+          "session": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode",
+          "output_dir"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "imaging.sem_top",
+      "description": "SEM-style top view of the layout: per-layer grey levels (sem_grey) + bright topography rims (edge_glow) from a klink_visual_stack_v1 declaration, with beam blur, film grain, scanlines and vignette (deterministic, seeded). Writes <basename>_sem.png (greyscale) and <basename>_sem_color.png (false color from layer colors) + a klink_imaging_result_v1 sidecar. layers=[...] restricts to a subset — e.g. the masks printed up to a given process step. Needs numpy/scipy/pillow.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "gds": {
+            "type": "string",
+            "description": "Path to the layout file. Omit to use the live KLayout session."
+          },
+          "cell": {
+            "type": "string",
+            "description": "Cell to render (default: top/current cell)."
+          },
+          "stack": {
+            "type": "string",
+            "description": "Path to a klink_visual_stack_v1 JSON (sem_grey/edge_glow/color per layer)."
+          },
+          "layers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Optional 'L/D' subset (paint order stays stack order)."
+          },
+          "width_px": {
+            "type": "integer",
+            "default": 1600
+          },
+          "corner_radius_um": {
+            "type": "number",
+            "default": 0.05,
+            "description": "Litho corner rounding applied to every mask."
+          },
+          "seed": {
+            "type": "integer",
+            "default": 7,
+            "description": "Noise seed (same seed = identical image)."
+          },
+          "output_dir": {
+            "type": "string"
+          },
+          "basename": {
+            "type": "string",
+            "default": "semtop"
+          },
+          "overwrite": {
+            "type": "boolean",
+            "default": false
+          },
+          "session": {
+            "type": "string",
+            "description": "KLayout session id/label (default: primary)."
+          }
+        },
+        "required": [
+          "stack",
+          "output_dir"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "imaging.render3d",
+      "description": "Build a 3D model (GLB) of the layout plus a SELF-CONTAINED interactive viewer page (html: embedded model + vendored viewer JS + manual color/metal/rough panel + PNG export; opens by double-click, offline). mode='fast' extrudes each layer of a klink_visual_stack_v1 declaration between its z0_um/z1_um; mode='process' sweeps the xsection engine across the die so curvature (LOCOS, conformal layers, CMP) comes from the recipe — engine materials are styled by matching recipe_symbol in the stack, unmatched ones render grey and are listed as 'unstyled'. fraction<1 stops the sweep mid-die: the exposed face is a true cross-section (cutaway). Deterministic outputs + klink_imaging_result_v1 sidecar; never overwrites unless overwrite=true.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "gds": {
+            "type": "string",
+            "description": "Path to the layout file. Omit to use the live KLayout session."
+          },
+          "cell": {
+            "type": "string",
+            "description": "Cell to render (default: top/current cell)."
+          },
+          "stack": {
+            "type": "string",
+            "description": "Path to a klink_visual_stack_v1 JSON (example/project-owned; klink ships none)."
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "fast",
+              "process"
+            ],
+            "default": "fast"
+          },
+          "recipe": {
+            "type": "string",
+            "description": "Required for mode='process': the .pyxs recipe (trusted Python)."
+          },
+          "slices": {
+            "type": "integer",
+            "default": 36,
+            "description": "process mode: number of engine cuts."
+          },
+          "fraction": {
+            "type": "number",
+            "default": 1.0,
+            "description": "process mode: sweep this fraction of the die (<1 = cutaway)."
+          },
+          "exclude": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "process mode: recipe variables to skip (consumed intermediates)."
+          },
+          "output_dir": {
+            "type": "string"
+          },
+          "basename": {
+            "type": "string",
+            "default": "render3d"
+          },
+          "overwrite": {
+            "type": "boolean",
+            "default": false
+          },
+          "session": {
+            "type": "string",
+            "description": "KLayout session id/label (default: primary)."
+          }
+        },
+        "required": [
+          "stack",
+          "output_dir"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "imaging.xsection_run",
+      "description": "Process cross-section from a .pyxs recipe along an explicit cut line — headless, deterministic, engine=klayout_pyxs (pinned; instructive install error if missing). Writes <basename>.gds (or per-step files with steps=true using '# klink-step: <name>' recipe markers) + a klink_imaging_result_v1 sidecar into output_dir; never overwrites unless overwrite=true. Source is either a gds path OR the live KLayout session (saved via layout.save_file). show=true opens the section in a new tab. NOTE: .pyxs recipes are trusted Python code executed in-process.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "gds": {
+            "type": "string",
+            "description": "Path to the layout file. Omit to use the live KLayout session."
+          },
+          "cell": {
+            "type": "string",
+            "description": "Cell to section (default: top/current cell)."
+          },
+          "recipe": {
+            "type": "string",
+            "description": "Path to the .pyxs process recipe (example/project-owned; klink ships none)."
+          },
+          "cut_um": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "[[x1,y1],[x2,y2]] microns. Explicit only — GUI ruler readout is not available (backlog)."
+          },
+          "output_dir": {
+            "type": "string",
+            "description": "Directory for outputs (created if missing)."
+          },
+          "basename": {
+            "type": "string",
+            "default": "xsection",
+            "description": "Plain filename stem (no path separators)."
+          },
+          "steps": {
+            "type": "boolean",
+            "default": false,
+            "description": "Per-step film via '# klink-step: <name>' markers."
+          },
+          "overwrite": {
+            "type": "boolean",
+            "default": false
+          },
+          "show": {
+            "type": "boolean",
+            "default": false,
+            "description": "Open the (last) section GDS in a new KLayout tab (needs a live session)."
+          },
+          "height_um": {
+            "type": "number",
+            "default": 2.0
+          },
+          "depth_um": {
+            "type": "number",
+            "default": 2.0
+          },
+          "below_um": {
+            "type": "number",
+            "default": 2.0
+          },
+          "extend_um": {
+            "type": "number",
+            "default": 2.0
+          },
+          "delta_dbu": {
+            "type": "integer",
+            "default": 10
+          },
+          "exclude": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Recipe material variable names to skip in auto-output (consumed intermediates)."
+          },
+          "render": {
+            "type": "boolean",
+            "default": false,
+            "description": "Also rasterize each section to PNG (+ film strip/GIF with steps=true). Needs numpy/scipy/pillow."
+          },
+          "stack": {
+            "type": "string",
+            "description": "Optional klink_visual_stack_v1 JSON path: colors rendered materials via recipe_symbol/recipe_styles; unmatched get deterministic auto-colors (reported)."
+          },
+          "session": {
+            "type": "string",
+            "description": "KLayout session id/label (default: primary)."
+          }
+        },
+        "required": [
+          "recipe",
+          "cut_um",
+          "output_dir"
+        ],
         "additionalProperties": false
       }
     },
