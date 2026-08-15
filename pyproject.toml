@@ -71,6 +71,10 @@ klink = [
     "mcp/CLAUDE.md",
     "mcp/README.md",
     "domains/nanodevice/flake/priors/*.json",
+    # Vendored @google/model-viewer bundle (BSD-3/MIT, notices kept in the
+    # file header + THIRD_PARTY_NOTICES.md) -- inlined into the
+    # self-contained 3D viewer pages imaging.render3d generates.
+    "domains/imaging/_assets/*",
     # The bundled KLayout salt plugin (mirror of klink_plugin/, synced by
     # tools/sync_plugin_payload.py) -- `klink plugin install` copies it into
     # KLayout's salt/ so pip users need no repo checkout. RECURSIVE glob

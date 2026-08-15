@@ -4,6 +4,16 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project does not use dated entries (versions only).
 
+## 0.3.1
+
+- Fix: the 0.3.0 wheel shipped WITHOUT the vendored model-viewer bundle
+  (the package-data entry existed only in the development pyproject, not
+  the release one), so `imaging.render3d` could not build its
+  self-contained viewer page from a pip install. The release pyproject
+  now carries the asset glob, and `tools/check_versions.py` gained a
+  package-data parity guard so a dev-only data glob can never ship a
+  broken wheel again. No code changes.
+
 ## 0.3.0
 
 - New `imaging` domain: process-realistic imaging exits driven by ONE

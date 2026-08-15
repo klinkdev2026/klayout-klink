@@ -8,7 +8,7 @@ agree for a client and a plugin to be compatible.
 
 from __future__ import annotations
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 # Wire protocol the client speaks. Bump when the RPC contract changes in a
 # way that an older plugin cannot serve. Compared against the plugin's
