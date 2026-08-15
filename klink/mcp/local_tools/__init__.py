@@ -69,6 +69,7 @@ def get_local_tool(name: str) -> LocalTool | None:
 # effects.
 # ---------------------------------------------------------------------------
 from . import discovery  # noqa: E402,F401
+from . import imaging  # noqa: E402,F401
 from . import interaction  # noqa: E402,F401
 from . import upi_ledit  # noqa: E402,F401
 from . import nanodevice  # noqa: E402,F401

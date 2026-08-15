@@ -48,6 +48,16 @@ klink 是一个面向 [KLayout](https://www.klayout.de/) 的 AI-native 控制面
 
 ## 更新亮点
 
+### 0.3.0 —— 成像域：一份声明出剖面、3D 与 SEM 视图
+
+新 `imaging` 域：声明一次工艺栈（`klink_visual_stack_v1`），即可得到
+工艺剖面（无头 `klayout-pyxs` 引擎、显式切线、`# klink-step:` 配方标记
+出分步工艺胶片）、带**自含离线网页查看器**的 3D 模型（单文件双击即开、
+逐层调色）、SEM 风格顶视图，以及论文级 Blender 渲染——二维材料层直接
+呈现为原子晶格（石墨烯/MoS₂），全部与版图坐标 1:1。输出确定性契约 +
+机读 sidecar；配方与栈声明归示例/项目所有；重依赖全部可选并附精确
+安装指引。详见 [CHANGELOG](./CHANGELOG.md)。
+
 ### 0.2.2 —— PCell 拟合器：要么学对，要么明说
 
 样本拟合器现在能处理**数量随参数变化**的几何（接触孔阵列、叉指重复），
@@ -421,7 +431,26 @@ klink 构建于并借鉴了优秀的开源工作:
   flake 检测先验与形态学掩膜辅助。
 - **[Klayout-Router](https://github.com/Legendrexial/Klayout-Router)**(MIT)——
   writefield patch 生成背后的 EBL auto-patching 思路。
+- **[klayout_pyxs](https://github.com/gdsfactory/klayout_pyxs)**(MIT)——
+  `imaging.xsection_run` 背后的工艺剖面**引擎**。klink 只把它作为 import
+  依赖使用并钉死版本(`klayout-pyxs==0.1.13`),不复制任何代码;klink 自研
+  的是其上的无头坐标驱动层(上游流程绑定 GUI/标尺)。klayout_pyxs 本身是
+  Matthias Köfferlein 的 [XSection](https://codeberg.org/klayoutmatthias/xsection)
+  项目的 Python 移植,此功能的概念最终归功于该项目。
+- **[model-viewer](https://github.com/google/model-viewer)**(BSD-3-Clause,
+  内含 MIT 许可的 three.js 部分)—— 被**原样内置**(v3.5.0,许可头保留)并
+  内联进 `imaging.render3d` 生成的自含查看器页面的 3D 网页组件。
+- **[Blender / bpy](https://www.blender.org/)**(GPL-3)——
+  `imaging.blender` 背后的可选无头渲染器;仅 import 引用
+  (`pip install bpy`,用户自装),永不打包。
+- **[trimesh](https://github.com/mikedh/trimesh)**(MIT)与
+  **[shapely](https://github.com/shapely/shapely)**(BSD-3-Clause)——
+  3D 出口背后的可选网格/几何库。
 
+引用关系一览:**移植**(OpenROAD 算法,带署名)、**内置**(model-viewer
+打包件,宽松许可、声明保留)、**仅 import 依赖**(KLayout、gdsfactory、
+klayout_pyxs、bpy、trimesh、shapely——零代码进入 klink)、**协议重实现**
+(klive)、**数据/思路致谢**(KlayoutClaw 先验、Klayout-Router 思路)。
 正式的第三方版权与许可证文本见
 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)。
 

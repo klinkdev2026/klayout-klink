@@ -58,6 +58,19 @@ artifacts are intentionally not part of a clean release.
 
 ## What's New
 
+### 0.3.0 — Imaging: cross-sections, 3D and SEM views from one declaration
+
+New `imaging` domain: declare your stack once (`klink_visual_stack_v1`)
+and get process cross-sections (headless `klayout-pyxs` engine, explicit
+cut line, per-step films via `# klink-step:` recipe markers), a 3D model
+with a SELF-CONTAINED interactive web viewer (offline single file,
+per-layer color controls), SEM-style top views, and paper-grade Blender
+renders where 2D-material layers appear as their atomic lattice
+(graphene/MoS2) — all at 1:1 layout coordinates, all with deterministic
+output contracts and machine-readable sidecars. Recipes and stacks stay
+example-owned; heavy dependencies are optional with instructive install
+errors. Details in the [CHANGELOG](./CHANGELOG.md).
+
 ### 0.2.2 — PCell fitter: learn it exactly or refuse
 
 The exemplar fitter now handles COUNT-VARYING geometry (contact arrays,
@@ -470,7 +483,30 @@ klink builds on and borrows from excellent open-source work:
   flake-detection priors and morphological mask helpers.
 - **[Klayout-Router](https://github.com/Legendrexial/Klayout-Router)** (MIT) —
   the EBL auto-patching idea behind the writefield patch generator.
+- **[klayout_pyxs](https://github.com/gdsfactory/klayout_pyxs)** (MIT) — the
+  process cross-section ENGINE behind `imaging.xsection_run`. klink uses it
+  strictly as an import-only, version-pinned dependency (`klayout-pyxs==
+  0.1.13`); no code is vendored. klink contributes its own headless,
+  coordinate-driven driver on top (the upstream flow is GUI/ruler-bound).
+  klayout_pyxs is itself a Python port of Matthias Köfferlein's
+  [XSection](https://codeberg.org/klayoutmatthias/xsection) project, whose
+  concept this feature ultimately owes to.
+- **[model-viewer](https://github.com/google/model-viewer)** (BSD-3-Clause,
+  with MIT-licensed three.js parts) — the 3D web component VENDORED verbatim
+  (v3.5.0, license headers preserved) and inlined into the self-contained
+  viewer pages `imaging.render3d` generates.
+- **[Blender / bpy](https://www.blender.org/)** (GPL-3) — the optional
+  headless renderer behind `imaging.blender`; import-only at arm's length
+  (`pip install bpy`, user-installed), never bundled.
+- **[trimesh](https://github.com/mikedh/trimesh)** (MIT) and
+  **[shapely](https://github.com/shapely/shapely)** (BSD-3-Clause) — optional
+  mesh/geometry libraries behind the 3D exits.
 
+Relationship summary: *ported* (OpenROAD algorithms, with attribution),
+*vendored* (model-viewer bundle, permissive licenses, notices kept),
+*import-only dependencies* (KLayout, gdsfactory, klayout_pyxs, bpy, trimesh,
+shapely — nothing copied into klink), *protocol reimplementation* (klive),
+*data/idea credits* (KlayoutClaw priors, Klayout-Router patching idea).
 Formal third-party copyright and license texts are in
 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 

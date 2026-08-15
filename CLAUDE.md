@@ -244,7 +244,13 @@ before running integration tests, or the live server returns
 - `klink/mcp/` — MCP bridge
 - `klink/mcp/catalog.py` — MCP tool catalog + `find_tools`
 - `klink/domains/` — domain packages (photonics, nanodevice, structdevice,
-  measurement), each behind one-call orchestrators
+  measurement, imaging), each behind one-call orchestrators. The imaging
+  domain (`imaging.xsection_run` / `render3d` / `sem_top` / `blender`)
+  turns one `klink_visual_stack_v1` declaration into cross-sections,
+  self-contained 3D viewer pages, SEM-style views and Blender figures;
+  stacks/.pyxs recipes are example-owned (`examples_klink/public/imaging/`),
+  heavy deps optional with instructive install errors, and `.pyxs`
+  recipes are trusted Python executed in-process
 - `klink/spec/` — klink.spec.json v1 contract
 - `klink_plugin/python/klink_server/` — KLayout in-process server
 - `examples_klink/public/` — the open, open-box-runnable example gallery

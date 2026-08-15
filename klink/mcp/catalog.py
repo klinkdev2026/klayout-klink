@@ -252,6 +252,49 @@ DOMAINS: "OrderedDict[str, dict]" = OrderedDict([
             "without a process returns an INSTRUCTIVE error, not a guess."
         ),
     }),
+    ("imaging", {
+        "title": "Imaging (cross-section / renders from one declaration)",
+        "summary": "Process-realistic imaging exits driven by the layout: "
+                   "cross-sections from a .pyxs recipe now; 3D/SEM/Blender "
+                   "renders in later knives (design: docs/IMAGING_FAMILY_"
+                   "DESIGN.md).",
+        "prefixes": ["imaging"],
+        "usage": (
+            "Everything runs klink-side (no plugin involvement); heavy "
+            "deps are optional and the error names the exact pip install "
+            "command. Recipes/VisualStack instances are example-owned — "
+            "klink ships mechanism only.\n"
+            "- imaging.xsection_run — process cross-section along an "
+            "EXPLICIT cut_um=[[x1,y1],[x2,y2]] from a .pyxs recipe "
+            "(engine: klayout_pyxs, pinned). steps=true + '# klink-step: "
+            "<name>' recipe markers give a per-step film (one section GDS "
+            "per process step). Deterministic outputs (no GDS "
+            "timestamps), sidecar klink_imaging_result_v1, "
+            "overwrite=false by default. Source = gds path or the live "
+            "session; show=true opens the result in a new tab. .pyxs is "
+            "TRUSTED Python code executed in-process.\n"
+            "- imaging.blender — paper-grade render via headless bpy "
+            "(subprocess; pip install bpy). mode=die polishes a "
+            "render3d GLB on transparent film + shadow catcher; "
+            "mode=figure builds a device figure from gds+stack at 1:1 "
+            "layout coordinates — kind='lattice' layers become atomic "
+            "structures (graphene/MoS2 motifs), plus explicit substrate "
+            "slabs. Outputs PNG + hand-editable .blend.\n"
+            "- imaging.sem_top — SEM-style top view PNGs (greyscale + "
+            "false color): per-layer sem_grey/edge_glow from the stack, "
+            "grain/scanlines/vignette, deterministic (seeded); "
+            "layers=[...] restricts to the masks printed at a given step."
+            "\n"
+            "- imaging.render3d — GLB + SELF-CONTAINED interactive viewer "
+            "html (offline double-click; per-layer color/metal/rough "
+            "panel; PNG export). mode=fast extrudes a "
+            "klink_visual_stack_v1 declaration (z0_um/z1_um per layer); "
+            "mode=process sweeps the xsection engine so LOCOS/conformal/"
+            "CMP curvature is real — stack styles engine materials via "
+            "recipe_symbol, unmatched go grey + 'unstyled'; fraction<1 = "
+            "cutaway exposing a true section face."
+        ),
+    }),
     ("bridge_ledit", {
         "title": "L-Edit bridge (file-exchange RPC)",
         "summary": "Read selections/cells from a live Tanner L-Edit, import them into KLayout (parametric where possible), and push KLayout geometry back — via the ledit_bridge.cpp macro.",
