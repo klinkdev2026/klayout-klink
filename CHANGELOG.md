@@ -4,6 +4,16 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project does not use dated entries (versions only).
 
+## 0.3.2
+
+- Fix: the 3D exit's instructive install error was incomplete —
+  trimesh's polygon extrusion needs a triangulation engine
+  (`mapbox-earcut`) that trimesh does not itself depend on, so a clean
+  environment following the printed command still failed with trimesh's
+  raw "No available triangulation engine!". `mesh3d` now probes for the
+  engine and its install guidance is `pip install trimesh shapely
+  mapbox-earcut`. Caught by clean-environment wheel verification.
+
 ## 0.3.1
 
 - Fix: the 0.3.0 wheel shipped WITHOUT the vendored model-viewer bundle

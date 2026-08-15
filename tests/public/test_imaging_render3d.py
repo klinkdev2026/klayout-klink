@@ -152,6 +152,19 @@ def test_viewer_html_is_self_contained(device):
         build_viewer_html(glb, html_path)
 
 
+def test_missing_triangulation_engine_error_is_instructive(monkeypatch):
+    import sys
+
+    pytest.importorskip("trimesh")
+    pytest.importorskip("shapely")
+    from klink.domains.imaging.mesh3d import Mesh3DError, _deps
+
+    monkeypatch.setitem(sys.modules, "mapbox_earcut", None)
+    monkeypatch.setitem(sys.modules, "manifold3d", None)
+    with pytest.raises(Mesh3DError, match="mapbox-earcut"):
+        _deps()
+
+
 def test_registry_binds_each_tool_to_its_own_handler():
     # a stacked-decorator slip once bound imaging.xsection_run to the
     # BLENDER handler and no test noticed — pin name->handler forever

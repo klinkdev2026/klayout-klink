@@ -40,9 +40,24 @@ def _deps():
         from shapely.geometry import Polygon as ShPoly
     except ImportError as exc:
         raise Mesh3DError(
-            f"3D building needs trimesh and shapely in THIS interpreter "
-            f"({exc.name} is missing). Install with: "
-            f"pip install trimesh shapely") from exc
+            f"3D building needs trimesh, shapely and a triangulation "
+            f"engine in THIS interpreter ({exc.name} is missing). "
+            f"Install with: pip install trimesh shapely mapbox-earcut"
+        ) from exc
+    # trimesh's polygon extrusion needs a triangulation engine that
+    # trimesh does NOT depend on itself — without this probe the failure
+    # surfaces as trimesh's own 'No available triangulation engine!'
+    # (a shipped 0.3.1 wheel walked into exactly that)
+    try:
+        import mapbox_earcut  # noqa: F401
+    except ImportError:
+        try:
+            import manifold3d  # noqa: F401
+        except ImportError as exc:
+            raise Mesh3DError(
+                "trimesh needs a triangulation engine for polygon "
+                "extrusion and none is installed. Install with: "
+                "pip install mapbox-earcut") from exc
     return trimesh, ShPoly
 
 
