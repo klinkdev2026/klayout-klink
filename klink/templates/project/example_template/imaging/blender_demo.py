@@ -62,10 +62,14 @@ def main():
 
     glb = OUT / "render3d_process.glb"
     if glb.exists():
+        # the engine's section carries microns of substrate, so this
+        # model needs no vertical exaggeration; pass z_scale=N (and say
+        # so in the caption) when YOUR stack renders as a hairline
         r = render_die_glb(str(glb), str(OUT / "blender_die.png"),
                            str(OUT / "blender_die.blend"),
                            camera="face")
-        print(f"die: {r['meshes']} meshes -> blender_die.png/.blend")
+        print(f"die: {r['meshes']} meshes, z x{r['z_scale']:g}"
+              f" -> blender_die.png/.blend")
     else:
         print("die figure skipped (run render3d_demo first for the GLB)")
 

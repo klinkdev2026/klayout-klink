@@ -81,12 +81,48 @@ def _strip_outputs(recipe_text: str) -> str:
     a multi-line call would exec as a syntax error, so refuse it
     instructively instead."""
     stripped = _OUTPUT_LINE_RE.sub("", recipe_text)
-    if "output(" in stripped:
+    # a leftover CALL, or stripping that broke a recipe which parsed
+    # fine before (= a multi-line output() whose tail survived)
+    broke_it = _parses(recipe_text) and not _parses(stripped)
+    if _calls_output(stripped) or broke_it:
         raise XSectionError(
             "the recipe uses a multi-line or non-statement output(...) "
             "call; keep each output() on ONE line (they are stripped "
             "and replaced by auto-output in steps/sweep modes)")
     return stripped
+
+
+def _parses(text: str) -> bool:
+    """Does this text parse as Python? (tokenize is too lenient — it
+    accepts an unbalanced ')' left behind by stripping a multi-line
+    call, which is exactly the case the guard must catch.)"""
+    import ast
+    try:
+        ast.parse(text)
+    except SyntaxError:
+        return False
+    return True
+
+
+def _calls_output(text: str) -> bool:
+    """True if a real ``output(`` CALL survives — tokenized, so the word
+    inside a comment or a string does not count (a recipe that merely
+    documents output() must not be refused)."""
+    import io as _io
+    import tokenize
+    prev_name = False
+    try:
+        for tok in tokenize.generate_tokens(
+                _io.StringIO(text).readline):
+            if prev_name and tok.type == tokenize.OP and tok.string == "(":
+                return True
+            prev_name = (tok.type == tokenize.NAME
+                         and tok.string == "output")
+    except (tokenize.TokenError, IndentationError):
+        # unbalanced source: the stripped text is not tokenizable, which
+        # is exactly the multi-line-call case this guard exists for
+        return "output(" in text
+    return False
 
 
 def parse_steps(recipe_text: str) -> List[Tuple[str, int]]:
@@ -187,7 +223,10 @@ def _make_driver(pyxs_lib, MaterialData):
                 for nm, val in locals_dict.items():
                     if not isinstance(val, MaterialData):
                         continue
-                    if nm in exclude:
+                    # convention: a recipe variable starting with '_' is
+                    # an intermediate (half-grown oxide, scratch mask)
+                    # and is not a material worth its own color
+                    if nm.startswith("_") or nm in exclude:
                         continue
                     if nm not in name_to_layer:
                         name_to_layer[nm] = "%d/0" % (
@@ -293,6 +332,8 @@ def run_xsection(
     exclude: Sequence[str] = (),
     render: bool = False,
     stack: Optional[Any] = None,
+    z_window_um: Optional[Sequence[float]] = None,
+    axis: bool = False,
     source_label: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Cross-section ``gds_path`` along ``cut_um`` using ``recipe_path``.
@@ -309,6 +350,11 @@ def run_xsection(
     auto-colors and are reported), and with ``steps=True`` assembles the
     frames into a contact-sheet PNG + animated GIF.  Needs
     numpy/scipy/pillow (instructive error when missing).
+    ``z_window_um=(z_bottom, z_top)`` frames those rasters vertically —
+    without it the deep substrate dominates the image and thin films are
+    a sliver at the top; ``axis=True`` adds the z ruler and scale bar.
+    Recipe variables whose name starts with ``_`` are treated as
+    intermediates and are not auto-output as materials.
     """
     pyxs_lib, MaterialData = _engine()
     import klayout
@@ -432,6 +478,7 @@ def run_xsection(
             mat_map = {m["layer"]: m["name"] for m in rep["materials"]}
             r = render_section_png(
                 f["path"], mat_map, png, stack=stack,
+                z_window_um=z_window_um, axis=axis,
                 label=rep["step"] or basename)
             frame_paths.append(png)
             for sym in r["auto_colored"]:

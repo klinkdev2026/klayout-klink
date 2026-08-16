@@ -1,7 +1,8 @@
 """PUBLIC demo: layout -> 3D GLB + self-contained interactive viewer.
 
-Builds the same tiny device as xsection_demo, declares a
-klink_visual_stack_v1 (EXAMPLE-owned — edit for your process), then:
+Builds the same CMOS row as xsection_demo (demo_layout.py),
+declares a klink_visual_stack_v1 (EXAMPLE-owned — edit for your
+process), then:
   - fast mode: stack extrusion,
   - process mode: xsection-engine sweep with fraction=0.6 (cutaway —
     the exposed face is a true cross-section).
@@ -23,9 +24,9 @@ from klink.domains.imaging.viewer import build_viewer_html
 # same-directory imports work both as a package module and as a copied
 # `klink init` starter script
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from demo_layout import write_demo_device                 # noqa: E402
 from demo_stack import STACK                              # noqa: E402
-from xsection_demo import (GDS, OUT, RECIPE,              # noqa: E402
-                           write_demo_device)
+from xsection_demo import GDS, OUT, RECIPE                # noqa: E402
 
 
 def main():

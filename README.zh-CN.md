@@ -48,6 +48,17 @@ klink 是一个面向 [KLayout](https://www.klayout.de/) 的 AI-native 控制面
 
 ## 更新亮点
 
+### 0.3.4 — 成像:starter 换成真工艺,出图能见人
+
+`klink init` 现在铺的是四晶体管 CMOS 单元行(`demo_layout.py`)加十一步
+平面 CMOS 配方(n 阱、LOCOS、栅氧、多晶硅栅+硅化物、LDD、侧墙、源漏、
+ILD、接触孔刻蚀+钨塞+CMP、金属1 双大马士革)——第一次跑出来就是真实的
+器件结构,而不是示意图形。剖面新增 z 标尺与比例尺(`axis=True`)、纵向
+取景窗(`z_window_um=`)、几何抗锯齿与逐材质渐变;Blender 相机改为按真实
+包围盒取景(以前扁平的 die 会渲成一条空白细线);`klink update` 不再删除
+starter 自己产出的 `_generated/` 目录。详见
+[CHANGELOG](./CHANGELOG.md)。
+
 ### 0.3.0 —— 成像域：一份声明出剖面、3D 与 SEM 视图
 
 新 `imaging` 域：声明一次工艺栈（`klink_visual_stack_v1`），即可得到

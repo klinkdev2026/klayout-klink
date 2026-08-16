@@ -167,3 +167,54 @@ def test_sem_top_tool_handler_offline(device):
         "width_px": 300})
     assert res.get("isError")
     assert "overwrite=true" in res["content"][0]["text"]
+
+
+def test_axis_ruler_and_z_window(device):
+    """axis=True must draw a real ruler (ticks + numbers in the gutter),
+    and z_window_um must actually re-frame the geometry."""
+    pytest.importorskip("klayout_pyxs")
+    import numpy as np
+    from PIL import Image
+
+    from klink.domains.imaging.raster import render_section_png
+    from klink.domains.imaging.xsection_driver import run_xsection
+
+    gds, recipe, tmp = device
+    r = run_xsection(gds, recipe, [[-1.0, 2.0], [7.0, 2.0]],
+                     output_dir=str(tmp / "ax"), basename="a")
+    sec = r["outputs"]["files"][0]["path"]
+    mats = {m["layer"]: m["name"]
+            for m in r["outputs"]["stages"][0]["materials"]}
+
+    plain = str(tmp / "plain.png")
+    ruled = str(tmp / "ruled.png")
+    render_section_png(sec, mats, plain, width_px=600,
+                       z_window_um=(-1.0, 0.6))
+    render_section_png(sec, mats, ruled, width_px=600,
+                       z_window_um=(-1.0, 0.6), axis=True)
+    a, b = Image.open(plain), Image.open(ruled)
+    assert b.width == a.width + 74 and b.height == a.height
+    # the gutter is not an empty margin: ticks and labels are drawn
+    gut = np.asarray(b.convert("RGB"))[:, :73]
+    ink = (gut < 160).all(axis=-1)
+    assert ink.sum() > 40, "axis gutter has no tick/label ink"
+
+    # a taller window must shrink the geometry (same width, more height)
+    tall = str(tmp / "tall.png")
+    render_section_png(sec, mats, tall, width_px=600,
+                       z_window_um=(-2.0, 0.6))
+    assert Image.open(tall).height > a.height
+
+
+def test_z_window_must_be_ordered(device):
+    from klink.domains.imaging.raster import RasterError, render_section_png
+    pytest.importorskip("klayout_pyxs")
+    from klink.domains.imaging.xsection_driver import run_xsection
+
+    gds, recipe, tmp = device
+    r = run_xsection(gds, recipe, [[-1.0, 2.0], [7.0, 2.0]],
+                     output_dir=str(tmp / "zw"), basename="z")
+    sec = r["outputs"]["files"][0]["path"]
+    with pytest.raises(RasterError, match="z_bottom, z_top"):
+        render_section_png(sec, {}, str(tmp / "bad.png"),
+                           z_window_um=(0.6, -1.0))

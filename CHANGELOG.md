@@ -4,6 +4,44 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project does not use dated entries (versions only).
 
+## 0.3.4
+
+- imaging figures are now legible by default. `imaging.xsection_run` /
+  `render_section_png` accept `z_window_um=(z_bottom, z_top)` to frame a
+  section vertically — the engine's substrate is microns deep while the
+  films are a few hundred nanometres, so the default bbox framing spent
+  most of every frame on bulk. The Blender camera now derives its
+  distance by solving the eight bounding-box corners against the lens'
+  horizontal and vertical field of view instead of scaling the box
+  diagonal; for flat geometry (any die) the old distance put the camera
+  inside the slab and rendered a blank sliver. `render_die_glb` gains
+  `z_scale` (echoed in the result) for stacks that really are hairlines
+  at 1:1.
+- `klink update` no longer deletes a starter's `_generated/` output
+  directory: its mirror cleanup treated user-produced files as stale
+  starters. The imaging starter README now states that
+  `example_template/` is package-owned and that your own stack/recipe
+  must be copied out before editing.
+- the imaging starter is now a real process, not a demo shape. It ships
+  a new `demo_layout.py` (a four-transistor CMOS row: NMOS in the
+  substrate, PMOS in an n-well, poly gates over active, a contact per
+  source/drain, metal-1 straps and power rails) and an eleven-step
+  planar CMOS recipe (n-well, LOCOS, gate oxide, poly + silicide, LDD,
+  spacer, S/D, ILD, contact etch + W plug + CMP, metal-1 damascene), so
+  the film, the 3D model and the SEM view show real device structure.
+- `imaging.xsection_run` / `render_section_png` gain `axis=True`: a z
+  ruler in µm plus a lateral scale bar.
+- recipe variables named with a leading `_` are intermediates and are no
+  longer auto-output as materials of their own.
+- the section renderer draws geometry supersampled and shades each
+  material with a slight gradient (`supersample`, `shade`), so process
+  profiles stop looking like staircases; the demo stack makes ILD/IMD
+  translucent so the 3D exits show the gates, junctions and plugs
+  inside the stack.
+- fixed: the guard against multi-line `output(...)` calls was a
+  substring check, so a recipe whose COMMENT mentioned `output()` was
+  refused. It now looks for a real call.
+
 ## 0.3.3
 
 - `klink init` (and `klink update` for existing projects) now scaffolds

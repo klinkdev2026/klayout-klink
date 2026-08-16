@@ -191,6 +191,9 @@ def update(target: str, *, dry_run: bool = False) -> int:
             p.relative_to(root) for p in root.rglob("*")
             if p.is_file()
             and "__pycache__" not in p.parts
+            # demo OUTPUT dirs are user-produced, never shipped — they
+            # must survive an update (mirror-cleanup would delete them)
+            and "_generated" not in p.parts
             and p.suffix not in (".pyc", ".pyo")
         }
 

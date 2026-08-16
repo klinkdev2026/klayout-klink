@@ -201,3 +201,41 @@ def test_from_stackspec_refuses_to_guess():
         VisualStack.from_stackspec(spec, {"10/0": (0, 0.1)}, mats)
     with pytest.raises(VisualStackError, match="materials"):
         VisualStack.from_stackspec(spec, z, {"10/0": {"name": "p"}})
+
+
+def test_output_guard_ignores_comments_and_strings():
+    """The multi-line-output() guard is tokenized: a recipe that merely
+    MENTIONS output() in a comment or docstring must still run (a naive
+    substring check refused a perfectly good recipe)."""
+    from klink.domains.imaging.xsection_driver import (XSectionError,
+                                                       _strip_outputs)
+    ok = ('# no output() lines are needed here\n'
+          '"""output( in a string too"""\n'
+          'output("300/0", foo)\n'
+          'bar = bulk()\n')
+    stripped = _strip_outputs(ok)
+    assert "bar = bulk()" in stripped
+    assert 'output("300/0", foo)' not in stripped
+
+    with pytest.raises(XSectionError, match="ONE line"):
+        _strip_outputs('output(\n    "300/0", foo)\n')
+
+
+def test_underscore_materials_stay_intermediates(device):
+    """A recipe variable named with a leading _ is an intermediate: it
+    must not be auto-output as a material of its own."""
+    gds, _recipe, tmp = device
+    recipe = tmp / "under.pyxs"
+    recipe.write_text(
+        "l1 = layer('1/0')\n"
+        "# klink-step: bulk\n"
+        "sub = bulk()\n"
+        "# klink-step: grow\n"
+        "_half = mask(l1).grow(0.2, 0.1, mode='round')\n"
+        "film = _half.or_(_half)\n", encoding="utf-8")
+    r = run_xsection(gds, str(recipe), [[-1.0, 2.0], [7.0, 2.0]],
+                     output_dir=str(tmp / "u"), basename="u", steps=True)
+    names = {m["name"] for s in r["outputs"]["stages"]
+             for m in s["materials"]}
+    assert "film" in names and "sub" in names
+    assert not any(n.startswith("_") for n in names)

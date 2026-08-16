@@ -67,6 +67,7 @@ STARTERS: dict[str, list[tuple[str, str]]] = {
     # L-Edit UPI SDK (we ship zero Siemens/Tanner files). Lives in the
     # template so `klink init` users can find it.
     "imaging": [
+        ("imaging", "demo_layout.py"),
         ("imaging", "demo_stack.py"),
         ("imaging", "demo.pyxs"),
         ("imaging", "xsection_demo.py"),
