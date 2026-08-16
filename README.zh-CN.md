@@ -43,6 +43,9 @@ klink 是一个面向 [KLayout](https://www.klayout.de/) 的 AI-native 控制面
   的方式在会话间搬运几何。
 - 把一段工作过程——手工编辑和 RPC 编辑——录制成可回放的 Python 脚本
   (外加一个独立的 `pya` 版本)。
+- 把同一份版图变成图:按你自己的 `.pyxs` 配方出工艺剖面和逐步胶片、
+  带自含离线查看器页面的 3D 模型、SEM 风格顶视图、Blender 渲染——
+  全部由一份你拥有的视觉叠层声明驱动。
 - 支持 gdsfactory 相关工作流，包括 Port 标记、组件放置、routing 和兼容 klive 的 `c.show()` 显示。
 - 保持 KLayout 插件很薄，把复杂逻辑放在外部 Python 中运行。
 
