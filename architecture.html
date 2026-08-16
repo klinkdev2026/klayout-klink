@@ -41,6 +41,7 @@
         <a href="tutorial-passives.html">无源器件模板</a>
         <a href="tutorial-fit-device.html">拟合器件 → PnR → LVS</a>
         <a href="tutorial-padframe.html">针卡优先 padframe</a>
+        <a href="tutorial-imaging.html">成像：剖面 · 3D · SEM · Blender</a>
       </div>
       <div class="sb-group">
         <div class="sb-title">指南</div>
@@ -165,6 +166,8 @@
           <article class="card"><h3>nanodevice</h3><p>EBL wraparound、Hall bar、neural electrode harness 和 flake 相关工具。</p></article>
           <article class="card"><h3>photonics</h3><p>gdsfactory bridge、blackbox port harvesting、import_gf_component、photonic net intent、reroute。</p></article>
           <article class="card"><h3>structdevice</h3><p>device extraction、netlist、logic map、layout engine、P&R、LVS-lite 和 live LVS 对接。</p></article>
+          <article class="card"><h3>imaging</h3><p>由同一份版图/工艺声明驱动的成像出口：.pyxs 工艺剖面、3D 渲染 + 离线交互查看器、SEM 风格俯视图、Blender 论文级渲染。</p></article>
+          <article class="card"><h3>L-Edit bridge</h3><p>与运行中的 Tanner L-Edit 双向文件交换：拉取选区/cell、推送几何回去；更深的 T-Cell 读写走 Python API。</p></article>
           <article class="card"><h3>MCP core</h3><p>tool discovery、session registry、interaction context、recorder、transfer、diagnostics。</p></article>
         </div>
         <p class="note">这些领域都是内置的，但<strong>第三方也能扩展</strong>：写一个 pip 包，通过 <code>klink.plugins</code> entry point 贡献自己的 MCP 工具、find_tools 域和命名资源（profile/devices/recipe/stack），故障按包隔离——这是给 PDK 供应商和扩展作者的入口，不是终端用户功能。见<a href="plugin-packages.html">编写扩展包指南</a>。</p>

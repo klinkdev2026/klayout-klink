@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>MCP 工具参考 - klink</title>
-  <meta name="description" content="klink MCP / RPC 工具完整参考：11 个领域、120+ 个工具，每个工具的功能、参数和调用示例。">
+  <meta name="description" content="klink MCP / RPC 工具完整参考：13 个领域、153 个工具，每个工具的功能、参数和调用示例。">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="assets/styles.css">
 </head>
@@ -41,6 +41,7 @@
         <a href="tutorial-passives.html">无源器件模板</a>
         <a href="tutorial-fit-device.html">拟合器件 → PnR → LVS</a>
         <a href="tutorial-padframe.html">针卡优先 padframe</a>
+        <a href="tutorial-imaging.html">成像：剖面 · 3D · SEM · Blender</a>
       </div>
       <div class="sb-group">
         <div class="sb-title">指南</div>
@@ -90,7 +91,7 @@
       <div class="container">
         <div class="eyebrow">MCP / RPC reference</div>
         <h1>MCP 工具完整参考</h1>
-        <p>klink 的控制面只有一份工具目录，两张脸：typed Python client（<code>KLinkClient</code>）和暴露给 agent 的 MCP 工具。二者都由 live plugin 的 method registry 生成，不存在会漂移的手写清单。本页把 <strong>83 个 plugin RPC</strong> + <strong>39 个 MCP 本地工具</strong>（共 122 个）按 11 个领域逐一列出：功能、参数、示例。</p>
+        <p>klink 的控制面只有一份工具目录，两张脸：typed Python client（<code>KLinkClient</code>）和暴露给 agent 的 MCP 工具。二者都由 live plugin 的 method registry 生成，不存在会漂移的手写清单。本页把 <strong>107 个 plugin RPC</strong> + <strong>46 个 MCP 本地工具</strong>（共 153 个）按 13 个领域逐一列出：功能、参数、示例。</p>
       </div>
     </section>
 
@@ -100,25 +101,25 @@
           <a href="#overview">总览与约定</a>
           <a href="#discovery">动态发现工具</a>
           <a href="#profiles">Profiles 过滤</a>
-          <a href="#d-connection">1 · 连接 / 自检 / 视图</a>
-          <a href="#d-session">2 · 多会话与跨窗搬运</a>
-          <a href="#d-geometry">3 · 几何与单元结构</a>
-          <a href="#d-selection">4 · 选择与 SEND 记忆</a>
-          <a href="#d-ports">5 · Port 与 Anchor</a>
-          <a href="#d-routing">6 · 路由后端</a>
-          <a href="#d-verify">7 · DRC 与 LVS</a>
-          <a href="#d-structdevice">8 · 自定义器件 P&amp;R</a>
-          <a href="#d-nanodevice">9 · 纳米器件</a>
-          <a href="#d-photonics">10 · 硅光</a>
-          <a href="#d-ledit">11 · L-Edit 桥</a>
-          <a href="#d-escape">12 · Escape hatch</a>
+          <a href="#d-connection">1 &middot; 连接 / 自检 / 视图</a>
+          <a href="#d-session">2 &middot; 多会话与搬运（plugin 侧）</a>
+          <a href="#d-geometry">3 &middot; 几何与单元结构</a>
+          <a href="#d-selection">4 &middot; 选择与 SEND 记忆</a>
+          <a href="#d-ports">5 &middot; Port 与 Anchor</a>
+          <a href="#d-routing">6 &middot; 路由后端</a>
+          <a href="#d-verify">7 &middot; DRC 与 LVS</a>
+          <a href="#d-structdevice">8 &middot; 自定义器件 P&amp;R</a>
+          <a href="#d-imaging">9 &middot; 成像</a>
+          <a href="#d-nanodevice">10 &middot; 纳米器件</a>
+          <a href="#d-photonics">11 &middot; 硅光</a>
+          <a href="#d-ledit">12 &middot; L-Edit 桥</a>
+          <a href="#d-escape">13 &middot; Escape hatch</a>
         </nav>
       </aside>
 
       <article class="content">
         <h2 id="overview" class="anchor-h">总览与约定</h2>
         <p>MCP 工具名是稳定的 <code>namespace.verb</code>。每个工具都归属唯一一个领域，同一个领域 token 既是 <code>klink.find_tools domain=&lt;token&gt;</code> 的导航键，也是 <code>--profile &lt;token&gt;</code> 的过滤器。</p>
-
         <div class="pill-row">
           <a href="#d-connection">connection_and_view</a>
           <a href="#d-session">multi_session_transfer</a>
@@ -128,18 +129,18 @@
           <a href="#d-routing">routing_backends</a>
           <a href="#d-verify">drc_and_lvs_verification</a>
           <a href="#d-structdevice">device_structdevice</a>
+          <a href="#d-imaging">imaging</a>
           <a href="#d-nanodevice">device_nanodevice</a>
           <a href="#d-photonics">device_photonics</a>
           <a href="#d-ledit">bridge_ledit</a>
           <a href="#d-escape">escape_hatch</a>
         </div>
-
         <h3>阅读约定</h3>
         <ul>
           <li>参数表里 <code>name*</code> 表示<strong>必填</strong>，其余为可选。</li>
           <li>坐标：带 <code>_um</code> 后缀是微米（最自然）；带 <code>_dbu</code> 是整数数据库单位。<code>micron = dbu × layout.dbu</code>，<code>dbu</code> 来自 <code>layout.info</code>。</li>
-          <li>图层写法三选一：图层索引 <code>int</code>、<code>"L/D"</code> 字符串（如 <code>"1/0"</code>）、或 <code>{layer, datatype}</code> 对象。</li>
-          <li>徽章含义：
+          <li>图层写法三选一：图层索引 <code>int</code>、<code>"L/D"</code> 字符串（如 <code>"1/0"</code>），或 <code>{layer, datatype}</code> 对象。</li>
+          <li><strong>类型</strong>列说明工具跑在哪：<span class="badge kind-rpc">rpc</span> 在 KLayout 插件内执行；<span class="badge kind-local">local</span> 在 MCP 进程内执行。其余徽章：
             <span class="badge read">read</span> 只读 ·
             <span class="badge write">write</span> 写入 ·
             <span class="badge verify">verify</span> 验证 ·
@@ -147,13 +148,12 @@
             <span class="badge mutates">mutates</span> 会改动版图（可 Ctrl+Z 撤销）·
             <span class="badge long">long</span> 长耗时（走独立超时）。</li>
         </ul>
-
         <div class="note">
           <strong>批量优先。</strong> 生成式版图<strong>永远不要</strong>一次 RPC 画一个对象——循环里每次调用都要付 TCP + JSON + 事务 + GUI 记账，常慢上百倍。用批量方法：<code>shape.insert_boxes</code> / <code>shape.insert_many</code> / <code>instance.insert_many</code> / <code>instance.insert_pcell_many</code>。单件插入只用于调试单个对象。
         </div>
 
         <h2 id="discovery" class="anchor-h">动态发现工具</h2>
-        <p>目录是<strong>实时查询</strong>的，不要死记。Python 侧：</p>
+        <p>目录是<strong>实时查询</strong>的，不要死记——它由 live plugin 的 method registry 生成，不存在会漂移的手写清单。Python 侧：</p>
         <pre><code>from klink import KLinkClient
 with KLinkClient() as c:
     print([m["name"] for m in c.methods()["methods"]])   # meta.methods</code></pre>
@@ -178,39 +178,50 @@ klink.find_tools query="lvs route"          # 跨全部工具的关键词排序�
         <pre><code>python -m klink.mcp --profile read,write,verify,escape      # 默认
 python -m klink.mcp --profile read,device_photonics         # 混合两轴
 python -m klink.mcp --profile routing_backends              # 只暴露一个领域</code></pre>
-        <p>所有<strong>本地工具</strong>在任意意图 profile 下都始终包含；核心导航工具 <code>klink.find_tools</code> / <code>klink.status</code> / <code>klink.reconnect</code> 永远在。旧别名仍有效：<code>basic→read</code>、<code>draw→write</code>、<code>advanced→escape</code>、<code>drc→verify</code>。</p>
+        <p>所有<strong>本地工具</strong>在任意意图 profile 下都始终包含；核心导航工具 <code>klink.find_tools</code> / <code>klink.status</code> / <code>klink.reconnect</code> 永远在。旧别名仍有效：<code>basic→read</code>、<code>draw→write</code>、<code>advanced→escape</code>、<code>drc→verify</code>。
 
-
-        <!-- ================= 1 connection ================= -->
-        <h2 id="d-connection" class="anchor-h">1 · 连接、自检、发现与视图 <span class="tool-count">connection_and_view · 15 tools</span></h2>
+        <h2 id="d-connection" class="anchor-h">1 &middot; 连接、自检、发现与视图 <span class="tool-count">connection_and_view &middot; 30 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="connection_and_view"</span>
-          <p><strong>不确定时从这里开始。</strong> <code>klink.status</code> 报告连接、当前 session、解释器和可选能力（gdsfactory、klayout.db）；<code>klink.guide</code> 报告打开了什么 + 磁盘意图状态 + 下一步字面调用；<code>klink.find_tools</code> 按领域/关键词导航其余工具；<code>klink.reconnect</code> 恢复断掉的连接。View 工具是读为主的画布导航——注意新建的 cell 在 <code>view.show_cell</code> 之前是不可见的。截图（<code>view.screenshot</code>）只是用户要的产物，绝不是 agent 的验证步骤，优先用几何查询。</p>
+          <p><strong>不确定时从这里开始。</strong> <code>klink.status</code> 报告连接、当前 session、解释器和可选能力；<code>klink.guide</code> 报告打开了什么 + 磁盘意图状态 + 下一步字面调用；<code>klink.find_tools</code> 按领域/关键词导航其余工具；<code>klink.reconnect</code> 恢复断掉的连接。本域还带着 MCP 侧的 session 注册辅助工具（<code>klink.session_*</code>、<code>klink.transfer_*</code>）——klink 用一个 MCP 桥驱动多个 KLayout session，session 是平等 peer，显式传你要的那个。View 工具是读为主的画布导航：新建的 cell 在 <code>view.show_cell</code> 之前不可见；<code>view.new_tab</code> 打开一次性 scratch tab；<code>view.show_25d</code> 从显示列表打开原生 2.5D 视图；子实例显示成名字方框时用 <code>view.hier_levels</code> 调大层级深度。截图（<code>view.screenshot</code>）只是用户要的产物，绝不是 agent 的验证步骤，优先用几何查询。破坏性：<code>view.close_tab</code>——只对一次性测试 tab 用。</p>
         </div>
         <table class="data-table reftable">
-          <thead><tr><th>工具</th><th>参数</th><th>功能</th></tr></thead>
+          <thead><tr><th>工具</th><th>类型</th><th>参数</th><th>功能</th></tr></thead>
           <tbody>
-            <tr><td><code>klink.status</code></td><td>—</td><td>MCP 桥连接状态、当前 session、解释器与上次连接错误。<strong>排障第一步</strong>。</td></tr>
-            <tr><td><code>klink.reconnect</code></td><td>—</td><td>关掉过期 client 并尝试重连 KLayout。</td></tr>
-            <tr><td><code>klink.guide</code></td><td>—</td><td>报告已打开内容、磁盘上的意图状态，以及每个可用意图的字面调用和建议下一步。不知道该干嘛就调它。</td></tr>
-            <tr><td><code>klink.find_tools</code></td><td>domain, query</td><td>按领域或关键词发现工具。无参→领域索引；<code>domain</code>→该域工具+用法；<code>query</code>→排序匹配。</td></tr>
-            <tr><td><code>hello</code></td><td>client, protocol</td><td>介绍 client，拿到 server 信息+能力列表。推荐每条新连接的第一次调用。</td></tr>
-            <tr><td><code>meta.ping</code></td><td>—</td><td>存活探针，回显 params + trace id，用于测往返延迟。</td></tr>
-            <tr><td><code>meta.methods</code></td><td>—</td><td>返回完整 RPC 方法目录（描述 + JSON schema），可直接喂给 LLM function-calling。</td></tr>
-            <tr><td><code>meta.debug_signals</code></td><td>fire</td><td>SignalHub 诊断日志；<code>fire="selection_changed"</code> 可触发合成事件测投递链路。</td></tr>
-            <tr><td><code>view.list_tabs</code></td><td>—</td><td>列出该窗口所有 layout tab（索引、标题、文件、active cell、当前 tab）。</td></tr>
-            <tr><td><code>view.activate_tab</code> <span class="badge mutates">mutates</span></td><td>index*</td><td>按索引切换当前 tab；之后所有单 layout RPC 都作用于该 tab。</td></tr>
-            <tr><td><code>view.show_cell</code></td><td>cell*, zoom_fit</td><td>把当前 cellview 显示的 top cell 切成指定 cell（新建 cell 靠它才可见），默认 zoom-fit。</td></tr>
-            <tr><td><code>view.screenshot</code></td><td>mode, width_px, height_px, bbox_dbu, path</td><td>渲染 PNG。<code>mode=base64</code> 内嵌 data URL（给有视觉的 LLM）；<code>mode=path</code> 存盘返回绝对路径。仅用户请求时用。</td></tr>
-            <tr><td><code>view.zoom_fit</code> <span class="badge mutates">mutates</span></td><td>—</td><td>整幅版图适配视口（等价 GUI 的 Zoom Fit）。</td></tr>
-            <tr><td><code>view.zoom_box</code> <span class="badge mutates">mutates</span></td><td>bbox_dbu*</td><td>缩放到恰好显示给定 bbox（dbu）。</td></tr>
-            <tr><td><code>view.viewport</code></td><td>—</td><td>报告当前视口：可见 bbox（dbu）、视图像素尺寸、cellview 索引。</td></tr>
-            <tr><td><code>view.show_lvsdb</code></td><td>path*, kind</td><td>把存盘的 LVS/netlist 数据库载入 Netlist Browser 并显示，交互 cross-probe。<code>kind=lvs</code> 读 <code>.lvsdb</code>，<code>kind=l2n</code> 读 <code>.l2n</code>。</td></tr>
+            <tr><td><code>hello</code></td><td><span class="badge kind-rpc">rpc</span></td><td>client, protocol</td><td>介绍 client，拿到 server 信息+能力列表。推荐每条新连接的第一次调用。</td></tr>
+            <tr><td><code>klink.find_tools</code></td><td><span class="badge kind-local">local</span></td><td>domain, query</td><td>按领域或关键词发现工具。无参→领域索引；domain→该域工具+用法；query→排序匹配。</td></tr>
+            <tr><td><code>klink.guide</code></td><td><span class="badge kind-local">local</span></td><td>—</td><td>报告已打开内容、磁盘上的意图状态，以及每个可用意图的字面调用和建议下一步。不知道该干嘛就调它。</td></tr>
+            <tr><td><code>klink.reconnect</code></td><td><span class="badge kind-local">local</span></td><td>—</td><td>关掉过期 client 并尝试重连 KLayout。</td></tr>
+            <tr><td><code>klink.session_label</code></td><td><span class="badge kind-local">local</span></td><td>aliases, description, label*, session_id*</td><td>给注册的 session 附人类 label 和别名。</td></tr>
+            <tr><td><code>klink.session_list</code></td><td><span class="badge kind-local">local</span></td><td>include_stale</td><td>从本地注册表枚举可发现的 KLayout/klink session。</td></tr>
+            <tr><td><code>klink.session_resolve</code></td><td><span class="badge kind-local">local</span></td><td>query*</td><td>把 id / label / 别名 / active cell / top cell 解析成一个 session。</td></tr>
+            <tr><td><code>klink.session_set_klive_target</code></td><td><span class="badge kind-local">local</span></td><td>session_id*</td><td>指定 klive 兼容 8082 入口用的 session（gdsfactory c.show() 落点）。</td></tr>
+            <tr><td><code>klink.session_status</code></td><td><span class="badge kind-local">local</span></td><td>include_stale, session_id</td><td>返回一条 session 记录，默认当前 MCP session。</td></tr>
+            <tr><td><code>klink.session_use</code></td><td><span class="badge kind-local">local</span></td><td>session_id*</td><td>把 MCP 桥的主 RPC 目标切到指定 session。</td></tr>
+            <tr><td><code>klink.status</code></td><td><span class="badge kind-local">local</span></td><td>—</td><td>MCP 桥连接状态、当前 session、解释器与上次连接错误。排障第一步。</td></tr>
+            <tr><td><code>klink.transfer_commit</code></td><td><span class="badge kind-local">local</span></td><td>dry_run, package_id*</td><td>提交 transfer_prepare 生成的包。</td></tr>
+            <tr><td><code>klink.transfer_prepare</code></td><td><span class="badge kind-local">local</span></td><td>copy_mode, layer_map, source_session*, target_cell, target_session*, translate_um</td><td>构建两 session 间的 flat-selection 搬运包并在目标 dry-run。</td></tr>
+            <tr><td><code>meta.debug_signals</code></td><td><span class="badge kind-rpc">rpc</span></td><td>fire</td><td>SignalHub 诊断日志；fire="selection_changed" 可触发合成事件测投递链路。</td></tr>
+            <tr><td><code>meta.methods</code></td><td><span class="badge kind-rpc">rpc</span></td><td>—</td><td>返回完整 RPC 方法目录（描述 + JSON schema），可直接喂给 LLM function-calling。</td></tr>
+            <tr><td><code>meta.ping</code></td><td><span class="badge kind-rpc">rpc</span></td><td>—</td><td>存活探针，回显 params + trace id，用于测往返延迟。</td></tr>
+            <tr><td><code>view.activate_tab</code></td><td><span class="badge kind-rpc">rpc</span></td><td>index*</td><td>按索引切换当前 tab；之后所有单 layout RPC 都作用于该 tab。</td></tr>
+            <tr><td><code>view.close_tab</code></td><td><span class="badge kind-rpc">rpc</span></td><td>view_index</td><td>按索引关闭一个 layout tab（不传则关当前）。</td></tr>
+            <tr><td><code>view.hier_levels</code></td><td><span class="badge kind-rpc">rpc</span></td><td>max, min</td><td>读取/设置视图显示的层级深度（min/max）；密集子实例显示成名字方框时调大 max。</td></tr>
+            <tr><td><code>view.highlight</code></td><td><span class="badge kind-rpc">rpc</span></td><td>boxes_um, circles_um, clear, color, expire_s, halo, line_width, polygons_um</td><td>在视图上画临时高亮标记（boxes/polygons/circles）——只是叠加层，不碰版图/选择/undo。</td></tr>
+            <tr><td><code>view.highlight_clear</code></td><td><span class="badge kind-rpc">rpc</span></td><td>—</td><td>立即清除全部 klink 高亮标记。</td></tr>
+            <tr><td><code>view.list_tabs</code></td><td><span class="badge kind-rpc">rpc</span></td><td>—</td><td>列出该窗口所有 layout tab（索引、标题、文件、active cell、当前 tab）。</td></tr>
+            <tr><td><code>view.new_tab</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cell_name, dbu</td><td>打开一个带全新 top cell 的空 layout tab 并设为当前；返回 previous_current_index 供之后恢复。</td></tr>
+            <tr><td><code>view.screenshot</code></td><td><span class="badge kind-rpc">rpc</span></td><td>bbox_dbu, bbox_um, height_px, mode, path, width_px</td><td>渲染 PNG。mode=base64 内嵌 data URL（给有视觉的 LLM）；mode=path 存盘返回绝对路径。仅用户请求时用。</td></tr>
+            <tr><td><code>view.show_25d</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cell, displays*, generator</td><td>从显示列表（每种材料的层+z 范围）打开 KLayout 原生 2.5D 挤出视图；z 高度由调用方提供（工艺事实）。</td></tr>
+            <tr><td><code>view.show_cell</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cell*, zoom_fit</td><td>把当前 cellview 显示的 top cell 切成指定 cell（新建 cell 靠它才可见），默认 zoom-fit。</td></tr>
+            <tr><td><code>view.show_lvsdb</code></td><td><span class="badge kind-rpc">rpc</span></td><td>kind, path*</td><td>把存盘的 LVS/netlist 数据库载入 Netlist Browser 并显示，交互 cross-probe。kind=lvs 读 .lvsdb，kind=l2n 读 .l2n。</td></tr>
+            <tr><td><code>view.viewport</code></td><td><span class="badge kind-rpc">rpc</span></td><td>—</td><td>报告当前视口：可见 bbox（微米与 dbu）、视图像素尺寸、cellview 索引。</td></tr>
+            <tr><td><code>view.zoom_box</code></td><td><span class="badge kind-rpc">rpc</span></td><td>bbox_dbu, bbox_um</td><td>缩放到恰好显示给定 bbox（微米或 dbu）。</td></tr>
+            <tr><td><code>view.zoom_fit</code></td><td><span class="badge kind-rpc">rpc</span></td><td>—</td><td>整幅版图适配视口（等价 GUI 的 Zoom Fit）。</td></tr>
           </tbody>
         </table>
-        <p><strong>示例：连接自检 + 查看当前状态。</strong></p>
-        <pre><code># MCP（agent 视角）
-klink.status
+        <p><strong>示例。</strong></p>
+        <pre><code>klink.status
 klink.guide
 view.list_tabs
 
@@ -219,121 +230,125 @@ from klink import KLinkClient
 with KLinkClient() as c:
     print(c.hello(client="my-script"))
     print(c.layout_info(verbosity="summary"))
-    print(c.ping(nonce=42))</code></pre>
+    print(c.ping(nonce=42))
 
-
-        <!-- ================= 2 session ================= -->
-        <h2 id="d-session" class="anchor-h">2 · 多会话注册表与跨会话搬运 <span class="tool-count">multi_session_transfer · 15 tools</span></h2>
-        <div class="domain-intro">
-          <span class="token">klink.find_tools domain="multi_session_transfer"</span>
-          <p>klink 用<strong>一个 MCP 桥</strong>驱动<strong>多个 KLayout session</strong>（每个是本地注册表里的一个端口，通常 8765、8766……）。所有 session 是平等 peer，没有特权端口——显式传你要的那个。搬运是两阶段、确认安全的：<code>transfer_prepare</code> 构建包并在目标 dry-run 后挂起，<code>transfer_commit</code> 才写入。</p>
-        </div>
-        <table class="data-table reftable">
-          <thead><tr><th>工具</th><th>参数</th><th>功能</th></tr></thead>
-          <tbody>
-            <tr><td><code>klink.session_list</code></td><td>include_stale</td><td>从本地注册表枚举可发现的 KLayout/klink session。</td></tr>
-            <tr><td><code>klink.session_status</code></td><td>session_id, include_stale</td><td>返回一条 session 记录，默认当前 MCP session。</td></tr>
-            <tr><td><code>klink.session_label</code></td><td>session_id*, label*, aliases, description</td><td>给注册的 session 附人类 label 和别名。</td></tr>
-            <tr><td><code>klink.session_resolve</code></td><td>query*</td><td>把 id / label / 别名 / active cell / top cell 解析成一个 session。</td></tr>
-            <tr><td><code>klink.session_use</code></td><td>session_id*</td><td>把 MCP 桥的主 RPC 目标切到指定 session。</td></tr>
-            <tr><td><code>klink.session_set_klive_target</code></td><td>session_id*</td><td>指定 klive 兼容 8082 入口用的 session（gdsfactory <code>c.show()</code> 落点）。</td></tr>
-            <tr><td><code>klink.transfer_prepare</code></td><td>source_session*, target_session*, target_cell, copy_mode, layer_map, translate_um</td><td>构建两 session 间的 flat-selection 搬运包并在目标 dry-run。</td></tr>
-            <tr><td><code>klink.transfer_commit</code></td><td>package_id*, dry_run</td><td>提交 <code>transfer_prepare</code> 生成的包。</td></tr>
-            <tr><td><code>session.mark_klive_target</code></td><td>—</td><td>（plugin 侧）把本窗口标记为 klive/gdsfactory 兼容的 8082 目标。</td></tr>
-            <tr><td><code>session.label_set</code></td><td>session_id*, label*, aliases, description</td><td>（plugin 侧）在共享注册表里设 label 和别名。</td></tr>
-            <tr><td><code>transfer.pending_set</code></td><td>package*</td><td>把已审阅的 flat-selection 包存进本窗口。</td></tr>
-            <tr><td><code>transfer.pending_status</code></td><td>—</td><td>本窗口挂起搬运包的状态。</td></tr>
-            <tr><td><code>transfer.pending_clear</code></td><td>—</td><td>清掉挂起包（不写几何）。</td></tr>
-            <tr><td><code>transfer.paste_pending</code> <span class="badge mutates">mutates</span></td><td>dry_run, clear_after</td><td>把挂起的 flat-selection 包粘入本窗口（包内已含最终目标层与坐标）。</td></tr>
-            <tr><td><code>transfer.import_cell_tree_package</code> <span class="badge mutates">mutates</span> <span class="badge long">long</span></td><td>path*, source_cell*, dry_run</td><td>用 KLayout 原生 <code>Cell.copy_tree</code> 从 GDS/OAS 包导入一棵 cell 树；重名以 <code>$N</code> 解决。</td></tr>
-          </tbody>
-        </table>
-        <p><strong>示例：给窗口打标签，再把选中几何从一个窗口搬到另一个。</strong></p>
-        <pre><code>klink.session_list
+# session 注册表 + 两阶段搬运（先 prepare + dry-run，看清目标/cell/layer/统计再 commit）
+klink.session_list
 klink.session_label session_id="klayout-8766" label="scratch" aliases=["test"]
 klink.session_resolve query="scratch"
-
-# 两阶段搬运：先 prepare + dry-run，看清目标/cell/layer/统计再 commit
 klink.transfer_prepare source_session="klayout-8765" target_session="klayout-8766" copy_mode="flat_selection"
 klink.transfer_commit package_id="pkg_0001"</code></pre>
 
+        <h2 id="d-session" class="anchor-h">2 &middot; 多会话注册表与跨会话搬运（plugin 侧） <span class="tool-count">multi_session_transfer &middot; 7 tools</span></h2>
+        <div class="domain-intro">
+          <span class="token">klink.find_tools domain="multi_session_transfer"</span>
+          <p>session/transfer 的 plugin 侧一半：<code>session.label_set</code> 和 <code>session.mark_klive_target</code> 直接在某个 KLayout 窗口里操作共享注册表；<code>transfer.pending_set/status/clear</code> 和 <code>transfer.paste_pending</code> 在本窗口持有并应用一个已审阅的 flat-selection 包；<code>transfer.import_cell_tree_package</code> 用原生 <code>Cell.copy_tree</code> 从 GDS/OAS 包导入一棵 cell 树。MCP 侧编排（<code>klink.session_*</code>、<code>klink.transfer_prepare/commit</code>）在 <a href="#d-connection">connection_and_view</a> 域——两阶段、确认安全的搬运流程从那里开始。</p>
+        </div>
+        <table class="data-table reftable">
+          <thead><tr><th>工具</th><th>类型</th><th>参数</th><th>功能</th></tr></thead>
+          <tbody>
+            <tr><td><code>session.label_set</code></td><td><span class="badge kind-rpc">rpc</span></td><td>aliases, description, label*, session_id*</td><td>（plugin 侧）在共享注册表里设 label 和别名。</td></tr>
+            <tr><td><code>session.mark_klive_target</code></td><td><span class="badge kind-rpc">rpc</span></td><td>—</td><td>（plugin 侧）把本窗口标记为 klive/gdsfactory 兼容的 8082 目标。</td></tr>
+            <tr><td><code>transfer.import_cell_tree_package</code></td><td><span class="badge kind-rpc">rpc</span></td><td>dry_run, path*, source_cell*</td><td>用 KLayout 原生 Cell.copy_tree 从 GDS/OAS 包导入一棵 cell 树；重名以 $N 解决。</td></tr>
+            <tr><td><code>transfer.paste_pending</code></td><td><span class="badge kind-rpc">rpc</span></td><td>clear_after, dry_run</td><td>把挂起的 flat-selection 包粘入本窗口（包内已含最终目标层与坐标）。</td></tr>
+            <tr><td><code>transfer.pending_clear</code></td><td><span class="badge kind-rpc">rpc</span></td><td>—</td><td>清掉挂起包（不写几何）。</td></tr>
+            <tr><td><code>transfer.pending_set</code></td><td><span class="badge kind-rpc">rpc</span></td><td>package*</td><td>把已审阅的 flat-selection 包存进本窗口。</td></tr>
+            <tr><td><code>transfer.pending_status</code></td><td><span class="badge kind-rpc">rpc</span></td><td>—</td><td>本窗口挂起搬运包的状态。</td></tr>
+          </tbody>
+        </table>
 
-        <!-- ================= 3 geometry ================= -->
-        <h2 id="d-geometry" class="anchor-h">3 · 几何与单元结构 <span class="tool-count">geometry_authoring · 28 tools</span></h2>
+        <h2 id="d-geometry" class="anchor-h">3 &middot; 几何与单元结构 <span class="tool-count">geometry_authoring &middot; 50 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="geometry_authoring"</span>
-          <p>核心绘图面。<strong>先读</strong>：<code>layout.info</code>、<code>cell.list</code>/<code>cell.tree</code>、<code>layer.list</code>、<code>shape.query</code>、<code>instance.query</code>、<code>pcell.*</code>。<strong>再用批量 RPC 写</strong>。画之前先 <code>layer.ensure</code>。编辑都包在事务里，<code>edit.undo</code>/<code>redo</code>/<code>status</code> 操作它们。破坏性的 <code>layout.clear</code>/<code>cell.delete</code> 只对一次性测试 cell 用，除非用户明确要求，别碰用户的工作 tab。</p>
+          <p>核心绘图面。先读：<code>layout.info</code>、<code>cell.list</code>/<code>cell.tree</code>、<code>layer.list</code>/<code>layer.display_list</code>、<code>shape.query</code>、<code>instance.query</code>、<code>pcell.*</code>、<code>library.list</code>。生成式版图<strong>永远不要</strong>一次 RPC 画一个对象，用批量 RPC。画之前先 <code>layer.ensure</code>。编辑都包在事务里，<code>edit.undo</code>/<code>redo</code>/<code>status</code> 操作它们。本域除基础绘图外还带：<code>geometry.boolean</code>/<code>cell_xor</code>/<code>density</code>（几何差异与覆盖率检查）、<code>cell.fill_region</code>（dummy fill/测试结构平铺）、<code>cell.flatten</code>、<code>layer.load_lyp</code>/<code>save_lyp</code>/<code>set_style</code>/<code>set_visible</code>（视图样式）、<code>library.list</code>/<code>refresh</code>/<code>register_file</code>、<code>pcell.convert_to_static</code>、<code>shape.change_layer</code>/<code>transform</code>、<code>instance.transform</code>。破坏性的 <code>layout.clear</code>、<code>cell.delete</code> 只对一次性测试 cell 用，除非用户明确要求，别碰用户的工作 tab。</p>
         </div>
-
         <h3>读取（geometry, not pixels）</h3>
         <table class="data-table reftable">
-          <thead><tr><th>工具</th><th>参数</th><th>功能</th></tr></thead>
+          <thead><tr><th>工具</th><th>类型</th><th>参数</th><th>功能</th></tr></thead>
           <tbody>
-            <tr><td><code>layout.info</code></td><td>verbosity</td><td>当前 layout 快照：视图数、active cellview、top cell、源文件、<code>dbu</code>、top-cell 列表、已注册 layer/datatype。想快速了解当前状态就用它。</td></tr>
-            <tr><td><code>cell.list</code></td><td>name_prefix, top_only, with_bbox, offset, limit</td><td>扁平分页列出 cell。发现有哪些 cell 用它，层级用 <code>cell.tree</code>。</td></tr>
-            <tr><td><code>cell.tree</code></td><td>root, max_depth, max_nodes</td><td>从某 cell 起的层级树（受 depth/nodes 限）；每个节点的 instances 数说明它被父实例化几次。</td></tr>
-            <tr><td><code>layer.list</code></td><td>—</td><td>列出所有已定义图层：<code>layer_index</code>（其他 RPC 用的句柄）、<code>layer</code>/<code>datatype</code>、可选 name，附 <code>dbu_um</code>。</td></tr>
-            <tr><td><code>shape.query</code> <span class="badge long">long</span></td><td>cell*, layers, bbox_dbu, kinds, limit</td><td>读<strong>一个</strong> cell 的形状（不递归）为 JSON。强烈建议用 <code>layers</code>+<code>bbox_dbu</code> 缩小范围并分页（默认 500，最大 5000）。<code>truncated=true</code> 表示还有更多。</td></tr>
-            <tr><td><code>instance.query</code></td><td>parent*, child, bbox_dbu, bbox_um, limit</td><td>列父 cell 的直接子实例：child 名、bbox、变换、array、PCell 元数据、子 cell 各层形状计数。</td></tr>
-            <tr><td><code>pcell.libraries</code></td><td>—</td><td>列可用 PCell 库（Basic 恒在；PDK 注册自己的）。</td></tr>
-            <tr><td><code>pcell.list</code></td><td>library</td><td>列某库（默认 Basic）里全部 PCell 名。</td></tr>
-            <tr><td><code>pcell.info</code></td><td>library, pcell*</td><td>描述一个 PCell 的参数（name/type/default/description/choices），据此构造 <code>instance.insert_pcell</code> 的 params。</td></tr>
+            <tr><td><code>layout.info</code></td><td><span class="badge kind-rpc">rpc</span></td><td>verbosity</td><td>当前 layout 快照：视图数、active cellview、top cell、源文件、dbu、top-cell 列表、已注册 layer/datatype。想快速了解当前状态就用它。</td></tr>
+            <tr><td><code>cell.list</code></td><td><span class="badge kind-rpc">rpc</span></td><td>limit, name_prefix, offset, top_only, with_bbox</td><td>扁平分页列出 cell。发现有哪些 cell 用它，层级用 cell.tree。</td></tr>
+            <tr><td><code>cell.tree</code></td><td><span class="badge kind-rpc">rpc</span></td><td>max_depth, max_nodes, root</td><td>从某 cell 起的层级树（受 depth/nodes 限）；每个节点的 instances 数说明它被父实例化几次。</td></tr>
+            <tr><td><code>layer.list</code></td><td><span class="badge kind-rpc">rpc</span></td><td>—</td><td>列出所有已定义图层：layer_index（其他 RPC 用的句柄）、layer/datatype、可选 name，附 dbu_um。</td></tr>
+            <tr><td><code>layer.display_list</code></td><td><span class="badge kind-rpc">rpc</span></td><td>—</td><td>列出当前视图的图层显示项（visible、颜色、抖动图案、name）——layer.list 的视图侧对应物。</td></tr>
+            <tr><td><code>shape.query</code></td><td><span class="badge kind-rpc">rpc</span></td><td>bbox_dbu, cell*, kinds, layers, limit</td><td>读一个 cell 的形状（不递归）为 JSON。强烈建议用 layers+bbox_dbu 缩小范围并分页（默认 500，最大 5000）。truncated=true 表示还有更多。</td></tr>
+            <tr><td><code>instance.query</code></td><td><span class="badge kind-rpc">rpc</span></td><td>bbox_dbu, bbox_um, child, limit, parent*</td><td>列父 cell 的直接子实例：child 名、bbox、变换、array、PCell 元数据、子 cell 各层形状计数。</td></tr>
+            <tr><td><code>pcell.libraries</code></td><td><span class="badge kind-rpc">rpc</span></td><td>—</td><td>列可用 PCell 库（Basic 恒在；PDK 注册自己的）。</td></tr>
+            <tr><td><code>pcell.list</code></td><td><span class="badge kind-rpc">rpc</span></td><td>library</td><td>列某库（默认 Basic）里全部 PCell 名。</td></tr>
+            <tr><td><code>pcell.info</code></td><td><span class="badge kind-rpc">rpc</span></td><td>library, pcell*</td><td>描述一个 PCell 的参数（name/type/default/description/choices），据此构造 instance.insert_pcell 的 params。</td></tr>
+            <tr><td><code>library.list</code></td><td><span class="badge kind-rpc">rpc</span></td><td>—</td><td>列出本 KLayout 进程里注册的全部库（Basic、salt/PDK、运行期注册的）。</td></tr>
           </tbody>
         </table>
-
         <h3>写入 · 单元与图层</h3>
         <table class="data-table reftable">
-          <thead><tr><th>工具</th><th>参数</th><th>功能</th></tr></thead>
+          <thead><tr><th>工具</th><th>类型</th><th>参数</th><th>功能</th></tr></thead>
           <tbody>
-            <tr><td><code>cell.create</code> <span class="badge mutates">mutates</span></td><td>name</td><td>新建 cell；重名时 KLayout 追加 <code>$1</code>…（返回生效名）。不保证幂等，每次调用建新 cell。</td></tr>
-            <tr><td><code>cell.rename</code> <span class="badge mutates">mutates</span></td><td>cell*, new_name*, allow_suffix</td><td>重命名；重名默认报错（<code>allow_suffix=true</code> 才自动加后缀）。</td></tr>
-            <tr><td><code>cell.delete</code> <span class="badge mutates">mutates</span></td><td>cell*, recursive</td><td>删 cell。<code>recursive=true</code> 连带删孤儿子 cell；默认残留 ghost 引用。<strong>破坏性</strong>。</td></tr>
-            <tr><td><code>layer.ensure</code> <span class="badge mutates">mutates</span></td><td>layer*, datatype, name</td><td>确保 GDS 层存在（缺则在事务里建），返回 <code>layer_index</code>。纯 upsert，可反复调。</td></tr>
+            <tr><td><code>cell.create</code></td><td><span class="badge kind-rpc">rpc</span></td><td>name</td><td>新建 cell；重名时 KLayout 追加 $1…（返回生效名）。不保证幂等，每次调用建新 cell。</td></tr>
+            <tr><td><code>cell.rename</code></td><td><span class="badge kind-rpc">rpc</span></td><td>allow_suffix, cell*, new_name*</td><td>重命名；重名默认报错（allow_suffix=true 才自动加后缀）。</td></tr>
+            <tr><td><code>cell.delete</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cell*, recursive</td><td>删 cell。recursive=true 连带删孤儿子 cell；默认残留 ghost 引用。破坏性。</td></tr>
+            <tr><td><code>cell.flatten</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cell*, dry_run, levels, prune</td><td>把一个 cell 的层级拍平成普通形状；dry_run 可预览，prune 删除孤儿子 cell。</td></tr>
+            <tr><td><code>cell.fill_region</code></td><td><span class="badge kind-rpc">rpc</span></td><td>boxes_um, cell*, circles_um, column_step_um, exclude_layers, exclude_margin_um, fc_bbox_um, fill_cell*, origin_um, polygons_um, region_layers, row_step_um</td><td>在一个区域（boxes/polygons/circles/region_layers，减去 exclude_layers）里平铺一个 fill cell——KLayout 的 Fill Utility，用于 dummy fill、器件阵列、测试结构。</td></tr>
+            <tr><td><code>layer.ensure</code></td><td><span class="badge kind-rpc">rpc</span></td><td>datatype, layer*, name</td><td>确保 GDS 层存在（缺则在事务里建），返回 layer_index。纯 upsert，可反复调。</td></tr>
+            <tr><td><code>layer.set_style</code></td><td><span class="badge kind-rpc">rpc</span></td><td>color, dither_pattern, fill_color, frame_color, layer*, line_width</td><td>设置某图层在当前视图里的显示样式（颜色/填充/边框/抖动/线宽）——只改显示，不动版图数据。</td></tr>
+            <tr><td><code>layer.set_visible</code></td><td><span class="badge kind-rpc">rpc</span></td><td>exclusive, layers*, visible</td><td>在当前视图里显示/隐藏图层；exclusive=true 只显示列出的那些层。</td></tr>
+            <tr><td><code>layer.load_lyp</code></td><td><span class="badge kind-rpc">rpc</span></td><td>path*</td><td>一次调用把 KLayout .lyp 图层属性文件（颜色/填充/可见性）载入当前视图。</td></tr>
+            <tr><td><code>layer.save_lyp</code></td><td><span class="badge kind-rpc">rpc</span></td><td>path*</td><td>把当前视图的图层属性（颜色/填充/可见性）存成 .lyp 文件。</td></tr>
+            <tr><td><code>library.refresh</code></td><td><span class="badge kind-rpc">rpc</span></td><td>library</td><td>重新求值某个（或全部）库的内容，例如某 PCell 重新注册之后调用。</td></tr>
+            <tr><td><code>library.register_file</code></td><td><span class="badge kind-rpc">rpc</span></td><td>description, name, path*, technology</td><td>把一个版图文件注册成运行期库，其 cell 就能通过 instance.insert* 按名字放置。</td></tr>
           </tbody>
         </table>
-
         <h3>写入 · 形状（批量优先）</h3>
         <table class="data-table reftable">
-          <thead><tr><th>工具</th><th>参数</th><th>功能</th></tr></thead>
+          <thead><tr><th>工具</th><th>类型</th><th>参数</th><th>功能</th></tr></thead>
           <tbody>
-            <tr><td><code>shape.insert_boxes</code> <span class="badge mutates">mutates</span></td><td>cell, layer, boxes_um / boxes_dbu</td><td><strong>批量</strong>：一次 RPC、一个事务插入很多矩形到同一 cell/层。生成式版图首选。</td></tr>
-            <tr><td><code>shape.insert_many</code> <span class="badge mutates">mutates</span></td><td>cell*, items*, dry_run</td><td><strong>批量</strong>：一次插入混合形状（box/polygon/path/text），每项带自己的层选择器和几何字段。</td></tr>
-            <tr><td><code>shape.insert_box</code> <span class="badge mutates">mutates</span></td><td>cell, layer, bbox_um / bbox_dbu</td><td>单个轴对齐矩形。调试单对象用。</td></tr>
-            <tr><td><code>shape.insert_polygon</code> <span class="badge mutates">mutates</span></td><td>cell, layer, points_um / points_dbu</td><td>单个多边形（仅外壳，暂不支持洞），≥3 点，自动闭合。</td></tr>
-            <tr><td><code>shape.insert_path</code> <span class="badge mutates">mutates</span></td><td>cell, layer, points, width, begin_ext, end_ext, round_ends</td><td>单条 path（中心线+宽度），可选端延伸与圆头。</td></tr>
-            <tr><td><code>shape.insert_text</code> <span class="badge mutates">mutates</span></td><td>cell, layer, position, size_um</td><td>单个文本标签（非几何注记，不产生掩模）。</td></tr>
-            <tr><td><code>shape.delete</code> <span class="badge mutates">mutates</span></td><td>cell, layer(s), bbox, kinds, dry_run</td><td>按声明式选择器删形状（层 + 可选 bbox + 可选 kinds）。<code>dry_run=true</code> 先看计数。整批一个事务，可一次 undo。</td></tr>
+            <tr><td><code>shape.insert_boxes</code></td><td><span class="badge kind-rpc">rpc</span></td><td>boxes_dbu, boxes_um, cell*, datatype, dry_run, layer, layer_index</td><td>批量：一次 RPC、一个事务插入很多矩形到同一 cell/层。生成式版图首选。</td></tr>
+            <tr><td><code>shape.insert_many</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cell*, dry_run, items*</td><td>批量：一次插入混合形状（box/polygon/path/text），每项带自己的层选择器和几何字段。</td></tr>
+            <tr><td><code>shape.insert_box</code></td><td><span class="badge kind-rpc">rpc</span></td><td>bbox_dbu, bbox_um, cell*, datatype, layer, layer_index</td><td>单个轴对齐矩形。调试单对象用。</td></tr>
+            <tr><td><code>shape.insert_polygon</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cell*, datatype, layer, layer_index, points_dbu, points_um</td><td>单个多边形（仅外壳，暂不支持洞），≥3 点，自动闭合。</td></tr>
+            <tr><td><code>shape.insert_path</code></td><td><span class="badge kind-rpc">rpc</span></td><td>begin_ext_dbu, begin_ext_um, cell*, datatype, end_ext_dbu, end_ext_um, layer, layer_index, points_dbu, points_um, round_ends, width_dbu, width_um</td><td>单条 path（中心线+宽度），可选端延伸与圆头。</td></tr>
+            <tr><td><code>shape.insert_text</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cell*, datatype, layer, layer_index, position_dbu, position_um, size_dbu, size_um, string*</td><td>单个文本标签（非几何注记，不产生掩模）。</td></tr>
+            <tr><td><code>shape.delete</code></td><td><span class="badge kind-rpc">rpc</span></td><td>all_layers, bbox_dbu, bbox_um, cell*, datatype, dry_run, kinds, layer, layer_index, layers, limit</td><td>按声明式选择器删形状（层 + 可选 bbox + 可选 kinds）。dry_run=true 先看计数。整批一个事务，可一次 undo。</td></tr>
+            <tr><td><code>shape.change_layer</code></td><td><span class="badge kind-rpc">rpc</span></td><td>bbox_um, cell*, from_layer*, to_layer*</td><td>把一个 cell 里的形状从一个图层搬到另一个图层（可选只搬 touching 某 bbox 的）。</td></tr>
+            <tr><td><code>shape.transform</code></td><td><span class="badge kind-rpc">rpc</span></td><td>bbox_um, cell*, layers, limit, mirror, move_um, rotation</td><td>原地移动/旋转/镜像已有形状（按 layers 和/或 bbox 过滤，至少给一个）。</td></tr>
           </tbody>
         </table>
-
         <h3>写入 · 实例与 PCell（批量优先）</h3>
         <table class="data-table reftable">
-          <thead><tr><th>工具</th><th>参数</th><th>功能</th></tr></thead>
+          <thead><tr><th>工具</th><th>类型</th><th>参数</th><th>功能</th></tr></thead>
           <tbody>
-            <tr><td><code>instance.insert_many</code> <span class="badge mutates">mutates</span></td><td>parent*, items*, dry_run</td><td><strong>批量</strong>：一次插入很多已存在子 cell 实例。每项含 child + 变换/array 字段。</td></tr>
-            <tr><td><code>instance.insert_pcell_many</code> <span class="badge mutates">mutates</span></td><td>parent*, items*, dry_run</td><td><strong>批量</strong>：一次插入很多 PCell 实例（library/pcell/params/变换/array）。</td></tr>
-            <tr><td><code>instance.insert</code> <span class="badge mutates">mutates</span></td><td>parent*, child*, position, rotation, mirror, magnification, array</td><td>把 child 放进 parent。位置微米/dbu，旋转度数，可选 array 建网格。</td></tr>
-            <tr><td><code>instance.insert_pcell</code> <span class="badge mutates">mutates</span></td><td>parent*, library, pcell*, params, position, rotation, …</td><td>从库构建一个 PCell 变体 cell（如 Basic.CIRCLE/TEXT）再插一个实例。先 <code>pcell.info</code> 查参数。相同 params 复用同一变体。</td></tr>
-            <tr><td><code>instance.query</code></td><td>parent*, child, bbox, limit</td><td>（见上）读父 cell 的子实例。</td></tr>
-            <tr><td><code>instance.delete</code> <span class="badge mutates">mutates</span></td><td>parent*, child, bbox, all, limit, dry_run</td><td>按声明式选择器删实例（对子 cell 本身非破坏，只去引用）。一个事务。</td></tr>
-            <tr><td><code>pcell.register_fitted</code></td><td>name*, fit_table*</td><td>运行期从 fit table 注册一个拟合器件 PCell（<code>klink_transistor_pcell_fit_v1</code>），落到 <code>klink_structdevice</code> 库，无需重载插件。新器件族零插件改动。</td></tr>
+            <tr><td><code>instance.insert_many</code></td><td><span class="badge kind-rpc">rpc</span></td><td>dry_run, items*, parent*</td><td>批量：一次插入很多已存在子 cell 实例。每项含 child + 变换/array 字段。</td></tr>
+            <tr><td><code>instance.insert_pcell_many</code></td><td><span class="badge kind-rpc">rpc</span></td><td>dry_run, items*, parent*</td><td>批量：一次插入很多 PCell 实例（library/pcell/params/变换/array）。</td></tr>
+            <tr><td><code>instance.insert</code></td><td><span class="badge kind-rpc">rpc</span></td><td>array, child*, klink_id, library, magnification, mirror, parent*, position_dbu, position_um, rotation</td><td>把 child 放进 parent。位置微米/dbu，旋转度数，可选 array 建网格。</td></tr>
+            <tr><td><code>instance.insert_pcell</code></td><td><span class="badge kind-rpc">rpc</span></td><td>array, klink_id, library, magnification, mirror, params, parent*, pcell*, position_dbu, position_um, rotation</td><td>从库构建一个 PCell 变体 cell（如 Basic.CIRCLE/TEXT）再插一个实例。先 pcell.info 查参数。相同 params 复用同一变体。</td></tr>
+            <tr><td><code>instance.delete</code></td><td><span class="badge kind-rpc">rpc</span></td><td>all, bbox_dbu, bbox_um, child, dry_run, limit, parent*</td><td>按声明式选择器删实例（对子 cell 本身非破坏，只去引用）。一个事务。</td></tr>
+            <tr><td><code>instance.transform</code></td><td><span class="badge kind-rpc">rpc</span></td><td>bbox_um, child, mirror, move_um, parent*, rotation</td><td>移动/旋转/镜像已放置的实例（按 child 和/或 bbox 过滤）；零匹配报错。</td></tr>
+            <tr><td><code>pcell.register_fitted</code></td><td><span class="badge kind-rpc">rpc</span></td><td>fit_table*, name*</td><td>运行期从 fit table 注册一个拟合器件 PCell（klink_transistor_pcell_fit_v1），落到 klink_structdevice 库，无需重载插件。新器件族零插件改动。</td></tr>
+            <tr><td><code>pcell.convert_to_static</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cell*, prune_variant</td><td>把一个 PCell 变体转成静态 cell，并把所有实例重定向到它；之后几何就冻结了，不能再改参数。</td></tr>
           </tbody>
         </table>
-
         <h3>写入 · Layout 级与编辑历史</h3>
         <table class="data-table reftable">
-          <thead><tr><th>工具</th><th>参数</th><th>功能</th></tr></thead>
+          <thead><tr><th>工具</th><th>类型</th><th>参数</th><th>功能</th></tr></thead>
           <tbody>
-            <tr><td><code>layout.show_file</code> <span class="badge mutates">mutates</span> <span class="badge long">long</span></td><td>path*, mode, keep_position, technology</td><td>载入 GDS/OAS（已开则 reload）。<code>mode=replace</code> 当前视图 / <code>new</code> 新 tab。录制时合并为一行。</td></tr>
-            <tr><td><code>layout.save_file</code> <span class="badge mutates">mutates</span></td><td>path*, cellview_index</td><td>存盘。扩展名决定格式：<code>.gds/.gds2</code> GDSII，<code>.oas/.oasis</code> OASIS。</td></tr>
-            <tr><td><code>layout.clear</code> <span class="badge mutates">mutates</span></td><td>cellview_index</td><td><strong>破坏性</strong>：清空整幅 layout（所有 cell/形状/层级）。</td></tr>
-            <tr><td><code>edit.undo</code> <span class="badge mutates">mutates</span></td><td>—</td><td>撤销最近一次可撤销操作（klink RPC、Macro IDE 编辑或 GUI 编辑）。返回前后栈快照。</td></tr>
-            <tr><td><code>edit.redo</code> <span class="badge mutates">mutates</span></td><td>—</td><td>重做，与 <code>edit.undo</code> 配对。</td></tr>
-            <tr><td><code>edit.status</code></td><td>debug</td><td>报告当前 undo/redo 可用性；<code>debug=true</code> 暴露 Manager 内省字段。</td></tr>
+            <tr><td><code>layout.show_file</code></td><td><span class="badge kind-rpc">rpc</span></td><td>keep_position, mode, path*, technology</td><td>载入 GDS/OAS（已开则 reload）。mode=replace 当前视图 / new 新 tab。录制时合并为一行。</td></tr>
+            <tr><td><code>layout.save_file</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cellview_index, path*</td><td>存盘。扩展名决定格式：.gds/.gds2 GDSII，.oas/.oasis OASIS。</td></tr>
+            <tr><td><code>layout.import_file</code></td><td><span class="badge kind-rpc">rpc</span></td><td>create_other_layers, layer_map, on_conflict, path*</td><td>把一个版图文件合并进当前 layout，带图层重映射与同名 cell 冲突策略（rename/add/overwrite/skip）。</td></tr>
+            <tr><td><code>layout.clear</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cellview_index</td><td>破坏性：清空整幅 layout（所有 cell/形状/层级）。</td></tr>
+            <tr><td><code>edit.undo</code></td><td><span class="badge kind-rpc">rpc</span></td><td>—</td><td>撤销最近一次可撤销操作（klink RPC、Macro IDE 编辑或 GUI 编辑）。返回前后栈快照。</td></tr>
+            <tr><td><code>edit.redo</code></td><td><span class="badge kind-rpc">rpc</span></td><td>—</td><td>重做，与 edit.undo 配对。</td></tr>
+            <tr><td><code>edit.status</code></td><td><span class="badge kind-rpc">rpc</span></td><td>debug</td><td>报告当前 undo/redo 可用性；debug=true 暴露 Manager 内省字段。</td></tr>
           </tbody>
         </table>
-
-        <p><strong>示例：先读当前状态 → 建 cell 与层 → 批量画 → 显示。</strong></p>
+        <h3>几何检查（只读报告）</h3>
+        <table class="data-table reftable">
+          <thead><tr><th>工具</th><th>类型</th><th>参数</th><th>功能</th></tr></thead>
+          <tbody>
+            <tr><td><code>geometry.boolean</code></td><td><span class="badge kind-rpc">rpc</span></td><td>a*, b*, op*, write_to</td><td>两个 {cell, layer} 源之间的布尔运算（and/or/xor/not）；报告多边形数/面积，可选把结果写入 write_to。</td></tr>
+            <tr><td><code>geometry.cell_xor</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cell_a*, cell_b*, layers, only_differing</td><td>两个 cell 逐层几何差异（纯报告，不写任何东西）——校验“我的改动是否只改了我想改的”的工具。</td></tr>
+            <tr><td><code>geometry.density</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cell*, layer*, window_um</td><td>一个 cell 里某图层的覆盖面积密度（面积/窗口面积）；做 dummy fill 决策前的预检查。</td></tr>
+          </tbody>
+        </table>
+        <p><strong>示例。</strong></p>
         <pre><code># 1) 读
 layout.info verbosity="summary"
 cell.list top_only=true
@@ -353,10 +368,10 @@ shape.insert_many cell="MYBLOCK" items=[
 ]
 
 # 5) 让它可见（新 cell 在 show_cell 前不可见）
-view.show_cell cell="MYBLOCK"</code></pre>
+view.show_cell cell="MYBLOCK"
 
-        <p><strong>示例：放置 Basic.CIRCLE PCell（先查参数）。</strong></p>
-        <pre><code>pcell.info library="Basic" pcell="CIRCLE"
+# 放置 Basic.CIRCLE PCell（先查参数）
+pcell.info library="Basic" pcell="CIRCLE"
 instance.insert_pcell parent="MYBLOCK" library="Basic" pcell="CIRCLE" \
     params={"l":"1/0","r":5.0,"n":64} position_um=[100,0]
 
@@ -364,63 +379,61 @@ instance.insert_pcell parent="MYBLOCK" library="Basic" pcell="CIRCLE" \
 instance.insert parent="TOP" child="MYBLOCK" position_um=[0,0] \
     array={"rows":8,"cols":8,"pitch_x_um":60,"pitch_y_um":40}</code></pre>
 
-
-        <!-- ================= 4 selection ================= -->
-        <h2 id="d-selection" class="anchor-h">4 · 选择与 SEND 交互记忆 <span class="tool-count">selection_and_send_memory · 11 tools</span></h2>
+        <h2 id="d-selection" class="anchor-h">4 &middot; 选择与 SEND 交互记忆 <span class="tool-count">selection_and_send_memory &middot; 10 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="selection_and_send_memory"</span>
-          <p>两件不同的事。<code>selection.*</code> 是 KLayout 里<strong>当前的实时选择</strong>；<code>interaction.*</code> 是用户<strong>明确 SEND 过</strong>（工具栏 SEND，记成 <code>sel_0006</code> 这样的 id）的持久 session 记忆。当用户说“刚发的”“这块区域”“这里”“那一个”时用它们——按<strong>顺序/数量</strong>解析，不是按时间；把用户措辞绑到这些 id/查询，而不是绑到截图。</p>
+          <p>两件不同的事。<code>selection.*</code> 是 KLayout 里<strong>当前的实时选择</strong>：<code>selection.get</code>、<code>selection.set_box</code>（替换当前选择）、<code>selection.clear</code>、<code>selection.send_context</code>（agent 侧显式 SEND）。<code>interaction.*</code> 是用户<strong>明确 SEND 过</strong>（工具栏 SEND，记成 <code>sel_0006</code> 这样的 id）的持久 session 记忆：<code>interaction.selection.latest</code>/<code>recent</code>（默认最新 5，按顺序不按时间裁剪）/<code>get</code>/<code>label</code>，以及 <code>interaction.context</code>（当前选择+最近记忆一起返回）。当用户说“刚发的”“这块区域”“这里”“那一个”时用它们——按<strong>顺序/数量</strong>解析，不是按时间；把用户措辞绑到这些 id/查询，而不是绑到截图。</p>
         </div>
         <table class="data-table reftable">
-          <thead><tr><th>工具</th><th>参数</th><th>功能</th></tr></thead>
+          <thead><tr><th>工具</th><th>类型</th><th>参数</th><th>功能</th></tr></thead>
           <tbody>
-            <tr><td><code>selection.get</code></td><td>limit</td><td>当前视图的选择，每项是 shape（层+bbox）或 instance（目标 cell+bbox）。空选择返回空列表，不是错误。</td></tr>
-            <tr><td><code>selection.set_box</code> <span class="badge mutates">mutates</span></td><td>cell*, bbox_dbu*, layers, limit</td><td>选中 cell 内 bbox 与给定框相交的所有形状（默认全层），<strong>替换</strong>当前选择，返回选中数。</td></tr>
-            <tr><td><code>selection.clear</code> <span class="badge mutates">mutates</span></td><td>—</td><td>清空当前选择。</td></tr>
-            <tr><td><code>selection.send_context</code></td><td>source, max_items</td><td>把当前非空选择作为 <code>selection_sent</code> 事件显式发出（agent 侧 SEND）。不在 plugin 存记忆。</td></tr>
-            <tr><td><code>interaction.selection.latest</code></td><td>—</td><td>本 MCP session 记忆里最新一次 SEND。</td></tr>
-            <tr><td><code>interaction.selection.recent</code></td><td>limit</td><td>最近若干次 SEND（默认最新 5，按顺序不按时间裁剪）。</td></tr>
-            <tr><td><code>interaction.selection.get</code></td><td>id*</td><td>按稳定 id 读一条存储选择。</td></tr>
-            <tr><td><code>interaction.selection.label</code></td><td>id*, label, description</td><td>给某条存储选择加/改 label 和描述。</td></tr>
-            <tr><td><code>interaction.selection.clear_session</code></td><td>confirm*</td><td>确认后清掉本 MCP session 的持久交互上下文。</td></tr>
-            <tr><td><code>interaction.context</code></td><td>include_current_selection</td><td>同时返回当前 KLayout 选择 + 最近持久 SEND 记忆。</td></tr>
+            <tr><td><code>interaction.context</code></td><td><span class="badge kind-local">local</span></td><td>include_current_selection</td><td>同时返回当前 KLayout 选择 + 最近持久 SEND 记忆。</td></tr>
+            <tr><td><code>interaction.selection.clear_session</code></td><td><span class="badge kind-local">local</span></td><td>confirm*</td><td>确认后清掉本 MCP session 的持久交互上下文。</td></tr>
+            <tr><td><code>interaction.selection.get</code></td><td><span class="badge kind-local">local</span></td><td>id*</td><td>按稳定 id 读一条存储选择。</td></tr>
+            <tr><td><code>interaction.selection.label</code></td><td><span class="badge kind-local">local</span></td><td>description, id*, label</td><td>给某条存储选择加/改 label 和描述。</td></tr>
+            <tr><td><code>interaction.selection.latest</code></td><td><span class="badge kind-local">local</span></td><td>—</td><td>本 MCP session 记忆里最新一次 SEND。</td></tr>
+            <tr><td><code>interaction.selection.recent</code></td><td><span class="badge kind-local">local</span></td><td>limit</td><td>最近若干次 SEND（默认最新 5，按顺序不按时间裁剪）。</td></tr>
+            <tr><td><code>selection.clear</code></td><td><span class="badge kind-rpc">rpc</span></td><td>—</td><td>清空当前选择。</td></tr>
+            <tr><td><code>selection.get</code></td><td><span class="badge kind-rpc">rpc</span></td><td>limit</td><td>当前视图的选择，每项是 shape（层+bbox）或 instance（目标 cell+bbox）。空选择返回空列表，不是错误。</td></tr>
+            <tr><td><code>selection.send_context</code></td><td><span class="badge kind-rpc">rpc</span></td><td>max_items, source</td><td>把当前非空选择作为 selection_sent 事件显式发出（agent 侧 SEND）。不在 plugin 存记忆。</td></tr>
+            <tr><td><code>selection.set_box</code></td><td><span class="badge kind-rpc">rpc</span></td><td>bbox_dbu, bbox_um, cell*, include_instances, layers, limit</td><td>选中 cell 内 bbox 与给定框相交的所有形状（默认全层），替换当前选择，返回选中数。</td></tr>
           </tbody>
         </table>
-        <p><strong>示例：解析“把我刚发的两块连起来”。</strong></p>
+        <p><strong>示例。</strong></p>
         <pre><code># 用户在 KLayout 里选中 A，点 SEND；再选中 B，点 SEND
 interaction.selection.recent limit=2       # → [sel_0007(B), sel_0006(A)]
 interaction.selection.label id="sel_0006" label="probe pad"
 # 现在按 id 去 mark port / 声明 net，而不是靠截图猜位置</code></pre>
 
-
-        <!-- ================= 5 ports ================= -->
-        <h2 id="d-ports" class="anchor-h">5 · Port 与 Anchor（路由标记） <span class="tool-count">ports_and_anchors · 16 tools</span></h2>
+        <h2 id="d-ports" class="anchor-h">5 &middot; Port 与 Anchor（路由标记） <span class="tool-count">ports_and_anchors &middot; 18 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="ports_and_anchors"</span>
-          <p>Port 是网络端点（<code>klink_Port</code> PCell：带 net + 朝向 + 宽度）。Anchor 是路由约束（<code>klink_Anchor</code> PCell），<code>kind</code> 为 <code>waypoint_region</code> / <code>bend_region</code> / <code>corridor</code>（普通 corridor 是<strong>必经</strong>通道；给它 <code>choice_group=BUS</code> 才变成可选通道）。路由工具默认 <code>port_layer=999/99</code>、<code>anchor_layer=999/1</code>。<strong>Keepout 不是 anchor 类型</strong>——它是你传给路由工具的 <code>obstacle_layers</code>（你自己设计里的层）；klink 不带默认 keepout 层。<strong>这些是路由后端的输入</strong>：先 mark Port+Anchor，再调 <code>routing.*</code>。</p>
+          <p>Port 是网络端点（<code>klink_Port</code> PCell：带 net + 朝向 + 宽度）。Anchor 是路由约束（<code>klink_Anchor</code> PCell），<code>kind</code> 为 <code>waypoint_region</code> / <code>bend_region</code> / <code>corridor</code>（普通 corridor 是<strong>必经</strong>通道；给它 <code>choice_group=BUS</code> 才变成可选通道）。<code>port.mark</code>/<code>list</code>/<code>update</code>/<code>transform</code>/<code>set_layer</code>/<code>unmark</code>/<code>delete_all</code>/<code>repair_names</code>，<code>anchor.*</code>（+ <code>anchor.repair_ids</code>）同名动词对应。<code>port.mark_many</code> 一次 RPC/一个 undo 步在一个 cell 里标很多 port（先校验再写）——生成式 port 阵列用它而不是循环 <code>port.mark</code>。<code>port.harvest_blackbox</code> 按 waveguide stub 约定从 live 的 gdsfactory/PDK blackbox 实例位置派生 Port（这个偏硅光的工具归在本域）。路由工具默认 <code>port_layer=999/99</code>、<code>anchor_layer=999/1</code>。<strong>Keepout 不是 anchor 类型</strong>——把你自己设计的 <code>obstacle_layers</code> 传给路由工具；klink 不带默认 keepout 层（<code>900/0</code> 是 klink 保留 keepout 层，structdevice 内部用它）。<strong>这些是路由后端的输入</strong>：先 mark Port+Anchor，再调 <code>routing.*</code>。</p>
         </div>
         <table class="data-table reftable">
-          <thead><tr><th>工具</th><th>参数</th><th>功能</th></tr></thead>
+          <thead><tr><th>工具</th><th>类型</th><th>参数</th><th>功能</th></tr></thead>
           <tbody>
-            <tr><td><code>port.set_layer</code> <span class="badge mutates">mutates</span></td><td>layer*</td><td>配置本 layout 的默认 Port 标记层。</td></tr>
-            <tr><td><code>port.mark</code> <span class="badge mutates">mutates</span></td><td>cell*, name, center, orientation, width_um, port_type, net, target_layer, …</td><td>在 cell 里建一个 <code>klink_Port</code> PCell 实例（一个端点）。</td></tr>
-            <tr><td><code>port.list</code></td><td>cell*, layer, sort</td><td>列 cell 里的 Port（给 <code>layer</code> 则只列该标记层的）。</td></tr>
-            <tr><td><code>port.update</code> <span class="badge mutates">mutates</span></td><td>cell*, name*, orientation, width_um, net, …</td><td>按不可变 name 更新单个 Port。</td></tr>
-            <tr><td><code>port.transform</code> <span class="badge mutates">mutates</span></td><td>cell*, names / selection, rotate_delta, net, …</td><td>按 names 或 GUI 选择批量更新 Port 参数。</td></tr>
-            <tr><td><code>port.repair_names</code> <span class="badge mutates">mutates</span></td><td>cell*, layer, prefix</td><td>修复重复/空 Port 名（主要给经 GUI PCell 面板手插、绕过唯一性检查的）。</td></tr>
-            <tr><td><code>port.unmark</code> <span class="badge mutates">mutates</span></td><td>cell*, name*</td><td>按 name 删一个 Port。</td></tr>
-            <tr><td><code>port.delete_all</code> <span class="badge mutates">mutates</span></td><td>cell*, layer</td><td>删 cell 里全部 Port。</td></tr>
-            <tr><td><code>anchor.set_layer</code> <span class="badge mutates">mutates</span></td><td>layer*</td><td>配置默认 Anchor 标记层。</td></tr>
-            <tr><td><code>anchor.mark</code> <span class="badge mutates">mutates</span></td><td>cell*, kind, center, net, radius_um, width_um, height_um, path_points, …</td><td>建一个 <code>klink_Anchor</code> PCell 实例（路由约束）。</td></tr>
-            <tr><td><code>anchor.list</code></td><td>cell*, layer, sort</td><td>列 cell 里的 Anchor。</td></tr>
-            <tr><td><code>anchor.update</code> <span class="badge mutates">mutates</span></td><td>cell*, id*, new_id, kind, net, …</td><td>按不可变 id 更新单个 Anchor。</td></tr>
-            <tr><td><code>anchor.transform</code> <span class="badge mutates">mutates</span></td><td>cell*, ids / names / selection, kind, …</td><td>按 ids 或选择批量更新 Anchor。</td></tr>
-            <tr><td><code>anchor.repair_ids</code> <span class="badge mutates">mutates</span></td><td>cell*, layer, prefix</td><td>修复重复/空 Anchor id（GUI 手插的）。</td></tr>
-            <tr><td><code>anchor.unmark</code> <span class="badge mutates">mutates</span></td><td>cell*, id*</td><td>按 id 删一个 Anchor。</td></tr>
-            <tr><td><code>anchor.delete_all</code> <span class="badge mutates">mutates</span></td><td>cell*, layer</td><td>删 cell 里全部 Anchor。</td></tr>
+            <tr><td><code>port.set_layer</code></td><td><span class="badge kind-rpc">rpc</span></td><td>layer*</td><td>配置本 layout 的默认 Port 标记层。</td></tr>
+            <tr><td><code>port.mark</code></td><td><span class="badge kind-rpc">rpc</span></td><td>access_mode, cell*, center_dbu, center_um, label, layer, name, net, orientation, port_type, show_label, slide_allowed, slide_edge, target_layer, width_um</td><td>在 cell 里建一个 klink_Port PCell 实例（一个端点）。</td></tr>
+            <tr><td><code>port.mark_many</code></td><td><span class="badge kind-rpc">rpc</span></td><td>access_mode, cell*, items*, label, layer, net, orientation, port_type, show_label, slide_allowed, slide_edge, target_layer, width_um</td><td>一次调用/一个 undo 步在一个 cell 里建很多 Port PCell；插入前整体校验（一项错则全部拒绝）。</td></tr>
+            <tr><td><code>port.list</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cell*, layer, sort</td><td>列 cell 里的 Port（给 layer 则只列该标记层的）。</td></tr>
+            <tr><td><code>port.update</code></td><td><span class="badge kind-rpc">rpc</span></td><td>access_mode, cell*, label, layer, name*, net, orientation, port_type, show_label, slide_allowed, slide_edge, target_layer, width_um</td><td>按不可变 name 更新单个 Port。</td></tr>
+            <tr><td><code>port.transform</code></td><td><span class="badge kind-rpc">rpc</span></td><td>access_mode, cell*, label, layer, names, net, orientation, port_type, rotate_delta, selection, show_label, slide_allowed, slide_edge, target_layer, width_um</td><td>按 names 或 GUI 选择批量更新 Port 参数。</td></tr>
+            <tr><td><code>port.repair_names</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cell*, layer, prefix</td><td>修复重复/空 Port 名（主要给经 GUI PCell 面板手插、绕过唯一性检查的）。</td></tr>
+            <tr><td><code>port.harvest_blackbox</code></td><td><span class="badge kind-local">local</span></td><td>cell*, clear, nets, port_layer, stub_size_um*, tags*, wg_layer*</td><td>按 waveguide stub 约定（波导层上的小 stub 盒）从 PDK blackbox 实例派生 Port。Port 由 live 实例位置得来——移动实例后重跑刷新，再路由。</td></tr>
+            <tr><td><code>port.unmark</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cell*, name*</td><td>按 name 删一个 Port。</td></tr>
+            <tr><td><code>port.delete_all</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cell*, layer</td><td>删 cell 里全部 Port。</td></tr>
+            <tr><td><code>anchor.set_layer</code></td><td><span class="badge kind-rpc">rpc</span></td><td>layer*</td><td>配置默认 Anchor 标记层。</td></tr>
+            <tr><td><code>anchor.mark</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cell*, center_dbu, center_um, height_um, id, kind, label, layer, mode, name, net, orientation, path_points, priority, radius_um, required, show_label, width_um</td><td>建一个 klink_Anchor PCell 实例（路由约束）。</td></tr>
+            <tr><td><code>anchor.list</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cell*, layer, sort</td><td>列 cell 里的 Anchor。</td></tr>
+            <tr><td><code>anchor.update</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cell*, height_um, id*, kind, label, layer, mode, net, new_id, orientation, path_points, priority, radius_um, required, show_label, width_um</td><td>按不可变 id 更新单个 Anchor。</td></tr>
+            <tr><td><code>anchor.transform</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cell*, height_um, ids, kind, label, layer, mode, names, net, orientation, path_points, priority, radius_um, required, selection, show_label, width_um</td><td>按 ids 或选择批量更新 Anchor。</td></tr>
+            <tr><td><code>anchor.repair_ids</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cell*, layer, prefix</td><td>修复重复/空 Anchor id（GUI 手插的）。</td></tr>
+            <tr><td><code>anchor.unmark</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cell*, id*</td><td>按 id 删一个 Anchor。</td></tr>
+            <tr><td><code>anchor.delete_all</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cell*, layer</td><td>删 cell 里全部 Anchor。</td></tr>
           </tbody>
         </table>
-        <p><strong>示例：标两个对着的 Port，加一个必经 waypoint，然后路由。</strong></p>
+        <p><strong>示例。</strong></p>
         <pre><code>port.mark cell="NET1" name="A" center_um=[0,0]   orientation="E" width_um=2 net="sig"
 port.mark cell="NET1" name="B" center_um=[80,20] orientation="W" width_um=2 net="sig"
 anchor.mark cell="NET1" kind="waypoint_region" center_um=[40,40] radius_um=6 net="sig"
@@ -428,25 +441,23 @@ port.list cell="NET1"
 
 routing.tapered_hybrid_cell cell="NET1" angle_mode="manhattan" obstacle_layers=["10/0"]</code></pre>
 
-
-        <!-- ================= 6 routing ================= -->
-        <h2 id="d-routing" class="anchor-h">6 · 路由后端 <span class="tool-count">routing_backends · 9 tools</span></h2>
+        <h2 id="d-routing" class="anchor-h">6 &middot; 路由后端 <span class="tool-count">routing_backends &middot; 9 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="routing_backends"</span>
-          <p>都读一个 cell 里的 Port/Anchor PCell 并写出路由几何。按拓扑/质量选后端。<strong>永远检查结构化结果</strong>：<code>ok=false</code>、<code>obstacle_hit_count&gt;0</code>、sibling 重叠、<code>route_count</code> 偏少都算失败。诚实报告 router 局限。障碍处理要传<strong>你自己</strong>设计的 <code>obstacle_layers</code>（无默认）。</p>
+          <p>都读一个 cell 里的 Port/Anchor PCell 并写出路由几何。按拓扑/质量选后端：<code>routing.tapered_hybrid_cell</code> 是主要的 path+patch 后端；<code>routing.tapered_polygon_cell</code> 写连续 taper 多边形（正式后端，不是备选）；<code>routing.steiner_cell</code> 处理多端网络（&gt;2 port）；<code>routing.damped_*</code> 系列显式加额外障碍间距；<code>routing.global_channel_cell</code> 是在 hybrid 几何之上的全局决策路由（候选 sink 分配+corridor 容量负载均衡）；<code>routing.multilayer_escape_cell</code> 用 bridge 层+via 给被墙挡住的网络逃逸；<code>routing.gdsfactory_ports</code> 用命名 gdsfactory 策略路由 Port 标记（需解释器里有 gdsfactory）。<strong>永远检查结构化结果</strong>：<code>ok=false</code>、<code>obstacle_hit_count&gt;0</code>、sibling 重叠、<code>route_count</code> 偏少都算失败。障碍处理要传<strong>你自己</strong>设计的 <code>obstacle_layers</code>（无默认）。</p>
         </div>
         <table class="data-table reftable">
-          <thead><tr><th>工具</th><th>参数</th><th>功能</th></tr></thead>
+          <thead><tr><th>工具</th><th>类型</th><th>参数</th><th>功能</th></tr></thead>
           <tbody>
-            <tr><td><code>routing.tapered_hybrid_cell</code></td><td>cell*, spacing_um, angle_mode, clear, port_layer, anchor_layer, obstacle_layers</td><td>主要的 path+patch 后端。<code>angle_mode</code>：any / manhattan / fortyfive。</td></tr>
-            <tr><td><code>routing.tapered_polygon_cell</code></td><td>cell*, …, route_layer, corner_style, obstacle_layers</td><td>连续 taper 多边形（正式后端，不是备选），corner_style miter/bevel/round。</td></tr>
-            <tr><td><code>routing.steiner_cell</code></td><td>cell*, route_layer, root_ports, clear, obstacle_layers</td><td>多端网络（&gt;2 port）的直角 Steiner/总线树。星形网否则要拆成 2-port。</td></tr>
-            <tr><td><code>routing.damped_segment_cell</code></td><td>cell, damping_distance_um, obstacle_layers, …</td><td>显式远离障碍的 damped 段后端（用 hybrid 输出 + 额外软间距）。</td></tr>
-            <tr><td><code>routing.damped_polygon_cell</code></td><td>cell, damping_distance_um, corner_style, …</td><td>damped 连续 taper 多边形版。</td></tr>
-            <tr><td><code>routing.damped_steiner_cell</code></td><td>cell, damping_distance_um, root_ports, …</td><td>damped 多端 trunk/branch 版。</td></tr>
-            <tr><td><code>routing.global_channel_cell</code></td><td>cell*, spacing_um, angle_mode, safe_distance_um, obstacle_layers</td><td><strong>更强的全局决策</strong>路由：障碍感知候选 sink 分配 + corridor 容量负载均衡，再复用 hybrid 几何。非完整 rip-up/reroute。</td></tr>
-            <tr><td><code>routing.multilayer_escape_cell</code></td><td>cell*, route_layer*, bridge_layer*, via_layer*, spacing_um, obstacle_layers</td><td>用主层 + bridge 层 + via 盒子给被墙挡住的成对网络逃逸（窄；不建模 via enclosure）。</td></tr>
-            <tr><td><code>routing.gdsfactory_ports</code></td><td>cell*, route_layer*, router, cross_section, separation_um, radius_um, waypoints_um, path_length_match, obstacle_bboxes_um, …</td><td>读 cell 的 Port 标记，用<strong>一种命名 gdsfactory 策略</strong>路由再写回。需 MCP 解释器里有 gdsfactory。</td></tr>
+            <tr><td><code>routing.damped_polygon_cell</code></td><td><span class="badge kind-local">local</span></td><td>anchor_layer, angle_mode, cell*, clear, corner_style, damping_distance_um, obstacle_layers, port_layer, route_layer, spacing_um</td><td>damped 连续 taper 多边形版。</td></tr>
+            <tr><td><code>routing.damped_segment_cell</code></td><td><span class="badge kind-local">local</span></td><td>anchor_layer, angle_mode, cell*, clear, damping_distance_um, obstacle_layers, port_layer, spacing_um</td><td>显式远离障碍的 damped 段后端（用 hybrid 输出 + 额外软间距）。</td></tr>
+            <tr><td><code>routing.damped_steiner_cell</code></td><td><span class="badge kind-local">local</span></td><td>anchor_layer, angle_mode, cell*, clear, damping_distance_um, obstacle_layers, port_layer, root_ports, route_layer, spacing_um</td><td>damped 多端 trunk/branch 版。</td></tr>
+            <tr><td><code>routing.gdsfactory_ports</code></td><td><span class="badge kind-local">local</span></td><td>all_two_port_nets, allow_crossing, auto_taper, backbone_um, bundle_gather_um, cell*, clear, collision_check_layers, cross_section, distance_um, end_straight_um, gf_route_layer, min_straight_taper_um, net, obstacle_bboxes_um, output_mode, pair_by, path_length_match, port_layer, radius_um, resolution_um, route_layer*, route_width_um, router, sbend_fallback, separation_um, sort_ports, source, source_orientation, source_prefix, start_straight_um, steps, taper, target, target_orientation, target_prefix, waypoints_um</td><td>读 cell 的 Port 标记，用一种命名 gdsfactory 策略路由再写回。需 MCP 解释器里有 gdsfactory。</td></tr>
+            <tr><td><code>routing.global_channel_cell</code></td><td><span class="badge kind-local">local</span></td><td>anchor_layer, angle_mode, cell*, clear, obstacle_layers, port_layer, safe_distance_um, spacing_um</td><td>更强的全局决策路由：障碍感知候选 sink 分配 + corridor 容量负载均衡，再复用 hybrid 几何。</td></tr>
+            <tr><td><code>routing.multilayer_escape_cell</code></td><td><span class="badge kind-local">local</span></td><td>bridge_layer*, cell*, clear, obstacle_layers, port_layer, route_layer*, spacing_um, via_layer*</td><td>用主层 + bridge 层 + via 盒子给被墙挡住的成对网络逃逸（窄；不建模 via enclosure）。</td></tr>
+            <tr><td><code>routing.steiner_cell</code></td><td><span class="badge kind-local">local</span></td><td>anchor_layer, cell*, clear, obstacle_layers, port_layer, root_ports, route_layer</td><td>多端网络（&gt;2 port）的直角 Steiner/总线树。星形网否则要拆成 2-port。</td></tr>
+            <tr><td><code>routing.tapered_hybrid_cell</code></td><td><span class="badge kind-local">local</span></td><td>anchor_layer, angle_mode, cell*, clear, obstacle_layers, port_layer, spacing_um</td><td>主要的 path+patch 后端。angle_mode：any / manhattan / fortyfive。</td></tr>
+            <tr><td><code>routing.tapered_polygon_cell</code></td><td><span class="badge kind-local">local</span></td><td>anchor_layer, angle_mode, cell*, clear, corner_style, obstacle_layers, port_layer, route_layer, spacing_um</td><td>连续 taper 多边形（正式后端，不是备选），corner_style miter/bevel/round。</td></tr>
           </tbody>
         </table>
         <p><code>routing.gdsfactory_ports</code> 的 <code>router</code> 策略（选错参数会报错并指出哪些 router 支持它，绝不静默忽略）：</p>
@@ -462,14 +473,14 @@ routing.tapered_hybrid_cell cell="NET1" angle_mode="manhattan" obstacle_layers=[
             <tr><td><code>astar</code>（实验）</td><td>绕 <code>obstacle_bboxes_um</code> 的网格 A*；gf 的 astar 脆弱，klink 会校验结果，穿墙则<strong>报错</strong>而不是返回坏路由。可靠避障请用 klink 自己的 tapered_hybrid/damped + <code>obstacle_layers</code>。</td></tr>
           </tbody>
         </table>
-        <p><strong>示例：主路由 + 更强避障 + gdsfactory bundle。</strong></p>
+        <p><strong>示例。</strong></p>
         <pre><code># klink 自带的主路由，Manhattan，避开你的 keepout 层
 routing.tapered_hybrid_cell cell="BLOCK" angle_mode="manhattan" spacing_um=20 obstacle_layers=["900/0"]
 
 # 需要更大障碍间距时
 routing.damped_segment_cell cell="BLOCK" damping_distance_um=15 obstacle_layers=["900/0"]
 
-# 多端网络（>2 port）
+# 多端网络（&gt;2 port）
 routing.steiner_cell cell="BLOCK" route_layer="1/0"
 
 # gdsfactory river bundle，等长匹配
@@ -477,51 +488,46 @@ routing.gdsfactory_ports cell="BLOCK" route_layer="1/0" router="bundle" \
     separation_um=5 radius_um=10 path_length_match=true</code></pre>
         <div class="note">路由完成的判据是<strong>结构化报告</strong>，不是“看起来连上了”。检查 <code>ok</code>、<code>obstacle_hit_count</code>、sibling overlap 和 <code>route_count</code>。真正的“完成”只有 live LVS <code>match=True</code>。</div>
 
-
-        <!-- ================= 7 verify ================= -->
-        <h2 id="d-verify" class="anchor-h">7 · DRC 与 LVS 验证 <span class="tool-count">drc_and_lvs_verification · 2 tools</span></h2>
+        <h2 id="d-verify" class="anchor-h">7 &middot; DRC 与 LVS 验证 <span class="tool-count">drc_and_lvs_verification &middot; 2 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="drc_and_lvs_verification"</span>
-          <p>两个都是长耗时、纯 pya、领域无关的逃生舱式检查。<code>drc.run</code> 跑你提供的任意 DRC DSL（Ruby）脚本——脚本内异常作为结果返回，<strong>不会</strong>让 RPC 失败。<code>lvs.run</code> 是连通性对应物：把 live 版图抽成器件网表，和你提供的<strong>参考网表</strong>比对，写 <code>.lvsdb</code> 并（默认 <code>show=true</code>）在 Netlist/LVS 浏览器打开做 cross-probe。一个 P&amp;R/器件阶段只有在真实 live LVS <code>match=True</code> 时才算 DONE——离线 fixture 和 marker 计数都不能替代。structdevice 流程优先用 <code>structdevice.lvs_check</code>。</p>
+          <p>两个都是长耗时、纯 pya、领域无关的逃生舱式检查。<code>drc.run</code> 跑你提供的任意 DRC DSL（Ruby）脚本——脚本内异常作为结果返回，<strong>不会</strong>让 RPC 失败。<code>lvs.run</code> 是连通性对应物：把 live 版图抽成器件网表，和你提供的<strong>参考网表</strong>比对，写 <code>.lvsdb</code> 并（默认显示）在 Netlist/LVS 浏览器打开做 cross-probe。一个 P&amp;R/器件阶段只有在真实 live LVS <code>match=True</code> 时才算 DONE——离线 fixture 和 marker 计数都不能替代。structdevice 流程优先用 <code>structdevice.lvs_check</code>。</p>
         </div>
         <table class="data-table reftable">
-          <thead><tr><th>工具</th><th>参数</th><th>功能</th></tr></thead>
+          <thead><tr><th>工具</th><th>类型</th><th>参数</th><th>功能</th></tr></thead>
           <tbody>
-            <tr><td><code>drc.run</code> <span class="badge mutates">mutates</span> <span class="badge long">long</span></td><td>（DRC DSL 源码 + 可选 output_rdb / 输入变量）</td><td>在 KLayout 集成 Ruby DRC 引擎跑任意 DRC DSL。含 <code>source()</code> 则 standalone，否则对当前 layout 交互式跑。</td></tr>
-            <tr><td><code>lvs.run</code> <span class="badge long">long</span></td><td>cell*, conductors*, vias, devices*, reference*, out_lvsdb, show</td><td>抽取（按 devices 配置的 per-cell 器件抽取器 + 你传的导体层）→ 与参考网表（<code>reference.spice</code> 或结构化 <code>reference.netlist</code>）比对 → 写 <code>.lvsdb</code> 并显示。</td></tr>
+            <tr><td><code>drc.run</code></td><td><span class="badge kind-rpc">rpc</span></td><td>code*, input_layout, output_rdb, result_mode, stderr_limit, stdout_limit, top_cell</td><td>在 KLayout 集成 Ruby DRC 引擎跑任意 DRC DSL。含 source() 则 standalone，否则对当前 layout 交互式跑。</td></tr>
+            <tr><td><code>lvs.run</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cell*, conductors*, devices*, out_lvsdb, reference*, show, vias</td><td>抽取（按 devices 配置的 per-cell 器件抽取器 + 你传的导体层）→ 与参考网表比对 → 写 .lvsdb 并显示。</td></tr>
           </tbody>
         </table>
-        <p><strong>示例：最小 DRC（间距检查）与 LVS 调用骨架。</strong></p>
+        <p><strong>示例。</strong></p>
         <pre><code># DRC：M1 最小间距 0.2um（交互模式，对当前 layout）
 drc.run script="""
 m1 = input(1, 0)
-m1.space(0.2.um).output("M1_space", "M1 spacing < 0.2um")
+m1.space(0.2.um).output("M1_space", "M1 spacing &lt; 0.2um")
 """
 
 # LVS：抽取导体层，和参考 SPICE 比对，打开浏览器
 lvs.run cell="BLOCK" conductors=["1/0","3/0"] vias=["2/0"] \
     devices={...} reference={"spice":"ref.spice"} out_lvsdb="block.lvsdb" show=true</code></pre>
 
-
-        <!-- ================= 8 structdevice ================= -->
-        <h2 id="d-structdevice" class="anchor-h">8 · 自定义器件网表 → 自动 P&amp;R → LVS <span class="tool-count">device_structdevice · 7 tools</span></h2>
+        <h2 id="d-structdevice" class="anchor-h">8 &middot; 自定义器件网表 → 自动 P&R → LVS <span class="tool-count">device_structdevice &middot; 6 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="device_structdevice"</span>
-          <p>这是<strong>器件无关</strong>的自定义器件 P&amp;R 流。“器件”=任何带任意参数集 + 端子的 cell；klink 不假设参数名/数量，也没有器件词汇表。器件库、工艺 profile、端子来源都是示例/PDK 数据显式传入——MCP 工具不带任何工艺，缺工艺时返回<strong>有指导性的错误</strong>（“写/跑一个 example”），绝不猜。物理模型很紧凑：器件自己的金属层同时当路由层用；<code>mode</code> 2L/3L 选用其中 2 或 3 层。</p>
+          <p>这是<strong>器件无关</strong>的自定义器件 P&amp;R 流。“器件”=任何带任意参数集 + 端子的 cell；klink 不假设参数名/数量，也没有器件词汇表。器件库、工艺 profile、端子来源都是示例/PDK 数据显式传入——工具不带任何工艺，缺工艺时返回<strong>有指导性的错误</strong>（“写/跑一个 example”），绝不猜。<code>structdevice.build_from_netlist</code> 是<strong>一次调用的主流程</strong>（确认门控：先调一次拿 proposal，带 confirm token 再调才真正 build）；路由跑在 flexdr 引擎上，物理模型很紧凑：器件自己的金属层同时当路由层用。<code>structdevice.declare_nets</code>/<code>connect_nets</code>/<code>lvs_check</code>/<code>spec_write</code> 是 SEND 驱动的交互路径。<code>structdevice.register_pcell</code> 封装了更底层的 plugin RPC <code>pcell.register_fitted</code>（列在 <a href="#d-geometry">geometry_authoring</a> 域）。</p>
         </div>
         <table class="data-table reftable">
-          <thead><tr><th>工具</th><th>参数</th><th>功能</th></tr></thead>
+          <thead><tr><th>工具</th><th>类型</th><th>参数</th><th>功能</th></tr></thead>
           <tbody>
-            <tr><td><code>structdevice.build_from_netlist</code></td><td>cell*, netlist*, confirm, mode, rows, cols, session</td><td><strong>一次调用的主流程</strong>：给器件级网表（<code>{instances, nets, groups}</code>），派生 floorplan → 单趟多层路由 → 绘制 → 器件 LVS 验证一个<strong>全新</strong> cell。确认门控：先不带 confirm → 返回 proposal；带 confirm token 再调 → 真正 build。</td></tr>
-            <tr><td><code>structdevice.declare_nets</code></td><td>recent_sends*, cell*, conductors, vias</td><td>从 SEND 声明电学网络：<strong>一次 SEND 框住 ≥2 个端子 = 一个声明网络</strong>（持久化到 <code>&lt;cell&gt;.elec_nets.json</code>）。示例驱动，缺 recipe 报指导性错误。</td></tr>
-            <tr><td><code>structdevice.connect_nets</code></td><td>cell*, session, route_layer, route_width_um, via_cell, min_spacing_um, min_width_um, conductors, vias</td><td>把每个已声明但未连接的网络布线并验证：recipe 派生 attach point、自动 via、自动 keepout、damped 路由，然后 LVS——任何 mismatch <strong>全部撤销</strong>。在 declare 之后、spec_write 之前。</td></tr>
-            <tr><td><code>structdevice.lvs_check</code></td><td>cell*, session, mode, conductors, vias</td><td>一次调用 LVS：派生器件端子（recipe）→ 抽取实际布线做出的网络 → 和 declared 网络对账。<code>mode=net</code>（默认）net 级；<code>device</code>/<code>both</code> 另跑器件级 NetlistComparer → <code>device_lvs</code>。</td></tr>
-            <tr><td><code>structdevice.spec_write</code></td><td>cell*, layer_roles*, session, device_class, conductors, vias</td><td>把 live cell 投影成 <code>klink.spec.json</code> v1 事实文件：器件、实例、declared/derived 网络及对账。<code>layer_roles</code> 把 <code>L/D</code> 映射到角色名。</td></tr>
-            <tr><td><code>structdevice.register_pcell</code></td><td>name*, fit_table*, session</td><td>运行期从 fit table 注册拟合器件 PCell（fitter 产出后调）。落到 <code>klink_structdevice</code> 库，零插件改动零重载，GUI 与 <code>instance.insert_pcell</code> 立即可用。</td></tr>
-            <tr><td><code>pcell.register_fitted</code></td><td>name*, fit_table*</td><td>上面 <code>register_pcell</code> 背后的底层 plugin RPC。</td></tr>
+            <tr><td><code>structdevice.build_from_netlist</code></td><td><span class="badge kind-local">local</span></td><td>cell*, cols, confirm, mode, netlist*, rows, session</td><td>一次调用的主流程：给器件级网表 → 派生 floorplan → 单趟多层路由 → 绘制 → 器件 LVS 验证一个全新 cell。确认门控：先不带 confirm → 返回 proposal；带 confirm token 再调 → 真正 build。</td></tr>
+            <tr><td><code>structdevice.connect_nets</code></td><td><span class="badge kind-local">local</span></td><td>cell*, conductors, min_spacing_um, min_width_um, route_layer, route_width_um, session, via_cell, vias</td><td>把每个已声明但未连接的网络布线并验证：任何 mismatch 全部撤销。</td></tr>
+            <tr><td><code>structdevice.declare_nets</code></td><td><span class="badge kind-local">local</span></td><td>cell*, conductors, recent_sends*, vias</td><td>从 SEND 声明电学网络：一次 SEND 框住 ≥2 个端子 = 一个声明网络（持久化）。示例驱动。</td></tr>
+            <tr><td><code>structdevice.lvs_check</code></td><td><span class="badge kind-local">local</span></td><td>cell*, conductors, mode, session, vias</td><td>net 级对账；mode=device/both 另跑器件级 NetlistComparer。</td></tr>
+            <tr><td><code>structdevice.register_pcell</code></td><td><span class="badge kind-local">local</span></td><td>diff_report, fit_table*, name*, session</td><td>运行期从 fit table 注册拟合器件 PCell，零插件改动零重载。</td></tr>
+            <tr><td><code>structdevice.spec_write</code></td><td><span class="badge kind-local">local</span></td><td>cell*, conductors, device_class, layer_roles*, session, vias</td><td>把 live cell 投影成 klink.spec.json 事实文件。</td></tr>
           </tbody>
         </table>
-        <p><strong>示例：从器件级网表两步 build。</strong></p>
+        <p><strong>示例。</strong></p>
         <pre><code># 第 1 步：不带 confirm → 拿 proposal（网格 rows×cols、行距、路由层、器件混合）
 structdevice.build_from_netlist cell="RINGOSC" netlist={
   "instances":[{"name":"INV0","device":"inv_x1"}, ...],
@@ -531,29 +537,42 @@ structdevice.build_from_netlist cell="RINGOSC" netlist={
 # → needs_confirmation + proposal + next_action(confirm=...)
 
 # 第 2 步：同样参数 + confirm token → 真正 place/route/draw/LVS
-structdevice.build_from_netlist cell="RINGOSC" netlist={...} mode="3L" confirm="CONFIRM-xyz"</code></pre>
-        <p><strong>示例：SEND 驱动的交互连线。</strong></p>
-        <pre><code># 用户为每个网络 SEND 一次（框住该网络的所有端子）
+structdevice.build_from_netlist cell="RINGOSC" netlist={...} mode="3L" confirm="CONFIRM-xyz"
+
+# SEND 驱动的交互连线：用户为每个网络 SEND 一次（框住该网络的所有端子）
 structdevice.declare_nets recent_sends=3 cell="BLOCK" conductors=["1/0","3/0"] vias=["2/0"]
 structdevice.connect_nets cell="BLOCK" route_layer="3/0" route_width_um=0.5
 structdevice.lvs_check cell="BLOCK" mode="both"
 structdevice.spec_write cell="BLOCK" layer_roles={"1/0":"gate","3/0":"metal1"}</code></pre>
 
-
-        <!-- ================= 9 nanodevice ================= -->
-        <h2 id="d-nanodevice" class="anchor-h">9 · 纳米器件（Hall bar / EBL / flake） <span class="tool-count">device_nanodevice · 2 tools</span></h2>
+        <h2 id="d-imaging" class="anchor-h">9 &middot; 成像（剖面 / 3D / SEM / Blender） <span class="tool-count">imaging &middot; 4 tools</span></h2>
         <div class="domain-intro">
-          <span class="token">klink.find_tools domain="device_nanodevice"</span>
-          <p><code>nanodevice.hallbar</code> 用一次调用完成整个流程：它在通用 port 标记 + 路由之上，额外提供<strong>参数化的 Hall bar 器件几何</strong>——从 <code>HallBarSpec</code>（bar 长宽、contact 数、contact/pad 尺寸、pitch、gap）算并画整个器件（bar + N 对称接触臂 + pad + Port 标记 + label），然后把实际路由<strong>交给</strong>通用 router 把 contact 接到 pad（开启重叠校验，可选 EBL writefield 墙当 keepout），提交到一次性 cell（支持 dry_run）。失败返回 problems/next_action，什么都不改。</p>
+          <span class="token">klink.find_tools domain="imaging"</span>
+          <p>全部在 klink 侧运行（不涉及插件）；重依赖是可选的，缺失时错误会指名确切的 pip install 命令。Recipe/VisualStack 实例是示例自有的——klink 只提供机制。<code>imaging.xsection_run</code> 沿显式切割线，按 <code>.pyxs</code> 工艺配方（引擎 <code>klayout_pyxs</code>）做工艺剖面；<code>steps=true</code> + 配方里的 <code>'# klink-step: &lt;name&gt;'</code> 标记可给每个工艺步骤各出一张剖面。<code>imaging.render3d</code> 生成 GLB + 自包含交互查看器 HTML；<code>mode=fast</code> 按 visual-stack 声明挤出，<code>mode=process</code> 用剖面引擎扫过全片让工艺曲率（LOCOS、CMP）真实；<code>fraction&lt;1</code> 暴露真正的剖切截面。<code>imaging.sem_top</code> 渲染确定性的 SEM 风格俯视图 PNG（灰度+假彩色）。<code>imaging.blender</code> 用无头 bpy 子进程做论文级渲染——<code>mode=die</code> 给 render3d 的 GLB 抛光，<code>mode=figure</code> 按 GDS+stack 以 1:1 版图坐标建器件图（lattice 层变成原子结构图案）。</p>
         </div>
         <table class="data-table reftable">
-          <thead><tr><th>工具</th><th>参数</th><th>功能</th></tr></thead>
+          <thead><tr><th>工具</th><th>类型</th><th>参数</th><th>功能</th></tr></thead>
           <tbody>
-            <tr><td><code>nanodevice.hallbar</code></td><td>cell, spec, writefield, route_layer, spacing_um, dry_run, session</td><td>一次调用生成 + 路由 + 校验 + 提交一个 Hall bar：从 spec 生成几何 + Port/Anchor，用 klink router 把 contact 接 pad（重叠校验 ON，可选 writefield 墙），写入一次性 cell。</td></tr>
-            <tr><td><code>nanodevice.detect_commit</code></td><td>cell, traces_path, image, pixel_size_um, coordinate, dry_run, session</td><td>加载（或检测）纳米器件 flake trace 并作为多边形提交进 live cell。<code>traces_path</code> 走预算 <code>traces.json</code>（无额外依赖）；<code>image</code>+<code>pixel_size_um</code> 走实时检测（需本解释器有 cv2 + numpy）。</td></tr>
+            <tr><td><code>imaging.blender</code></td><td><span class="badge kind-local">local</span></td><td>basename, camera, cell, gds, glb, lattice_a_um, mode*, output_dir*, overwrite, samples, session, slabs, stack, timeout_s, transparent</td><td>用无头 bpy 子进程做论文级 Blender 渲染。mode=die 给 render3d 的 GLB 加胶片感透明底+阴影接收；mode=figure 按 GDS+stack 以 1:1 版图比例建器件图（lattice 层→原子结构图案）。</td></tr>
+            <tr><td><code>imaging.render3d</code></td><td><span class="badge kind-local">local</span></td><td>basename, cell, exclude, fraction, gds, mode, output_dir*, overwrite, recipe, session, slices, stack*</td><td>生成 3D 模型（GLB）+ 一个离线可用的自包含交互式查看器 HTML。mode=fast 按 visual-stack 声明挤出；mode=process 用剖面引擎扫过全片，曲率（LOCOS/CMP）是真实的。</td></tr>
+            <tr><td><code>imaging.sem_top</code></td><td><span class="badge kind-local">local</span></td><td>basename, cell, corner_radius_um, gds, layers, output_dir*, overwrite, seed, session, stack*, width_px</td><td>按 visual-stack 声明生成 SEM 风格俯视图 PNG（灰度+假彩色），带颗粒/扫描线/暗角；确定性（可设种子）。</td></tr>
+            <tr><td><code>imaging.xsection_run</code></td><td><span class="badge kind-local">local</span></td><td>basename, below_um, cell, cut_um*, delta_dbu, depth_um, exclude, extend_um, gds, height_um, output_dir*, overwrite, recipe*, render, session, show, stack, steps</td><td>沿一条显式切割线，按 .pyxs 工艺配方（引擎 klayout_pyxs）做工艺剖面；steps=true 时每个标记的工艺步骤各出一张剖面。</td></tr>
           </tbody>
         </table>
-        <p><strong>示例：生成并路由一个 Hall bar；再从预算 traces 提交 flake。</strong></p>
+
+        <h2 id="d-nanodevice" class="anchor-h">10 &middot; 纳米器件（Hall bar / EBL / flake） <span class="tool-count">device_nanodevice &middot; 2 tools</span></h2>
+        <div class="domain-intro">
+          <span class="token">klink.find_tools domain="device_nanodevice"</span>
+          <p><code>nanodevice.hallbar</code> 用一次调用完成整个流程：从 <code>HallBarSpec</code>（bar 长宽、contact 数、contact/pad 尺寸、pitch、gap）算并画整个器件（bar + N 对称接触臂 + pad + Port 标记 + label），然后把实际路由<strong>交给</strong>通用 router 把 contact 接到 pad（开启重叠校验，可选 EBL writefield 墙当 keepout），提交到一次性 cell（支持 dry_run）。失败返回 problems/next_action，什么都不改。<code>nanodevice.detect_commit</code> 从预算 <code>traces.json</code> 提交 flake trace 为多边形，或对显微图像做实时检测（需 cv2 + numpy）。</p>
+        </div>
+        <table class="data-table reftable">
+          <thead><tr><th>工具</th><th>类型</th><th>参数</th><th>功能</th></tr></thead>
+          <tbody>
+            <tr><td><code>nanodevice.detect_commit</code></td><td><span class="badge kind-local">local</span></td><td>cell, coordinate, dry_run, image, pixel_size_um, session, traces_path</td><td>加载（或检测）纳米器件 flake trace 并作为多边形提交进 live cell。traces_path 走预算 traces.json；image+pixel_size_um 走实时检测（需 cv2+numpy）。</td></tr>
+            <tr><td><code>nanodevice.hallbar</code></td><td><span class="badge kind-local">local</span></td><td>cell, dry_run, route_layer, session, spacing_um, spec, writefield</td><td>一次调用生成 + 路由 + 校验 + 提交一个 Hall bar：从 spec 生成几何 + Port/Anchor，用 klink router 把 contact 接 pad。</td></tr>
+          </tbody>
+        </table>
+        <p><strong>示例。</strong></p>
         <pre><code>nanodevice.hallbar cell="HB1" spec={
   "bar_length_um":60, "bar_width_um":8, "contact_count":6,
   "contact_width_um":4, "pad_size_um":40, "pitch_um":24, "gap_um":6
@@ -561,70 +580,64 @@ structdevice.spec_write cell="BLOCK" layer_roles={"1/0":"gate","3/0":"metal1"}</
 
 nanodevice.detect_commit cell="FLAKE" traces_path="out/traces.json"</code></pre>
 
-
-        <!-- ================= 10 photonics ================= -->
-        <h2 id="d-photonics" class="anchor-h">10 · 硅光（gdsfactory 导入 / 连接 / 重路由） <span class="tool-count">device_photonics · 4 tools</span></h2>
+        <h2 id="d-photonics" class="anchor-h">11 &middot; 硅光（gdsfactory 导入 / 连接 / 重路由） <span class="tool-count">device_photonics &middot; 3 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="device_photonics"</span>
-          <p>光子电路流，需 MCP 解释器里有 gdsfactory。两个端口来源、一个交互循环：<code>photonics.import_gf</code> 一次把成品 gdsfactory 脚本接管进循环（器件实例→真实 KLayout cell+实例，routed/snapped 连接坍缩成器件级网络，per-device port 模板持久化进 spec，网络由 klink 路由）；<code>port.harvest_blackbox</code> 从 live blackbox 实例位置按 foundry stub 约定派生 Port。接管后，<strong>在 GUI 里拖动组件 → 一次 <code>photonics.reroute</code> 把光学和金属一起重画</strong>。这个“拖动→reroute”循环就是重点：版图保持 live 可编辑，不是一次性冻结。</p>
+          <p>光子电路流，需 MCP 解释器里有 gdsfactory。两个端口来源、一个交互循环：<code>photonics.import_gf</code> 一次把成品 gdsfactory 脚本接管进循环——器件实例变成真实 KLayout cell+实例，routed 连接坍缩成器件级网络，per-device port 模板持久化进 spec，网络由 klink 路由。<code>port.harvest_blackbox</code>（列在 <a href="#d-ports">ports_and_anchors</a> 域——从 live blackbox 实例位置派生 Port）是另一个端口来源；移动实例后重跑它，再路由。<code>photonics.connect</code> 读最近 N 次 SEND 当端口对，自动命名网络，持久化，重新 harvest，再用 gdsfactory 路由。<code>photonics.reroute</code> 在用户移动组件后重路由一个 cell（读持久 net 表）。多端光学网络不按星形路由——先插入显式 splitter/MMI/Y-branch，再路由拆出来的两端网络。</p>
         </div>
         <table class="data-table reftable">
-          <thead><tr><th>工具</th><th>参数</th><th>功能</th></tr></thead>
+          <thead><tr><th>工具</th><th>类型</th><th>参数</th><th>功能</th></tr></thead>
           <tbody>
-            <tr><td><code>photonics.import_gf</code></td><td>script_path*, component, cell, route_layer, port_layer, route, session</td><td>一次接管成品 gdsfactory 脚本：跑用户 <code>.py</code>，取它 build 的 Component，把器件实例导入为真实 KLayout cell+实例（批量 RPC），把 routed 连接坍缩成器件级网络，持久化 port 模板 + net 表，并用 klink 路由（脚本自己的路由被替换）。</td></tr>
-            <tr><td><code>port.harvest_blackbox</code></td><td>cell*, tags*, nets, wg_layer*, stub_size_um*, port_layer, clear</td><td>按 waveguide stub 约定（波导层上的小 stub 盒）从 PDK blackbox 实例派生 Port。Port 由 live 实例位置得来——移动实例后重跑刷新，再路由。</td></tr>
-            <tr><td><code>photonics.connect</code></td><td>recent_sends*, cell, width_um, radius_um, separation_um, wg_layer, stub_size_um, route_layer</td><td>连接用户刚 SEND 的端口：读最近 N 次 SEND → 变成端口对（一次 SEND 框两个 Port 标记 = 一对）→ 自动命名网络 → 持久化 → 重新 harvest → gdsfactory 路由。session 从 SEND 自动推得。</td></tr>
-            <tr><td><code>photonics.reroute</code></td><td>cell*, session, wg_layer, stub_size_um, route_layer</td><td>用户移动组件后重路由：读持久 net 表 → 从 live 实例位置重新 harvest → 路由 → 写回。只需 cell 名。多端光学网络需先放 splitter/MMI。</td></tr>
+            <tr><td><code>photonics.connect</code></td><td><span class="badge kind-local">local</span></td><td>cell, radius_um, recent_sends*, route_layer, separation_um, stub_size_um, wg_layer, width_um</td><td>连接用户刚 SEND 的端口：读最近 N 次 SEND → 变成端口对 → 自动命名网络 → 持久化 → 重新 harvest → gdsfactory 路由。</td></tr>
+            <tr><td><code>photonics.import_gf</code></td><td><span class="badge kind-local">local</span></td><td>cell, component, port_layer, route, route_layer, script_path*, session</td><td>一次接管成品 gdsfactory 脚本：导入器件实例（批量 RPC），把 routed 连接坍缩成器件级网络，持久化 port 模板 + net 表，用 klink 路由。</td></tr>
+            <tr><td><code>photonics.reroute</code></td><td><span class="badge kind-local">local</span></td><td>cell*, route_layer, session, stub_size_um, wg_layer</td><td>用户移动组件后重路由：读持久 net 表 → 从 live 实例位置重新 harvest → 路由 → 写回。多端光学网络需先放 splitter。</td></tr>
           </tbody>
         </table>
-        <p><strong>示例：接管一个 gdsfactory 脚本，然后拖动后重路由。</strong></p>
+        <p><strong>示例。</strong></p>
         <pre><code># 1) 一次接管成品脚本（脚本里 c = build_mzi(); 供 klink 取用）
 photonics.import_gf script_path="my_mzi.py" cell="MZI" route_layer="1/0"
 
 # 2) 在 KLayout GUI 里拖动某个 phase shifter……然后：
 photonics.reroute cell="MZI"     # 光学 + 金属一起重画，保住你的拖动
 
-# 也可从 blackbox stub 约定派生端口后再连
+# 也可从 blackbox stub 约定派生端口后再连（这个工具列在 ports_and_anchors 域）
 port.harvest_blackbox cell="MZI" tags=["gc","mmi"] wg_layer="1/0" stub_size_um=0.5
 photonics.connect recent_sends=4 cell="MZI" radius_um=10 separation_um=5</code></pre>
 
-
-        <!-- ================= 11 escape ================= -->
-        
-        <!-- ================= 11 ledit bridge ================= -->
-        <h2 id="d-ledit" class="anchor-h">11 · L-Edit 桥（文件交换 RPC） <span class="tool-count">bridge_ledit · 3 tools</span></h2>
+        <h2 id="d-ledit" class="anchor-h">12 &middot; L-Edit 桥（文件交换 RPC） <span class="tool-count">bridge_ledit &middot; 3 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="bridge_ledit"</span>
-          <p>让 agent 驱动正在运行的 Tanner L-Edit：前提是用户把 <code>example_template/ledit_bridge/ledit_bridge.cpp</code> 以<strong>源码</strong>方式装载进 L-Edit（Tools → Macro → Load Macro…，零编译）。传输是 <code>%LOCALAPPDATA%</code> 下的 JSON 文件交换，单命名空间——同时只保留一个装宏的 L-Edit。更深的 T-Cell 工作流（读生成器代码、程序化实例化、写回原生 T-Cell、逐字节差分验证）走 Python API <code>klink.bridges.ledit</code> 和模板里的 <code>tcell_workflows.py</code>；详见<a href="ledit-bridge.html">《L-Edit 桥》指南</a>。</p>
+          <p>前提是用户把 <code>example_template/ledit_bridge/ledit_bridge.cpp</code> 以<strong>源码</strong>方式装载进 L-Edit（Tools → Macro → Load Macro…，零编译）。传输是 <code>%LOCALAPPDATA%\klink\ledit_bridge\&lt;namespace&gt;</code> 下的 JSON 文件交换，单命名空间——同时只保留一个装宏的 L-Edit。<code>ledit.status</code> 是发现与握手——任何异常先调它，错误信息直接写明下一步。<code>ledit.import_selection</code> 现拉用户当前 L-Edit 选区到新的 KLayout 落地 cell。<code>ledit.push_cell</code> 把 KLayout 平坦 cell 推回 L-Edit（追加式，重新生成用新 target cell）。更深的 T-Cell 工作流走 Python API <code>klink.bridges.ledit</code>；详见 <a href="ledit-bridge.html">《L-Edit 桥》指南</a>。</p>
         </div>
         <table class="data-table reftable">
-          <thead><tr><th>工具</th><th>参数</th><th>功能</th></tr></thead>
+          <thead><tr><th>工具</th><th>类型</th><th>参数</th><th>功能</th></tr></thead>
           <tbody>
-            <tr><td><code>ledit.status</code></td><td>namespace</td><td>发现与分诊：宏活性（心跳年龄）、设计是否打开、宏版本与能力表、当前 .tdb 与 cell。任何 ledit.* 异常先叫它——错误信息直接写明下一步（装宏 / 关掉模态对话框 / new_design）。</td></tr>
-            <tr><td><code>ledit.import_selection</code></td><td>target_cell, namespace, session</td><td>把用户当前在 L-Edit 里的选区导入 KLayout 新落地 cell（每次现拉，绝不用陈旧几何）。能力匹配转换：box→box、wire→path、circle→CIRCLE PCell（保持参数化）、其余有轮廓一律 polygon 兜底；层<strong>连名带号</strong>迁移（重名追加 <code>旧|新</code> 不覆盖）；不可转换对象如实列出。</td></tr>
-            <tr><td><code>ledit.push_cell</code></td><td>cell*, ledit_cell, namespace, session</td><td>把 KLayout 平坦 cell 推回 L-Edit（box/path→wire/polygon；层带名建立并盖 GDS 号）。子实例计入 <code>skipped.instance</code> 不静默丢——层次结构先 flatten。L-Edit 侧 draw 是追加式：重新生成请换新 <code>ledit_cell</code>。</td></tr>
+            <tr><td><code>ledit.import_selection</code></td><td><span class="badge kind-local">local</span></td><td>namespace, session, target_cell</td><td>把用户当前在 L-Edit 里的选区导入 KLayout 新落地 cell（每次现拉，绝不用陈旧几何）。能力匹配转换：box→box、wire→path、circle→CIRCLE PCell、其余轮廓兜底 polygon；层连名带号迁移；不可转换对象如实列出。</td></tr>
+            <tr><td><code>ledit.push_cell</code></td><td><span class="badge kind-local">local</span></td><td>cell*, ledit_cell, namespace, session</td><td>把 KLayout 平坦 cell 推回 L-Edit（box/path→wire/polygon；层带名建立并盖 GDS 号）。子实例计入 skipped.instance 不静默丢。L-Edit 侧 draw 是追加式：重新生成请换新 ledit_cell。</td></tr>
+            <tr><td><code>ledit.status</code></td><td><span class="badge kind-local">local</span></td><td>namespace</td><td>发现与分诊：宏活性（心跳年龄）、设计是否打开、宏版本与能力表、当前 .tdb 与 cell。任何 ledit.* 异常先叫它——错误信息直接写明下一步。</td></tr>
           </tbody>
         </table>
-        <h2 id="d-escape" class="anchor-h">12 · Escape hatch（pya exec、事件、recorder） <span class="tool-count">escape_hatch · 8 tools</span></h2>
+
+        <h2 id="d-escape" class="anchor-h">13 &middot; Escape hatch（pya exec、事件、recorder） <span class="tool-count">escape_hatch &middot; 9 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="escape_hatch"</span>
-          <p><strong>优先用 typed RPC。</strong> <code>exec.python</code> 跑原始 pya，仅用于没有 typed RPC 覆盖的操作 / 调试 / 紧凑一次性——它仍会触发 recorder + layout-diff 检测。<code>events.*</code> 是桥为 SEND 记忆订阅的 live 事件流（通常你改读 <code>interaction.*</code>）。<code>recorder.*</code> 生成回放<strong>脚本</strong>（不是字面 RPC 日志）；测试前先看 <code>recorder.status</code>，别覆盖用户正在录的东西。</p>
+          <p><strong>优先用 typed RPC。</strong> <code>exec.python</code> 跑原始 pya，仅用于没有 typed RPC 覆盖的操作 / 调试 / 紧凑一次性（<code>exec.reset</code> 清空其命名空间）——它仍会触发 recorder + layout-diff 检测。<code>events.*</code>（<code>channels</code>/<code>status</code>/<code>subscribe</code>/<code>unsubscribe</code>）是桥为 SEND 记忆订阅的 live 事件流（通常你改读 <code>interaction.*</code>）。<code>recorder.*</code>（<code>start</code>/<code>stop</code>/<code>status</code>）生成回放<strong>脚本</strong>（不是字面 RPC 日志）；测试前先看 <code>recorder.status</code>，别覆盖用户正在录的东西。</p>
         </div>
         <table class="data-table reftable">
-          <thead><tr><th>工具</th><th>参数</th><th>功能</th></tr></thead>
+          <thead><tr><th>工具</th><th>类型</th><th>参数</th><th>功能</th></tr></thead>
           <tbody>
-            <tr><td><code>exec.python</code> <span class="badge mutates">mutates</span></td><td>（code + 可选 reset）</td><td>在 KLayout Qt 主线程跑任意 Python。全 pya + 文件系统访问。预绑定 <code>pya, mw, view, layout</code>。同一连接内状态保留（<code>reset=true</code> 清空）。stdout/stderr 捕获返回。</td></tr>
-            <tr><td><code>exec.reset</code> <span class="badge mutates">mutates</span></td><td>—</td><td>清空 <code>exec.python</code> 的 per-connection 命名空间（要个干净沙箱）。</td></tr>
-            <tr><td><code>events.channels</code></td><td>—</td><td>列 server 能推的事件通道。事件以 NDJSON 帧 <code>{"event":…,"data":…}</code> 投递。</td></tr>
-            <tr><td><code>events.status</code></td><td>—</td><td>本连接的订阅 + SignalHub 诊断。调试 selection_changed 是否绑定/订阅。</td></tr>
-            <tr><td><code>events.subscribe</code></td><td>channels*</td><td>订阅一或多个通道（未知通道静默忽略，看返回的 accepted）。</td></tr>
-            <tr><td><code>events.unsubscribe</code></td><td>channels</td><td>退订；传 <code>*</code> 退全部，空/省略则不变。</td></tr>
-            <tr><td><code>recorder.start</code></td><td>output_path</td><td>开始把所有改动版图的事件翻译成可回放 Python 脚本。幂等。默认落 <code>~/Documents/klink_recordings/…</code>。</td></tr>
-            <tr><td><code>recorder.stop</code></td><td>output_path</td><td>停止并写脚本；返回统计 + <code>wrote</code>。幂等。</td></tr>
-            <tr><td><code>recorder.status</code></td><td>—</td><td>当前 recorder 状态（是否在录、事件/动作数、输出路径）。随时可调。</td></tr>
+            <tr><td><code>events.channels</code></td><td><span class="badge kind-rpc">rpc</span></td><td>—</td><td>列 server 能推的事件通道。事件以 NDJSON 帧投递。</td></tr>
+            <tr><td><code>events.status</code></td><td><span class="badge kind-rpc">rpc</span></td><td>—</td><td>本连接的订阅 + SignalHub 诊断。</td></tr>
+            <tr><td><code>events.subscribe</code></td><td><span class="badge kind-rpc">rpc</span></td><td>channels*</td><td>订阅一或多个通道（未知通道静默忽略）。</td></tr>
+            <tr><td><code>events.unsubscribe</code></td><td><span class="badge kind-rpc">rpc</span></td><td>channels</td><td>退订；传 * 退全部。</td></tr>
+            <tr><td><code>exec.python</code></td><td><span class="badge kind-rpc">rpc</span></td><td>code*, protect_cellview, reset, result_mode, stderr_limit, stdout_limit</td><td>在 KLayout Qt 主线程跑任意 Python。全 pya + 文件系统访问。预绑定 pya, mw, view, layout。同一连接内状态保留（reset=true 清空）。stdout/stderr 捕获返回。</td></tr>
+            <tr><td><code>exec.reset</code></td><td><span class="badge kind-rpc">rpc</span></td><td>—</td><td>清空 exec.python 的 per-connection 命名空间。</td></tr>
+            <tr><td><code>recorder.start</code></td><td><span class="badge kind-rpc">rpc</span></td><td>output_path</td><td>开始把所有改动版图的事件翻译成可回放 Python 脚本。幂等。</td></tr>
+            <tr><td><code>recorder.status</code></td><td><span class="badge kind-rpc">rpc</span></td><td>—</td><td>当前 recorder 状态（是否在录、事件/动作数、输出路径）。</td></tr>
+            <tr><td><code>recorder.stop</code></td><td><span class="badge kind-rpc">rpc</span></td><td>output_path</td><td>停止并写脚本；返回统计 + wrote。</td></tr>
           </tbody>
         </table>
-        <p><strong>示例：录制一段会话，用 pya 做一次性操作。</strong></p>
+        <p><strong>示例。</strong></p>
         <pre><code>recorder.status                 # 先确认没在录别人的
 recorder.start
 # …做一些 typed RPC 编辑 + 手工 GUI 编辑…
@@ -635,9 +648,8 @@ exec.python code="print(layout.top_cell().name); print(len(list(layout.each_cell
         <p>recorder 产出两个文件：<code>&lt;name&gt;.py</code>（基于 <code>KLinkClient</code> 的回放）和 <code>&lt;name&gt;_pya.py</code>（可在 KLayout 内独立运行的 pya 版）。</p>
 
         <div class="note" style="margin-top:36px">
-          想看这些工具在真实流程里怎么配合？去 <a href="tutorials.html">教程</a> 看可跑 demo 的逐个详解，或 <a href="tutorials.html">教程</a> 看按领域的上手路径。
+          想看这些工具在真实流程里怎么配合？去 <a href="tutorials.html">教程</a> 看可跑 demo 的逐个详解。
         </div>
-
       </article>
     </div>
   </main>

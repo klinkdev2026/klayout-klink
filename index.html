@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>klink · KLayout 的 AI-native 控制平面</title>
-  <meta name="description" content="klink 是面向 KLayout 的 AI-native 控制平面：geometry-first 的版图自动化，120+ 个 MCP 工具，SEND 记忆、多会话、跨窗搬运、8082 klive 显示与录制回放，全部由 live KLayout 插件驱动。">
+  <meta name="description" content="klink 是面向 KLayout 的 AI-native 控制平面：geometry-first 的版图自动化，150+ 个 MCP 工具，SEND 记忆、多会话、跨窗搬运、8082 klive 显示与录制回放，全部由 live KLayout 插件驱动。">
   <meta property="og:title" content="klink · KLayout 的 AI-native 控制平面">
-  <meta property="og:description" content="klink 是面向 KLayout 的 AI-native 控制平面：geometry-first 的版图自动化，120+ 个 MCP 工具，SEND 记忆、多会话、跨窗搬运、8082 klive 显示与录制回放，全部由 live KLayout 插件驱动。">
+  <meta property="og:description" content="klink 是面向 KLayout 的 AI-native 控制平面：geometry-first 的版图自动化，150+ 个 MCP 工具，SEND 记忆、多会话、跨窗搬运、8082 klive 显示与录制回放，全部由 live KLayout 插件驱动。">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://klinkdev2026.github.io/klayout-klink/">
   <meta property="og:image" content="https://klinkdev2026.github.io/klayout-klink/assets/klink-hero.png">
@@ -47,6 +47,7 @@
         <a href="tutorial-passives.html">无源器件模板</a>
         <a href="tutorial-fit-device.html">拟合器件 → PnR → LVS</a>
         <a href="tutorial-padframe.html">针卡优先 padframe</a>
+        <a href="tutorial-imaging.html">成像：剖面 · 3D · SEM · Blender</a>
       </div>
       <div class="sb-group">
         <div class="sb-title">指南</div>
@@ -105,7 +106,7 @@
         </p>
         <div class="hero-actions">
           <a class="button" href="quickstart.html">开始安装</a>
-          <a class="button-secondary" href="mcp-reference.html">浏览 120+ 个工具</a>
+          <a class="button-secondary" href="mcp-reference.html">浏览 150+ 个工具</a>
           <a class="button-secondary" href="tutorials.html">看教程</a>
         </div>
         <div class="hero-meta" aria-label="项目事实">
@@ -135,7 +136,7 @@
           <a class="card" href="mcp-reference.html">
             <span class="feature-kicker green">Agent</span>
             <h3>MCP 工具面</h3>
-            <p><code>klink-mcp</code> 把同一套控制目录暴露给 Claude Code、Codex 等——<strong>120+ 个工具、11 个领域</strong>，用 <code>klink.find_tools</code> 导航。</p>
+            <p><code>klink-mcp</code> 把同一套控制目录暴露给 Claude Code、Codex 等——<strong>150+ 个工具、13 个领域</strong>，用 <code>klink.find_tools</code> 导航。</p>
             <span class="card-more">看 MCP 参考 →</span>
           </a>
           <a class="card" href="concepts.html#verify">
@@ -311,8 +312,8 @@ python example_template/nanodevice/ebl_wraparound.py</code></pre>
     <section class="section dark">
       <div class="container">
         <div class="section-head">
-          <h2>120+ 个工具，11 个领域</h2>
-          <p class="muted">83 个插件 RPC + 39 个 MCP 本地工具，每个都有功能、参数和示例。目录由 live plugin 的 method registry 生成，不存在会漂移的手写清单。</p>
+          <h2>150+ 个工具，13 个领域</h2>
+          <p class="muted">107 个插件 RPC + 46 个 MCP 本地工具，每个都有功能、参数和示例。目录由 live plugin 的 method registry 生成，不存在会漂移的手写清单。</p>
         </div>
         <div class="pill-row">
           <a href="mcp-reference.html#d-connection">连接 / 视图</a>
@@ -323,8 +324,10 @@ python example_template/nanodevice/ebl_wraparound.py</code></pre>
           <a href="mcp-reference.html#d-routing">路由后端</a>
           <a href="mcp-reference.html#d-verify">DRC / LVS</a>
           <a href="mcp-reference.html#d-structdevice">自定义器件</a>
+          <a href="mcp-reference.html#d-imaging">成像</a>
           <a href="mcp-reference.html#d-nanodevice">纳米器件</a>
           <a href="mcp-reference.html#d-photonics">硅光</a>
+          <a href="mcp-reference.html#d-ledit">L-Edit 桥</a>
           <a href="mcp-reference.html#d-escape">Escape hatch</a>
         </div>
         <div class="hero-actions" style="margin-top:8px">
@@ -358,7 +361,7 @@ python example_template/nanodevice/ebl_wraparound.py</code></pre>
           </a>
           <a class="card" href="mcp-reference.html">
             <h3>MCP 工具参考</h3>
-            <p>120+ 个工具按 11 个领域逐一列出：功能、参数、示例。</p>
+            <p>150+ 个工具按 13 个领域逐一列出：功能、参数、示例。</p>
             <span class="card-more">参考 →</span>
           </a>
           <a class="card" href="tutorials.html">

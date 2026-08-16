@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>分步教程：成像家族——剖面、工艺胶片、3D、SEM、Blender - klink</title>
+  <meta name="description" content="用 klink 的 imaging 域从一份 GDS 出五种图：process cross-section 剖面、逐步工艺胶片、3D 自含网页查看器、SEM 风格顶视、Blender 论文级渲染——三份你自己拥有的文件（CMOS 行版图 + .pyxs 配方 + VisualStack 声明）驱动全部出口，klink 只出机制、零工艺数据。">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="assets/styles.css">
+  <style>
+    /* Minimal figure styling, following the site's existing card/note language
+       (border var(--line), radius 8px) -- assets/styles.css has no <img>
+       usage yet, so this stays scoped to this page until it lands there. */
+    .tut-figure {
+      margin: 16px 0 26px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .tut-figure img {
+      width: 100%;
+      display: block;
+      background: #fff;
+    }
+    .tut-figure figcaption {
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      background: #f7fafb;
+    }
+    .tut-figure-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    @media (max-width: 760px) {
+      .tut-figure-row { grid-template-columns: 1fr; }
+    }
+    .tut-figure-strip {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+      margin: 16px 0 26px;
+    }
+    .tut-figure-strip .tut-figure { margin: 0; }
+    @media (max-width: 900px) { .tut-figure-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 480px) { .tut-figure-strip { grid-template-columns: 1fr; } }
+    .stage-kicker {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 26px;
+      height: 26px;
+      padding: 0 8px;
+      border-radius: 6px;
+      background: #dff1ee;
+      color: #12654b;
+      font-weight: 800;
+      font-size: 13px;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body data-page="tutorials" class="has-sidebar">
+  <aside class="site-sidebar">
+    <a class="sb-brand" href="index.html"><span class="brand-mark">k</span>klink</a>
+    <nav class="sb-nav" aria-label="站点结构">
+      <div class="sb-group">
+        <div class="sb-title">开始</div>
+        <a href="index.html">首页 · klink 是什么</a>
+        <a href="quickstart.html">快速上手</a>
+        <a href="concepts.html">核心思路</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">工作流 · 人机协作</div>
+        <a href="workflows.html">工作流详解（图文）</a>
+        <a href="tutorial-multiwindow.html">跨窗口协作实战</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">对话案例</div>
+        <a href="case-hallbar-chat.html">一句话画 Hall bar</a>
+        <a href="case-drc-chat.html">DRC 查违例并修好</a>
+        <a href="case-fit-lvs-chat.html">拟合器件跑到 LVS</a>
+        <a href="case-gf-reroute-chat.html">硅光：标端口 · 拖动重连</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">分步教程</div>
+        <a href="tutorials.html">教程总览</a>
+        <a href="tutorial-hallbar.html">Hall bar 器件</a>
+        <a href="tutorial-ebl-wraparound.html">EBL wraparound</a>
+        <a href="tutorial-neural-electrode.html">神经电极阵列</a>
+        <a href="tutorial-gf-ports.html">硅光 · 三种拿端口</a>
+        <a href="tutorial-gf-mzi.html">硅光 · gf MZI 接管</a>
+        <a href="tutorial-passives.html">无源器件模板</a>
+        <a href="tutorial-fit-device.html">拟合器件 → PnR → LVS</a>
+        <a href="tutorial-padframe.html">针卡优先 padframe</a>
+        <a href="tutorial-imaging.html">成像：剖面 · 3D · SEM · Blender</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">指南</div>
+        <a href="drc-lvs.html">DRC · LVS</a>
+        <a href="25d-view.html">2.5D 视图</a>
+        <a href="ledit-bridge.html">L-Edit 桥</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">参考</div>
+        <a href="mcp-reference.html">MCP 工具全表</a>
+        <a href="plugin-packages.html">编写扩展包</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">架构</div>
+        <a href="architecture.html">架构与边界</a>
+      </div>
+    </nav>
+    <div class="sb-foot">
+      <a href="https://github.com/klinkdev2026/klayout-klink">GitHub ↗</a>
+      <a href="en/index.html">English</a>
+    </div>
+  </aside>
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="主导航">
+        <a href="index.html" data-nav="home">首页</a>
+        <a href="quickstart.html" data-nav="quickstart">快速上手</a>
+        <a href="tutorials.html" data-nav="tutorials" class="active">教程</a>
+        <a href="workflows.html" data-nav="workflows">工作流</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP 参考</a>
+        <a href="architecture.html" data-nav="architecture">架构</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="语言切换">
+          <a class="active" href="tutorial-imaging.html">CN</a>
+          <a href="en/tutorial-imaging.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="打开导航" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Step-by-step tutorial · imaging</div>
+        <h1>分步教程：从一份 GDS 出五种图</h1>
+        <p>对应 <code>example_template/imaging/</code> 里的可跑 starter（klink 0.3.3 起随 wheel 打包）。imaging 域是 klink 里专门"出图"的一组出口：process cross-section 剖面、逐步工艺胶片、3D 模型 + 自含网页查看器、SEM 风格顶视、Blender 论文级渲染——全部由你自己的三份文件驱动，klink 机制层零工艺数据。</p>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#what">这是什么</a>
+          <a href="#prereqs">前置条件</a>
+          <a href="#starters">拿到 starter</a>
+          <a href="#stage-1">① 剖面 + 逐步工艺胶片</a>
+          <a href="#stage-2">② 3D + 自含网页查看器</a>
+          <a href="#stage-3">③ SEM 风格顶视</a>
+          <a href="#stage-4">④ Blender 论文级渲染</a>
+          <a href="#physics">物理对不对？</a>
+          <a href="#gotchas">常见坑</a>
+          <a href="#determinism">确定性 · 产物契约</a>
+          <a href="#credits">引擎与查看器归属</a>
+          <a href="#next">下一步</a>
+        </nav>
+      </aside>
+
+      <article class="content">
+        <h2 id="what" class="anchor-h">这是什么</h2>
+        <p>一份 GDS，加上你自己拥有的三份文件，能出五种"图"。驱动它们的只有这三份 EXAMPLE-owned 文件——klink 只提供机制（xsection 引擎绑定、GLB 网格生成、SEM 光栅渲染、Blender 场景搭建），零工艺常数：</p>
+        <table class="data-table">
+          <thead><tr><th>你的文件</th><th>是什么</th></tr></thead>
+          <tbody>
+            <tr><td><code>demo_layout.py</code></td><td>示例版图：一整排四晶体管 CMOS 器件（p 衬底两个 NMOS + n-well 两个 PMOS，多晶硅栅极、每个源漏上的接触、金属1加电源轨），并导出切线 <code>CUT_UM</code>。<strong>改成你的器件就是改这份文件。</strong></td></tr>
+            <tr><td><code>demo.pyxs</code></td><td>工艺配方——受信 Python，进程内执行；<code># klink-step: &lt;名字&gt;</code> 注释标记每个工艺步。<strong>改成你的流程就是改这份文件。</strong></td></tr>
+            <tr><td><code>demo_stack.py</code></td><td>一份 <code>klink_visual_stack_v1</code> 声明：每层的 <code>z0_um</code>/<code>z1_um</code>、颜色、SEM 灰阶（<code>sem_grey</code>）、材质类别（solid / lattice / dielectric）、对应的配方符号（<code>recipe_symbol</code>）。<strong>改成你的工艺就是改这份文件。</strong></td></tr>
+          </tbody>
+        </table>
+        <p>这篇教程走一遍随包 starter：<code>example_template/imaging/demo_layout.py</code>、<code>demo.pyxs</code>、<code>demo_stack.py</code> 和四个 demo 脚本（<code>xsection_demo.py</code> / <code>render3d_demo.py</code> / <code>sem_demo.py</code> / <code>blender_demo.py</code>），全部离线跑，输出落进 <code>_generated/</code>。</p>
+
+        <h2 id="prereqs" class="anchor-h">前置条件</h2>
+        <ul>
+          <li>安装 klink：<code>pip install klayout-klink</code>。</li>
+          <li>四个出口各自的依赖是<strong>可选的</strong>，按需装——少装了什么，klink 的报错会给出精确的 pip 命令：</li>
+        </ul>
+        <pre><code>pip install klayout klayout-pyxs==0.1.13            # 剖面引擎
+pip install trimesh shapely mapbox-earcut           # 3D
+pip install numpy scipy pillow                      # SEM / 胶片渲染
+pip install bpy                                     # Blender（约 300MB，可选）</code></pre>
+        <div class="note">这条链路<strong>不需要 KLayout 在跑</strong>——四个 demo 脚本都是纯 Python，离线读写 GDS/GLB/PNG/HTML 文件。连着 KLayout/klink-mcp 时，同样的功能是四个 MCP 工具：<code>imaging.xsection_run</code> / <code>imaging.render3d</code> / <code>imaging.sem_top</code> / <code>imaging.blender</code>，参数和这些脚本一一对应；<code>klink.find_tools domain=imaging</code> 能看到完整用法。</div>
+
+        <h2 id="starters" class="anchor-h">拿到 starter</h2>
+        <pre><code>klink init myproj
+cd myproj/example_template/imaging
+python xsection_demo.py</code></pre>
+        <p>升级 klink 之后用 <code>klink update</code> 刷新 starter（新增/修复的文件会回灌，你自己没碰过的旧文件会清理）。</p>
+        <div class="warning"><strong>重要：</strong><code>example_template/</code> 整个目录归 klink 包所有——<code>klink update</code> 会把它刷回随包状态。所以<strong>先把 <code>demo_layout.py</code> / <code>demo.pyxs</code> / <code>demo_stack.py</code> 拷贝到项目根目录或你自己的目录再改</strong>（和 <code>pdk.py</code> 一个待遇），不要直接改 <code>example_template/</code> 里的文件。<code>klink update</code> 完全不碰 demo 的 <code>_generated/</code> 输出目录。</div>
+
+        <h2 id="stage-1" class="anchor-h"><span class="stage-kicker">1</span>剖面 + 逐步工艺胶片</h2>
+        <p><code>xsection_demo.py</code> 先用 <code>demo_layout.py</code> 画一整排四晶体管 CMOS 器件：p 衬底左半两个 NMOS，n-well 右半两个 PMOS，多晶硅栅极横跨有源区，每个源漏上都有接触，金属1覆盖接触并带上下两条电源轨。再沿一条显式切线 <code>CUT_UM = [[-0.8, 1.9], [11.2, 1.9]]</code>（贯穿有源行正中间，切过四个栅极、间隔层和阱边界）剖开：一次单帧剖面，一次 <code>steps=True</code> 的逐步工艺胶片。</p>
+        <pre><code>python xsection_demo.py</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/imaging/hero-film-strip.png" alt="十一帧竖排剖面胶片，从裸衬底经 n-well 注入、LOCOS 场氧、多晶硅栅极、LDD、侧墙、源漏注入、层间介质、钨塞接触，一路叠到金属1完成互连">
+          <figcaption>逐步工艺胶片（<code>film_film.png</code>）：<code>demo.pyxs</code> 的 11 个 <code>klink-step</code> 各出一帧剖面，从裸衬底一路叠到金属1互连完成。</figcaption>
+        </figure>
+        <p><code>demo.pyxs</code> 用 <code># klink-step: &lt;名字&gt;</code> 注释标记工艺步——<strong>每个标记命名的是它后面紧跟的那段代码</strong>，胶片按标记数量渲染，一步一帧；这版配方有 11 个标记：p-substrate、n-well implant、LOCOS field oxide、gate oxide、poly gate + silicide、LDD implants、spacer、source/drain implants、ILD deposition、contact etch + W plug + CMP、metal-1 damascene。下面是配方的一段摘录（完整 11 步见 <code>demo.pyxs</code>）：</p>
+        <pre><code># klink-step: p-substrate
+pbulk = bulk()
+
+# klink-step: n-well implant
+nwell = mask(lnwell).grow(0.55, -0.05, mode='round', into=pbulk)
+
+# klink-step: LOCOS field oxide
+mfield = mask(lfield)
+_fox_up = mfield.grow(0.22, 0.22, bias=0.12, mode='round')
+_fox_dn = mfield.grow(0.22, 0.22, bias=0.12, mode='round',
+                     into=[pbulk, nwell])
+fox = _fox_up.or_(_fox_dn)
+
+# ... gate oxide / poly gate + silicide / LDD implants / spacer /
+# source-drain implants / ILD deposition 在这里（完整代码见 demo.pyxs）...
+
+# klink-step: contact etch + W plug + CMP
+mask(lcontact).etch(0.85, into=ild, taper=5)
+tungsten = deposit(0.18, 0.18)
+planarize(into=[tungsten, ild], less=0.5)
+
+# klink-step: metal-1 damascene
+imd = deposit(0.22)
+mask(lmetal1).etch(0.32, into=imd, taper=5)
+metal1 = deposit(0.22, 0.22)
+planarize(into=[metal1], less=0.22)</code></pre>
+        <p>被赋值给变量的材质会按变量名自动输出，不需要写 <code>output()</code>——但变量名以 <code>_</code> 开头的例外：上面 <code>_fox_up</code> / <code>_fox_dn</code> 是 LOCOS 场氧上下两半各自生长出的中间结果，按惯例标成下划线开头，只用来 <code>.or_()</code> 合成最终的 <code>fox</code>，本身不会作为一种材质单独出现在图里。</p>
+        <p>5 帧最有代表性的截取（完整 11 帧见上面的胶片）：</p>
+        <div class="tut-figure-strip">
+          <figure class="tut-figure">
+            <img src="assets/tutorials/imaging/step-00-p-substrate.png" alt="第1步剖面：切线下方是一整块均匀的棕褐色 p 衬底，上方是空气，还没有任何结构">
+            <figcaption>步骤 1/11 · p-substrate</figcaption>
+          </figure>
+          <figure class="tut-figure">
+            <img src="assets/tutorials/imaging/step-01-locos-field-oxide.png" alt="第3步剖面：剖面两端各出现一个圆角的蓝灰色场氧化物凸起，中间偏右有一块颜色略浅的 n-well 区域">
+            <figcaption>步骤 3/11 · LOCOS field oxide</figcaption>
+          </figure>
+          <figure class="tut-figure">
+            <img src="assets/tutorials/imaging/step-02-poly-gate-silicide.png" alt="第5步剖面：硅表面均匀分布着四个深红色的小方块状多晶硅栅极，场氧化物凸起仍在两端">
+            <figcaption>步骤 5/11 · poly gate + silicide</figcaption>
+          </figure>
+          <figure class="tut-figure">
+            <img src="assets/tutorials/imaging/step-03-contact-w-plug.png" alt="第10步剖面：浅蓝灰色的层间介质覆盖全表面，若干深灰色梯形钨塞垂直穿过它连到下方绿色和紫色的源漏区">
+            <figcaption>步骤 10/11 · contact etch + W plug + CMP</figcaption>
+          </figure>
+          <figure class="tut-figure">
+            <img src="assets/tutorials/imaging/step-04-metal-1-damascene.png" alt="第11步（最后一步）剖面：在钨塞上方又出现一层灰蓝色金属层，通过下方的钨塞与源漏区相连">
+            <figcaption>步骤 11/11 · metal-1 damascene</figcaption>
+          </figure>
+        </div>
+        <p>MCP 工具：<code>imaging.xsection_run</code>——<code>cut_um</code> 必须显式给（µm），<code>steps=true</code> 配合配方里的 <code># klink-step:</code> 标记出胶片；<code>z_window_um</code> 给每帧定一个统一的 z 窗口（这里是 <code>(-1.1, 1.5)</code>——engine 的衬底本身有好几微米深，不框一下画面大半都是衬底），<code>axis=true</code> 会在每帧左边画一条带刻度的 z / µm 标尺、右下角配一条水平比例尺（上面每张图左边的刻度和角落的 "1 µm" 线段就是它画的）。输出确定性（GDS 不带时间戳），<code>overwrite=false</code> 是默认值，每次运行都写一份 <code>klink_imaging_result_v1</code> 机读 sidecar。</p>
+
+        <h2 id="stage-2" class="anchor-h"><span class="stage-kicker">2</span>3D + 自含网页查看器</h2>
+        <p><code>render3d_demo.py</code> 把同一份四晶体管 CMOS 版图出成两个 GLB + 两个自含网页查看器：</p>
+        <pre><code>python render3d_demo.py</code></pre>
+        <pre><code>fast_glb = OUT / "render3d_fast.glb"
+build_glb_fast(str(GDS), STACK, str(fast_glb))                    # 拉伸 STACK 声明
+build_viewer_html(str(fast_glb), str(OUT / "render3d_fast.html"))
+
+proc_glb = OUT / "render3d_process.glb"
+build_glb_process(str(GDS), STACK, str(RECIPE), str(proc_glb),
+                  slices=24, fraction=0.6)                        # 扫过真实配方，fraction<1 是切角
+build_viewer_html(str(proc_glb), str(OUT / "render3d_process.html"))</code></pre>
+        <p><strong>fast 模式</strong>直接拉伸 <code>demo_stack.py</code> 里的 <code>z0_um</code>/<code>z1_um</code>，快但形状是理想化的层块；<strong>process 模式</strong>沿着真实的 <code>.pyxs</code> 配方做切片扫描，LOCOS/保形层/CMP 那种真实拓扑都会体现出来——本例还传了 <code>fraction=0.6</code>，做出一个切角（cutaway），暴露面就是一个真实的剖面。生成的 <code>.html</code>是<strong>完全自含、离线</strong>的（查看器 JS + 模型数据都编码进同一个文件），双击直接在浏览器打开，拖动旋转，右侧面板能调每层的颜色/金属度/粗糙度、导出 PNG。</p>
+        <figure class="tut-figure">
+          <iframe src="assets/tutorials/imaging/viewer-process.html" title="klink imaging：process 模式 cutaway 的交互式 3D 查看器" loading="lazy" style="width:100%;height:520px;border:1px solid var(--border,#d8d8d2);border-radius:6px;background:#14161a" allowfullscreen></iframe>
+          <figcaption><strong>这就是 <code>render3d_demo.py</code> 生成的那个文件本身</strong>，原样嵌在这里：拖动旋转、滚轮缩放，右侧面板调背景/曝光/色调映射/阴影、逐材质改颜色与金属度，还能导出 PNG。它是单文件、离线的——查看器 JS 和模型数据都编码在这一个 HTML 里，<a href="assets/tutorials/imaging/viewer-process.html" target="_blank" rel="noopener">单独打开</a>或拷给同事双击都一样能跑，不连网、不装东西。</figcaption>
+        </figure>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/imaging/blender-die.png" alt="process-cutaway GLB 的渲染：一整条矩形 die，顶面沿长度方向有一道浅槽，均匀分布着四个深红色多晶硅栅极凸起，栅极之间是深灰色的竖直接触/金属列，透明背景带柔和阴影">
+          <figcaption>这不是自含网页查看器的截图（那是一个你要自己双击打开的离线 HTML 页面）——这是同一个 <code>render3d_process.glb</code> 模型被 <code>blender_demo.py</code> 的 <code>mode="die"</code> 重新摆到透明薄膜 + 阴影承接面上渲染出的静态图：能看到顶面沿长度方向的浅槽、四个深红色多晶硅栅极凸起，以及栅极之间深灰色的接触/金属列，用来在文档里表示这个模型长什么样。</figcaption>
+        </figure>
+        <p>MCP 工具：<code>imaging.render3d</code>——<code>mode="fast"</code> 拉伸 <code>klink_visual_stack_v1</code> 声明；<code>mode="process"</code> 扫过 xsection 引擎，配方材质（<code>pbulk</code>/<code>nwell</code>/<code>tungsten</code> 等）通过 <code>recipe_symbol</code> 映射上色，没映射上的材质标灰并报告 <code>unstyled</code>。</p>
+
+        <h2 id="stage-3" class="anchor-h"><span class="stage-kicker">3</span>SEM 风格顶视</h2>
+        <p><code>sem_demo.py</code> 把版图渲染成"看起来像"二次电子显微图的顶视图：按 <code>VisualStack</code> 里每层的 <code>sem_grey</code>/<code>edge_glow</code> 出灰阶发射强度和边缘亮边，加光刻圆角、束斑模糊、带种子的胶片颗粒、扫描线、暗角——同一个种子永远出同一张图。</p>
+        <pre><code>python sem_demo.py</code></pre>
+        <div class="tut-figure-row">
+          <figure class="tut-figure">
+            <img src="assets/tutorials/imaging/sem-top.jpg" alt="灰度 SEM 顶视图：上下各一条粗的亮灰色电源轨，中间九根亮灰色竖条高度交替排列，横跨一条稍亮的水平有源区带，背景左半接近纯黑、右半是较浅的深灰色，分界线出现在正中间">
+            <figcaption>灰度版（<code>sem_top.png</code>）：顶部/底部两条电源轨，中间九根竖条是四个多晶硅栅极和五个金属1接触列交替排列，横跨有源区；背景左半（p 衬底）比右半（n-well）暗——per-layer <code>sem_grey</code> 发射强度决定了这些明暗差。</figcaption>
+          </figure>
+          <figure class="tut-figure">
+            <img src="assets/tutorials/imaging/sem-top-color.jpg" alt="假彩色 SEM 顶视图：红色竖条（多晶硅栅极）和浅蓝灰色竖条（金属1）交替排列，横跨绿色的有源区带，上下各有一条浅蓝灰色电源轨，背景左侧深蓝黑、右侧橄榄棕色">
+            <figcaption>假彩色版（<code>sem_top_color.png</code>）：同一份数据换一种看法——红色是多晶硅栅极，浅蓝灰色是金属1，绿色带是有源区，背景颜色区分 p 衬底（深蓝黑）和 n-well（橄榄棕）。</figcaption>
+          </figure>
+        </div>
+        <p>脚本还按 <code>demo_stack.py</code> 的层顺序累积渲染"目前已印出哪些掩膜"的序列——配合配方的 <code># klink-step:</code> 顺序，就是顶视版的逐步工艺胶片：</p>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/imaging/sem-after-well-mask.jpg" alt="只印过 n-well 掩膜后的顶视：画面几乎是空白的，只能看到一条竖直分界线把左侧较深的区域和右侧略浅的区域分开，没有任何其他可见结构">
+          <figcaption>只印过掩膜 <code>1/0</code>（n-well）之后的顶视（<code>sem_after_1_0.png</code>）——n-well 本身是一次没有自身形貌的注入，这一步画面只是一块被 well 边界分成深浅两块的平坦灰场；有源/多晶/接触/金属这些之后才印的掩膜，此刻完全看不到任何结构。<code>layers=</code> 参数限制到目前已印出的掩膜子集。</figcaption>
+        </figure>
+        <p>MCP 工具：<code>imaging.sem_top</code>——灰度 + 假彩色两个 PNG 一次出，<code>layers=[...]</code> 限制到某一步已印出的掩膜子集，确定性渲染（同种子同结果）。</p>
+
+        <h2 id="stage-4" class="anchor-h"><span class="stage-kicker">4</span>Blender 论文级渲染</h2>
+        <p><code>blender_demo.py</code> 用无头 <code>bpy</code> 出两张图，来自同一批声明：</p>
+        <pre><code>python blender_demo.py</code></pre>
+        <ul>
+          <li><code>mode="figure"</code>：一个二维材料器件，按版图坐标 1:1 摆放——<code>10/0</code> 层是 MoS2 flake，声明 <code>kind="lattice", motif="mos2"</code> 后直接长出<strong>真实原子晶格</strong>（也支持 <code>motif="graphene"</code>）；<code>20/0</code> 层是 Au 电极，画成精确的版图棱柱；外加显式的 Si/SiO2 衬底 slab。</li>
+          <li><code>mode="die"</code>：把 <code>render3d_process.glb</code>（第②节的产物）重新摆到透明薄膜 + 阴影承接面上，就是上面已经看过的那张切角芯片图。</li>
+        </ul>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/imaging/blender-figure.png" alt="MoS2 场效应器件的论文级渲染：中间是不规则六边形的原子晶格薄片，两端各连一个金色矩形电极，下方是灰蓝色的 SiO2/Si 衬底切块">
+          <figcaption><code>blender_figure.png</code>：MoS2 flake 长成真实原子晶格（<code>kind="lattice", motif="mos2"</code>），Au 电极是精确的版图棱柱，衬底是显式的 SiO2/Si slab。</figcaption>
+        </figure>
+        <p>两种模式都<strong>额外写一份 <code>.blend</code></strong>（<code>blender_figure.blend</code> / <code>blender_die.blend</code>）——在桌面版 Blender 里打开就能手动调相机、灯光、材质再重新渲染，不是一次性黑盒输出。</p>
+        <p>MCP 工具：<code>imaging.blender</code>——子进程隔离跑 headless <code>bpy</code>；<code>mode="die"</code> 需要先跑过 <code>imaging.render3d</code>（或 <code>render3d_demo.py</code>）产出的 process GLB；<code>mode="figure"</code> 直接吃 gds + stack，需要 <code>bpy</code>（外加 <code>trimesh</code>/<code>klayout-pyxs==0.1.13</code>，如果要用 die 模式）。</p>
+
+        <h2 id="physics" class="anchor-h">物理对不对？</h2>
+        <p>这不是营销话术，是一个可核对的结果：<strong>同一份版图</strong>，把 <code>.pyxs</code> 配方里接触工序的那几行代码换三种写法，钨塞是否真的出现在生成的 3D 模型里就完全不一样——因果关系在配方顺序里，不在版图坐标里。</p>
+        <table class="data-table">
+          <thead><tr><th>变体</th><th>配方改动</th><th>模型里的 W plug</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>A</strong>（随包 <code>demo.pyxs</code> 就是这个顺序）</td>
+              <td><code>ild = deposit(...)</code> → <code>mask(lcontact).etch(0.85, into=ild, taper=5)</code> → <code>tungsten = deposit(...)</code> → <code>planarize(...)</code></td>
+              <td>z = 0.00 – 0.49 µm：钨塞从硅表面一路灌到 CMP 平坦化后的顶面。</td>
+            </tr>
+            <tr>
+              <td><strong>B</strong>（删掉接触刻蚀那一行）</td>
+              <td><code>mask(lcontact).etch(...)</code> 那一行整个删掉</td>
+              <td><strong>模型里完全没有 W plug 这种材质</strong>——没有孔可填，CMP 直接把整层钨磨掉了。</td>
+            </tr>
+            <tr>
+              <td><strong>C</strong>（把接触刻蚀挪到 ILD 沉积之前）</td>
+              <td>同样的 <code>etch</code> 那一行，挪到 <code>ild = deposit(...)</code> 之前执行</td>
+              <td><strong>同样完全没有</strong>——是在一层还没沉积出来的膜上开孔，相当于在空气里刻蚀。</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>三种情况下版图<strong>逐字节相同</strong>，只是配方顺序不同：B 和 C 都是开路——每个晶体管都断在接触层，整个器件不导通。而且<strong>版图视图里什么都看不出来</strong>：普通的版图检查工具只看 GDS 里的多边形，这三个变体的 GDS 是同一份文件。只有剖面和 process 模式 3D 才能看见这个断路，因为它们真正跑了配方顺序，而不是把层当成理想化的盒子直接叠起来。</p>
+        <p>顺带说一句诚实话：三种情况下金属1都稳稳地待在 z = 0.45 – 0.93 µm——<strong>上面几层看起来完全正常</strong>，因为金属1的 damascene 工序根本不关心下面的钨塞在不在。失效只在接触层可见，光看版图或只看金属层视图都发现不了。</p>
+
+        <h2 id="gotchas" class="anchor-h">常见坑：deposit ≠ patterned</h2>
+        <div class="warning"><strong>动词语义（最容易踩的坑）：</strong>带图案的沉积是 <code>mask(l).grow(...)</code>——<strong>没有</strong> <code>mask(l).deposit()</code> 这种写法；<code>deposit(...)</code> 永远是<strong>整面覆盖</strong>（blanket）操作。<code>etch(...)</code> 同理也是整面刻蚀；带图案的刻蚀要写 <code>mask(l).etch(...)</code>。<code>demo.pyxs</code> 就是活例子：<code>nwell</code> 用 <code>mask(lnwell).grow(...)</code>（图案化生长），<code>gox</code>/<code>ild</code>/<code>tungsten</code>/<code>imd</code>/<code>metal1</code> 这些用整面的 <code>deposit(...)</code>，接触孔和金属1沟槽分别用 <code>mask(lcontact).etch(...)</code> 和 <code>mask(lmetal1).etch(...)</code>（图案化刻蚀）。</div>
+
+        <h2 id="determinism" class="anchor-h">确定性 · 产物契约</h2>
+        <ul>
+          <li><strong>永不静默覆盖</strong>：目标文件已存在时默认拒绝，必须显式传 <code>overwrite=True</code> 才会替换。</li>
+          <li><strong>每次运行都写机读 sidecar</strong>：<code>*.klink_imaging.json</code>，格式 <code>klink_imaging_result_v1</code>——里面有输入的 <code>cut_um</code>/参数、每个输出文件的 <code>sha256</code>、GDS/配方输入的 <code>sha256</code>，脚本或 CI 可以直接读这份 JSON 而不是解析人读的日志。</li>
+          <li><strong>GDS 输出字节可复现</strong>：不写时间戳，同样的输入两次跑出字节相同的 GDS。</li>
+        </ul>
+
+        <h2 id="credits" class="anchor-h">引擎与查看器归属</h2>
+        <p>剖面由 <a href="https://github.com/dimapu/klayout_pyxs" rel="noopener">klayout-pyxs</a> 引擎驱动——klink 把它当依赖<strong>导入</strong>，固定版本 <code>==0.1.13</code>，从不 vendor 进仓库；3D 查看器里嵌的是 Google 的 <a href="https://modelviewer.dev/" rel="noopener"><code>&lt;model-viewer&gt;</code></a>（vendor 了一份打包好的 JS，这样导出的 <code>.html</code> 才能完全离线打开）。klink 自己写的是 GLB 网格生成、SEM 光栅渲染和 Blender 场景搭建这几层胶水，不是剖面引擎或查看器本身。</p>
+
+        <h2 id="next" class="anchor-h">下一步</h2>
+        <p>把 <code>demo_layout.py</code>、<code>demo.pyxs</code> 和 <code>demo_stack.py</code> 拷到你自己的项目里，换成你真实的版图、层号/z 范围/颜色和真实的工艺步骤（沉积厚度、刻蚀深度、掩膜层），四个脚本原样重跑。想看物理对不对，就照着上面「物理对不对？」节的做法，在配方里挪一行代码的顺序（比如把某道刻蚀挪到它该在的沉积之前），对比 process 模式（<code>imaging.render3d mode="process"</code>）或剖面（<code>imaging.xsection_run</code>）跑出来的材质有没有整个消失——材质凭空消失说明配方在真实生效，不是装饰。四个出口共用同一套 <code>VisualStack</code> 声明，改一次层颜色，剖面/3D/SEM/Blender 四张图都会跟着换。</p>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>geometry-first：在几何上标意图，让算法补全布线，用结构化证据验证。</p></div>
+      <div><h3>继续阅读</h3><p><a href="tutorials.html">核心思路与教程</a></p><p><a href="mcp-reference.html">MCP 工具参考</a></p></div>
+      <div><h3>安装</h3><p><a href="quickstart.html">快速上手</a></p></div>
+    </div>
+  </footer>
+  <script src="assets/app.js"></script>
+</body>
+</html>

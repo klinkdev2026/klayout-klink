@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>klink · AI-native control plane for KLayout</title>
-  <meta name="description" content="klink is an AI-native control plane for KLayout: geometry-first layout automation, 120+ MCP tools, SEND memory, multi-session, cross-window transfer, an 8082 klive-compatible display, and a replay recorder — all driven by the live KLayout plugin.">
+  <meta name="description" content="klink is an AI-native control plane for KLayout: geometry-first layout automation, 150+ MCP tools, SEND memory, multi-session, cross-window transfer, an 8082 klive-compatible display, and a replay recorder — all driven by the live KLayout plugin.">
   <meta property="og:title" content="klink · AI-native control plane for KLayout">
-  <meta property="og:description" content="klink is an AI-native control plane for KLayout: geometry-first layout automation, 120+ MCP tools, SEND memory, multi-session, cross-window transfer, an 8082 klive-compatible display, and a replay recorder — all driven by the live KLayout plugin.">
+  <meta property="og:description" content="klink is an AI-native control plane for KLayout: geometry-first layout automation, 150+ MCP tools, SEND memory, multi-session, cross-window transfer, an 8082 klive-compatible display, and a replay recorder — all driven by the live KLayout plugin.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://klinkdev2026.github.io/klayout-klink/en/">
   <meta property="og:image" content="https://klinkdev2026.github.io/klayout-klink/assets/klink-hero.png">
@@ -47,6 +47,7 @@
         <a href="tutorial-passives.html">Passive templates</a>
         <a href="tutorial-fit-device.html">Fit device &rarr; PnR &rarr; LVS</a>
         <a href="tutorial-padframe.html">Probe-card-first padframe</a>
+        <a href="tutorial-imaging.html">Imaging: cross-section · 3D · SEM · Blender</a>
       </div>
       <div class="sb-group">
         <div class="sb-title">Guides</div>
@@ -105,7 +106,7 @@
         </p>
         <div class="hero-actions">
           <a class="button" href="quickstart.html">Install</a>
-          <a class="button-secondary" href="mcp-reference.html">Browse 120+ tools</a>
+          <a class="button-secondary" href="mcp-reference.html">Browse 150+ tools</a>
           <a class="button-secondary" href="tutorials.html">See the tutorials</a>
         </div>
         <div class="hero-meta" aria-label="Project facts">
@@ -135,7 +136,7 @@
           <a class="card" href="mcp-reference.html">
             <span class="feature-kicker green">Agent</span>
             <h3>MCP tool surface</h3>
-            <p><code>klink-mcp</code> exposes the same catalogue to Claude Code, Codex and others — <strong>120+ tools across 11 domains</strong>, navigated by <code>klink.find_tools</code>.</p>
+            <p><code>klink-mcp</code> exposes the same catalogue to Claude Code, Codex and others — <strong>150+ tools across 13 domains</strong>, navigated by <code>klink.find_tools</code>.</p>
             <span class="card-more">See the MCP Reference →</span>
           </a>
           <a class="card" href="concepts.html#verify">
@@ -311,8 +312,8 @@ python example_template/nanodevice/ebl_wraparound.py</code></pre>
     <section class="section dark">
       <div class="container">
         <div class="section-head">
-          <h2>120+ tools, 11 domains</h2>
-          <p class="muted">83 plugin RPCs + 39 MCP local tools, each with function, parameters and examples. The catalogue is generated from the live plugin's method registry — no hand-maintained list that can drift.</p>
+          <h2>150+ tools, 13 domains</h2>
+          <p class="muted">107 plugin RPCs + 46 MCP local tools, each with function, parameters and examples. The catalogue is generated from the live plugin's method registry — no hand-maintained list that can drift.</p>
         </div>
         <div class="pill-row">
           <a href="mcp-reference.html#d-connection">Connection / view</a>
@@ -323,8 +324,10 @@ python example_template/nanodevice/ebl_wraparound.py</code></pre>
           <a href="mcp-reference.html#d-routing">Routing backends</a>
           <a href="mcp-reference.html#d-verify">DRC / LVS</a>
           <a href="mcp-reference.html#d-structdevice">Custom device</a>
+          <a href="mcp-reference.html#d-imaging">Imaging</a>
           <a href="mcp-reference.html#d-nanodevice">Nanodevices</a>
           <a href="mcp-reference.html#d-photonics">Photonics</a>
+          <a href="mcp-reference.html#d-ledit">L-Edit Bridge</a>
           <a href="mcp-reference.html#d-escape">Escape hatch</a>
         </div>
         <div class="hero-actions" style="margin-top:8px">
@@ -358,7 +361,7 @@ python example_template/nanodevice/ebl_wraparound.py</code></pre>
           </a>
           <a class="card" href="mcp-reference.html">
             <h3>MCP tool reference</h3>
-            <p>All 120+ tools across 11 domains: function, parameters, examples.</p>
+            <p>All 150+ tools across 13 domains: function, parameters, examples.</p>
             <span class="card-more">Reference →</span>
           </a>
           <a class="card" href="tutorials.html">

@@ -41,6 +41,7 @@
         <a href="tutorial-passives.html">Passive templates</a>
         <a href="tutorial-fit-device.html">Fit device &rarr; PnR &rarr; LVS</a>
         <a href="tutorial-padframe.html">Probe-card-first padframe</a>
+        <a href="tutorial-imaging.html">Imaging: cross-section · 3D · SEM · Blender</a>
       </div>
       <div class="sb-group">
         <div class="sb-title">Guides</div>
@@ -163,6 +164,8 @@
           <article class="card"><h3>nanodevice</h3><p>EBL wraparound, Hall bar, neural electrode harness, and flake-related tools.</p></article>
           <article class="card"><h3>photonics</h3><p>gdsfactory bridge, blackbox port harvesting, <code>import_gf_component</code>, photonic net intent, and reroute.</p></article>
           <article class="card"><h3>structdevice</h3><p>Device extraction, netlists, logic map, layout engine, P&R, LVS-lite, and live LVS integration.</p></article>
+          <article class="card"><h3>imaging</h3><p>Imaging exits driven by one layout/process declaration: .pyxs process cross-sections, 3D renders with an offline interactive viewer, SEM-style top views, and paper-grade Blender renders.</p></article>
+          <article class="card"><h3>L-Edit bridge</h3><p>Two-way file exchange with a running Tanner L-Edit: pull selections/cells, push geometry back; deeper T-Cell read/write goes through the Python API.</p></article>
           <article class="card"><h3>MCP core</h3><p>Tool discovery, session registry, interaction context, recorder, transfer, and diagnostics.</p></article>
         </div>
         <p class="note">These domains are built in, but <strong>third parties can extend klink too</strong>: ship a pip package that contributes its own MCP tools, a find_tools domain, and named resources (profile/devices/recipe/stack) through the <code>klink.plugins</code> entry point, with failures isolated per package — an on-ramp for PDK vendors and extension authors, not an end-user feature. See the <a href="plugin-packages.html">extension-package guide</a>.</p>

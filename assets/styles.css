@@ -709,6 +709,8 @@ pre {
 .badge.escape { color: #8f2f6a; background: #f6e2ee; }
 .badge.mutates { color: #9a3838; background: #f7e2e2; }
 .badge.long { color: #4b4368; background: #e8e6f2; }
+.badge.kind-rpc { color: #1f6f4a; background: #e2f3ea; }
+.badge.kind-local { color: #3a4a80; background: #e6e9f7; }
 
 .tool-count {
   display: inline-flex;

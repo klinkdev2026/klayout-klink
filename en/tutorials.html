@@ -41,6 +41,7 @@
         <a href="tutorial-passives.html">Passive templates</a>
         <a href="tutorial-fit-device.html">Fit device &rarr; PnR &rarr; LVS</a>
         <a href="tutorial-padframe.html">Probe-card-first padframe</a>
+        <a href="tutorial-imaging.html">Imaging: cross-section · 3D · SEM · Blender</a>
       </div>
       <div class="sb-group">
         <div class="sb-title">Guides</div>
@@ -265,6 +266,26 @@
     <section class="section">
       <div class="container">
         <div class="section-head">
+          <h2 id="imaging" class="anchor-h">Imaging <code>imaging</code></h2>
+          <p>Five kinds of picture from one GDS: cross-section, per-step process film, a self-contained 3D web viewer, an SEM-style top view, and paper-grade Blender renders -- all driven by one <code>VisualStack</code> declaration plus one <code>.pyxs</code> recipe, fully runnable offline.</p>
+        </div>
+        <div class="grid two">
+          <a class="card" href="tutorial-imaging.html">
+            <span class="feature-kicker">imaging · five exits</span>
+            <span class="tier offline">Fully offline</span>
+            <h3>Cross-section · 3D · SEM · Blender, one declaration drives all</h3>
+            <p>Process cross-section + per-step process film, a 3D model with a self-contained web viewer, an SEM-style top view, and a paper-grade Blender render (with real 2D-material atomic lattices) -- plus a checkable comparison showing recipe order genuinely changes the physical shape.</p>
+            <p class="card-run"><code>python example_template/imaging/xsection_demo.py</code></p>
+            <p class="card-metric">4 exits · deterministic output · sha256 sidecar</p>
+            <span class="card-more">Read the tutorial →</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section alt">
+      <div class="container">
+        <div class="section-head">
           <h2 id="control-plane" class="anchor-h">Control plane · collaboration <code>control plane</code></h2>
           <p>Not a kind of device but the control plane itself: one agent driving several KLayout windows at once, humans and the agent collaborating through the toolbar.</p>
         </div>
@@ -280,7 +301,7 @@
       </div>
     </section>
 
-    <section class="section alt">
+    <section class="section">
       <div class="container">
         <div class="section-head">
           <h2 id="guides" class="anchor-h">Guides <code>guides</code></h2>

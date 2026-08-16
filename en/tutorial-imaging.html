@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Step-by-step tutorial: imaging -- cross-section, process film, 3D, SEM, Blender - klink</title>
+  <meta name="description" content="Get five kinds of picture from one GDS with klink's imaging domain: process cross-section, per-step process film, a self-contained 3D web viewer, SEM-style top views, and paper-grade Blender renders -- three files you own (a CMOS-row layout + a .pyxs recipe + a VisualStack declaration) drive every exit; klink ships mechanism only, zero process data.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../assets/styles.css">
+  <style>
+    /* Minimal figure styling, following the site's existing card/note language
+       (border var(--line), radius 8px) -- assets/styles.css has no <img>
+       usage yet, so this stays scoped to this page until it lands there. */
+    .tut-figure {
+      margin: 16px 0 26px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .tut-figure img {
+      width: 100%;
+      display: block;
+      background: #fff;
+    }
+    .tut-figure figcaption {
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      background: #f7fafb;
+    }
+    .tut-figure-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    @media (max-width: 760px) {
+      .tut-figure-row { grid-template-columns: 1fr; }
+    }
+    .tut-figure-strip {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+      margin: 16px 0 26px;
+    }
+    .tut-figure-strip .tut-figure { margin: 0; }
+    @media (max-width: 900px) { .tut-figure-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 480px) { .tut-figure-strip { grid-template-columns: 1fr; } }
+    .stage-kicker {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 26px;
+      height: 26px;
+      padding: 0 8px;
+      border-radius: 6px;
+      background: #dff1ee;
+      color: #12654b;
+      font-weight: 800;
+      font-size: 13px;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body data-page="tutorials" class="has-sidebar">
+  <aside class="site-sidebar">
+    <a class="sb-brand" href="index.html"><span class="brand-mark">k</span>klink</a>
+    <nav class="sb-nav" aria-label="Site structure">
+      <div class="sb-group">
+        <div class="sb-title">Get started</div>
+        <a href="index.html">Home · what klink is</a>
+        <a href="quickstart.html">Quickstart</a>
+        <a href="concepts.html">Core concepts</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Workflows · human+agent</div>
+        <a href="workflows.html">Workflows in depth (illustrated)</a>
+        <a href="tutorial-multiwindow.html">Multi-window collaboration</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Chat walkthroughs</div>
+        <a href="case-hallbar-chat.html">Hall bar from one sentence</a>
+        <a href="case-drc-chat.html">DRC catch &amp; fix</a>
+        <a href="case-fit-lvs-chat.html">Fit a device to LVS</a>
+        <a href="case-gf-reroute-chat.html">Photonics: ports &amp; drag-reroute</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Step-by-step tutorials</div>
+        <a href="tutorials.html">Tutorials overview</a>
+        <a href="tutorial-hallbar.html">Hall bar device</a>
+        <a href="tutorial-ebl-wraparound.html">EBL wraparound</a>
+        <a href="tutorial-neural-electrode.html">Neural electrode array</a>
+        <a href="tutorial-gf-ports.html">Photonics · three ways to ports</a>
+        <a href="tutorial-gf-mzi.html">Photonics · gf MZI takeover</a>
+        <a href="tutorial-passives.html">Passive templates</a>
+        <a href="tutorial-fit-device.html">Fit device &rarr; PnR &rarr; LVS</a>
+        <a href="tutorial-padframe.html">Probe-card-first padframe</a>
+        <a href="tutorial-imaging.html">Imaging: cross-section · 3D · SEM · Blender</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Guides</div>
+        <a href="drc-lvs.html">DRC · LVS</a>
+        <a href="25d-view.html">2.5D View</a>
+        <a href="ledit-bridge.html">L-Edit Bridge</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Reference</div>
+        <a href="mcp-reference.html">MCP tool catalog</a>
+        <a href="plugin-packages.html">Writing extension packages</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Architecture</div>
+        <a href="architecture.html">Architecture &amp; boundaries</a>
+      </div>
+    </nav>
+    <div class="sb-foot">
+      <a href="https://github.com/klinkdev2026/klayout-klink">GitHub ↗</a>
+      <a href="../index.html">中文</a>
+    </div>
+  </aside>
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="index.html" data-nav="home">Home</a>
+        <a href="quickstart.html" data-nav="quickstart">Quickstart</a>
+        <a href="tutorials.html" data-nav="tutorials" class="active">Tutorials</a>
+        <a href="workflows.html" data-nav="workflows">Workflows</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP Reference</a>
+        <a href="architecture.html" data-nav="architecture">Architecture</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="Language switch">
+          <a href="../tutorial-imaging.html">CN</a>
+          <a class="active" href="tutorial-imaging.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Step-by-step tutorial · imaging</div>
+        <h1>Step-by-step: five kinds of picture from one GDS</h1>
+        <p>This walks through <code>example_template/imaging/</code>, a runnable starter shipped with the wheel since klink 0.3.3. The imaging domain is klink's dedicated picture-making group: a process cross-section, a per-step process film, a 3D model with a self-contained web viewer, an SEM-style top view, and a paper-grade Blender render -- all driven by three files you own. klink's mechanism layer carries zero process data.</p>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#what">What this is</a>
+          <a href="#prereqs">Prerequisites</a>
+          <a href="#starters">Get the starters</a>
+          <a href="#stage-1">① Cross-section + process film</a>
+          <a href="#stage-2">② 3D + self-contained viewer</a>
+          <a href="#stage-3">③ SEM-style top view</a>
+          <a href="#stage-4">④ Blender figure</a>
+          <a href="#physics">Does it get the physics right?</a>
+          <a href="#gotchas">Authoring gotcha</a>
+          <a href="#determinism">Determinism · output contract</a>
+          <a href="#credits">Engine &amp; viewer credits</a>
+          <a href="#next">Next steps</a>
+        </nav>
+      </aside>
+
+      <article class="content">
+        <h2 id="what" class="anchor-h">What this is</h2>
+        <p>One GDS, plus three files you own, gets you five kinds of picture. Only these three EXAMPLE-owned files drive them -- klink supplies mechanism only (binding the xsection engine, generating GLB meshes, SEM raster rendering, building Blender scenes), zero process constants:</p>
+        <table class="data-table">
+          <thead><tr><th>Your file</th><th>What it is</th></tr></thead>
+          <tbody>
+            <tr><td><code>demo_layout.py</code></td><td>The example layout: a row of four CMOS transistors (two NMOS in the p-substrate, two PMOS in an n-well), poly gates, a contact on every source/drain, and metal-1 straps plus power rails. Also exports the section cut line, <code>CUT_UM</code>. <strong>Editing this file is how you switch to your own device.</strong></td></tr>
+            <tr><td><code>demo.pyxs</code></td><td>The process recipe -- trusted Python, executed in-process; <code># klink-step: &lt;name&gt;</code> comments mark each process step. <strong>Editing this file is how you switch to your own flow.</strong></td></tr>
+            <tr><td><code>demo_stack.py</code></td><td>A <code>klink_visual_stack_v1</code> declaration: per-layer <code>z0_um</code>/<code>z1_um</code>, color, SEM greyscale level (<code>sem_grey</code>), material class (solid / lattice / dielectric), and the matching recipe symbol (<code>recipe_symbol</code>). <strong>Editing this file is how you switch to your own process.</strong></td></tr>
+          </tbody>
+        </table>
+        <p>This tutorial walks the shipped starter: <code>example_template/imaging/demo_layout.py</code>, <code>demo.pyxs</code>, <code>demo_stack.py</code>, and the four demo scripts (<code>xsection_demo.py</code> / <code>render3d_demo.py</code> / <code>sem_demo.py</code> / <code>blender_demo.py</code>). Everything runs offline; outputs land in <code>_generated/</code>.</p>
+
+        <h2 id="prereqs" class="anchor-h">Prerequisites</h2>
+        <ul>
+          <li>Install klink: <code>pip install klayout-klink</code>.</li>
+          <li>Each of the four exits has its own <strong>optional</strong> dependency set -- install on demand; whatever you're missing, klink's error names the exact pip command:</li>
+        </ul>
+        <pre><code>pip install klayout klayout-pyxs==0.1.13            # cross-section engine
+pip install trimesh shapely mapbox-earcut           # 3D
+pip install numpy scipy pillow                      # SEM / film rendering
+pip install bpy                                     # Blender (~300MB, optional)</code></pre>
+        <div class="note">None of this needs KLayout running -- all four demo scripts are plain Python, reading/writing GDS/GLB/PNG/HTML files offline. When connected to KLayout/klink-mcp, the same functionality is four MCP tools: <code>imaging.xsection_run</code> / <code>imaging.render3d</code> / <code>imaging.sem_top</code> / <code>imaging.blender</code>, with parameters matching these scripts one-for-one; <code>klink.find_tools domain=imaging</code> shows the full usage.</div>
+
+        <h2 id="starters" class="anchor-h">Get the starters</h2>
+        <pre><code>klink init myproj
+cd myproj/example_template/imaging
+python xsection_demo.py</code></pre>
+        <p>After upgrading klink, run <code>klink update</code> to refresh the starters (new/fixed files get restored; old files you never touched get cleaned up).</p>
+        <div class="warning"><strong>Important:</strong> the whole <code>example_template/</code> directory is package-owned -- <code>klink update</code> refreshes it back to the shipped state. So <strong>copy <code>demo_layout.py</code> / <code>demo.pyxs</code> / <code>demo_stack.py</code> out</strong> to your project root or your own directory before editing (same treatment as <code>pdk.py</code>); don't edit the files inside <code>example_template/</code> directly. <code>klink update</code> never touches a demo's <code>_generated/</code> output directory.</div>
+
+        <h2 id="stage-1" class="anchor-h"><span class="stage-kicker">1</span>Cross-section + per-step process film</h2>
+        <p><code>xsection_demo.py</code> first draws a row of four CMOS transistors with <code>demo_layout.py</code>: two NMOS in the p-substrate on the left, two PMOS in an n-well on the right, poly gates crossing the active strip, a contact on every source/drain, and metal-1 straps plus power rails top and bottom. Then it sections the device along an explicit cut line, <code>CUT_UM = [[-0.8, 1.9], [11.2, 1.9]]</code> (straight through the middle of the active row, crossing all four gates, the spacers, and the well edge): once as a single-frame cross-section, once as a per-step process film with <code>steps=True</code>.</p>
+        <pre><code>python xsection_demo.py</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/imaging/hero-film-strip.png" alt="Eleven stacked cross-section frames, from bare substrate through n-well implant, LOCOS field oxide, poly gate, LDD, spacer, source/drain implants, ILD, and tungsten-plug contacts, building up to finished metal-1">
+          <figcaption>The per-step process film (<code>film_film.png</code>): one cross-section frame per <code>klink-step</code> marker in <code>demo.pyxs</code>, from bare substrate through finished metal-1 interconnect -- 11 markers, 11 frames.</figcaption>
+        </figure>
+        <p><code>demo.pyxs</code> marks process steps with <code># klink-step: &lt;name&gt;</code> comments -- <strong>each marker names the step that follows it</strong>, and the film renders one frame per marker. This recipe has 11 markers: p-substrate, n-well implant, LOCOS field oxide, gate oxide, poly gate + silicide, LDD implants, spacer, source/drain implants, ILD deposition, contact etch + W plug + CMP, metal-1 damascene. Here's an excerpt (see <code>demo.pyxs</code> for the full 11 steps):</p>
+        <pre><code># klink-step: p-substrate
+pbulk = bulk()
+
+# klink-step: n-well implant
+nwell = mask(lnwell).grow(0.55, -0.05, mode='round', into=pbulk)
+
+# klink-step: LOCOS field oxide
+mfield = mask(lfield)
+_fox_up = mfield.grow(0.22, 0.22, bias=0.12, mode='round')
+_fox_dn = mfield.grow(0.22, 0.22, bias=0.12, mode='round',
+                     into=[pbulk, nwell])
+fox = _fox_up.or_(_fox_dn)
+
+# ... gate oxide / poly gate + silicide / LDD implants / spacer /
+# source-drain implants / ILD deposition go here (full code in demo.pyxs) ...
+
+# klink-step: contact etch + W plug + CMP
+mask(lcontact).etch(0.85, into=ild, taper=5)
+tungsten = deposit(0.18, 0.18)
+planarize(into=[tungsten, ild], less=0.5)
+
+# klink-step: metal-1 damascene
+imd = deposit(0.22)
+mask(lmetal1).etch(0.32, into=imd, taper=5)
+metal1 = deposit(0.22, 0.22)
+planarize(into=[metal1], less=0.22)</code></pre>
+        <p>A material assigned to a variable is auto-output under that name, no <code>output()</code> call needed -- except when the variable name starts with <code>_</code>: <code>_fox_up</code> / <code>_fox_dn</code> above are the intermediate results of growing the two LOCOS field-oxide halves separately; the leading underscore marks them as intermediates, used only to build the final <code>fox</code> via <code>.or_()</code>, and they never appear as materials of their own in the output.</p>
+        <p>The five most instructive frames (see the full 11-frame film above):</p>
+        <div class="tut-figure-strip">
+          <figure class="tut-figure">
+            <img src="../assets/tutorials/imaging/step-00-p-substrate.png" alt="Step 1 cross-section: a single uniform tan p-substrate block below the cut line, empty air above it, no structure yet">
+            <figcaption>Step 1/11 · p-substrate</figcaption>
+          </figure>
+          <figure class="tut-figure">
+            <img src="../assets/tutorials/imaging/step-01-locos-field-oxide.png" alt="Step 3 cross-section: a rounded blue-grey field-oxide bump appears at each end of the cut, with a lighter n-well region visible right of center">
+            <figcaption>Step 3/11 · LOCOS field oxide</figcaption>
+          </figure>
+          <figure class="tut-figure">
+            <img src="../assets/tutorials/imaging/step-02-poly-gate-silicide.png" alt="Step 5 cross-section: four small dark-red poly-gate blocks are now evenly spaced across the silicon surface, with the field-oxide bumps still visible at both ends">
+            <figcaption>Step 5/11 · poly gate + silicide</figcaption>
+          </figure>
+          <figure class="tut-figure">
+            <img src="../assets/tutorials/imaging/step-03-contact-w-plug.png" alt="Step 10 cross-section: a light blue-grey ILD film covers the whole surface, with several dark-grey tapered tungsten plugs punching straight down through it to the green and purple source/drain regions below">
+            <figcaption>Step 10/11 · contact etch + W plug + CMP</figcaption>
+          </figure>
+          <figure class="tut-figure">
+            <img src="../assets/tutorials/imaging/step-04-metal-1-damascene.png" alt="Step 11 (final) cross-section: a blue-grey metal layer now sits on top of the tungsten plugs, connecting down to the source/drain regions below">
+            <figcaption>Step 11/11 · metal-1 damascene</figcaption>
+          </figure>
+        </div>
+        <p>MCP tool: <code>imaging.xsection_run</code> -- <code>cut_um</code> must be given explicitly (µm), <code>steps=true</code> plus the recipe's <code># klink-step:</code> markers produce the film. <code>z_window_um</code> fixes one z window for every frame (here <code>(-1.1, 1.5)</code> -- the engine's substrate runs several microns deep, so an unframed section is mostly bulk), and <code>axis=true</code> draws a labeled z / µm ruler down the left side of every frame plus a horizontal scale bar in the corner (that's the tick marks on the left and the "1 µm" segment in each image above). Outputs are deterministic (no GDS timestamps), <code>overwrite=false</code> by default, and every run writes a <code>klink_imaging_result_v1</code> machine-readable sidecar.</p>
+
+        <h2 id="stage-2" class="anchor-h"><span class="stage-kicker">2</span>3D + self-contained web viewer</h2>
+        <p><code>render3d_demo.py</code> turns the same four-transistor CMOS row into two GLB models plus two self-contained web viewers:</p>
+        <pre><code>python render3d_demo.py</code></pre>
+        <pre><code>fast_glb = OUT / "render3d_fast.glb"
+build_glb_fast(str(GDS), STACK, str(fast_glb))                    # extrudes the STACK declaration
+build_viewer_html(str(fast_glb), str(OUT / "render3d_fast.html"))
+
+proc_glb = OUT / "render3d_process.glb"
+build_glb_process(str(GDS), STACK, str(RECIPE), str(proc_glb),
+                  slices=24, fraction=0.6)                        # sweeps the real recipe; fraction<1 = cutaway
+build_viewer_html(str(proc_glb), str(OUT / "render3d_process.html"))</code></pre>
+        <p><strong>Fast mode</strong> directly extrudes the <code>z0_um</code>/<code>z1_um</code> from <code>demo_stack.py</code> -- quick, but the shapes are idealized layer blocks; <strong>process mode</strong> sweeps the real <code>.pyxs</code> recipe slice by slice, so real topology like LOCOS, conformal layers, or CMP curvature shows up -- this run also passes <code>fraction=0.6</code>, producing a cutaway where the exposed face is a true cross-section. The generated <code>.html</code> is <strong>fully self-contained and offline</strong> (the viewer JS and the model data are both encoded into the same file): double-click to open in a browser, drag to rotate, and a right-hand panel lets you tune each layer's color/metallic/roughness and export a PNG.</p>
+        <figure class="tut-figure">
+          <iframe src="../assets/tutorials/imaging/viewer-process.html" title="klink imaging: interactive 3D viewer for the process-mode cutaway" loading="lazy" style="width:100%;height:520px;border:1px solid var(--border,#d8d8d2);border-radius:6px;background:#14161a" allowfullscreen></iframe>
+          <figcaption><strong>This is the file <code>render3d_demo.py</code> writes</strong>, embedded as-is: drag to rotate, scroll to zoom, and use the right-hand panel for background, exposure, tone mapping, shadows, per-material color/metallic/roughness, and PNG export. It is a single offline file — viewer JS and model data are both encoded into that one HTML — so <a href="../assets/tutorials/imaging/viewer-process.html" target="_blank" rel="noopener">opening it directly</a> or mailing it to a colleague works the same, with no network and nothing to install.</figcaption>
+        </figure>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/imaging/blender-die.png" alt="A rendered view of the process-cutaway GLB: an elongated rectangular die block with a shallow channel running along its top, four small dark-red poly-gate blocks evenly spaced along it, and dark-grey vertical contact/metal columns between the gates, on a transparent film with soft shadowing">
+          <figcaption>This is not a screenshot of the self-contained web viewer (that's an offline HTML page you double-click open yourself) -- it's the same <code>render3d_process.glb</code> model, restaged by <code>blender_demo.py</code>'s <code>mode="die"</code> onto a transparent film with a shadow catcher: you can see the shallow channel along the top, the four dark-red poly-gate blocks, and the dark-grey contact/metal columns between them, included here to show what the model looks like.</figcaption>
+        </figure>
+        <p>MCP tool: <code>imaging.render3d</code> -- <code>mode="fast"</code> extrudes a <code>klink_visual_stack_v1</code> declaration; <code>mode="process"</code> sweeps the xsection engine, mapping recipe materials (<code>pbulk</code>, <code>nwell</code>, <code>tungsten</code>, ...) to colors through <code>recipe_symbol</code>; anything unmapped goes grey and is reported as <code>unstyled</code>.</p>
+
+        <h2 id="stage-3" class="anchor-h"><span class="stage-kicker">3</span>SEM-style top view</h2>
+        <p><code>sem_demo.py</code> renders the layout the way a secondary-electron micrograph would roughly show it: per-layer <code>sem_grey</code>/<code>edge_glow</code> from the <code>VisualStack</code> drive grey emission levels and bright topography rims, plus litho corner rounding, beam blur, seeded film grain, scanlines, and vignette -- the same seed always gives the identical image.</p>
+        <pre><code>python sem_demo.py</code></pre>
+        <div class="tut-figure-row">
+          <figure class="tut-figure">
+            <img src="../assets/tutorials/imaging/sem-top.jpg" alt="Greyscale SEM-style top view: a thick bright power rail top and bottom, nine bright vertical bars of alternating height in between crossing a slightly brighter horizontal active band, background darker on the left half and a lighter dark grey on the right half, with the split running down the middle">
+            <figcaption>Greyscale variant (<code>sem_top.png</code>): the two power rails top and bottom; the nine vertical bars in between alternate between the four poly gates and five metal-1 contact columns, crossing the active area. The left half of the background (p-substrate) is darker than the right half (n-well) -- per-layer <code>sem_grey</code> emission levels drive that contrast.</figcaption>
+          </figure>
+          <figure class="tut-figure">
+            <img src="../assets/tutorials/imaging/sem-top-color.jpg" alt="False-color SEM-style top view: red vertical bars (poly gates) alternate with pale blue-grey vertical bars (metal-1) crossing a green active band, with a pale blue-grey power rail top and bottom, background dark navy on the left and olive-brown on the right">
+            <figcaption>False-color variant (<code>sem_top_color.png</code>): the same underlying data, a different read -- red is poly gate, pale blue-grey is metal-1, the green band is the active area, and the background colors separate p-substrate (dark navy) from n-well (olive-brown).</figcaption>
+          </figure>
+        </div>
+        <p>The script also renders a cumulative "masks printed so far" sequence, following <code>demo_stack.py</code>'s layer order -- paired with the recipe's <code># klink-step:</code> order, that's the top-view equivalent of the per-step process film:</p>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/imaging/sem-after-well-mask.jpg" alt="Top view after only the n-well mask has printed: the frame is almost entirely blank, showing only a single vertical boundary line separating a slightly darker region from a slightly lighter one, with no other visible structure">
+          <figcaption>Top view after only mask <code>1/0</code> (n-well) has printed (<code>sem_after_1_0.png</code>) -- n-well is an implant with no topography of its own, so at this step the frame is just a flat grey field split into two shades by the well boundary; the active/poly/contact/metal masks that print later aren't visible at all yet. The <code>layers=</code> parameter restricts rendering to the masks printed so far.</figcaption>
+        </figure>
+        <p>MCP tool: <code>imaging.sem_top</code> -- greyscale and false-color PNGs come out of one call, <code>layers=[...]</code> restricts to the mask subset printed at a given step, rendering is deterministic (same seed, same result).</p>
+
+        <h2 id="stage-4" class="anchor-h"><span class="stage-kicker">4</span>Blender paper-grade renders</h2>
+        <p><code>blender_demo.py</code> uses headless <code>bpy</code> to produce two figures from the same declarations:</p>
+        <pre><code>python blender_demo.py</code></pre>
+        <ul>
+          <li><code>mode="figure"</code>: a 2D-material device at 1:1 layout coordinates -- layer <code>10/0</code> is a MoS2 flake; declaring <code>kind="lattice", motif="mos2"</code> grows a <strong>real atomic lattice</strong> (<code>motif="graphene"</code> is also supported); layer <code>20/0</code> is Au electrodes, drawn as exact layout prisms; plus explicit Si/SiO2 substrate slabs.</li>
+          <li><code>mode="die"</code>: restages <code>render3d_process.glb</code> (the section 2 output) on transparent film with a shadow catcher -- this is the same cutaway chip image already shown above.</li>
+        </ul>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/imaging/blender-figure.png" alt="A paper-grade render of a MoS2 field-effect device: an irregular hexagonal atomic-lattice flake in the middle, a gold rectangular electrode on each end, and a grey-blue SiO2/Si substrate block below">
+          <figcaption><code>blender_figure.png</code>: the MoS2 flake grows a real atomic lattice (<code>kind="lattice", motif="mos2"</code>), the Au electrodes are exact layout prisms, and the substrate is an explicit SiO2/Si slab.</figcaption>
+        </figure>
+        <p>Both modes also write a <strong><code>.blend</code></strong> file (<code>blender_figure.blend</code> / <code>blender_die.blend</code>) -- open it in desktop Blender to adjust camera/lights/materials by hand and re-render; it's not a one-shot black-box output.</p>
+        <p>MCP tool: <code>imaging.blender</code> -- runs headless <code>bpy</code> in an isolated subprocess; <code>mode="die"</code> needs a process-mode GLB already produced by <code>imaging.render3d</code> (or <code>render3d_demo.py</code>); <code>mode="figure"</code> takes gds + stack directly and needs <code>bpy</code> (plus <code>trimesh</code>/<code>klayout-pyxs==0.1.13</code> if you also want the die figure).</p>
+
+        <h2 id="physics" class="anchor-h">Does it get the physics right?</h2>
+        <p>This isn't marketing language -- it's a checkable result: take the <strong>same layout</strong>, write the same handful of contact-step lines in the <code>.pyxs</code> recipe three different ways, and whether the tungsten plug actually shows up in the generated 3D model comes out completely different each time -- causality lives in the recipe order, not in the layout coordinates.</p>
+        <table class="data-table">
+          <thead><tr><th>Variant</th><th>Recipe change</th><th>W plug in the model</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>A</strong> -- the shipped flow</td>
+              <td><code>ild = deposit(...)</code> &rarr; <code>mask(lcontact).etch(0.85, into=ild, taper=5)</code> &rarr; <code>tungsten = deposit(...)</code> &rarr; <code>planarize(...)</code></td>
+              <td>z = 0.00 - 0.49 µm: the plug runs from the silicon surface up to the CMP plane.</td>
+            </tr>
+            <tr>
+              <td><strong>B</strong> -- contact etch deleted</td>
+              <td>the <code>mask(lcontact).etch(...)</code> line removed</td>
+              <td><strong>The W plug material is absent from the model entirely</strong> -- with no hole to fill, the CMP takes all the tungsten back off.</td>
+            </tr>
+            <tr>
+              <td><strong>C</strong> -- contact etch moved before the ILD</td>
+              <td>the same <code>etch</code> line, run before <code>ild = deposit(...)</code></td>
+              <td><strong>Absent as well</strong> -- it opened holes in a film that hadn't been deposited yet, the equivalent of etching thin air.</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>The layout is <strong>byte-identical</strong> in all three variants -- only the recipe order differs. B and C are both open circuits: every transistor is broken at the contact level, and the device never conducts. And <strong>nothing in a layout view would show it</strong> -- an ordinary layout checker only looks at the polygons in the GDS, and the GDS is the same file in all three variants. Only the cross-section and the process-mode 3D catch this, because they actually run the recipe in order instead of stacking idealized layer blocks.</p>
+        <p>Worth noting for honesty: metal-1 sits at z = 0.45 - 0.93 µm in all three cases -- <strong>the upper levels look perfectly fine</strong>, because the metal-1 damascene step doesn't care whether the tungsten plug below it exists. The failure is only visible at the contact level; you'd never catch it from the layout or from a metal-only view.</p>
+
+        <h2 id="gotchas" class="anchor-h">Authoring gotcha: deposit is not patterned</h2>
+        <div class="warning"><strong>Verb semantics (the easiest trip-up):</strong> patterned deposition is <code>mask(l).grow(...)</code> -- there is <strong>no</strong> <code>mask(l).deposit()</code>; <code>deposit(...)</code> is always a <strong>blanket</strong> (whole-surface) operation. <code>etch(...)</code> is blanket too; patterned etch is <code>mask(l).etch(...)</code>. <code>demo.pyxs</code> is a live example: <code>nwell</code> uses <code>mask(lnwell).grow(...)</code> (patterned growth), <code>gox</code>/<code>ild</code>/<code>tungsten</code>/<code>imd</code>/<code>metal1</code> use blanket <code>deposit(...)</code>, and the contact hole and metal-1 trench use <code>mask(lcontact).etch(...)</code> and <code>mask(lmetal1).etch(...)</code> respectively (patterned etch).</div>
+
+        <h2 id="determinism" class="anchor-h">Determinism · output contract</h2>
+        <ul>
+          <li><strong>Never silently overwrites</strong>: if the target file already exists, the call is rejected by default -- you must pass <code>overwrite=True</code> explicitly to replace it.</li>
+          <li><strong>Every run writes a machine-readable sidecar</strong>: <code>*.klink_imaging.json</code>, format <code>klink_imaging_result_v1</code> -- it carries the input <code>cut_um</code>/parameters, a <code>sha256</code> for every output file, and <code>sha256</code>es for the GDS/recipe inputs, so a script or CI can read this JSON directly instead of parsing human-readable logs.</li>
+          <li><strong>GDS output is byte-reproducible</strong>: no timestamps are written, so the same inputs produce byte-identical GDS across runs.</li>
+        </ul>
+
+        <h2 id="credits" class="anchor-h">Engine &amp; viewer credits</h2>
+        <p>Cross-sections are driven by the <a href="https://github.com/dimapu/klayout_pyxs" rel="noopener">klayout-pyxs</a> engine -- klink <strong>imports</strong> it as a dependency, pinned to <code>==0.1.13</code>, and never vendors it into the repo. The 3D viewer embeds Google's <a href="https://modelviewer.dev/" rel="noopener"><code>&lt;model-viewer&gt;</code></a> (a bundled copy is vendored so the exported <code>.html</code> can open fully offline). What klink itself writes is the glue: GLB mesh generation, SEM raster rendering, and Blender scene construction -- not the cross-section engine or the viewer itself.</p>
+
+        <h2 id="next" class="anchor-h">Next steps</h2>
+        <p>Copy <code>demo_layout.py</code>, <code>demo.pyxs</code>, and <code>demo_stack.py</code> into your own project, swap in your real layout, layer numbers/z-ranges/colors, and your real process steps (deposition thickness, etch depth, mask layers), and rerun the four scripts unchanged. To check the physics really holds for your process, do what the "Does it get the physics right?" section above did: move one line in your recipe to where it actually belongs (say, an etch to before the deposition it's supposed to follow) and compare whether a material vanishes entirely from process mode (<code>imaging.render3d mode="process"</code>) or the cross-section (<code>imaging.xsection_run</code>) -- a material disappearing means the recipe is actually driving geometry, not decoration. All four exits share one <code>VisualStack</code> declaration, so changing a layer color once updates the cross-section, 3D, SEM, and Blender pictures together.</p>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>geometry-first: mark intent on geometry, let algorithms complete the wiring, verify with structured evidence.</p></div>
+      <div><h3>Keep reading</h3><p><a href="tutorials.html">Core concepts &amp; tutorials</a></p><p><a href="mcp-reference.html">MCP tool reference</a></p></div>
+      <div><h3>Install</h3><p><a href="quickstart.html">Quickstart</a></p></div>
+    </div>
+  </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

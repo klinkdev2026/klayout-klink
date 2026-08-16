@@ -41,6 +41,7 @@
         <a href="tutorial-passives.html">无源器件模板</a>
         <a href="tutorial-fit-device.html">拟合器件 → PnR → LVS</a>
         <a href="tutorial-padframe.html">针卡优先 padframe</a>
+        <a href="tutorial-imaging.html">成像：剖面 · 3D · SEM · Blender</a>
       </div>
       <div class="sb-group">
         <div class="sb-title">指南</div>
@@ -265,6 +266,26 @@
     <section class="section">
       <div class="container">
         <div class="section-head">
+          <h2 id="imaging" class="anchor-h">成像 <code>imaging</code></h2>
+          <p>从一份 GDS 出五种图：剖面、逐步工艺胶片、3D 自含网页查看器、SEM 风格顶视、Blender 论文级渲染，全部由一份 <code>VisualStack</code> 声明 + 一份 <code>.pyxs</code> 配方驱动，离线可跑。</p>
+        </div>
+        <div class="grid two">
+          <a class="card" href="tutorial-imaging.html">
+            <span class="feature-kicker">imaging · 五种出口</span>
+            <span class="tier offline">完全离线</span>
+            <h3>剖面 · 3D · SEM · Blender，一份声明驱动全部</h3>
+            <p>process cross-section + 逐步工艺胶片、3D 模型 + 自含网页查看器、SEM 风格顶视、Blender 论文级渲染（含二维材料原子晶格）——附一段可核对的"配方顺序真的改变物理形状"实测对比。</p>
+            <p class="card-run"><code>python example_template/imaging/xsection_demo.py</code></p>
+            <p class="card-metric">4 个出口 · 确定性输出 · sha256 sidecar</p>
+            <span class="card-more">看分步教程 →</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section alt">
+      <div class="container">
+        <div class="section-head">
           <h2 id="control-plane" class="anchor-h">控制面 · 协作 <code>control plane</code></h2>
           <p>不是画某种器件，而是控制面本身：一个 agent 同时驱动多个 KLayout 窗口，人和 agent 靠工具栏协作。</p>
         </div>
@@ -280,7 +301,7 @@
       </div>
     </section>
 
-    <section class="section alt">
+    <section class="section">
       <div class="container">
         <div class="section-head">
           <h2 id="guides" class="anchor-h">指南 <code>guides</code></h2>
