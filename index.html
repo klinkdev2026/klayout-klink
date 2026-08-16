@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>klink · KLayout 的 AI-native 控制平面</title>
-  <meta name="description" content="klink 是面向 KLayout 的 AI-native 控制平面：geometry-first 的版图自动化，150+ 个 MCP 工具，SEND 记忆、多会话、跨窗搬运、8082 klive 显示与录制回放，全部由 live KLayout 插件驱动。">
+  <meta name="description" content="klink 是面向 KLayout 的 AI-native 控制平面：geometry-first 的版图自动化，150+ 个 MCP 工具，SEND 记忆、多会话、跨窗搬运、工艺剖面 / 3D / SEM 成像出图、8082 klive 显示与录制回放，全部由 live KLayout 插件驱动。">
   <meta property="og:title" content="klink · KLayout 的 AI-native 控制平面">
-  <meta property="og:description" content="klink 是面向 KLayout 的 AI-native 控制平面：geometry-first 的版图自动化，150+ 个 MCP 工具，SEND 记忆、多会话、跨窗搬运、8082 klive 显示与录制回放，全部由 live KLayout 插件驱动。">
+  <meta property="og:description" content="klink 是面向 KLayout 的 AI-native 控制平面：geometry-first 的版图自动化，150+ 个 MCP 工具，SEND 记忆、多会话、跨窗搬运、工艺剖面 / 3D / SEM 成像出图、8082 klive 显示与录制回放，全部由 live KLayout 插件驱动。">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://klinkdev2026.github.io/klayout-klink/">
   <meta property="og:image" content="https://klinkdev2026.github.io/klayout-klink/assets/klink-hero.png">
@@ -291,6 +291,12 @@ python example_template/nanodevice/ebl_wraparound.py</code></pre>
             <h3>新材料 flake 检测</h3>
             <p>从显微图检测材料 flake（需 cv2+numpy），或读预算 <code>traces.json</code>，提交为多边形并派生接触 Port。基于 KlayoutClaw 先验。</p>
             <span class="card-more">看 nanodevice 工具 →</span>
+          </a>
+          <a class="card" href="tutorial-imaging.html">
+            <span class="feature-kicker">成像</span>
+            <h3>剖面 · 3D · SEM · Blender</h3>
+            <p>一份 <code>klink_visual_stack_v1</code> 声明 + 你自己的 <code>.pyxs</code> 配方，出工艺剖面与逐步胶片（带 z 标尺）、3D 模型加<strong>自含离线网页查看器</strong>、SEM 风格顶视、论文级 Blender 渲染。starter 是四晶体管 CMOS 单元行 + 十一步平面 CMOS 流程。</p>
+            <span class="card-more">看成像教程 →</span>
           </a>
           <a class="card" href="tutorial-gf-mzi.html">
             <span class="feature-kicker magenta">硅光</span>

@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>klink · AI-native control plane for KLayout</title>
-  <meta name="description" content="klink is an AI-native control plane for KLayout: geometry-first layout automation, 150+ MCP tools, SEND memory, multi-session, cross-window transfer, an 8082 klive-compatible display, and a replay recorder — all driven by the live KLayout plugin.">
+  <meta name="description" content="klink is an AI-native control plane for KLayout: geometry-first layout automation, 150+ MCP tools, SEND memory, multi-session, cross-window transfer, process cross-section / 3D / SEM imaging, an 8082 klive-compatible display, and a replay recorder — all driven by the live KLayout plugin.">
   <meta property="og:title" content="klink · AI-native control plane for KLayout">
-  <meta property="og:description" content="klink is an AI-native control plane for KLayout: geometry-first layout automation, 150+ MCP tools, SEND memory, multi-session, cross-window transfer, an 8082 klive-compatible display, and a replay recorder — all driven by the live KLayout plugin.">
+  <meta property="og:description" content="klink is an AI-native control plane for KLayout: geometry-first layout automation, 150+ MCP tools, SEND memory, multi-session, cross-window transfer, process cross-section / 3D / SEM imaging, an 8082 klive-compatible display, and a replay recorder — all driven by the live KLayout plugin.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://klinkdev2026.github.io/klayout-klink/en/">
   <meta property="og:image" content="https://klinkdev2026.github.io/klayout-klink/assets/klink-hero.png">
@@ -291,6 +291,12 @@ python example_template/nanodevice/ebl_wraparound.py</code></pre>
             <h3>Material flake detection</h3>
             <p>Detect material flakes from a microscope image (needs cv2+numpy), or read a precomputed <code>traces.json</code>, commit them as polygons and derive contact Ports. Built on KlayoutClaw priors.</p>
             <span class="card-more">See nanodevice tools →</span>
+          </a>
+          <a class="card" href="tutorial-imaging.html">
+            <span class="feature-kicker">Imaging</span>
+            <h3>Cross-sections · 3D · SEM · Blender</h3>
+            <p>One <code>klink_visual_stack_v1</code> declaration plus your own <code>.pyxs</code> recipe yields process cross-sections and per-step films (with a z ruler), a 3D model with a <strong>self-contained offline web viewer</strong>, SEM-style top views, and paper-grade Blender renders. The starter is a four-transistor CMOS row and an eleven-step planar CMOS flow.</p>
+            <span class="card-more">See the imaging tutorial →</span>
           </a>
           <a class="card" href="tutorial-gf-mzi.html">
             <span class="feature-kicker magenta">Silicon photonics</span>
