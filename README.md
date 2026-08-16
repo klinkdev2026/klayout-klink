@@ -52,6 +52,10 @@ artifacts are intentionally not part of a clean release.
   them with a dry-run-then-commit transfer.
 - Records a working session — manual edits and RPC edits — into a replayable
   Python script (plus a standalone `pya` variant).
+- Turns the same layout into pictures: process cross-sections and per-step
+  films from your own `.pyxs` recipe, a 3D model with a self-contained
+  offline viewer page, SEM-style top views, and Blender renders — all
+  driven by one visual-stack declaration you own.
 - Supports gdsfactory-oriented workflows, including Port markers, component
   placement, routing, and klive-compatible `c.show()` display.
 - Keeps the KLayout plugin thin while heavier logic runs in external Python.
