@@ -58,6 +58,19 @@ artifacts are intentionally not part of a clean release.
 
 ## What's New
 
+### 0.3.4 — Imaging: a real process in the starter, and figures worth showing
+
+`klink init` now scaffolds a four-transistor CMOS row (`demo_layout.py`)
+and an eleven-step planar CMOS recipe (n-well, LOCOS, gate oxide, poly +
+silicide, LDD, spacer, S/D, ILD, contact etch + W plug + CMP, metal-1
+damascene), so the very first run shows real device structure instead of
+a demo shape. Sections gain a z ruler and scale bar (`axis=True`), a
+vertical framing window (`z_window_um=`), antialiased geometry and
+per-material shading; the Blender camera now fits the actual bounding
+box (flat dies used to render as a blank sliver); `klink update` no
+longer deletes a starter's own `_generated/` output. Details in the
+[CHANGELOG](./CHANGELOG.md).
+
 ### 0.3.0 — Imaging: cross-sections, 3D and SEM views from one declaration
 
 New `imaging` domain: declare your stack once (`klink_visual_stack_v1`)

@@ -1,13 +1,19 @@
 # imaging starters — 一份声明,所有成像出口 / one declaration, every exit
 
 Cross-sections, per-step process films, 3D models with a self-contained
-web viewer, SEM-style views and Blender figures — all driven by TWO
+web viewer, SEM-style views and Blender figures — all driven by THREE
 files YOU own (klink ships mechanism only, zero process data):
 
 | 你的文件 / yours | 是什么 |
 |---|---|
-| `demo_stack.py` | `klink_visual_stack_v1` 声明:每层 z0_um/z1_um、颜色、SEM 灰阶、材质类别(solid/lattice/dielectric)、对应配方变量名。**改成你的工艺** |
-| `demo.pyxs` | 工艺配方(受信 Python,进程内执行):`# klink-step: <名字>` 注释标记每个工艺步。**改成你的流程** |
+| `demo_layout.py` | 版图:四管 CMOS 单元行(左两个 NMOS 在 p 衬底、右两个 PMOS 在 n 阱),poly 栅横跨有源区,每个源漏都有接触孔,metal-1 引线 + 上下电源轨;并给出剖面切线 `CUT_UM`。**换成你的版图/GDS** |
+| `demo.pyxs` | 工艺配方(受信 Python,进程内执行):简化平面 CMOS 十一步,`# klink-step: <名字>` 注释标记每个工艺步。**改成你的流程** |
+| `demo_stack.py` | `klink_visual_stack_v1` 声明:掩膜层的 z0_um/z1_um、颜色、SEM 灰阶、材质类别(solid/lattice/dielectric)、对应配方变量名,外加 `recipe_styles`(只存在于配方里的材料:衬底/各种氧化层/注入区/钨塞)。**改成你的工艺** |
+
+配方的十一步 / the eleven steps: p-substrate → n-well implant → LOCOS
+field oxide → gate oxide → poly gate + silicide → LDD implants → spacer
+→ source/drain implants → ILD deposition → contact etch + W plug + CMP
+→ metal-1 damascene。胶片每步一帧。
 
 ## 三步走 / three steps
 
@@ -32,8 +38,21 @@ MCP 工具(连着 KLayout/klink-mcp 时):`imaging.xsection_run` /
 `imaging.render3d` / `imaging.sem_top` / `imaging.blender` —— 参数和
 这些脚本一一对应,`klink.find_tools domain=imaging` 看全部用法。
 
+**你的工艺文件放哪 / where YOUR process files live**:
+`example_template/` 归 klink 包所有——`klink update` 会把它刷回随包
+状态(新增/修复 starter,并清理不再随包的旧文件;demo 的 `_generated/`
+输出不受影响)。所以**自己的 stack/配方要拷出去改**,放项目根或你自己
+的目录(和 `pdk.py` 一个待遇),别直接改这里的文件。Copy starters OUT
+to your project root before editing — `klink update` refreshes this
+directory back to the shipped state (your `_generated/` outputs are
+left alone).
+
 要点 / notes:
 - 剖面切线 `cut_um=[[x1,y1],[x2,y2]]` 必须显式给(µm);
+- 光栅取景:`z_window_um=(下,上)` 把画面框在器件上(引擎的衬底有好几
+  微米深,不框就是一大片体硅),`axis=True` 画 z 标尺和比例尺;
+- 配方里以 `_` 开头的变量算中间产物(如 LOCOS 的上下两半),不会被当成
+  独立材料自动输出;
 - 输出永不静默覆盖(`overwrite=True` 才替换),每次运行都写
   `*.klink_imaging.json` 机读 sidecar;
 - 二维材料层用 `kind="lattice", motif="mos2"|"graphene"`,Blender 图里

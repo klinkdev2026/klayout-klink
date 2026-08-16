@@ -166,20 +166,55 @@ def _stage(bpy, col, center, size, *, sun_energy=6.0,
     scene.render.image_settings.color_mode = "RGBA"
 
 
-def _camera(bpy, col, center, size, preset="default"):
+def _camera(bpy, col, center, size, preset="default", *,
+            mins=None, maxs=None, margin=1.06):
+    """Place the camera along the preset's direction, at the distance
+    that actually FITS the content.
+
+    The distance must come from the bounding box PROJECTED into the
+    camera frame, not from the box diagonal: a die is wide and paper
+    thin, so its diagonal ~= its width and a diagonal-scaled distance
+    puts the camera inside the slab. With ``mins``/``maxs`` given, the
+    eight corners are solved exactly against the lens' horizontal and
+    vertical field of view."""
     from mathutils import Vector
 
     cam_data = bpy.data.cameras.new("cam")
     cam_data.lens = 58
     cam = bpy.data.objects.new("cam", cam_data)
-    if preset == "face":          # look at the +Y end (p6 cutaway face)
+    if preset == "face":          # look at the +Y end (cutaway face)
         d = Vector((0.30, 0.85, 0.42)).normalized()
-        cam.location = center + d * size * 0.62
     elif preset == "top":
-        cam.location = center + Vector((0.0, -0.15 * size, 0.9 * size))
+        d = Vector((0.0, -0.15, 0.9)).normalized()
     else:
-        cam.location = center + Vector((0.55 * size, -0.75 * size,
-                                        0.45 * size))
+        d = Vector((0.55, -0.75, 0.45)).normalized()
+
+    dist = size * 1.03            # legacy fallback (no bbox given)
+    if mins is not None and maxs is not None:
+        scene = bpy.context.scene
+        aspect = ((scene.render.resolution_x or 1)
+                  / (scene.render.resolution_y or 1))
+        sensor = 36.0
+        t_h = (sensor / 2) / cam_data.lens
+        t_v = (sensor / max(aspect, 1e-6) / 2) / cam_data.lens
+        fwd = -d                            # camera looks along -d
+        up_ref = Vector((0.0, 0.0, 1.0))
+        right = fwd.cross(up_ref)
+        if right.length < 1e-9:             # looking straight down
+            right = Vector((1.0, 0.0, 0.0))
+        right.normalize()
+        up = right.cross(fwd).normalized()
+        need = 0.0
+        for cx in (mins.x, maxs.x):
+            for cy in (mins.y, maxs.y):
+                for cz in (mins.z, maxs.z):
+                    r = Vector((cx, cy, cz)) - center
+                    z = r.dot(fwd)          # + = beyond the center
+                    need = max(need,
+                               abs(r.dot(right)) / t_h - z,
+                               abs(r.dot(up)) / t_v - z)
+        dist = max(need * margin, 1e-6)
+    cam.location = center + d * dist
     cam.rotation_euler = (center - cam.location).to_track_quat(
         "-Z", "Y").to_euler()
     col.objects.link(cam)
@@ -202,8 +237,15 @@ def render_die_glb(
     samples: int = 96,
     transparent: bool = True,
     resolution: Sequence[int] = (1920, 1080),
+    z_scale: float = 1.0,
 ) -> Dict[str, Any]:
-    """GLB (from mesh3d) -> paper-grade PNG + hand-editable .blend."""
+    """GLB (from mesh3d) -> paper-grade PNG + hand-editable .blend.
+
+    ``z_scale`` stretches the vertical axis before framing. A real die is
+    microns wide and nanometres thick, so at 1:1 the stack renders as a
+    line; the figure convention is to exaggerate z. The factor used is
+    returned as ``z_scale`` — state it in the caption, it is no longer a
+    metrically true picture."""
     bpy = _bpy()
     from mathutils import Matrix, Vector
 
@@ -211,10 +253,14 @@ def render_die_glb(
     bpy.ops.import_scene.gltf(filepath=os.path.abspath(glb_path))
     # trimesh exports Z-up data into Y-up glTF; stand the die back flat
     rot = Matrix.Rotation(math.radians(-90), 4, "X")
+    if z_scale <= 0:
+        raise BlenderSceneError(
+            f"z_scale must be > 0, got {z_scale!r}")
+    xform = Matrix.Scale(z_scale, 4, (0.0, 0.0, 1.0)) @ rot
     n_mesh = 0
     for obj in bpy.data.objects:
         if obj.type == "MESH":
-            obj.matrix_world = rot @ obj.matrix_world
+            obj.matrix_world = xform @ obj.matrix_world
             n_mesh += 1
     if not n_mesh:
         raise BlenderSceneError(f"no meshes imported from {glb_path}")
@@ -242,10 +288,12 @@ def render_die_glb(
     _stage(bpy, col, center, size, ground_z=mins.z - 0.02,
            samples=samples, transparent=transparent,
            resolution=tuple(resolution))
-    _camera(bpy, col, center, size, camera)
+    _camera(bpy, col, center, size, camera,
+            mins=mins, maxs=maxs)
     _finish(bpy, out_png, out_blend)
     return {"kind": "die", "meshes": n_mesh,
             "materials": len(bpy.data.materials),
+            "z_scale": float(z_scale),
             "bbox_um": [list(mins), list(maxs)]}
 
 
@@ -285,6 +333,8 @@ def render_device_figure(
 
     counts: Dict[str, Any] = {"solids": 0, "atoms": 0, "bonds": 0}
     z_min = 0.0
+    z_max = max([float(v.z1_um) for v in stack.layers]
+                + [float(s.get("z1_um", 0.0)) for s in slabs] + [0.0])
     for i, s in enumerate(slabs):
         missing = [k for k in ("name", "z0_um", "z1_um", "color")
                    if k not in s]
@@ -355,7 +405,9 @@ def render_device_figure(
     _stage(bpy, col, center, size, ground_z=z_min - 0.02,
            samples=samples, transparent=transparent,
            resolution=tuple(resolution))
-    _camera(bpy, col, center, size * 1.15, camera)
+    _camera(bpy, col, center, size * 1.15, camera,
+            mins=Vector((x0, y0, z_min)),
+            maxs=Vector((x1, y1, z_max)))
     _finish(bpy, out_png, out_blend)
     counts["kind"] = "figure"
     return counts

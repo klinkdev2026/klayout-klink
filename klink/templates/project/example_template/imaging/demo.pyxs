@@ -1,24 +1,94 @@
-# Demo process recipe for the klink imaging examples (EXAMPLE-owned:
-# klink ships no recipes). A tiny 2-mask flow with klink-step markers —
-# each marker names the step that FOLLOWS it; imaging.xsection_run with
-# steps=true renders one section per step.
+# EXAMPLE-owned process recipe for the klink imaging starters.
+# klink ships NO recipes: this file is a process description YOU write
+# (or have an agent write with you) and edit into your own flow.
+#
+# It is a simplified planar CMOS flow — n-well, LOCOS isolation, gate
+# stack, LDD + spacer + source/drain, tungsten plugs, damascene metal-1
+# — written so every step is visible in a cross-section.
+#
+# `# klink-step: <name>` markers cut the recipe into frames: each marker
+# names the step that FOLLOWS it, and imaging.xsection_run(steps=True)
+# renders the recipe prefix up to each marker. Materials assigned to a
+# variable are auto-output under that name, so no output() lines are
+# needed here.
 #
 # NOTE: .pyxs recipes are trusted Python code executed in-process.
+#
+# Verb semantics (a common authoring trip-up): PATTERNED deposition is
+# mask(l).grow(...) — there is no mask(l).deposit(); deposit(...) is
+# always a BLANKET (whole-surface) operation. etch(...) is blanket too;
+# patterned etch is mask(l).etch(...). grow(..., on=material) grows only
+# on top of that material; diffuse(...) drives dopant into a material
+# and can be told to pass `through=` a covering film.
 
-lwell = layer("1/0")
-lmetal = layer("2/0")
+delta(5 * dbu)
 
-# klink-step: substrate
+# mask layers — these are the GDS layers of demo_layout.py
+lnwell = layer("1/0")
+lactive = layer("2/0")
+lpoly = layer("3/0")
+lcontact = layer("4/0")
+lmetal1 = layer("6/0")
+lfield = lactive.inverted()          # everything outside active = field
+
+# klink-step: p-substrate
 pbulk = bulk()
 
-# klink-step: well implant
-well = mask(lwell).grow(0.4, -0.05, mode='round', into=pbulk)
+# klink-step: n-well implant
+# the well is driven deep and pulled slightly inside the mask edge; it
+# consumes the p-bulk it grows into
+nwell = mask(lnwell).grow(0.55, -0.05, mode='round', into=pbulk)
 
-# klink-step: conformal oxide
-ox = deposit(0.12, 0.12)
+# klink-step: LOCOS field oxide
+# grown twice from ONE derived mask (same seed for both contributions);
+# the two halves are named with a leading _ so they stay intermediates
+# instead of becoming materials of their own:
+# upwards into air and downwards into silicon, then joined — the classic
+# half-up/half-down LOCOS profile
+mfield = mask(lfield)
+_fox_up = mfield.grow(0.22, 0.22, bias=0.12, mode='round')
+_fox_dn = mfield.grow(0.22, 0.22, bias=0.12, mode='round',
+                     into=[pbulk, nwell])
+fox = _fox_up.or_(_fox_dn)
 
-# klink-step: contact etch
-mask(lmetal).etch(0.12, into=ox, taper=5)
+# klink-step: gate oxide
+gox = deposit(0.02)
 
-# klink-step: metallization
-metal = deposit(0.15, 0.15)
+# klink-step: poly gate + silicide
+poly = mask(lpoly).grow(0.16, -0.04, mode='round')
+silicide = grow(0.08, on=poly)
+
+# klink-step: LDD implants
+# shallow, self-aligned to the gate; `through=gox` lets the dopant pass
+# the gate oxide instead of stopping on it
+nldd = diffuse(0.05, 0.02, into=pbulk, through=gox, bias=0.01,
+               mode='round')
+pldd = diffuse(0.05, 0.02, into=nwell, through=gox, bias=0.01,
+               mode='round')
+
+# klink-step: spacer
+# conformal deposition followed by an anisotropic etch-back leaves
+# material only on the gate sidewalls
+spacer = deposit(0.06, 0.06)
+etch(0.06, into=spacer)
+
+# klink-step: source/drain implants
+nsd = diffuse(0.12, -0.05, into=[nldd, pbulk], through=gox, mode='round')
+psd = diffuse(0.12, -0.05, into=[pldd, nwell], through=gox, mode='round')
+etch(0.02, into=[gox, spacer])        # strip oxide off the contacts
+
+# klink-step: ILD deposition
+ild = deposit(0.55, 0.55, mode='round')
+
+# klink-step: contact etch + W plug + CMP
+# taper gives the holes a 5 degree sidewall; the CMP takes the tungsten
+# overburden back down to the ILD, leaving isolated plugs
+mask(lcontact).etch(0.85, into=ild, taper=5)
+tungsten = deposit(0.18, 0.18)
+planarize(into=[tungsten, ild], less=0.5)
+
+# klink-step: metal-1 damascene
+imd = deposit(0.22)
+mask(lmetal1).etch(0.32, into=imd, taper=5)
+metal1 = deposit(0.22, 0.22)
+planarize(into=[metal1], less=0.22)
