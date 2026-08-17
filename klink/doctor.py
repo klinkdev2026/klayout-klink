@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import platform
 import sys
 from pathlib import Path
@@ -127,6 +128,66 @@ def _check_klayout_pip(add) -> None:
         )
 
 
+def _check_ledit_bridge(add) -> None:
+    """Report the L-Edit bridge, which `doctor` used to be blind to.
+
+    klink drives two editors. Every other check here is about the KLayout
+    side, so a user whose L-Edit bridge is the broken part got either a
+    green report or a KLayout error — neither one about L-Edit. Never a
+    hard failure: a KLayout-only user has no bridge and that is normal.
+    """
+    try:
+        from .bridges.ledit.client import LEditBridgeClient, LEditBridgeError
+        from .bridges.ledit.client import bundled_macro_path, default_root
+    except Exception as exc:  # pragma: no cover - import-time env detail
+        add("ledit_bridge", True, f"not available ({exc})")
+        return
+
+    root = default_root()
+    override = os.environ.get("KLINK_LEDIT_BRIDGE_ROOT")
+    where = f"{root}" + (" (from KLINK_LEDIT_BRIDGE_ROOT)" if override else "")
+    # The user picks this file by hand in a GUI dialog, so give the whole path.
+    macro = bundled_macro_path()
+    load_it = (f"In L-Edit: Tools > Macro > Load Macro... -> {macro} "
+               "(or launch L-Edit with `-u \"{0}\"` to preload it)".format(macro))
+
+    if not os.path.isdir(root):
+        add("ledit_bridge", True,
+            f"not configured -- no exchange dir at {where}. Only needed for "
+            f"Tanner L-Edit. {load_it}. Set KLINK_LEDIT_BRIDGE_ROOT to "
+            "relocate the exchange dir (e.g. a sandbox that cannot write "
+            "LOCALAPPDATA).")
+        return
+
+    namespaces = [d for d in sorted(os.listdir(root))
+                  if os.path.exists(os.path.join(root, d, "hello.json"))]
+    if not namespaces:
+        add("ledit_bridge", True,
+            f"exchange dir at {where} but no namespace has a heartbeat -- "
+            f"the macro has not run here. {load_it}")
+        return
+
+    parts = []
+    for ns in namespaces:
+        client = LEditBridgeClient(namespace=ns)
+        try:
+            hello = client.hello()
+            age = client.hello_age_s()
+        except LEditBridgeError as exc:
+            parts.append(f"{ns}: {exc}")
+            continue
+        ver = hello.get("macro_version", "?")
+        if age <= 10.0:
+            design = hello.get("file") or "no design open"
+            parts.append(f"{ns}: live (macro {ver}, {design})")
+        else:
+            parts.append(
+                f"{ns}: heartbeat {age:.0f}s stale (macro {ver}) -- L-Edit "
+                "closed, the bridge stopped, or a MODAL DIALOG is blocking "
+                "it (a human must close that one)")
+    add("ledit_bridge", True, "; ".join(parts))
+
+
 def _scan_for_sessions(
     host: str,
     lo: int = _SCAN_PORT_LO,
@@ -190,6 +251,7 @@ def run_doctor(
     add("klink", True, f"klink {__version__} (protocol {PROTOCOL_VERSION})")
     _check_kernels(add)
     _check_klayout_pip(add)
+    _check_ledit_bridge(add)
 
     # Live plugin connection + version handshake.
     from .client import KLinkClient
@@ -305,6 +367,10 @@ def format_issue_report(report: Dict[str, Any]) -> str:
     klayout_desktop = checks.get("klayout")
     if klayout_desktop:
         lines.append(f"KLayout desktop: {klayout_desktop['detail']}")
+
+    ledit = checks.get("ledit_bridge")
+    if ledit:
+        lines.append(f"ledit bridge: {_redact_home(ledit['detail'])}")
 
     port_scan = checks.get("port_scan")
     if port_scan:

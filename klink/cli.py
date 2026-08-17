@@ -274,7 +274,21 @@ def main(argv=None) -> int:
     p_ps.add_argument("--salt-dir", default=None,
                       help="KLayout salt directory (default: auto-detected)")
 
-    sub.add_parser("doctor", help="preflight check (interpreter, plugin, handshake)")
+    # `klink doctor` used to drop every flag on the floor (doctor_main([])),
+    # so --scan/--report were reachable only as `python -m klink.doctor`.
+    p_doc = sub.add_parser(
+        "doctor",
+        help="preflight check (interpreter, plugin, handshake, L-Edit bridge)")
+    p_doc.add_argument("--host", default="127.0.0.1")
+    p_doc.add_argument("--port", type=int, default=8765)
+    p_doc.add_argument("--scan", action="store_true",
+                       help="scan localhost ports for a live klink session")
+    p_doc.add_argument("--gdsfactory", action="store_true",
+                       help="also check gdsfactory is importable here")
+    p_doc.add_argument("--json", action="store_true",
+                       help="emit the report as JSON")
+    p_doc.add_argument("--report", action="store_true",
+                       help="print a markdown block ready to paste into an issue")
 
     args = ap.parse_args(argv)
     if args.cmd == "init":
@@ -292,7 +306,11 @@ def main(argv=None) -> int:
     if args.cmd == "doctor":
         from .doctor import main as doctor_main
 
-        return doctor_main([])
+        forwarded = ["--host", args.host, "--port", str(args.port)]
+        for flag in ("scan", "gdsfactory", "json", "report"):
+            if getattr(args, flag, False):
+                forwarded.append("--" + flag)
+        return doctor_main(forwarded)
     ap.print_help()
     return 1
 

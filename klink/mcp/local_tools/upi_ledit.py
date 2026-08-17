@@ -11,14 +11,13 @@ versa.
 from __future__ import annotations
 
 import json
-import os
 
 from . import local_tool
 from ..results import _error_result, _json_result
 from ...bridges.ledit import (LEditBridgeClient, LEditBridgeError,
-                              build_layer_map, merge_layer_name,
+                              build_layer_map, import_cell_tree,
+                              merge_layer_name, push_cell_tree,
                               selection_to_items)
-from ...bridges.ledit.client import default_root
 
 _REQ_BYTES_BUDGET = 50 * 1024   # stay under the macro's 64 KiB request cap
 
@@ -45,44 +44,10 @@ def _bridge(arguments: dict) -> LEditBridgeClient:
     },
 )
 def _tool_ledit_status(ctx, arguments: dict) -> dict:
+    # Thin shell over LEditBridgeClient.status(): the same health check has
+    # to be available to plain scripts, and two implementations of it drift.
     try:
-        root = default_root()
-        namespaces = []
-        if os.path.isdir(root):
-            for entry in sorted(os.listdir(root)):
-                if os.path.exists(os.path.join(root, entry, "hello.json")):
-                    namespaces.append(entry)
-        bridge = _bridge(arguments)
-        result: dict = {"root": root, "namespaces": namespaces,
-                        "namespace": bridge.namespace}
-        try:
-            hello = bridge.hello()
-            result["hello"] = hello
-            result["heartbeat_age_s"] = round(bridge.hello_age_s(), 1)
-            # macro_alive = the bridge polls; design_ready = a .tdb is open
-            # and commands can act. They fail differently - report both.
-            result["macro_alive"] = bridge.alive()
-            if result["macro_alive"]:
-                try:
-                    ping = bridge.ping()
-                    result["ping"] = ping
-                    result["design_ready"] = bool(ping.get("design_ready",
-                                                           ping.get("file")))
-                except LEditBridgeError as exc:
-                    result["design_ready"] = False
-                    result["error"] = str(exc)
-                    result["next_action"] = exc.next_action
-            else:
-                result["design_ready"] = False
-                result["next_action"] = (
-                    "heartbeat stale: in L-Edit run Tools > klink: Bridge "
-                    "Start, or reload ledit_bridge.cpp")
-        except LEditBridgeError as exc:
-            result["macro_alive"] = False
-            result["design_ready"] = False
-            result["error"] = str(exc)
-            result["next_action"] = exc.next_action
-        return _json_result(result)
+        return _json_result(_bridge(arguments).status())
     except Exception as exc:
         return _error_result(str(exc))
 
@@ -90,7 +55,7 @@ def _tool_ledit_status(ctx, arguments: dict) -> dict:
 @local_tool(
     "ledit.import_selection",
     "Import the CURRENT L-Edit selection into a fresh KLayout landing "
-    "cell (fresh GET each call — never stale geometry). Generic "
+    "cell (fresh GET each call -- never stale geometry). Generic "
     "capability matching: box->box, wire->path, circle->Basic.CIRCLE "
     "PCell (stays parametric), any other outline->polygon; "
     "non-convertible objects are reported, never silently dropped. "
@@ -178,13 +143,107 @@ def _tool_ledit_import_selection(ctx, arguments: dict) -> dict:
 
 
 @local_tool(
+    "ledit.push_cell_tree",
+    "Push a KLayout cell AND EVERY CELL BELOW IT into L-Edit, keeping the "
+    "hierarchy: cells are created children-first and instances are rebuilt "
+    "as real instances (ledit.push_cell is the FLAT one -- it refuses "
+    "sub-instances). Idempotent by default (each cell is cleared before "
+    "redraw, since L-Edit's draw only appends). The whole tree goes over "
+    "as ONE ordered batch. Instances L-Edit placement cannot express "
+    "exactly (magnification, non-orthogonal rotation, skewed array) are "
+    "REPORTED in unsupported_instances, never approximated. For a whole "
+    "design rather than a subtree, a GDS file via import_gds is cheaper.",
+    {
+        "type": "object",
+        "required": ["cell"],
+        "properties": {
+            "cell": {"type": "string",
+                     "description": "KLayout root cell; its whole subtree is pushed."},
+            "expect_file": {"type": "string",
+                            "description": "Refuse to write unless this L-Edit design is active (recommended)."},
+            "clear": {"type": "boolean", "default": True,
+                      "description": "Clear each target cell first so re-running is idempotent."},
+            "namespace": {"type": "string", "default": "default"},
+            "session": {"type": "string",
+                        "description": "KLayout session id/label/alias (default: primary)."},
+        },
+        "additionalProperties": False,
+    },
+)
+def _tool_ledit_push_cell_tree(ctx, arguments: dict) -> dict:
+    try:
+        bridge = _bridge(arguments)
+        bridge.require_alive()
+        client, close_after = ctx._session_scoped_client(
+            arguments.get("session"))
+        try:
+            report = push_cell_tree(
+                client, bridge, str(arguments["cell"]),
+                expect_file=str(arguments.get("expect_file") or ""),
+                clear=bool(arguments.get("clear", True)))
+        finally:
+            if close_after:
+                try:
+                    client.close()
+                except Exception:
+                    pass
+        return _json_result(report)
+    except LEditBridgeError as exc:
+        return _error_result(str(exc))
+    except Exception as exc:
+        return _error_result(str(exc))
+
+
+@local_tool(
+    "ledit.import_cell_tree",
+    "Import an L-Edit cell AND ITS HIERARCHY into KLayout as real cells + "
+    "instances (ledit.import_selection reads the current SELECTION and "
+    "drops instances by design). Cells are rebuilt children-first, layer "
+    "identity travels by NAME + GDS number, and each target cell is "
+    "recreated so re-importing is idempotent. Shapes L-Edit exposes "
+    "without a convertible outline are reported in not_convertible.",
+    {
+        "type": "object",
+        "required": ["cell"],
+        "properties": {
+            "cell": {"type": "string",
+                     "description": "L-Edit root cell; its whole subtree is imported."},
+            "namespace": {"type": "string", "default": "default"},
+            "session": {"type": "string",
+                        "description": "KLayout session id/label/alias (default: primary)."},
+        },
+        "additionalProperties": False,
+    },
+)
+def _tool_ledit_import_cell_tree(ctx, arguments: dict) -> dict:
+    try:
+        bridge = _bridge(arguments)
+        bridge.require_alive()
+        client, close_after = ctx._session_scoped_client(
+            arguments.get("session"))
+        try:
+            report = import_cell_tree(client, bridge, str(arguments["cell"]))
+        finally:
+            if close_after:
+                try:
+                    client.close()
+                except Exception:
+                    pass
+        return _json_result(report)
+    except LEditBridgeError as exc:
+        return _error_result(str(exc))
+    except Exception as exc:
+        return _error_result(str(exc))
+
+
+@local_tool(
     "ledit.push_cell",
     "Push a KLayout cell's flat geometry into an L-Edit cell through the "
     "bridge: boxes, paths (->wires) and polygons transfer; text and "
     "sub-instances are counted and reported, not silently dropped. "
     "Layers are created in L-Edit with the KLayout layer NAME when one "
     "exists (else L<gds>D<dt>) plus the GDS numbers. Draw is append-only "
-    "on the L-Edit side — pass a fresh ledit_cell to regenerate.",
+    "on the L-Edit side -- pass a fresh ledit_cell to regenerate.",
     {
         "type": "object",
         "required": ["cell"],
@@ -216,7 +275,7 @@ def _tool_ledit_push_cell(ctx, arguments: dict) -> dict:
             q = client.shape_query(source)
             if q.get("truncated"):
                 return _error_result(
-                    f"shape.query truncated for cell '{source}' — push a "
+                    f"shape.query truncated for cell '{source}' -- push a "
                     "smaller/flattened cell, or split it")
             shapes = q.get("shapes", [])
             try:

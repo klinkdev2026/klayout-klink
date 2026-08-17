@@ -30,6 +30,12 @@ Exchange dir: %LOCALAPPDATA%\klink\ledit_bridge\default\
 - `driver.py` — standalone smoke-test driver (stdlib only):
   `python driver.py ping | demo | selection | layers | cell <name>`;
   importable as `from driver import call`.
+- `draw_device_demo.py` — **the copy-and-adapt starter**: a static
+  two-finger NMOS over five layers (`python draw_device_demo.py --new
+  my_lib`). Shows the four things that are easy to get wrong: design
+  targeting with `expect_file`, idempotent redraw (`draw` only appends),
+  one batched request instead of a dozen round trips, and read-back
+  verification. 改尺寸/画 PMOS/做 inverter 都从这个文件改起。
 - `tcell_workflows.py` — the T-Cell loop (needs `pip install
   klayout-klink`; the package imports as `klink` — the client is
   `from klink.bridges.ledit import LEditBridgeClient`):
@@ -42,16 +48,49 @@ Exchange dir: %LOCALAPPDATA%\klink\ledit_bridge\default\
 ## Quickstart / 快速上手
 
 1. L-Edit: **Tools → Macro → Load Macro…** → pick `ledit_bridge.cpp`.
-   The bridge starts immediately (Tools menu gains *klink: Bridge
-   Start/Stop/Status*).
-2. `python driver.py ping` → shows macro version, current file/cell and
-   the capability list. `"design_ready": false` means no design is open —
-   that is fine: call `new_design` (below) and keep going.
-3. With klink's MCP configured, agents get `ledit.status`,
+   Loading it IS the start — the poll timer begins immediately and the
+   Tools menu gains *klink: Bridge Start/Stop/Status*; those are for
+   pausing and resuming an already-loaded macro, not for the first run.
+   **Running L-Edit is not enough — the macro must be loaded, and it is
+   not restored after L-Edit restarts.** `python -m klink.doctor` prints
+   the macro's absolute path, so you can paste it into the dialog.
+   L-Edit can also preload it at launch: `ledit64.exe -u <that path>`
+   (`-U` loads and runs it) — put that in your L-Edit shortcut and it is
+   loaded every time. There is no way to inject it into an L-Edit that is
+   ALREADY running. 加载即启动；重启 L-Edit 后不会自动恢复，快捷方式加
+   `-u <宏路径>` 可以一劳永逸，但已经开着的 L-Edit 只能手动加载。
+   Changing the .cpp needs a RELOAD to take effect — run *klink: Bridge
+   Stop* first, or two timers poll the same inbox.
+2. `python -m klink.doctor` → reports the bridge (namespace, macro
+   version, heartbeat, current design) next to the KLayout checks, or
+   says it is not configured. `python driver.py ping` is the
+   no-klink-needed version.
+3. `python draw_device_demo.py --new my_lib` → draws a real device
+   (two-finger NMOS, five layers). **Start here when adapting.**
+4. With klink's MCP configured, agents get `ledit.status`,
    `ledit.import_selection`, `ledit.push_cell` as one-call tools
-   (domain `bridge_ledit` in `klink.find_tools`).
+   (domain `bridge_ledit` in `klink.find_tools`). In plain Python the
+   same health check is `LEditBridgeClient().status()`.
+
+**Exchange directory / 交换目录**: defaults to
+`%LOCALAPPDATA%\klink\ledit_bridge\`. Set **`KLINK_LEDIT_BRIDGE_ROOT`**
+to relocate it when that path is not writable (sandboxed agent,
+redirected profile) — the client, `driver.py` and the macro all read it,
+so set it BEFORE starting L-Edit and in the calling process, then reload
+the macro. 沙箱写不了 `%LOCALAPPDATA%` 时用这个变量改交换目录，三端都认，
+但要在启动 L-Edit 前设好并重载宏。
 
 ## Core flows / 核心流程
+
+**Bind the guard once / 一次绑定全程守卫**: in Python, prefer
+`LEditBridgeClient().bind_active()` (or `.bind_file("my_lib")`). The guard
+then rides on every request AND on every op inside a `batch`, so the
+convenience wrappers stay usable — `ensure_layer(...)` / `create_cell(...)`
+have no room for a per-call `expect_file`, and passing it per call is what
+pushed callers back to raw `call()` with hand-built dicts. One forgotten
+guard is a write into the user's own design. Verified live: after the
+active design changes, a bound write is REFUSED ("active design is X but
+expect_file is Y") and nothing leaks into the other design.
 
 **Design targeting / 设计归属**: every command runs against the ACTIVE
 design — normal workflow is to draw in the design the user already has
@@ -155,15 +194,64 @@ gate refuses extrapolation it cannot prove. 采样规则：要学的参数至少
 取值；数量型参数必须跨档位，最好骑缝取样（档位前最后一个值+档位后第一
 个值），数量律才能唯一钉死。`REFUSED`/`MISMATCH` 输出就是下一步操作指南。
 
+## Bulk transfer: what is actually slow / 批量写回的真实瓶颈
+
+Measured on v16.3, not guessed: **drawing is nearly free (~0.02 ms per
+shape, flat as the cell fills), and the cost is one poll interval PER
+REQUEST.** So the lever is fewer requests, never smaller payloads.
+实测：画图几乎免费，成本按**请求数**计——要快就减少请求数，不是减小批量。
+
+| Need | Use | Why |
+|---|---|---|
+| An ORDERED sequence (create_cell → draw → place_instance) | `batch {ops:[...]}` | N commands, one request, stops at the first failure |
+| Many INDEPENDENT requests | `LEditBridgeClient.pipeline([...])` | one tick drains the whole inbox — measured ~10x over blocking calls |
+| A cell SUBTREE, keeping layer names | `ledit.push_cell_tree` / `ledit.import_cell_tree` | cells in dependency order, instances stay instances |
+| A whole DESIGN, or thousands of shapes | `import_gds` | keeps the hierarchy, no size cap, `overwrite:"all"` is idempotent |
+| Incremental edits, T-Cells | either RPC path | GDS flattens parametric content to static geometry |
+
+## Hierarchy / 层级传输
+
+Both lanes keep the hierarchy; they differ in what else they keep.
+
+- **RPC** — `ledit.push_cell_tree` (KLayout → L-Edit) and
+  `ledit.import_cell_tree` (L-Edit → KLayout), or in Python
+  `from klink.bridges.ledit import push_cell_tree, import_cell_tree`.
+  Cells are created children-first, instances are rebuilt as real
+  instances (arrays and orthogonal rotations included), layer identity
+  travels **by NAME**, each cell is cleared before redraw so re-running
+  is idempotent, and the whole tree goes over as ONE batch. Anything
+  L-Edit placement cannot express exactly — a magnification, a
+  non-orthogonal rotation, a skewed array — is listed in
+  `unsupported_instances` with a fix, never approximated.
+- **GDS** — `import_gds` for a whole design. Faster for thousands of
+  shapes, but it maps layers by NUMBER and turns parametric content
+  static.
+
+Measured on a 3-level tree (leaf shapes on two layers, a 2×2 array, a 90°
+placement): RPC push = 15 ops in one 0.18 s request, round-trips back into
+KLayout with the array still an array. 两条路都保层级：RPC 路保图层名和
+参数化、可只推一个子树、幂等；GDS 路适合整库搬家。
+
+`ledit.push_cell` / `ledit.import_selection` remain the FLAT single-cell
+tools — they report sub-instances rather than silently flattening them.
+
 ## Command reference (schema 1)
 
-`ping` · `get_layers` · `ensure_layer` · `set_layer_style` ·
+`ping` · `batch` · `get_layers` · `ensure_layer` · `set_layer_style` ·
 `create_cell` · `clear_cell` · `list_cells` · `draw` · `place_instance` ·
 `get_selection` · `get_cell` · `get_tcell_params` · `get_drc_rules` ·
 `instance_tcell` · `set_tcell_code` · `new_design` · `open_design` ·
-`save_design` — all coordinates in microns (doubles); errors carry
-`next_action` (read it; it names the fix). Full parameter shapes are in
-the header comment of `ledit_bridge.cpp`.
+`save_design` · `list_designs` · `activate_design` · `import_gds` — all
+coordinates in microns (doubles); errors carry `next_action` (read it; it
+names the fix). Full parameter shapes are in the header comment of
+`ledit_bridge.cpp`.
+
+**Designs / 设计切换** (macro >= 0.5.2): every command targets the VISIBLE
+design, so start from `list_designs` (name, path, visible, changed, cell
+count) and switch with `activate_design {file}` — BY NAME, no disk path,
+so a design created by `new_design` and never saved is reachable too. It
+raises an existing window rather than opening a cell, so nothing inside
+the design is touched. `open_design {path}` still loads from disk.
 
 ## Landmines / 已知地雷（都踩过，按此绕行）
 
@@ -177,6 +265,27 @@ the header comment of `ledit_bridge.cpp`.
   move gradually; e.g. don't instance a MOSFET at W below its contact
   size). 心跳停摆=有人必须去 L-Edit 关弹窗，没有程序化恢复；预防=参数
   取值从 `read` 给的默认值出发渐进探索，别喂物理上不成立的值。
+- **GDS needs the 2048-byte block padding**: L-Edit's reader expects the
+  classic Calma padding; KLayout does not write it. Unpadded, the import
+  aborts AT EOF ("Unexpected element", file position == file size),
+  `LFile_ImportGDSII` still returns OK, empty cell shells are left
+  behind, and a MODAL dialog freezes the bridge until a human closes it
+  (measured: 40 s frozen vs 0.11 s once padded). The klink client's
+  `import_gds()` pads a sibling `*.ledit.gds` copy for you and never
+  edits your file; macro >= 0.5.2 also reads the import log and refuses
+  to report success on an aborted import. 用 KLayout 写的 GDS 必须补齐到
+  2048 字节整数倍，否则 L-Edit 在文件末尾报错并弹模态框冻住桥。
+- **A request over 64 KiB**: the cap is on the REQUEST, not the batch
+  count — 250 flattened polygons are 104 KiB while 250 boxes are not.
+  Macro < 0.5.2 dropped such a request without answering OR deleting it
+  (a full-timeout stall plus a file re-read on every tick); 0.5.2 answers
+  `ERR_REQUEST_TOO_LARGE` and consumes it, and the client refuses to send
+  one at all. `draw()` chunks itself, so pass items to it rather than
+  hand-building a `call("draw", ...)`.
+- **A timeout does NOT mean it did not run**: the request may already have
+  been delivered and executed. `draw` is append-only and every retry gets
+  a fresh id, so blindly re-sending DOUBLE-draws. Check with `get_cell`
+  first, or `clear_cell` and redo.
 - **Stale T-Cell variants**: after changing a T-Cell's code, identical
   parameter values return the CACHED old variant. Use fresh values or
   Tools → Regenerate T-Cells.

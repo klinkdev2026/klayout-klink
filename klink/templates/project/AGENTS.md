@@ -19,10 +19,15 @@ You may create and edit only:
 Read-only (shipped references — run them, don't edit them):
 
 - `example_template/` — runnable starter scripts grouped by category
-  (nanodevice, passives, photonics, layout, digital). The live list and how to
-  run each is in `example_template/README.md` — read that, don't rely on any
-  enumeration elsewhere. Run one as-is, then copy it into `custom_devices/`
-  and adapt.
+  (nanodevice, passives, photonics, layout, digital, imaging, ledit_bridge).
+  The live list and how to run each is in `example_template/README.md` — read
+  that, don't rely on any enumeration elsewhere. Run one as-is, then copy it
+  into `custom_devices/` and adapt.
+- **Tanner L-Edit** (not KLayout) — if the user says L-Edit, Tanner, `.tdb`
+  or T-Cell, klink drives that editor too, over a file-exchange bridge:
+  `example_template/ledit_bridge/` (start with its `README.md`, then
+  `draw_device_demo.py`). `python -m klink.doctor` reports the bridge's
+  liveness alongside the KLayout checks.
 - `recipes/README.md` — the per-domain menu of what klink can build.
 
 **Never edit `klink` or the KLayout plugin.** They are installed packages

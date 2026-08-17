@@ -50,6 +50,26 @@
 //                   inherits the open design's technology/layers)
 //   open_design     {path} -> open an existing .tdb
 //   save_design     {path?} -> Save (or SaveAs when path given)
+//   list_designs    -> {designs:[{file, visible, changed, cells}], count}
+//                   every command targets the VISIBLE design; this is how a
+//                   caller sees the others
+//   activate_design {file} -> switch between ALREADY-OPEN designs by name
+//                   (no disk path, so unsaved new_design output is
+//                   reachable); raises an existing window when there is
+//                   one, so nothing inside the design is touched
+//   import_gds      {path, overwrite?:"all"|"top"|"none", use_gds_datatype?,
+//                   log_path?} -> {cells_before, cells_after, cells_added,
+//                   log_path}. Bulk/hierarchical transfer: GDS keeps the
+//                   CELL HIERARCHY, ignores the request cap, and
+//                   overwrite:"all" makes re-import idempotent (draw only
+//                   appends). Incremental/parametric work stays on the RPC
+//                   path.
+//   batch           {ops:[{cmd, params}, ...]} -> {results:[...], completed}
+//                   N commands, ONE request, in order, stopping at the
+//                   first failure. The transport costs ~one poll interval
+//                   per REQUEST regardless of size, so batching (or writing
+//                   independent requests as a pipeline) is what makes bulk
+//                   work fast -- not smaller payloads.
 //   get_tcell_params {cell, names:[...]} -> per-name default/previous
 //   get_drc_rules   -> the design's full DRC rule table (type, layers,
 //                   distance) - the tdb's process knowledge
@@ -98,9 +118,16 @@
 #include <ldata.h>   // L-Edit UPI (user-supplied SDK include path)
 
 #define BRIDGE_PROTO         1
-#define BRIDGE_MACRO_VERSION "0.5.1"
-#define POLL_INTERVAL_MS     200
-#define HELLO_EVERY_TICKS    10      // refresh hello.json every ~2 s
+#define BRIDGE_MACRO_VERSION "0.5.3"
+// Adaptive poll: measured cost of one round trip was ~0.20 s, essentially
+// all of it poll latency (payload is nearly free -- 400 boxes drew in
+// 0.16 s). Poll fast for a burst window after any activity, idle slowly.
+#define POLL_INTERVAL_MS     15      // hot: back-to-back calls cost ~this
+#define POLL_IDLE_MS         200     // cold: nothing seen for a while
+#define POLL_HOT_TICKS       120     // stay hot ~1.8 s after the last request
+#define HELLO_EVERY_MS       2000    // refresh hello.json every ~2 s
+#define SWEEP_EVERY_MS       300000  // reap uncollected responses every 5 min
+#define REQ_CAP_BYTES        (64 * 1024)
 
 // v15.cpp-proven export style for source-loaded macros: a plain extern "C"
 // declaration block; definitions carry no decoration. No __declspec.
@@ -364,6 +391,16 @@ static void jdump(const JVal& v, std::string& out) {
 static UINT_PTR g_timerId = 0;
 static bool     g_inTick  = false;          // re-entrancy guard
 static unsigned g_tick    = 0;
+// Adaptive polling state: the timer always fires at POLL_INTERVAL_MS, but a
+// COLD bridge only scans the inbox every POLL_IDLE_MS worth of ticks, so an
+// idle L-Edit keeps the old cheap duty cycle while a busy one answers ~13x
+// sooner. Retuning the timer itself is not an option: a NULL-hwnd timer
+// cannot be reset by id, only killed and recreated.
+static unsigned g_hotTicks    = 0;          // >0 while requests are flowing
+static DWORD    g_lastHelloMs = 0;
+static DWORD    g_lastSweepMs = 0;
+
+static void write_hello();                  // defined with the polling loop
 static std::string g_root, g_inbox, g_outbox, g_logPath;
 static std::set<std::string> g_processed;   // in-memory idempotency (v0.1)
 
@@ -388,15 +425,27 @@ static bool ensure_dir(const std::string& path) {
 
 static bool init_paths() {
     char buf[MAX_PATH] = {0};
-    DWORD n = GetEnvironmentVariableA("LOCALAPPDATA", buf, MAX_PATH);
-    std::string base;
-    if (n > 0 && n < MAX_PATH) base = buf;
-    else base = "C:\\klink_bridge";          // fallback if env unavailable
-    // build up the namespace tree piece by piece (no recursive mkdir on WinAPI)
-    std::string p = base;
-    ensure_dir(p);
-    p += "\\klink";           if (!ensure_dir(p)) return false;
-    p += "\\ledit_bridge";    if (!ensure_dir(p)) return false;
+    std::string p;
+
+    // KLINK_LEDIT_BRIDGE_ROOT is the escape hatch for callers that cannot
+    // write LOCALAPPDATA (sandboxes, redirected profiles). The klink client
+    // has honoured it all along; the macro did not, so the two ends pointed
+    // at different directories and the hatch silently did nothing.
+    DWORD n = GetEnvironmentVariableA("KLINK_LEDIT_BRIDGE_ROOT", buf, MAX_PATH);
+    if (n > 0 && n < MAX_PATH) {
+        p = buf;
+        ensure_dir(p);
+    } else {
+        n = GetEnvironmentVariableA("LOCALAPPDATA", buf, MAX_PATH);
+        std::string base;
+        if (n > 0 && n < MAX_PATH) base = buf;
+        else base = "C:\\klink_bridge";      // fallback if env unavailable
+        // build the tree piece by piece (no recursive mkdir on WinAPI)
+        p = base;
+        ensure_dir(p);
+        p += "\\klink";        if (!ensure_dir(p)) return false;
+        p += "\\ledit_bridge"; if (!ensure_dir(p)) return false;
+    }
     p += "\\default";         if (!ensure_dir(p)) return false;
     g_root   = p;
     g_inbox  = p + "\\inbox";  if (!ensure_dir(g_inbox))  return false;
@@ -411,11 +460,41 @@ static bool read_file(const std::string& path, std::string& out) {
     fseek(f, 0, SEEK_END);
     long sz = ftell(f);
     fseek(f, 0, SEEK_SET);
-    if (sz < 0 || sz > 64 * 1024) { fclose(f); return false; }  // request cap
+    if (sz < 0 || sz > REQ_CAP_BYTES) { fclose(f); return false; }  // request cap
     out.resize((size_t)sz);
     size_t rd = sz ? fread(&out[0], 1, (size_t)sz, f) : 0;
     fclose(f);
     return rd == (size_t)sz;
+}
+
+static long file_size(const std::string& path) {
+    FILE* f = fopen(path.c_str(), "rb");
+    if (!f) return -1;
+    fseek(f, 0, SEEK_END);
+    long sz = ftell(f);
+    fclose(f);
+    return sz;
+}
+
+// Pull "id":"..." out of the head of a request we are not going to parse
+// (an oversized one). Without the real id the response filename would not
+// match what the caller waits for, and it would time out anyway.
+static bool sniff_request_id(const std::string& path, std::string& out) {
+    FILE* f = fopen(path.c_str(), "rb");
+    if (!f) return false;
+    char buf[1024];
+    size_t n = fread(buf, 1, sizeof(buf) - 1, f);
+    fclose(f);
+    buf[n] = 0;
+    std::string head(buf, n);
+    size_t k = head.find("\"id\"");
+    if (k == std::string::npos) return false;
+    k = head.find('"', head.find(':', k) + 1);
+    if (k == std::string::npos) return false;
+    size_t e = head.find('"', k + 1);
+    if (e == std::string::npos) return false;
+    out = head.substr(k + 1, e - k - 1);
+    return !out.empty();
 }
 
 // atomic publish: write .tmp, then rename into place
@@ -628,8 +707,9 @@ static bool resolve_ctx(const JVal& params, Ctx& ctx, bool needs_file,
         if (!file_matches(cur, expect)) {
             err  = "active design is '" + cur + "' but expect_file is '" +
                    expect + "'";
-            next = "call open_design/new_design (or switch designs in "
-                   "L-Edit), ping to confirm 'file', then retry";
+            next = "call activate_design {file:\"" + expect + "\"} to switch "
+                   "back (it works on any OPEN design, saved or not), then "
+                   "retry; list_designs shows what is open";
             return false;
         }
     }
@@ -684,6 +764,10 @@ static bool cmd_ping(Ctx& ctx, const JVal&, JVal& result,
     caps.arr.push_back(JVal::S("save_design"));
     caps.arr.push_back(JVal::S("get_tcell_params"));
     caps.arr.push_back(JVal::S("get_drc_rules"));
+    caps.arr.push_back(JVal::S("batch"));
+    caps.arr.push_back(JVal::S("list_designs"));
+    caps.arr.push_back(JVal::S("activate_design"));
+    caps.arr.push_back(JVal::S("import_gds"));
     result.set("capabilities", caps);
     return true;
 }
@@ -789,6 +873,28 @@ static bool read_points(Ctx& ctx, const JVal* pts, std::vector<LPoint>& out) {
     return true;
 }
 
+// Resolving the layer per ITEM meant one LLayer_Find (plus a GDS parameter
+// write) for every shape: a 6000-shape push across 5 layers paid 6000
+// lookups for 5 distinct answers. Cache them for the life of one request.
+// First mention wins, so a later item repeating the same layer NAME with
+// different GDS numbers does not re-stamp it -- pass numbers consistently,
+// or call ensure_layer explicitly.
+struct LayerCache {
+    LFile file;
+    std::vector<std::pair<std::string, LLayer> > seen;
+    int created;
+    LayerCache(LFile f) : file(f), created(0) {}
+    LLayer get(const std::string& name, int gl, int gd) {
+        for (size_t i = 0; i < seen.size(); ++i)
+            if (seen[i].first == name) return seen[i].second;
+        bool made = false;
+        LLayer l = ensure_layer_impl(file, name, gl, gd, &made);
+        if (made) ++created;
+        if (l) seen.push_back(std::make_pair(name, l));
+        return l;
+    }
+};
+
 static bool cmd_draw(Ctx& ctx, const JVal& params, JVal& result,
                      std::string& err, std::string& next) {
     const JVal* items = params.get("items");
@@ -797,7 +903,8 @@ static bool cmd_draw(Ctx& ctx, const JVal& params, JVal& result,
         next = "pass items:[{\"kind\":\"box\",\"layer\":\"Metal1\",\"bbox_um\":[0,0,10,10]}]";
         return false;
     }
-    int drawn = 0, layersCreated = 0;
+    int drawn = 0;
+    LayerCache lc(ctx.file);
     for (size_t i = 0; i < items->arr.size(); ++i) {
         const JVal& it = items->arr[i];
         char where[64];
@@ -809,17 +916,14 @@ static bool cmd_draw(Ctx& ctx, const JVal& params, JVal& result,
             next = "every draw item needs a layer name; see get_layers";
             return false;
         }
-        bool created = false;
-        LLayer layer = ensure_layer_impl(ctx.file, layerName,
-                                         (int)it.num_or("gds_layer", -1),
-                                         (int)it.num_or("gds_datatype", -1),
-                                         &created);
+        LLayer layer = lc.get(layerName,
+                              (int)it.num_or("gds_layer", -1),
+                              (int)it.num_or("gds_datatype", -1));
         if (!layer) {
             err  = std::string(where) + ": cannot find/create layer " + layerName;
             next = "check layer name; call get_layers for the current table";
             return false;
         }
-        if (created) ++layersCreated;
 
         if (kind == "box") {
             const JVal* bb = it.get("bbox_um");
@@ -899,7 +1003,7 @@ static bool cmd_draw(Ctx& ctx, const JVal& params, JVal& result,
         ++drawn;
     }
     result.set("drawn", JVal::N(drawn));
-    result.set("layers_created", JVal::N(layersCreated));
+    result.set("layers_created", JVal::N(lc.created));
     result.set("cell", JVal::S(cell_name_of(ctx.cell)));
     return true;
 }
@@ -1418,10 +1522,19 @@ static bool cmd_new_design(Ctx&, const JVal& params, JVal& result,
             return false;
         }
     }
+    // The most common reason LFile_New fails is a design of that name being
+    // ALREADY OPEN -- say so, instead of a bare "failed" the caller cannot act on.
+    if (LFile_Find(name.c_str())) {
+        err  = "a design named '" + name + "' is already open";
+        next = "call activate_design {file:\"" + name + "\"} to switch to it, "
+               "or pick a different name";
+        return false;
+    }
     LFile nf = LFile_New(setup, name.c_str());
     if (!nf) {
         err  = "LFile_New failed for: " + name;
-        next = "check the name (no path separators) and try again";
+        next = "check the name (no path separators, not already open) "
+               "and try again";
         return false;
     }
     return activate_design(nf, result, err, next);
@@ -1474,6 +1587,184 @@ static bool cmd_save_design(Ctx& ctx, const JVal& params, JVal& result,
     }
     result.set("file", JVal::S(file_name_of(ctx.file)));
     result.set("saved_as", JVal::S(path));
+    return true;
+}
+
+// Every command targets LFile_GetVisible(), so a caller that cannot SEE the
+// other open designs cannot reason about which one it is writing to. Until
+// now `ping` reported only the visible one.
+static bool cmd_list_designs(Ctx&, const JVal&, JVal& result,
+                             std::string&, std::string&) {
+    LFile visible = LFile_GetVisible();
+    JVal arr = JVal::A();
+    int n = 0;
+    for (LFile f = LFile_GetList(); f; f = LFile_GetNext(f)) {
+        JVal e = JVal::O();
+        e.set("file", JVal::S(file_name_of(f)));
+        e.set("visible", JVal::B(f == visible));
+        e.set("changed", JVal::B(LFile_IsChanged(f) != 0));
+        int cells = 0;
+        for (LCell c = LCell_GetList(f); c; c = LCell_GetNext(c)) ++cells;
+        e.set("cells", JVal::N((double)cells));
+        arr.arr.push_back(e);
+        ++n;
+    }
+    result.set("designs", arr);
+    result.set("count", JVal::N((double)n));
+    return true;
+}
+
+// Switch between designs that are ALREADY OPEN, by name -- no disk path
+// needed, so a design created by new_design and never saved is reachable
+// too. open_design {path} remains the way to load one from disk.
+static bool cmd_activate_design(Ctx&, const JVal& params, JVal& result,
+                                std::string& err, std::string& next) {
+    std::string name = params.str_or("file", "");
+    if (name.empty()) name = params.str_or("name", "");
+    if (name.empty()) {
+        err  = "params.file is required";
+        next = "call list_designs and pass one of the 'file' values it reports";
+        return false;
+    }
+    LFile target = 0;
+    for (LFile f = LFile_GetList(); f; f = LFile_GetNext(f)) {
+        if (file_matches(file_name_of(f), name)) { target = f; break; }
+    }
+    if (!target) {
+        err  = "no OPEN design matches: " + name;
+        next = "call list_designs to see what is open; use open_design {path} "
+               "to load one from disk first";
+        return false;
+    }
+    if (LFile_GetVisible() == target) {
+        result.set("file", JVal::S(file_name_of(target)));
+        result.set("switched", JVal::B(false));
+        return true;
+    }
+    // Prefer raising an EXISTING window of that design: unlike the
+    // create/open path this touches nothing inside the design itself (no
+    // Cell0 conjured into an empty library just to make it visible).
+    for (LWindow w = LWindow_GetList(); w; w = LWindow_GetNext(w)) {
+        if (LWindow_GetFile(w) != target) continue;
+        LWindow_MakeVisible(w);
+        if (LFile_GetVisible() != target) continue;
+        LCell vc = LCell_GetVisible();
+        result.set("file", JVal::S(file_name_of(target)));
+        result.set("cell", JVal::S(vc ? cell_name_of(vc) : ""));
+        result.set("switched", JVal::B(true));
+        result.set("via", JVal::S("window"));
+        return true;
+    }
+    // No window open on it: fall back to opening one of its own cells.
+    LCell first = LCell_GetList(target);
+    if (first) {
+        std::string cname = cell_name_of(first);
+        LFile_OpenCell(target, cname.c_str());
+        LCell_MakeVisible(first);
+        LDisplay_Refresh();
+        if (LFile_GetVisible() == target) {
+            result.set("file", JVal::S(file_name_of(target)));
+            result.set("cell", JVal::S(cname));
+            result.set("switched", JVal::B(true));
+            result.set("via", JVal::S("cell"));
+            return true;
+        }
+    }
+    err  = "could not make '" + name + "' the active design";
+    next = "switch to it manually in L-Edit (Window menu), then ping and "
+           "confirm 'file' before writing";
+    return false;
+}
+
+// Bulk transfer that the JSON transport is the wrong tool for: GDS carries
+// the whole CELL HIERARCHY (no flattening), ignores the 64 KiB request cap,
+// and overwrite=all makes a re-import idempotent where `draw` only appends.
+// Small/incremental/parametric work still belongs on the RPC path -- this
+// does not replace it.
+static bool cmd_import_gds(Ctx& ctx, const JVal& params, JVal& result,
+                           std::string& err, std::string& next) {
+    std::string path = params.str_or("path", "");
+    if (path.empty()) {
+        err  = "params.path is required";
+        next = "pass the absolute path of a .gds/.gds2 file to import";
+        return false;
+    }
+    FILE* probe = fopen(path.c_str(), "rb");
+    if (!probe) {
+        err  = "GDS file not found: " + path;
+        next = "pass an absolute path to an existing file (write it from "
+               "KLayout first)";
+        return false;
+    }
+    fclose(probe);
+
+    std::string mode = params.str_or("overwrite", "all");
+    LOverwriteCellsScopeOnImport scope = cOverwriteAllCells;
+    if (mode == "none")     scope = cDontOverwriteCells;
+    else if (mode == "top") scope = cOverwriteCellsInTopDesignOnly;
+    else if (mode != "all") {
+        err  = "unknown overwrite mode: " + mode;
+        next = "use \"all\" (idempotent re-import), \"top\" or \"none\"";
+        return false;
+    }
+
+    std::string logPath = params.str_or("log_path", "");
+    if (logPath.empty()) logPath = g_root + "\\import_gds.log";
+
+    int before = 0;
+    for (LCell c = LCell_GetList(ctx.file); c; c = LCell_GetNext(c)) ++before;
+
+    LStatus st = LFile_ImportGDSII(
+        ctx.file, path.c_str(),
+        params.bool_or("use_gds_datatype", true) ? LTRUE : LFALSE,
+        scope,
+        LTRUE,          // take the resolution from the GDS file itself
+        0.0,
+        logPath.c_str());
+    if (st != LStatusOK) {
+        char buf[96];
+        _snprintf(buf, sizeof(buf) - 1, "LFile_ImportGDSII failed (status %d)",
+                  (int)st);
+        buf[sizeof(buf) - 1] = 0;
+        err  = buf;
+        next = "read the import log at " + logPath;
+        return false;
+    }
+
+    // LStatusOK is NOT proof of success: an aborted import still returns it,
+    // leaving EMPTY cell shells behind (proven with a KLayout-written file
+    // that stopped at "Unexpected element ... Import Aborted"). The log is
+    // the real verdict, so read it before claiming the geometry arrived.
+    std::string log;
+    if (read_file(logPath, log)) {
+        bool aborted = log.find("Import Aborted") != std::string::npos;
+        bool errors  = log.find("error(s)") != std::string::npos &&
+                       log.find("0 error(s)") == std::string::npos;
+        if (aborted || errors) {
+            // Lead with the diagnosis, not with whatever character a fixed
+            // tail happened to land on (it used to start mid-path).
+            size_t at = log.find("Error #");
+            if (at == std::string::npos) at = log.find("Warning");
+            std::string cut = (at != std::string::npos)
+                ? log.substr(at)
+                : (log.size() > 400 ? log.substr(log.size() - 400) : log);
+            if (cut.size() > 400) cut.erase(400);
+            err  = "GDS import reported errors: " + cut;
+            next = "L-Edit's reader is strict about the trailing 2048-byte "
+                   "block: a file written by another tool may need zero "
+                   "padding to a multiple of 2048 bytes (the klink client's "
+                   "import_gds() does this for you). Full log: " + logPath;
+            return false;
+        }
+    }
+
+    int after = 0;
+    for (LCell c = LCell_GetList(ctx.file); c; c = LCell_GetNext(c)) ++after;
+    LDisplay_Refresh();
+    result.set("cells_before", JVal::N((double)before));
+    result.set("cells_after", JVal::N((double)after));
+    result.set("cells_added", JVal::N((double)(after - before)));
+    result.set("log_path", JVal::S(logPath));
     return true;
 }
 
@@ -1669,9 +1960,80 @@ struct Command {
     bool        needs_file;
     bool        needs_cell;
 };
+// Forward declaration: defined right after the table it walks.
+static bool dispatch_one(const std::string& cmd, const JVal& params,
+                         JVal& result, std::string& err, std::string& next,
+                         bool* known);
+
+// ONE request, N ordered commands.
+//
+// The transport costs about one poll interval PER REQUEST no matter how big
+// the payload is (measured: 400 boxes drew in 0.16 s, of which ~0.15 s was
+// waiting for the tick). So a hierarchy push -- create_cell -> draw ->
+// place_instance, repeated per cell -- is dominated by round trips, not by
+// L-Edit. Batch them and the round trips collapse to one.
+//
+// Ops execute IN ORDER and stop at the first failure, so later ops may
+// depend on earlier ones (unlike pipelining independent requests, where the
+// tick's file order decides). Each op resolves its own target cell/design.
+static bool cmd_batch(Ctx&, const JVal& params, JVal& result,
+                      std::string& err, std::string& next) {
+    const JVal* ops = params.get("ops");
+    if (!ops || ops->t != JVal::JARR || ops->arr.empty()) {
+        err  = "params.ops must be a non-empty array";
+        next = "pass ops:[{\"cmd\":\"create_cell\",\"params\":{\"name\":\"X\"}},"
+               "{\"cmd\":\"draw\",\"params\":{\"cell\":\"X\",\"items\":[...]}}]";
+        return false;
+    }
+    JVal results = JVal::A();
+    JVal empty = JVal::O();
+    for (size_t i = 0; i < ops->arr.size(); ++i) {
+        const JVal& op = ops->arr[i];
+        std::string oc = op.str_or("cmd", "");
+        std::string oerr, onext;
+        JVal one = JVal::O();
+        bool known = false, ok = false;
+        if (oc == "batch") {
+            oerr  = "batch cannot contain another batch";
+            onext = "flatten the ops list";
+        } else {
+            const JVal* p = op.get("params");
+            ok = dispatch_one(oc, (p && p->t == JVal::JOBJ) ? *p : empty,
+                              one, oerr, onext, &known);
+            if (!known) {
+                oerr  = "unknown cmd: " + oc;
+                onext = "call ping for the capability list";
+            }
+        }
+        if (!ok) {
+            char where[48];
+            sprintf(where, "ops[%d]: ", (int)i);
+            err  = std::string(where) + oerr;
+            next = onext;
+            result.set("results", results);
+            result.set("completed", JVal::N((double)i));
+            return false;
+        }
+        results.arr.push_back(one);
+        // A long batch runs inside ONE tick, and the tick is what refreshes
+        // hello.json -- without this the bridge would look DEAD (stale
+        // heartbeat) while it is merely busy, which is the single most
+        // misleading failure the bridge can present.
+        DWORD now = GetTickCount();
+        if (now - g_lastHelloMs >= HELLO_EVERY_MS) {
+            write_hello();
+            g_lastHelloMs = now;
+        }
+    }
+    result.set("results", results);
+    result.set("completed", JVal::N((double)ops->arr.size()));
+    return true;
+}
+
 static const Command g_commands[] = {
     // name             handler            needs_file  needs_cell
     { "ping",            cmd_ping,            false, false },
+    { "batch",           cmd_batch,           false, false },
     { "get_layers",      cmd_get_layers,      true,  false },
     { "ensure_layer",    cmd_ensure_layer,    true,  false },
     { "create_cell",     cmd_create_cell,     true,  false },
@@ -1687,9 +2049,35 @@ static const Command g_commands[] = {
     { "new_design",      cmd_new_design,      false, false },
     { "open_design",     cmd_open_design,     false, false },
     { "save_design",     cmd_save_design,     true,  false },
+    { "list_designs",    cmd_list_designs,    false, false },
+    { "activate_design", cmd_activate_design, false, false },
+    { "import_gds",      cmd_import_gds,      true,  false },
     { "get_tcell_params", cmd_get_tcell_params, true, true  },
     { "get_drc_rules",   cmd_get_drc_rules,   true,  false },
 };
+
+// Resolve + run one command. Shared by the top-level request handler and by
+// `batch`, so a batched op behaves exactly like a standalone one: its own
+// Ctx (target design/cell), its own expect_file guard, its own file echo.
+static bool dispatch_one(const std::string& cmd, const JVal& params,
+                         JVal& result, std::string& err, std::string& next,
+                         bool* known) {
+    if (known) *known = false;
+    for (size_t i = 0; i < sizeof(g_commands) / sizeof(g_commands[0]); ++i) {
+        if (cmd != g_commands[i].name) continue;
+        if (known) *known = true;
+        Ctx ctx;
+        bool ok = resolve_ctx(params, ctx, g_commands[i].needs_file,
+                              g_commands[i].needs_cell, err, next) &&
+                  g_commands[i].handler(ctx, params, result, err, next);
+        // Echo the design every file-bound command actually wrote to / read
+        // from, so callers can detect targeting drift.
+        if (ok && g_commands[i].needs_file && ctx.file && !result.get("file"))
+            result.set("file", JVal::S(file_name_of(ctx.file)));
+        return ok;
+    }
+    return false;
+}
 
 // ----------------------------------------------------------------------------
 // Request processing + polling loop
@@ -1718,6 +2106,35 @@ static void write_response(const std::string& id, bool ok,
 
 static void process_request_file(const std::string& fname) {
     std::string path = g_inbox + "\\" + fname;
+
+    // An oversized request used to fall through read_file's cap check and
+    // return BEFORE the DeleteFileA below: never executed, never answered,
+    // never removed -- the caller stalled for its whole timeout while the
+    // file was re-read on every tick. Consume it and say why instead.
+    long sz = file_size(path);
+    if (sz > REQ_CAP_BYTES) {
+        std::string id;
+        if (!sniff_request_id(path, id)) {
+            id = fname;
+            size_t d = id.rfind(".json");
+            if (d != std::string::npos) id.erase(d);
+            if (id.compare(0, 4, "req_") == 0) id.erase(0, 4);
+        }
+        DeleteFileA(path.c_str());
+        char msg[192];
+        _snprintf(msg, sizeof(msg) - 1,
+                  "request is %ld bytes, over the %d byte cap",
+                  sz, (int)REQ_CAP_BYTES);
+        msg[sizeof(msg) - 1] = 0;
+        write_response(id, false, JVal(), msg,
+                       "send it as several smaller requests (the klink "
+                       "client's draw() chunks itself), group them with the "
+                       "'batch' command, or move bulk geometry as a GDS file "
+                       "via import_gds");
+        bridge_log(msg);
+        return;
+    }
+
     std::string body;
     if (!read_file(path, body)) return;   // partially written? next tick retries
     DeleteFileA(path.c_str());            // consume before handling
@@ -1751,19 +2168,12 @@ static void process_request_file(const std::string& fname) {
     const JVal& params = (paramsPtr && paramsPtr->t == JVal::JOBJ)
                          ? *paramsPtr : empty;
 
-    for (size_t i = 0; i < sizeof(g_commands) / sizeof(g_commands[0]); ++i) {
-        if (cmd == g_commands[i].name) {
-            Ctx ctx;
-            std::string err, next;
-            JVal result = JVal::O();
-            bool ok = resolve_ctx(params, ctx, g_commands[i].needs_file,
-                                  g_commands[i].needs_cell, err, next) &&
-                      g_commands[i].handler(ctx, params, result, err, next);
-            // Echo the design every file-bound command actually wrote to /
-            // read from, so callers can detect targeting drift.
-            if (ok && g_commands[i].needs_file && ctx.file &&
-                !result.get("file"))
-                result.set("file", JVal::S(file_name_of(ctx.file)));
+    {
+        std::string err, next;
+        JVal result = JVal::O();
+        bool isKnown = false;
+        bool ok = dispatch_one(cmd, params, result, err, next, &isKnown);
+        if (isKnown) {
             write_response(id, ok, result, err, next);
             return;
         }
@@ -1795,13 +2205,65 @@ static void write_hello() {
     write_file_atomic(g_root + "\\hello.json", body);
 }
 
+// Responses whose caller timed out or was killed are never collected --
+// four-day-old ones were found sitting in a real exchange dir. Reap them,
+// but only well past any plausible caller timeout so a live wait is never
+// robbed of its answer.
+static void sweep_outbox() {
+    WIN32_FIND_DATAA fd;
+    HANDLE h = FindFirstFileA((g_outbox + "\\resp_*.json").c_str(), &fd);
+    if (h == INVALID_HANDLE_VALUE) return;
+    FILETIME nowFt;
+    GetSystemTimeAsFileTime(&nowFt);
+    ULARGE_INTEGER now;
+    now.LowPart  = nowFt.dwLowDateTime;
+    now.HighPart = nowFt.dwHighDateTime;
+    const ULONGLONG maxAge = 15ULL * 60ULL * 10000000ULL;   // 15 min in 100ns
+    int reaped = 0;
+    do {
+        if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
+        ULARGE_INTEGER w;
+        w.LowPart  = fd.ftLastWriteTime.dwLowDateTime;
+        w.HighPart = fd.ftLastWriteTime.dwHighDateTime;
+        if (now.QuadPart > w.QuadPart &&
+            now.QuadPart - w.QuadPart > maxAge) {
+            if (DeleteFileA((g_outbox + "\\" + fd.cFileName).c_str())) ++reaped;
+        }
+    } while (FindNextFileA(h, &fd));
+    FindClose(h);
+    if (reaped) {
+        char buf[96];
+        _snprintf(buf, sizeof(buf) - 1,
+                  "swept %d uncollected response(s) older than 15 min", reaped);
+        buf[sizeof(buf) - 1] = 0;
+        bridge_log(buf);
+    }
+}
+
 static void CALLBACK BridgeTimerProc(HWND, UINT, UINT_PTR, DWORD) {
     if (g_inTick) return;      // a tick arriving mid-request is skipped, not nested
     g_inTick = true;
     ++g_tick;
     // exceptions must never escape into L-Edit's message loop
     try {
-        if (g_tick % HELLO_EVERY_TICKS == 1) write_hello();
+        DWORD now = GetTickCount();
+        if (now - g_lastHelloMs >= HELLO_EVERY_MS || g_lastHelloMs == 0) {
+            write_hello();
+            g_lastHelloMs = now;
+        }
+        if (now - g_lastSweepMs >= SWEEP_EVERY_MS || g_lastSweepMs == 0) {
+            sweep_outbox();
+            g_lastSweepMs = now;
+        }
+
+        // cold bridge: keep the old idle duty cycle instead of scanning the
+        // directory 60+ times a second inside someone's EDA tool
+        const unsigned skip = POLL_IDLE_MS / POLL_INTERVAL_MS;
+        if (g_hotTicks == 0 && skip > 1 && (g_tick % skip) != 0) {
+            g_inTick = false;
+            return;
+        }
+        if (g_hotTicks > 0) --g_hotTicks;
 
         WIN32_FIND_DATAA fd;
         HANDLE h = FindFirstFileA((g_inbox + "\\*.json").c_str(), &fd);
@@ -1812,8 +2274,12 @@ static void CALLBACK BridgeTimerProc(HWND, UINT, UINT_PTR, DWORD) {
                     names.push_back(fd.cFileName);
             } while (FindNextFileA(h, &fd));
             FindClose(h);
+            // one tick drains the WHOLE queue, which is what makes client-side
+            // pipelining (N requests written up front) ~10x faster than N
+            // blocking round trips
             for (size_t i = 0; i < names.size(); ++i)
                 process_request_file(names[i]);
+            if (!names.empty()) g_hotTicks = POLL_HOT_TICKS;
         }
     } catch (...) {
         bridge_log("EXCEPTION in bridge tick (request skipped)");

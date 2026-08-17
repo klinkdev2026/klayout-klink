@@ -19,8 +19,12 @@ import sys
 import time
 import uuid
 
-NS = os.path.join(os.environ.get("LOCALAPPDATA", r"C:\klink_bridge"),
-                  "klink", "ledit_bridge", "default")
+# KLINK_LEDIT_BRIDGE_ROOT relocates the exchange dir (sandbox / redirected
+# profile / anywhere LOCALAPPDATA is not writable). The klink client and the
+# macro both honour it, so all three ends agree.
+_ROOT = os.environ.get("KLINK_LEDIT_BRIDGE_ROOT") or os.path.join(
+    os.environ.get("LOCALAPPDATA", r"C:\klink_bridge"), "klink", "ledit_bridge")
+NS = os.path.join(_ROOT, "default")
 INBOX = os.path.join(NS, "inbox")
 OUTBOX = os.path.join(NS, "outbox")
 HELLO = os.path.join(NS, "hello.json")
