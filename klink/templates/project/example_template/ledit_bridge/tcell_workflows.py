@@ -95,7 +95,7 @@ def _load_json_arg(value, what):
     """--paramsets/--check accept inline JSON or a path to a .json file
     (shell quoting of inline JSON is painful, especially on Windows)."""
     text = value
-    if not value.lstrip().startswith("["):
+    if value.lstrip()[:1] not in ("[", "{"):   # a list of sets, or one set
         try:
             with open(value, "r", encoding="utf-8") as f:
                 text = f.read()
@@ -151,6 +151,213 @@ def cmd_writeback(bridge, args):
     print("note: if this REPLACED existing code, stale variants persist - "
           "instance with fresh parameter values or run "
           "Tools > Regenerate T-Cells")
+
+
+def _need_layer_src():
+    """The proven need_layer() helper, taken from tcell_template.cpp.
+
+    Copied at generation time rather than duplicated here: the template is
+    the byte-exact-verified source of truth, and two copies of UPI C++ would
+    drift silently until a compile error froze someone's bridge.
+    """
+    tpl = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                       "tcell_template.cpp")
+    with open(tpl, "r", encoding="utf-8") as f:
+        src = f.read()
+    start = src.index("static LLayer need_layer(")
+    depth, i = 0, src.index("{", start)
+    for k in range(i, len(src)):
+        if src[k] == "{":
+            depth += 1
+        elif src[k] == "}":
+            depth -= 1
+            if depth == 0:
+                return src[start:k + 1]
+    raise RuntimeError("need_layer() not found in tcell_template.cpp")
+
+
+# KLayout PCell parameter type -> the L-Edit typed getter + T-Cell param
+# type. UPI offers exactly five getters (ldata.h): Layer, Coord, Double,
+# Boolean, Int. Anything else has no reader, so it is reported rather than
+# guessed at.
+_GETTER = {
+    "double": ("LCell_GetParameterAsDouble", "double", "float"),
+    "float": ("LCell_GetParameterAsDouble", "double", "float"),
+    "int": ("LCell_GetParameterAsInt", "int", "int"),
+    "boolean": ("LCell_GetParameterAsBoolean", "LBoolean", "boolean"),
+    "bool": ("LCell_GetParameterAsBoolean", "LBoolean", "boolean"),
+}
+
+
+def _cident(name):
+    out = "".join(ch if (ch.isalnum() or ch == "_") else "_" for ch in name)
+    return ("p_" + out) if not out[:1].isalpha() else out
+
+
+def cmd_from_pcell(bridge, args):
+    """Scaffold T-Cell generator code from a KLayout PCell.
+
+    The boilerplate is where this goes wrong: a compile error in written-back
+    code pops a MODAL dialog that freezes the bridge until a human closes it.
+    So emit the proven skeleton with the parameter plumbing and layer stamping
+    already correct, plus the PCell's ACTUAL geometry at the sampled
+    parameters as concrete LBox_New calls -- turning "write UPI C++" into
+    "replace these constants with formulas".
+    """
+    from klink import KLinkClient
+
+    params_json = _load_json_arg(args.params, "params") if args.params else {}
+    with KLinkClient(port=args.port).connect() as k:
+        info = k.pcell_info(args.pcell, library=args.library)
+        pcell_params = info.get("params", [])
+
+        # place it once at the given/default parameters and harvest the boxes
+        probe = "klink_tcell_scaffold_probe"
+        boxes, layers, skipped_shapes = [], {}, {}
+        try:
+            k.cell_delete(probe)
+        except Exception:
+            pass
+        cell = k.cell_create(probe)["name"]
+        place = dict(params_json)
+        k.instance_insert_pcell(cell, pcell=args.pcell, library=args.library,
+                                params=place, position_um=[0, 0])
+        flat = k.call("cell.flatten", {"cell": cell, "levels": -1})  # noqa: F841
+        dbu = float(k.call("layout.info").get("dbu", 0.001))
+        by_index = {e["layer_index"]: e
+                    for e in k.call("layer.list")["layers"]}
+        for s in k.shape_query(cell).get("shapes", []):
+            e = by_index.get(s.get("layer_index"), {})
+            lname = e.get("name") or "L%dD%d" % (e.get("layer", 0),
+                                                 e.get("datatype", 0))
+            layers[lname] = (int(e.get("layer", 0)), int(e.get("datatype", 0)))
+            if s.get("type") == "box" and s.get("bbox_dbu"):
+                boxes.append((lname, [int(v) for v in s["bbox_dbu"]]))
+            else:
+                skipped_shapes[s.get("type") or "?"] = \
+                    skipped_shapes.get(s.get("type") or "?", 0) + 1
+        try:
+            k.cell_delete(probe)
+        except Exception:
+            pass
+
+    name = args.name or ("KLINK_" + _cident(args.pcell).upper())
+    reads, decls, unsupported = [], [], []
+    for p in pcell_params:
+        ptype = str(p.get("type", "")).lower()
+        pname = str(p.get("name", ""))
+        if ptype in _GETTER:
+            getter, ctype, ttype = _GETTER[ptype]
+            reads.append('    %s %s = %s(cellCurrent, "%s");'
+                         % (ctype, _cident(pname), getter, pname))
+            decl = {"name": pname, "type": ttype}
+            if p.get("default") is not None:
+                decl["default"] = p["default"]
+            decls.append(decl)
+        else:
+            unsupported.append("%s (%s)" % (pname, ptype or "?"))
+
+    L = []
+    L.append("/* T-Cell generator scaffolded from the KLayout PCell "
+             "'%s' (library %s)." % (args.pcell, args.library))
+    L.append(" *")
+    L.append(" * Generated from tcell_template.cpp, whose pattern is")
+    L.append(" * byte-exact-verified. Keep its rules: no")
+    L.append(" * EXCLUDE_LEDIT_LEGACY_UPI, integer internal units only,")
+    L.append(" * need_layer() for GDS stamping, guard degenerate input.")
+    L.append(" *")
+    L.append(" * The geometry below is what the PCell ACTUALLY drew at the")
+    L.append(" * sampled parameters, in internal units. Replace the")
+    L.append(" * constants with formulas over the parameters -- that edit")
+    L.append(" * IS the port. Then:")
+    L.append(" *   python tcell_workflows.py writeback %s --code %s "
+             "--params <params.json>" % (name, args.out))
+    L.append(" *   python tcell_workflows.py verify %s --reference "
+             "ref.py:boxes --paramsets ..." % name)
+    L.append(" * Acceptance is an ALL-BYTE-EXACT verify report; nothing")
+    L.append(" * less counts as a port.")
+    if unsupported:
+        L.append(" *")
+        L.append(" * NOT scaffolded (UPI has no getter for these types): %s"
+                 % ", ".join(unsupported))
+        L.append(" * Express them another way or hold them constant.")
+    if skipped_shapes:
+        L.append(" *")
+        L.append(" * The PCell also drew non-box shapes (%s); add them with"
+                 % skipped_shapes)
+        L.append(" * LPolygon_New / LWire_New yourself.")
+    L.append(" */")
+    L.append("#include <string.h>")
+    L.append("#include <ldata.h>")
+    L.append("")
+    L.append(_need_layer_src().strip())
+    L.append("")
+    L.append("void %s_main(void)" % name)
+    L.append("{")
+    L.append("    LCell cellCurrent = (LCell)LMacro_GetNewTCell();")
+    L.append("    LFile file = LCell_GetFile(cellCurrent);")
+    L.append("")
+    if reads:
+        L.append("    /* parameters (names match the writeback --params "
+                 "table) */")
+        L.extend(reads)
+        L.append("")
+    for lname, (gl, gd) in sorted(layers.items()):
+        L.append('    LLayer ly_%s = need_layer(file, "%s", %d, %d);'
+                 % (_cident(lname), lname, gl, gd))
+    L.append("")
+    L.append("    /* GUARD: refuse degenerate input instead of drawing "
+             "garbage */")
+    if reads:
+        first = reads[0].split()[1]
+        L.append("    if (%s <= 0) { LUpi_SetReturnCode(1); return; }" % first)
+    else:
+        L.append("    /* add a guard over your parameters here */")
+    L.append("")
+    L.append("    /* geometry AT THE SAMPLED PARAMETERS -- internal units. */")
+    L.append("    /* EDIT: turn these constants into formulas. */")
+    for lname, bb in boxes:
+        L.append("    LBox_New(cellCurrent, ly_%s, %d, %d, %d, %d);"
+                 % (_cident(lname), bb[0], bb[1], bb[2], bb[3]))
+    if not boxes:
+        L.append("    /* the probe placement produced no boxes -- check the "
+                 "PCell parameters you passed */")
+    L.append("}")
+    L.append("")
+    L.append('extern "C" int UPI_Entry_Point(void)')
+    L.append("{")
+    L.append("    %s_main();" % name)
+    L.append("    return 1;")
+    L.append("}")
+    src = "\n".join(L) + "\n"
+
+    with open(args.out, "w", encoding="utf-8") as f:
+        f.write(src)
+    params_path = os.path.splitext(args.out)[0] + ".params.json"
+    with open(params_path, "w", encoding="utf-8") as f:
+        json.dump(decls, f, indent=1)
+
+    print("scaffolded %s -> %s (%d bytes)" % (args.pcell, args.out, len(src)))
+    print("  cell name     : %s" % name)
+    print("  parameters    : %d scaffolded, %d unsupported %s"
+          % (len(decls), len(unsupported),
+             "(%s)" % ", ".join(unsupported) if unsupported else ""))
+    print("  layers        : %s"
+          % ", ".join("%s=%d/%d" % (n, p[0], p[1])
+                      for n, p in sorted(layers.items())) or "none")
+    print("  geometry      : %d boxes%s"
+          % (len(boxes),
+             (", %s NOT scaffolded" % skipped_shapes) if skipped_shapes else ""))
+    print("  params table  : %s" % params_path)
+    print("\nnext:")
+    print("  1. edit %s: replace the constant geometry with formulas over "
+          "the parameters" % args.out)
+    print("  2. python tcell_workflows.py writeback %s --code %s --params %s"
+          % (name, args.out, params_path))
+    print("  3. python tcell_workflows.py verify %s --reference "
+          "<ref.py:fn> --paramsets <sets>   <- must be ALL byte-exact"
+          % name)
+    return 0
 
 
 def cmd_verify(bridge, args):
@@ -371,6 +578,19 @@ def main():
     p.add_argument("--params", default="")
     p.add_argument("--language", type=int, default=5)
 
+    p = sub.add_parser("from_pcell")
+    p.add_argument("pcell", help="KLayout PCell name to port")
+    p.add_argument("--library", default="Basic",
+                   help="KLayout library holding the PCell")
+    p.add_argument("--name", default="",
+                   help="T-Cell name to generate (default KLINK_<PCELL>)")
+    p.add_argument("--params", default="",
+                   help="inline JSON (or .json path) of PCell parameters to "
+                        "sample the geometry at; defaults are used otherwise")
+    p.add_argument("--out", default="tcell_generated.cpp")
+    p.add_argument("--port", type=int, default=8765,
+                   help="klink session port of the running KLayout")
+
     p = sub.add_parser("verify")
     p.add_argument("tcell")
     p.add_argument("--reference", required=True,
@@ -400,6 +620,7 @@ def main():
     bridge = LEditBridgeClient()
     return {"read": cmd_read, "variants": cmd_variants,
             "writeback": cmd_writeback, "verify": cmd_verify,
+            "from_pcell": cmd_from_pcell,
             "fit": cmd_fit}[args.verb](bridge, args) or 0
 
 

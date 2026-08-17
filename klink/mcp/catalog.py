@@ -300,6 +300,22 @@ DOMAINS: "OrderedDict[str, dict]" = OrderedDict([
         "summary": "Read selections/cells from a live Tanner L-Edit, import them into KLayout (parametric where possible), and push KLayout geometry back — via the ledit_bridge.cpp macro.",
         "prefixes": ["ledit"],
         "usage": (
+            "ROUTE THE WORK, DO NOT REIMPLEMENT IT. L-Edit is where the "
+            "user's design lives; KLayout is where klink's capability "
+            "lives, and this domain is the transport between them "
+            "(draw/read/place/manage designs+layers+T-Cells). When the "
+            "user asks for something in L-Edit, first ask whether klink "
+            "already does it on the KLayout side -- routing.*, drc_run, "
+            "structdevice.* (P&R/LVS), geometry.*/cell.fill_region, "
+            "photonics.*, imaging.*, device fitting. If so: "
+            "ledit.import_cell_tree (or import_selection) -> do the work "
+            "with the real klink tools -> ledit.push_cell_tree (or a GDS "
+            "via the macro's import_gds) to put the result back. Building "
+            "routing or DRC out of ledit draw calls is the mistake this "
+            "note exists to prevent. Note a KLayout PCell lands as STATIC "
+            "geometry unless ported: examples' tcell_workflows.py "
+            "from_pcell scaffolds the T-Cell generator, writeback installs "
+            "it, and acceptance is an all-byte-exact verify.\n"
             "Requires L-Edit running with the bridge macro loaded as SOURCE "
             "(example_template/ledit_bridge/ledit_bridge.cpp via Tools > "
             "Macro > Load Macro...; zero compile; old-version API subset - "

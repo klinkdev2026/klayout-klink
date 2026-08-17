@@ -176,6 +176,15 @@ def _check_ledit_bridge(add) -> None:
         except LEditBridgeError as exc:
             parts.append(f"{ns}: {exc}")
             continue
+        except Exception as exc:
+            # A diagnostic must never be the thing that breaks. Catching only
+            # LEditBridgeError let an unreadable hello.json (macro < 0.5.4
+            # writes system-codepage bytes, so a non-ASCII design path is not
+            # valid UTF-8) abort the WHOLE doctor run with a traceback, taking
+            # the KLayout checks down with it.
+            parts.append(f"{ns}: unreadable heartbeat ({type(exc).__name__}: "
+                         f"{exc}); upgrade the macro and reload it")
+            continue
         ver = hello.get("macro_version", "?")
         if age <= 10.0:
             design = hello.get("file") or "no design open"
@@ -251,7 +260,12 @@ def run_doctor(
     add("klink", True, f"klink {__version__} (protocol {PROTOCOL_VERSION})")
     _check_kernels(add)
     _check_klayout_pip(add)
-    _check_ledit_bridge(add)
+    try:
+        _check_ledit_bridge(add)
+    except Exception as exc:  # a check must never take the report down
+        add("ledit_bridge", True,
+            f"check failed ({type(exc).__name__}: {exc}); the rest of this "
+            "report is still valid")
 
     # Live plugin connection + version handshake.
     from .client import KLinkClient

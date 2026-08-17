@@ -28,6 +28,17 @@ Read-only (shipped references — run them, don't edit them):
   `example_template/ledit_bridge/` (start with its `README.md`, then
   `draw_device_demo.py`). `python -m klink.doctor` reports the bridge's
   liveness alongside the KLayout checks.
+  **L-Edit is where the design lives; KLayout is where klink's capability
+  lives.** The bridge's command set is the transport (draw/read/place/
+  manage), not the toolbox. When a user asks for something in L-Edit, first
+  ask whether klink already does it on the KLayout side — routing, DRC,
+  LVS, P&R, fill/boolean/density, gdsfactory, imaging, device fitting. If it
+  does: read the cells out (`ledit.import_cell_tree`), do the work with the
+  real klink API, push the result back (`ledit.push_cell_tree`, or a GDS via
+  `import_gds`). Rebuilding klink's capabilities out of bridge `draw` calls
+  is the mistake this rule exists to prevent. A KLayout PCell arrives in
+  L-Edit as static geometry unless you port it —
+  `tcell_workflows.py from_pcell` scaffolds the T-Cell generator.
 - `recipes/README.md` — the per-domain menu of what klink can build.
 
 **Never edit `klink` or the KLayout plugin.** They are installed packages
