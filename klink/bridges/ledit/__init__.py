@@ -16,6 +16,8 @@ Modules:
 from .client import LEditBridgeClient, LEditBridgeError
 from .adapter import (build_layer_map, convert_object, selection_to_items,
                       harvest_boxes, merge_layer_name, nest_properties)
+from .tree import (push_cell_tree, import_cell_tree, collect_klayout_tree,
+                   collect_ledit_tree)
 from .tcell import (parse_tcell_params, VariantFactory, DiffReport,
                     verify_differential)
 
@@ -23,6 +25,8 @@ __all__ = [
     "LEditBridgeClient", "LEditBridgeError",
     "build_layer_map", "convert_object", "selection_to_items",
     "harvest_boxes", "merge_layer_name", "nest_properties",
+    "push_cell_tree", "import_cell_tree",
+    "collect_klayout_tree", "collect_ledit_tree",
     "parse_tcell_params", "VariantFactory", "DiffReport",
     "verify_differential",
 ]

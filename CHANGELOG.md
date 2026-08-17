@@ -4,6 +4,69 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project does not use dated entries (versions only).
 
+## 0.3.5
+
+- the L-Edit bridge stopped stalling on large write-backs. A request over
+  the macro's 64 KiB cap was dropped *without* being executed, answered or
+  deleted, so the caller waited out its whole timeout while the file was
+  re-read on every poll tick — and the error it finally got blamed a stale
+  heartbeat. Measurement says the payload was never the problem: drawing
+  costs about 0.02 ms per shape and stays flat as a cell fills, while every
+  request costs roughly one poll interval regardless of size. The client now
+  refuses an over-cap request outright, `draw()` splits by size and
+  pipelines the parts, and the macro answers and consumes an oversized
+  request instead of leaving it behind.
+- new macro command `batch {ops:[...]}` runs N commands in ONE ordered
+  request (stopping at the first failure), and `LEditBridgeClient.pipeline()`
+  fires independent requests together — measured ~10x over blocking calls.
+  The macro polls at 15 ms while requests are flowing and keeps its old idle
+  duty cycle otherwise, so a round trip fell from 0.197 s to 0.026 s.
+- hierarchy transfer both ways: `ledit.push_cell_tree` and
+  `ledit.import_cell_tree` move a cell and everything below it, cells in
+  dependency order, instances rebuilt as instances (arrays and orthogonal
+  rotations included), layer identity by NAME, idempotent, one batched
+  request. Placements the other side cannot express exactly — magnification,
+  non-orthogonal rotation, skewed array — are reported, never approximated.
+  `ledit.push_cell` / `import_selection` remain the flat single-cell tools.
+- new macro command `import_gds` for bulk transfer, keeping the cell
+  hierarchy and idempotent via `overwrite:"all"`. L-Edit's reader expects
+  the classic 2048-byte Calma block padding that KLayout does not write;
+  unpadded, the import aborts at EOF behind a modal dialog that freezes the
+  bridge, and `LFile_ImportGDSII` still returns OK while leaving empty cell
+  shells. `import_gds()` pads a sibling copy for you and the macro now reads
+  the import log rather than trusting the status code.
+- designs are visible and switchable: `list_designs` reports every open
+  design, and `activate_design {file}` switches between them BY NAME, so a
+  design created and never saved is reachable too. It raises an existing
+  window instead of opening a cell, so nothing inside the design is touched.
+- `LEditBridgeClient.bind_file()` / `bind_active()` attach the `expect_file`
+  design guard to the client, so it rides on every request and on every op
+  inside a batch. Passing it per call left the convenience wrappers unable
+  to carry it, and one forgotten guard is a write into the user's own
+  design.
+- `klink doctor` reports the L-Edit bridge (namespace, macro version,
+  heartbeat, current design) — it used to be blind to it, so a user whose
+  bridge was the broken part got either an all-green report or a KLayout
+  error. `klink doctor` also stopped dropping its own flags: `--scan`,
+  `--report`, `--json`, `--gdsfactory`, `--host`, `--port` now work.
+- new starter `example_template/ledit_bridge/draw_device_demo.py` draws a
+  real device (two-finger NMOS over five layers) and demonstrates design
+  targeting, idempotent redraw, batching and read-back verification.
+  `example_template/README.md` and the project `AGENTS.md` now list the
+  L-Edit bridge, which the category list omitted entirely.
+- `KLINK_LEDIT_BRIDGE_ROOT` relocates the exchange directory for sandboxes
+  that cannot write `%LOCALAPPDATA%`. The client honoured it, but the macro
+  and `driver.py` did not, so the escape hatch silently pointed the two ends
+  at different directories. All three read it now, and it is documented.
+- messages people act on: every "load the macro" instruction carries the
+  absolute path of the packaged `.cpp`; a missing heartbeat says outright
+  that running L-Edit is not the same as loading the macro; a stale one
+  distinguishes "loaded but paused" from "L-Edit restarted, load it again";
+  a failed inbox write names the environment variable instead of raising a
+  bare `OSError`; a timeout warns that the request may already have executed,
+  so a blind retry double-draws. User-facing text is ASCII, because an em
+  dash renders as `?` on a Windows console.
+
 ## 0.3.4
 
 - imaging figures are now legible by default. `imaging.xsection_run` /

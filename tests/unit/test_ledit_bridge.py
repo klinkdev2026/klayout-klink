@@ -96,6 +96,31 @@ def test_missing_hello_is_instructive(tmp_path):
     assert "Load Macro" in str(e.value)
 
 
+def test_load_instructions_carry_the_absolute_macro_path(tmp_path):
+    # A blind-test agent had to hunt for a 90-character path because the
+    # message only named the file. The user picks it in a GUI dialog.
+    from klink.bridges.ledit.client import bundled_macro_path
+    macro = bundled_macro_path()
+    assert os.path.isfile(macro), "packaged macro missing: %s" % macro
+
+    c = LEditBridgeClient(root=make_ns(tmp_path, hello=False))
+    with pytest.raises(LEditBridgeError) as e:
+        c.call("ping")
+    assert macro in e.value.next_action
+    assert "not enough" in e.value.next_action     # running != loaded
+
+
+def test_user_facing_messages_stay_ascii(tmp_path):
+    # Windows consoles (cp936/cp1252) render an em dash as '?', which a
+    # blind-test agent duly reported as unreadable guidance.
+    c = LEditBridgeClient(root=make_ns(tmp_path, hello=False))
+    with pytest.raises(LEditBridgeError) as e:
+        c.call("ping")
+    text = str(e.value) + e.value.next_action + json.dumps(c.status())
+    offenders = sorted({ch for ch in text if ord(ch) > 127})
+    assert not offenders, "non-ASCII in user-facing text: %s" % offenders
+
+
 def test_stale_hello_is_instructive(tmp_path):
     root = make_ns(tmp_path)
     c = LEditBridgeClient(root=root)
@@ -165,6 +190,139 @@ def test_timeout_is_instructive(tmp_path):
     with pytest.raises(LEditBridgeError) as e:
         c.call("ping", timeout=0.2)
     assert "bridge.log" in str(e.value)
+
+
+def _poly_item(k, npts=24):
+    """A polygon shaped like flattened layout output — the payload that
+    actually blows the request cap (250 of these measured 104 KiB live,
+    while 250 boxes stay under it)."""
+    return {"kind": "polygon", "layer": "M1",
+            "points_um": [[k + i * 0.11, k + i * 0.13] for i in range(npts)]}
+
+
+def test_oversize_request_fails_fast_without_touching_inbox(tmp_path):
+    # The macro would neither answer nor delete such a request: it stalls
+    # the caller for a full timeout and leaves a file re-read every tick.
+    root = make_ns(tmp_path)
+    c = LEditBridgeClient(root=root, poll_s=0.02)
+    huge = {"cell": "TOP", "items": [_poly_item(i) for i in range(400)]}
+    with pytest.raises(LEditBridgeError) as e:
+        c.call("draw", huge, timeout=0.2)
+    assert e.value.code == "ERR_REQUEST_TOO_LARGE"
+    assert "KiB" in str(e.value)
+    assert os.listdir(c.inbox) == []          # nothing left behind
+
+
+def test_draw_chunks_oversize_payload_and_sums_results(live_bridge):
+    seen = []
+
+    def handler(req):
+        n = len(req["params"]["items"])
+        seen.append(n)
+        return {"ok": True, "result": {"drawn": n, "layers_created": 1,
+                                       "cell": req["params"].get("cell")}}
+
+    c = live_bridge(handler)
+    items = [_poly_item(i) for i in range(400)]
+    out = c.draw(items, cell="TOP", expect_file="unit.tdb")
+
+    assert out["requests"] > 1                # actually split
+    assert out["drawn"] == 400                # nothing lost or double-counted
+    assert out["layers_created"] == out["requests"]
+    assert sum(seen) == 400
+    assert out["cell"] == "TOP"
+
+
+def test_bound_guard_rides_on_every_command(live_bridge):
+    # The convenience wrappers have no room for expect_file, which used to
+    # push callers back to raw call() with hand-built dicts — and one
+    # forgotten guard is a write into the user's own design.
+    seen = []
+
+    def handler(req):
+        seen.append((req["cmd"], req["params"].get("expect_file")))
+        return {"ok": True, "result": {"cells": [], "layers": []}}
+
+    c = live_bridge(handler).bind_file("mine.tdb")
+    c.ensure_layer("MET1", 68, 20)
+    c.create_cell("TOP")
+    c.clear_cell("TOP")
+    c.list_cells()
+    assert seen == [("ensure_layer", "mine.tdb"), ("create_cell", "mine.tdb"),
+                    ("clear_cell", "mine.tdb"), ("list_cells", "mine.tdb")]
+
+
+def test_bound_guard_rides_on_every_batch_op(live_bridge):
+    # Each op resolves its own target design inside the macro, so guarding
+    # only the envelope would leave the ops unguarded.
+    seen = []
+
+    def handler(req):
+        for op in req["params"]["ops"]:
+            seen.append((op["cmd"], op["params"].get("expect_file")))
+        return {"ok": True, "result": {"results": [], "completed": 0}}
+
+    c = live_bridge(handler).bind_file("mine.tdb")
+    c.batch([("create_cell", {"name": "A"}),
+             ("draw", {"cell": "A", "items": [{"kind": "box", "layer": "M1",
+                                               "bbox_um": [0, 0, 1, 1]}]})])
+    assert seen == [("create_cell", "mine.tdb"), ("draw", "mine.tdb")]
+
+
+def test_explicit_guard_wins_over_the_bound_one(live_bridge):
+    seen = []
+
+    def handler(req):
+        seen.append(req["params"].get("expect_file"))
+        return {"ok": True, "result": {}}
+
+    c = live_bridge(handler).bind_file("mine.tdb")
+    c.call("create_cell", {"name": "A", "expect_file": "other.tdb"})
+    assert seen == ["other.tdb"]
+
+
+def test_bind_active_refuses_when_no_design_is_open(live_bridge):
+    c = live_bridge(lambda req: {"ok": True, "result": {"file": ""}})
+    with pytest.raises(LEditBridgeError) as e:
+        c.bind_active()
+    assert "new_design" in e.value.next_action
+
+
+def test_import_gds_pads_to_the_2048_byte_block(live_bridge, tmp_path):
+    # L-Edit's reader wants the classic Calma block padding; KLayout does not
+    # write it. Unpadded, the import aborts at EOF behind a MODAL dialog and
+    # leaves empty cell shells (observed live, 40 s frozen bridge).
+    sent = {}
+
+    def handler(req):
+        sent.update(req["params"])
+        return {"ok": True, "result": {"cells_added": 3}}
+
+    c = live_bridge(handler)
+    gds = tmp_path / "hier.gds"
+    gds.write_bytes(b"X" * 466)
+    out = c.import_gds(str(gds))
+
+    assert out["padded_copy"].endswith(".ledit.gds")
+    assert os.path.getsize(out["padded_copy"]) % 2048 == 0
+    assert sent["path"] == out["padded_copy"]
+    assert gds.read_bytes() == b"X" * 466        # caller's file untouched
+
+
+def test_import_gds_leaves_an_aligned_file_alone(live_bridge, tmp_path):
+    c = live_bridge(lambda req: {"ok": True, "result": {"cells_added": 1}})
+    gds = tmp_path / "aligned.gds"
+    gds.write_bytes(b"X" * 4096)
+    out = c.import_gds(str(gds))
+    assert "padded_copy" not in out
+
+
+def test_draw_rejects_a_single_item_too_big_to_ever_send(live_bridge):
+    c = live_bridge(lambda req: {"ok": True, "result": {"drawn": 0}})
+    with pytest.raises(LEditBridgeError) as e:
+        c.draw([_poly_item(0, npts=4000)], cell="TOP")
+    assert e.value.code == "ERR_REQUEST_TOO_LARGE"
+    assert "GDS" in e.value.next_action       # names the real escape route
 
 
 # --------------------------------------------------------------------------

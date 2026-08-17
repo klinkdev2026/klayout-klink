@@ -12,7 +12,27 @@ passives/     idc_capacitor, spiral_inductor, saw_idt_filter, baw_fbar_planview
 layout/       fill_region_demo             (needs a live KLayout session)
 digital/      fit_device_pnr_lvs, padframe_pnr_lvs, chat_to_netlist_pnr,
               multilayer_pnr_lvs           (custom device -> P&R -> live LVS)
+imaging/      xsection_demo, render3d_demo, sem_demo, blender_demo
+ledit_bridge/ draw_device_demo, tcell_workflows, driver
+                                           (Tanner L-Edit, not KLayout)
 ```
+
+## Tanner L-Edit, not KLayout (`ledit_bridge/`)
+
+klink drives a second editor. If the user says **L-Edit / Tanner / .tdb /
+T-Cell**, this is the folder — read `ledit_bridge/README.md` first.
+
+```bash
+# 1. in L-Edit: Tools > Macro > Load Macro... -> ledit_bridge/ledit_bridge.cpp
+python -m klink.doctor                              # reports the bridge too
+python example_template/ledit_bridge/driver.py ping # macro version + capabilities
+python example_template/ledit_bridge/draw_device_demo.py --new my_lib
+```
+
+`draw_device_demo.py` is the copy-and-adapt starter: a static two-finger
+NMOS across five layers, with design targeting, idempotent redraw, one
+batched request, and read-back verification. `tcell_workflows.py` covers
+the parametric T-Cell loop (read / variants / writeback / verify / fit).
 
 ## Run one
 
