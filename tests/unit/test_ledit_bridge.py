@@ -233,6 +233,34 @@ def test_draw_chunks_oversize_payload_and_sums_results(live_bridge):
     assert out["cell"] == "TOP"
 
 
+def test_reads_survive_a_non_utf8_design_path(tmp_path):
+    # The macro builds JSON from L-Edit's ANSI strings, so a design under a
+    # Chinese OneDrive folder yields a hello.json that is not valid UTF-8.
+    # Strict decoding raised UnicodeDecodeError from inside json.load, which
+    # read as a klink crash and took `doctor` down with it.
+    root = make_ns(tmp_path)
+    hello = os.path.join(root, "default", "hello.json")
+    name = "D:\\设计\\我的库.tdb"
+    payload = ('{"schema":1,"proto":1,"macro_version":"0.5.3",'
+               '"file":"%s","cell":"顶层"}' % name.replace("\\", "\\\\"))
+    with open(hello, "wb") as f:
+        f.write(payload.encode("gbk"))          # what an ANSI macro writes
+
+    c = LEditBridgeClient(root=root)
+    got = c.hello()
+    assert got["file"] == name                  # recovered, not mangled
+    assert got["cell"] == "顶层"
+    assert c.alive()
+
+
+def test_reads_still_work_when_the_macro_emits_utf8(tmp_path):
+    root = make_ns(tmp_path)
+    hello = os.path.join(root, "default", "hello.json")
+    with open(hello, "wb") as f:
+        f.write('{"schema":1,"file":"设计.tdb","cell":"TOP"}'.encode("utf-8"))
+    assert LEditBridgeClient(root=root).hello()["file"] == "设计.tdb"
+
+
 def test_bound_guard_rides_on_every_command(live_bridge):
     # The convenience wrappers have no room for expect_file, which used to
     # push callers back to raw call() with hand-built dicts — and one

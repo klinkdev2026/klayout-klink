@@ -11,6 +11,7 @@ whose ``next_action`` names the exact next step.
 from __future__ import annotations
 
 import json
+import locale
 import os
 import time
 import uuid
@@ -41,6 +42,34 @@ class LEditBridgeError(RuntimeError):
         base = super().__str__()
         return f"{base}\nnext_action: {self.next_action}" if \
             self.next_action else base
+
+
+def _read_json(path: str) -> Dict[str, Any]:
+    """Read one bridge JSON file, tolerating the macro's ANSI output.
+
+    The macro builds its JSON from L-Edit's ANSI (system-codepage) strings
+    and writes the bytes through, so a design or cell whose PATH contains
+    non-ASCII characters -- a Chinese OneDrive folder, say -- produces a
+    file that is not valid UTF-8. Decoding it strictly raises
+    UnicodeDecodeError from inside json.load, which reads as a klink crash
+    rather than an encoding mismatch, and takes out every command that
+    happens to mention that name (hello, get_cell, list_designs...).
+
+    Try UTF-8 first (correct, and what a macro >= 0.5.4 emits), then the
+    system codepage, which recovers the real characters rather than
+    mangling them. Only if both fail do we fall back to lossy UTF-8, so a
+    caller still gets a usable answer instead of an exception.
+    """
+    with open(path, "rb") as f:
+        raw = f.read()
+    for encoding in ("utf-8", locale.getpreferredencoding(False)):
+        try:
+            return json.loads(raw.decode(encoding))
+        except (UnicodeDecodeError, LookupError):
+            continue
+        except ValueError:
+            break               # decoded fine, but the JSON itself is bad
+    return json.loads(raw.decode("utf-8", errors="replace"))
 
 
 def bundled_macro_path() -> str:
@@ -100,8 +129,7 @@ class LEditBridgeClient:
                 "macro must be loaded; it starts polling as soon as it is. "
                 "L-Edit can also preload it at launch: ledit64.exe -u <that "
                 "path>")
-        with open(self.hello_path, "r", encoding="utf-8") as f:
-            return json.load(f)
+        return _read_json(self.hello_path)
 
     def hello_age_s(self) -> float:
         return time.time() - os.path.getmtime(self.hello_path)
@@ -219,8 +247,7 @@ class LEditBridgeClient:
                 if not os.path.exists(path):
                     continue
                 time.sleep(min(self.poll_s / 2, 0.05))   # let rename settle
-                with open(path, "r", encoding="utf-8") as f:
-                    out[i] = json.load(f)
+                out[i] = _read_json(path)
                 try:
                     os.remove(path)
                 except OSError:

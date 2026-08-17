@@ -41,7 +41,9 @@ Exchange dir: %LOCALAPPDATA%\klink\ledit_bridge\default\
   `from klink.bridges.ledit import LEditBridgeClient`):
   `read` / `variants` / `writeback` / `verify` (byte-exact differential) /
   `fit` (geometry-only: harvest → v3 repeat-group fit → byte-exact gate →
-  KLayout PCell).
+  KLayout PCell) / **`from_pcell`** (the other direction: scaffold T-Cell
+  generator code from a live KLayout PCell — see the PCell → T-Cell
+  section).
 - `tcell_template.cpp` — byte-exact-verified COPY-AND-ADAPT template for
   generator code you write back. Do not hand-write UPI C++ from scratch.
 
@@ -110,7 +112,12 @@ proceed. `open_design {path}` / `save_design {path?}` round out file
 management. 没开 tdb 也能开工：`new_design` 直接建库。
 
 **Draw / 画图**: `ensure_layer` (GDS numbers stamped; NEW layers are
-auto-colored — solid fill, no outline, deterministic by name) →
+auto-styled with a HATCHED fill, never solid — you read a layout by
+seeing THROUGH the stack, and a solid fill hides the very overlap that
+shows a contact landing on its metal; colour and pattern are both
+deterministic by layer name, so layers stay separable. `set_layer_style`
+takes `fill:"hatch"` (default) `|"solid"|"none"`. 自动配色改为**图案填充**，
+实心会把叠层糊死) →
 `create_cell` → `draw` (box/polygon/wire/circle, batch) →
 `place_instance` (single or nx×ny array). Draw is APPEND-ONLY: to
 regenerate, `clear_cell {cell}` (explicit cell name required) or use a
@@ -193,6 +200,88 @@ still honest — the table records its sampled envelope and the check
 gate refuses extrapolation it cannot prove. 采样规则：要学的参数至少两个
 取值；数量型参数必须跨档位，最好骑缝取样（档位前最后一个值+档位后第一
 个值），数量律才能唯一钉死。`REFUSED`/`MISMATCH` 输出就是下一步操作指南。
+
+## Where the work happens / 活该在哪儿干 (read this first)
+
+**L-Edit is where the user's design lives. KLayout is where klink's
+capability lives. The bridge exists to move geometry between them — not
+to make L-Edit do the computing.**
+
+The bridge's own command set is deliberately small: draw, read, place,
+manage designs/layers/T-Cells. That is the transport, not the toolbox. So
+when a user asks for something *in L-Edit*, the first question is not
+"which bridge command does this?" but:
+
+> **Does klink already do this on the KLayout side?**
+> If yes: `ledit.import_cell_tree` (or `import_selection`) → do the work
+> with the real klink API in KLayout → `ledit.push_cell_tree` (or a GDS
+> via `import_gds`) to put the result back.
+
+用户在 L-Edit 里提的需求，先问「klink 有没有这个能力」。有 → **读出来 →
+在 KLayout 侧做 → 写回去**。L-Edit 负责「设计在这里」，不负责计算。
+
+| The user asks, in L-Edit | Route it through |
+|---|---|
+| route these ports / nets, avoid obstacles | `routing.*` backends, `photonics.connect` |
+| check the layout / run DRC / does it match the netlist | `drc_run`, `structdevice.lvs_check` |
+| place a netlist, do P&R | `structdevice.build_from_netlist` |
+| fill a region, boolean ops, density, XOR two cells | `cell.fill_region`, `geometry.*` |
+| generate a photonic circuit / gdsfactory component | `photonics.import_gf`, `routing.gdsfactory_ports` |
+| a cross-section, a 3D view, an SEM-style figure | `imaging.*` |
+| turn measured geometry into a parametric device | `pcell.register_fitted`, `tcell_workflows.py fit` |
+| draw a device / edit shapes / manage designs | the bridge directly — this is its job |
+
+Doing it the other way round — reimplementing klink's routing or DRC out
+of `draw` calls — is the failure mode this section exists to prevent. If
+klink has no such capability either, say so plainly instead of
+approximating it with primitives.
+
+Two things do NOT survive the round trip automatically, so decide before
+you start: KLayout **PCells become static geometry** in L-Edit unless you
+port them (see the next section), and a GDS trip maps layers by NUMBER
+rather than by name.
+
+## PCell -> T-Cell: keep it parametric / 参数化怎么带过去
+
+`push_cell_tree` moves a PCell's *shapes*; the parameters stay behind. To
+land a real, editable T-Cell in L-Edit, generate its UPI generator and
+write it back. Do not hand-write that C++: a compile error pops a modal
+dialog that freezes the bridge until a human closes it. Scaffold it.
+
+```bash
+# 1. scaffold from the live KLayout PCell (KLayout must be running)
+python tcell_workflows.py from_pcell MY_PCELL --library MyLib \
+    --params '{"w": 0.5, "n": 4}' --out gen.cpp
+# 2. edit gen.cpp: the geometry is emitted as the PCell's ACTUAL boxes at
+#    those parameters, in integer internal units. Replace the constants
+#    with formulas over the parameters -- that edit IS the port.
+# 3. write it back as a native T-Cell
+python tcell_workflows.py writeback KLINK_MY_PCELL --code gen.cpp \
+    --params gen.params.json
+# 4. acceptance: ALL-BYTE-EXACT, nothing less counts
+python tcell_workflows.py verify KLINK_MY_PCELL \
+    --reference ref.py:boxes --paramsets "[...]"
+```
+
+What the scaffold hands you, already correct: the `need_layer()` helper
+copied from the byte-exact-verified `tcell_template.cpp` (GDS stamping
+included — a layer left at -1 exports wrong), typed getters for every
+parameter UPI can actually read, layer creation for every layer the PCell
+drew, a degenerate-input guard, and the `UPI_Entry_Point`. It reports what
+it could NOT scaffold rather than guessing: parameter types with no UPI
+getter (strings, shapes, layer objects — UPI has only Layer/Coord/Double/
+Boolean/Int), and non-box shapes, which you add with `LPolygon_New` /
+`LWire_New`.
+
+Rules of thumb: sample the PCell at parameters that make the structure
+obvious (a count of 3 or 4, not 1 — you cannot see a repeat law in one
+copy), and keep every coordinate in integer internal units, because that
+is what makes the byte-exact gate possible at all. 采样时数量参数取 3~4,
+一个副本看不出重复律;坐标全程整数内部单位,逐字节验收才成立。
+
+For the opposite direction (an existing T-Cell you want usable in
+KLayout), `tcell_workflows.py fit` already does it geometry-only, with the
+same byte-exact gate.
 
 ## Bulk transfer: what is actually slow / 批量写回的真实瓶颈
 

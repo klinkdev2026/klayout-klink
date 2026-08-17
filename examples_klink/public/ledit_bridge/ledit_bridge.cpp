@@ -118,7 +118,7 @@
 #include <ldata.h>   // L-Edit UPI (user-supplied SDK include path)
 
 #define BRIDGE_PROTO         1
-#define BRIDGE_MACRO_VERSION "0.5.3"
+#define BRIDGE_MACRO_VERSION "0.5.5"
 // Adaptive poll: measured cost of one round trip was ~0.20 s, essentially
 // all of it poll latency (payload is nearly free -- 400 boxes drew in
 // 0.16 s). Poll fast for a burst window after any activity, idle slowly.
@@ -142,6 +142,11 @@ extern "C" {
 // Minimal JSON value + parser + serializer (C++03, no dependencies).
 // Supports: null, bool, number(double), string(UTF-8), array, object.
 // ----------------------------------------------------------------------------
+
+// Encoding helpers (defined below, used by the JSON layer): L-Edit is
+// ANSI, JSON is UTF-8.
+static std::wstring to_wide(const std::string& s, UINT cp);
+static std::string  from_wide(const std::wstring& w, UINT cp);
 
 struct JVal {
     enum T { JNULL, JBOOL, JNUM, JSTR, JARR, JOBJ };
@@ -261,7 +266,18 @@ private:
             fail(); return;
         }
     }
+    // Accumulates UTF-8 (raw bytes and \uXXXX alike), then hands back ANSI:
+    // every consumer passes these straight into L-Edit's ANSI API, so a
+    // UTF-8 path would reach fopen/LFile_Open as the wrong bytes and simply
+    // not be found.
     void parse_str(std::string& out) {
+        std::string u8;
+        parse_str_utf8(u8);
+        out = from_wide(to_wide(u8, CP_UTF8), CP_ACP);
+        if (out.empty() && !u8.empty()) out = u8;   // unconvertible: keep raw
+    }
+
+    void parse_str_utf8(std::string& out) {
         out.clear();
         if (next() != '"') { fail(); return; }
         for (;;) {
@@ -324,10 +340,49 @@ private:
     }
 };
 
+// ---------------------------------------------------------------------------
+// Text encoding. L-Edit's API is ANSI (the system codepage), while JSON is
+// UTF-8 by definition. Passing ANSI bytes through produced files that were
+// NOT valid UTF-8 as soon as a design lived under a non-ASCII path (a Chinese
+// OneDrive folder, say): every reader raised a decode error that looked like
+// a bridge crash. Convert at the boundary in both directions, and emit pure
+// ASCII (\uXXXX) so the wire format is immune to whatever codepage either
+// side is running.
+// ---------------------------------------------------------------------------
+static std::wstring to_wide(const std::string& s, UINT cp) {
+    if (s.empty()) return std::wstring();
+    int n = MultiByteToWideChar(cp, 0, s.c_str(), (int)s.size(), NULL, 0);
+    if (n <= 0) return std::wstring();
+    std::wstring w((size_t)n, L'\0');
+    MultiByteToWideChar(cp, 0, s.c_str(), (int)s.size(), &w[0], n);
+    return w;
+}
+
+static std::string from_wide(const std::wstring& w, UINT cp) {
+    if (w.empty()) return std::string();
+    int n = WideCharToMultiByte(cp, 0, w.c_str(), (int)w.size(),
+                                NULL, 0, NULL, NULL);
+    if (n <= 0) return std::string();
+    std::string s((size_t)n, '\0');
+    WideCharToMultiByte(cp, 0, w.c_str(), (int)w.size(), &s[0], n, NULL, NULL);
+    return s;
+}
+
 static void jesc(const std::string& in, std::string& out) {
     out += '"';
-    for (size_t i = 0; i < in.size(); ++i) {
-        unsigned char c = (unsigned char)in[i];
+    // ANSI in -> wide -> ASCII-only JSON out.
+    std::wstring w = to_wide(in, CP_ACP);
+    if (w.empty() && !in.empty()) {          // conversion refused: never drop
+        for (size_t i = 0; i < in.size(); ++i) {
+            char buf[8];
+            sprintf(buf, "\\u%04x", (int)(unsigned char)in[i]);
+            out += buf;
+        }
+        out += '"';
+        return;
+    }
+    for (size_t i = 0; i < w.size(); ++i) {
+        unsigned int c = (unsigned int)w[i];
         switch (c) {
             case '"':  out += "\\\""; break;
             case '\\': out += "\\\\"; break;
@@ -337,12 +392,12 @@ static void jesc(const std::string& in, std::string& out) {
             case '\r': out += "\\r";  break;
             case '\t': out += "\\t";  break;
             default:
-                if (c < 0x20) {
+                if (c < 0x20 || c > 0x7E) {
                     char buf[8];
-                    sprintf(buf, "\\u%04x", (int)c);
+                    sprintf(buf, "\\u%04x", c);
                     out += buf;
                 } else {
-                    out += (char)c;   // UTF-8 bytes pass through
+                    out += (char)c;
                 }
         }
     }
@@ -531,8 +586,31 @@ static LCoord um2i(LFile f, double um) { return LFile_MicronsToIntU(f, um); }
 static double i2um(LFile f, LCoord v)  { return LFile_IntUtoMicrons(f, v); }
 
 // default style for BRIDGE-CREATED layers: deterministic palette color by
-// name hash, solid fill, NO outline (owner ruling: borderless fills keep
+// name hash, HATCHED fill, NO outline (owner ruling: borderless fills keep
 // the selection highlight legible). Existing layers are never restyled.
+// 8x8 stipples for auto-styled layers. NOT solid: a layout is read by
+// seeing THROUGH the stack, and solid fill on every layer hides exactly the
+// overlap that tells you a contact lands on its metal. Each pattern leaves
+// most pixels clear, and picking pattern AND colour by the layer name gives
+// far more separable layers than colour alone.
+static unsigned hash_name(const std::string& name) {
+    unsigned h = 5381;
+    for (size_t i = 0; i < name.size(); ++i)
+        h = h * 33 + (unsigned char)name[i];
+    return h;
+}
+
+static const unsigned char AUTO_STIPPLES[8][8] = {
+    {0x11, 0x22, 0x44, 0x88, 0x11, 0x22, 0x44, 0x88},  // diagonal /
+    {0x88, 0x44, 0x22, 0x11, 0x88, 0x44, 0x22, 0x11},  // diagonal backslash
+    {0x99, 0x66, 0x66, 0x99, 0x99, 0x66, 0x66, 0x99},  // cross-hatch
+    {0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x00},  // horizontal lines
+    {0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11},  // vertical lines
+    {0x22, 0x00, 0x88, 0x00, 0x22, 0x00, 0x88, 0x00},  // sparse dots
+    {0xFF, 0x11, 0x11, 0x11, 0xFF, 0x11, 0x11, 0x11},  // grid
+    {0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA},  // 50% weave
+};
+
 static void auto_style_new_layer(LFile file, LLayer layer,
                                  const std::string& name) {
     LRenderingAttribute ra;
@@ -541,11 +619,13 @@ static void auto_style_new_layer(LFile file, LLayer layer,
         return;
     int n = LFile_GetColorPaletteNumColors(file);
     if (n <= 1) return;
-    unsigned h = 5381;
-    for (size_t i = 0; i < name.size(); ++i)
-        h = h * 33 + (unsigned char)name[i];
-    ra.mFillColorIndex = 1 + (h % (unsigned)(n - 1));   // skip entry 0
-    memset(ra.mFillPattern, 0xFF, sizeof(LStipple));
+    unsigned h = hash_name(name);
+    unsigned color = 1 + (h % (unsigned)(n - 1));      // skip entry 0
+    ra.mFillColorIndex = color;
+    memcpy(ra.mFillPattern, AUTO_STIPPLES[(h >> 5) % 8], sizeof(LStipple));
+    // Outline stays OFF by earlier ruling (borderless fills keep the
+    // selection highlight legible); pass outline_rgb to set_layer_style to
+    // opt in per layer.
     memset(ra.mOutlinePattern, 0x00, sizeof(LStipple));
     LLayer_SetRenderingAttribute(layer, raiObject, &ra);
 }
@@ -1913,10 +1993,14 @@ static bool cmd_set_layer_style(Ctx& ctx, const JVal& params, JVal& result,
         ra.mFillColorIndex =
             (unsigned int)nearest_palette_index(ctx.file, rgb[0], rgb[1],
                                                 rgb[2], &got);
-        // fill_rgb implies you want to SEE the fill: default to solid.
-        // Outline defaults to NONE (owner ruling: borderless fills make the
-        // selection highlight legible); pass outline_rgb to opt in.
-        memset(ra.mFillPattern, 0xFF, sizeof(LStipple));
+        // fill_rgb implies you want to SEE the fill -- but NOT solid:
+        // solid hides the layer underneath, and reading a layout means
+        // reading the stack (a contact landing on its metal). Hatch by
+        // default, name-hashed so layers differ; pass fill:"solid" to
+        // override. Outline defaults to NONE (owner ruling: borderless
+        // fills make the selection highlight legible).
+        memcpy(ra.mFillPattern, AUTO_STIPPLES[hash_name(name) % 8],
+               sizeof(LStipple));
         if (!params.get("outline_rgb"))
             memset(ra.mOutlinePattern, 0x00, sizeof(LStipple));
         JVal used = JVal::A();
@@ -1929,9 +2013,13 @@ static bool cmd_set_layer_style(Ctx& ctx, const JVal& params, JVal& result,
     std::string fill = params.str_or("fill", "");
     if (fill == "none")       memset(ra.mFillPattern, 0x00, sizeof(LStipple));
     else if (fill == "solid") memset(ra.mFillPattern, 0xFF, sizeof(LStipple));
+    else if (fill == "hatch")
+        memcpy(ra.mFillPattern, AUTO_STIPPLES[hash_name(name) % 8],
+               sizeof(LStipple));
     else if (!fill.empty()) {
         err  = "unknown fill mode: " + fill;
-        next = "supported: \"solid\", \"none\" (or omit fill and pass fill_rgb)";
+        next = "supported: \"hatch\" (default, lets you see the stack), "
+               "\"solid\", \"none\"";
         return false;
     }
     if (read_rgb(params.get("outline_rgb"), rgb)) {

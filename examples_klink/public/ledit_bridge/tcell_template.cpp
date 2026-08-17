@@ -39,17 +39,31 @@ static LLayer need_layer(LFile file, const char* name, short gds, short dt)
     if (!layer) {
         LLayer_New(file, (LLayer)0, name);
         layer = LLayer_Find(file, name);
-        if (layer) {   /* default style: hashed palette color, solid fill */
+        if (layer) {   /* default style: hashed color + HATCHED fill */
+            /* Never solid: a layout is read by seeing THROUGH the stack, and
+             * solid fill hides the very overlap that shows a contact landing
+             * on its metal. Pattern and color both come from the name, so
+             * layers stay separable. */
+            static const unsigned char PATS[4][8] = {
+                {0x11, 0x22, 0x44, 0x88, 0x11, 0x22, 0x44, 0x88},
+                {0x88, 0x44, 0x22, 0x11, 0x88, 0x44, 0x22, 0x11},
+                {0x99, 0x66, 0x66, 0x99, 0x99, 0x66, 0x66, 0x99},
+                {0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x00},
+            };
             LRenderingAttribute ra;
             if (LLayer_GetRenderingAttribute(layer, raiObject, &ra) == LStatusOK) {
                 int nc = LFile_GetColorPaletteNumColors(file);
                 if (nc > 1) {
                     unsigned h = 5381;
+                    unsigned c;
                     const char* p;
                     for (p = name; *p; ++p) h = h * 33 + (unsigned char)*p;
-                    ra.mFillColorIndex = 1 + (h % (unsigned)(nc - 1));
-                    memset(ra.mFillPattern, 0xFF, sizeof(LStipple));
-                    memset(ra.mOutlinePattern, 0x00, sizeof(LStipple));
+                    c = 1 + (h % (unsigned)(nc - 1));
+                    ra.mFillColorIndex = c;
+                    memcpy(ra.mFillPattern, PATS[(h >> 5) % 4], sizeof(LStipple));
+                    memset(ra.mOutlinePattern, 0xFF, sizeof(LStipple));
+                    ra.mOutlineColorIndex = c;
+                    ra.mOutlineStyle = osSolid;
                     LLayer_SetRenderingAttribute(layer, raiObject, &ra);
                 }
             }

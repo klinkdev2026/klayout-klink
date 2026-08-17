@@ -4,6 +4,53 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project does not use dated entries (versions only).
 
+## 0.3.6
+
+- non-ASCII paths work. L-Edit's API is ANSI (the system codepage) while
+  JSON is UTF-8, and the macro wrote those bytes straight through, so a
+  design under a path like a Chinese OneDrive folder produced files that
+  were not valid UTF-8 — and the client decoded them strictly, raising
+  `UnicodeDecodeError` out of `json.load`, which reads as a klink crash
+  rather than an encoding mismatch. It took out anything naming that path:
+  `hello` (and so `klink doctor` entirely), `list_designs` (it reports
+  EVERY open design, so one such path poisons the call even when the active
+  design is ASCII), and `get_cell`. The macro now converts at the boundary
+  and emits pure ASCII (`\uXXXX`); the reverse was broken too, so a
+  non-ASCII path handed to `open_design` reached `fopen` as the wrong bytes
+  and simply was not found. The client reads every bridge file bytes-first
+  — UTF-8, then the system codepage, which RECOVERS the characters instead
+  of mangling them — so it keeps working against a macro that has not been
+  reloaded yet. `doctor` also no longer lets a bridge problem abort the
+  whole report.
+- `push_cell_tree` no longer mirrors an array. It took `abs()` of the array
+  step, but a KLayout array may step in -x/-y while L-Edit's nx/ny only
+  grow in +x/+y, so a negative step silently moved every copy to where the
+  source never had them. The origin now shifts to the far corner and the
+  pitch stays positive, covering the same footprint; a repeat with a zero
+  step is reported rather than collapsing onto itself.
+- layers are no longer filled solid. You read a layout by seeing THROUGH
+  the stack — a contact landing on its metal, an implant enclosing an
+  active — and a solid fill hides exactly that. Auto-styled layers get one
+  of eight hatches chosen by the same name hash that picks the colour, so
+  pattern and colour both separate them; `set_layer_style` gains
+  `fill:"hatch"` and `fill_rgb` no longer forces solid.
+- the bridge is transport, not the toolbox. Agents were trying to satisfy
+  layout requests inside L-Edit because nothing said otherwise. The bridge
+  README, the project `AGENTS.md` and the `bridge_ledit` catalog entry now
+  state the rule — read the cells out, do the work with klink's real
+  capability in KLayout (routing, DRC, LVS, P&R, fill/boolean, gdsfactory,
+  imaging, device fitting), push the result back — with a table mapping the
+  usual asks onto the tool that does them.
+- new `tcell_workflows.py from_pcell`: scaffold T-Cell generator code from
+  a live KLayout PCell, so a parametric device can land in L-Edit as a real
+  T-Cell instead of static geometry. It emits the proven boilerplate
+  (`need_layer()` copied from the byte-exact-verified template, typed
+  getters for every parameter UPI can actually read, layer creation, a
+  degenerate-input guard) plus the PCell's ACTUAL geometry at the sampled
+  parameters as concrete `LBox_New` calls — the port becomes "replace
+  constants with formulas". Parameter types UPI cannot read and non-box
+  shapes are reported rather than guessed at.
+
 ## 0.3.5
 
 - the L-Edit bridge stopped stalling on large write-backs. A request over

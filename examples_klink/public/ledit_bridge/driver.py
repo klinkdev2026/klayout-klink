@@ -30,6 +30,27 @@ OUTBOX = os.path.join(NS, "outbox")
 HELLO = os.path.join(NS, "hello.json")
 
 
+def read_json(path):
+    """Read bridge JSON tolerantly.
+
+    A macro older than 0.5.4 builds its JSON from L-Edit's ANSI strings, so
+    a design whose PATH holds non-ASCII characters (a Chinese OneDrive
+    folder, say) makes a file that is not valid UTF-8. Strict decoding turns
+    that into a traceback that looks like a bridge failure.
+    """
+    import locale
+    with open(path, "rb") as f:
+        raw = f.read()
+    for enc in ("utf-8", locale.getpreferredencoding(False)):
+        try:
+            return json.loads(raw.decode(enc))
+        except (UnicodeDecodeError, LookupError):
+            continue
+        except ValueError:
+            break
+    return json.loads(raw.decode("utf-8", errors="replace"))
+
+
 def check_alive():
     if not os.path.exists(HELLO):
         raise SystemExit(
@@ -43,8 +64,7 @@ def check_alive():
             "-> the bridge timer is not ticking. Most common cause: a MODAL "
             "DIALOG is open in L-Edit (error box, prompt) - close it. "
             "Otherwise: Tools > klink: Bridge Start")
-    with open(HELLO, "r", encoding="utf-8") as f:
-        return json.load(f)
+    return read_json(HELLO)
 
 
 def call(cmd, params=None, timeout=10.0):
@@ -62,8 +82,7 @@ def call(cmd, params=None, timeout=10.0):
     while time.time() < deadline:
         if os.path.exists(resp_path):
             time.sleep(0.05)  # let the atomic rename settle
-            with open(resp_path, "r", encoding="utf-8") as f:
-                resp = json.load(f)
+            resp = read_json(resp_path)
             os.remove(resp_path)
             if not resp.get("ok"):
                 err = resp.get("error", {})

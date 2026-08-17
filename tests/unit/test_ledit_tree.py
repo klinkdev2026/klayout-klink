@@ -189,6 +189,64 @@ def test_push_reports_instances_it_cannot_express_exactly(bridge_with):
     assert all("fix" in u for u in report["unsupported_instances"])
 
 
+def test_negative_array_step_compensates_the_origin(bridge_with):
+    # A KLayout array may step in -x/-y; L-Edit's nx/ny grow in +x/+y only.
+    # Taking abs() of the pitch silently MIRRORS the array about its origin,
+    # so the copies land somewhere the source never had them.
+    cells = {
+        "TOP": {"instances": [inst("LEAF", dx=10000, dy=8000,
+                                   array={"na": 3, "nb": 2,
+                                          "a_dbu": [-2000, 0],
+                                          "b_dbu": [0, -1000]})]},
+        "LEAF": {"shapes": [box()]},
+    }
+    seen, handler = collect_ops(None, None)
+    bridge = bridge_with(handler)
+    report = push_cell_tree(FakeClient(cells), bridge, "TOP")
+
+    assert not report["unsupported_instances"]
+    place = next(p for c, p in seen if c == "place_instance")
+    # source occupies x in {10, 8, 6}, y in {8, 7}: origin moves to the far
+    # corner and the pitch turns positive, covering the SAME footprint
+    assert place["nx"] == 3 and place["ny"] == 2
+    assert place["dx_um"] == pytest.approx(2.0)
+    assert place["dy_um"] == pytest.approx(1.0)
+    assert place["x_um"] == pytest.approx(6.0)
+    assert place["y_um"] == pytest.approx(7.0)
+
+
+def test_positive_array_step_leaves_the_origin_alone(bridge_with):
+    cells = {
+        "TOP": {"instances": [inst("LEAF", dx=10000, dy=8000,
+                                   array={"na": 3, "nb": 2,
+                                          "a_dbu": [2000, 0],
+                                          "b_dbu": [0, 1000]})]},
+        "LEAF": {"shapes": [box()]},
+    }
+    seen, handler = collect_ops(None, None)
+    bridge = bridge_with(handler)
+    push_cell_tree(FakeClient(cells), bridge, "TOP")
+    place = next(p for c, p in seen if c == "place_instance")
+    assert place["x_um"] == pytest.approx(10.0)
+    assert place["y_um"] == pytest.approx(8.0)
+    assert place["dx_um"] == pytest.approx(2.0)
+
+
+def test_zero_step_array_is_reported_not_collapsed(bridge_with):
+    cells = {
+        "TOP": {"instances": [inst("LEAF", array={"na": 4, "nb": 1,
+                                                  "a_dbu": [0, 0],
+                                                  "b_dbu": [0, 0]})]},
+        "LEAF": {"shapes": [box()]},
+    }
+    seen, handler = collect_ops(None, None)
+    bridge = bridge_with(handler)
+    report = push_cell_tree(FakeClient(cells), bridge, "TOP")
+    assert len(report["unsupported_instances"]) == 1
+    assert "zero step" in report["unsupported_instances"][0]["reason"]
+    assert report["instances"]["TOP"] == 0
+
+
 def test_push_refuses_a_truncated_shape_query(bridge_with):
     cells = {"TOP": {"instances": [], "shapes": [box()], "truncated": True}}
     seen, handler = collect_ops(None, None)

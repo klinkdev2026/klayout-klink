@@ -182,9 +182,28 @@ def push_cell_tree(client, bridge: LEditBridgeClient, cell: str, *,
                         "fix": "L-Edit arrays are nx/ny on the axes; flatten "
                                "this array or use import_gds"})
                     continue
-                place.update(nx=na, ny=nb,
-                             dx_um=abs(float(a[0])) * dbu,
-                             dy_um=abs(float(b[1])) * dbu)
+                ax, by = float(a[0]), float(b[1])
+                if (na > 1 and ax == 0.0) or (nb > 1 and by == 0.0):
+                    unsupported.append({
+                        "cell": name, "child": inst.get("child"),
+                        "reason": "array repeats with a zero step "
+                                  "(a=%s, b=%s, na=%d, nb=%d)" % (a, b, na, nb),
+                        "fix": "the copies would sit on top of each other; "
+                               "L-Edit requires a nonzero pitch per repeated "
+                               "axis. Fix the source array or flatten it"})
+                    continue
+                # A KLayout array may step in -x/-y; L-Edit's nx/ny grow in
+                # +x/+y only. Taking abs() of the pitch would silently mirror
+                # the array about its origin, so move the ORIGIN to the far
+                # corner instead and keep the pitch positive -- same
+                # instances, same places.
+                x0, y0 = place["x_um"], place["y_um"]
+                if ax < 0:
+                    x0 += ax * (na - 1) * dbu
+                if by < 0:
+                    y0 += by * (nb - 1) * dbu
+                place.update(x_um=x0, y_um=y0, nx=na, ny=nb,
+                             dx_um=abs(ax) * dbu, dy_um=abs(by) * dbu)
             placements.append(place)
 
         per_cell[name] = {"items": items, "skipped": skipped,
