@@ -10,6 +10,7 @@ import time
 
 import pytest
 
+from klink.bridges.ledit import client as client_mod
 from klink.bridges.ledit import (
     LEditBridgeClient, LEditBridgeError, build_layer_map, convert_object,
     selection_to_items, harvest_boxes, merge_layer_name, parse_tcell_params,
@@ -233,23 +234,48 @@ def test_draw_chunks_oversize_payload_and_sums_results(live_bridge):
     assert out["cell"] == "TOP"
 
 
-def test_reads_survive_a_non_utf8_design_path(tmp_path):
+def _ansi_hello(root, encoding, name="D:\\设计\\我的库.tdb"):
+    """Write hello.json the way a macro < 0.5.4 does: JSON text in the
+    machine's ANSI codepage rather than UTF-8."""
+    payload = ('{"schema":1,"proto":1,"macro_version":"0.5.3",'
+               '"file":"%s","cell":"顶层"}' % name.replace("\\", "\\\\"))
+    hello = os.path.join(root, "default", "hello.json")
+    with open(hello, "wb") as f:
+        f.write(payload.encode(encoding))
+    return name
+
+
+def test_reads_survive_a_non_utf8_design_path(tmp_path, monkeypatch):
     # The macro builds JSON from L-Edit's ANSI strings, so a design under a
     # Chinese OneDrive folder yields a hello.json that is not valid UTF-8.
     # Strict decoding raised UnicodeDecodeError from inside json.load, which
     # read as a klink crash and took `doctor` down with it.
+    #
+    # The recovery uses the SYSTEM codepage, so the test has to state which
+    # system it is pretending to be -- reading the real one makes this pass
+    # on a Chinese Windows and fail everywhere else.
+    monkeypatch.setattr(client_mod.locale, "getpreferredencoding",
+                        lambda do_setlocale=True: "gbk")
     root = make_ns(tmp_path)
-    hello = os.path.join(root, "default", "hello.json")
-    name = "D:\\设计\\我的库.tdb"
-    payload = ('{"schema":1,"proto":1,"macro_version":"0.5.3",'
-               '"file":"%s","cell":"顶层"}' % name.replace("\\", "\\\\"))
-    with open(hello, "wb") as f:
-        f.write(payload.encode("gbk"))          # what an ANSI macro writes
+    name = _ansi_hello(root, "gbk")
 
-    c = LEditBridgeClient(root=root)
-    got = c.hello()
+    got = LEditBridgeClient(root=root).hello()
     assert got["file"] == name                  # recovered, not mangled
     assert got["cell"] == "顶层"
+
+
+def test_unrecoverable_bytes_degrade_instead_of_raising(tmp_path, monkeypatch):
+    # On a machine whose codepage cannot decode what the macro wrote, the
+    # caller must still get an answer: a stalled bridge is diagnosable, an
+    # exception out of json.load looks like a klink bug.
+    monkeypatch.setattr(client_mod.locale, "getpreferredencoding",
+                        lambda do_setlocale=True: "utf-8")
+    root = make_ns(tmp_path)
+    _ansi_hello(root, "gbk")
+
+    c = LEditBridgeClient(root=root)
+    got = c.hello()                             # must not raise
+    assert got["macro_version"] == "0.5.3"      # the ASCII parts survive
     assert c.alive()
 
 
