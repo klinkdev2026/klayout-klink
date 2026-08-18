@@ -26,6 +26,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from .visual_stack import VisualStack, VisualLayer
+from ._util import kdb as _kdb
 
 #: Placeholder only — the real fallback colour is the caller's
 #: (viewer_style.material.undeclared_color). Nothing here picks a
@@ -94,7 +95,7 @@ def _add_geometry(scene, trimesh, name, meshes, color, alpha,
 
 
 def _layer_shapely(layout, top, layer: str, ShPoly):
-    import klayout.db as kdb
+    kdb = _kdb(Mesh3DError)
     l, d = (int(v) for v in layer.split("/"))
     li = layout.find_layer(kdb.LayerInfo(l, d))
     if li is None:
@@ -124,8 +125,7 @@ def build_glb_fast(
 ) -> Dict[str, Any]:
     """Extrude every VisualStack layer between its z0_um/z1_um."""
     trimesh, ShPoly = _deps()
-    import klayout.db as kdb
-
+    kdb = _kdb(Mesh3DError)
     layout = kdb.Layout()
     layout.read(gds_path)
     from ._util import top_cell_of
@@ -179,8 +179,7 @@ def build_glb_process(
     is a true cross-section (cutaway)."""
     trimesh, ShPoly = _deps()
     from .xsection_driver import run_cut_polygons
-    import klayout.db as kdb
-
+    kdb = _kdb(Mesh3DError)
     if slices < 2:
         raise Mesh3DError("slices must be >= 2")
     if not 0.0 < fraction <= 1.0:

@@ -4,6 +4,24 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project does not use dated entries (versions only).
 
+## 0.4.1
+
+- A missing `klayout` now says what to install. Every other optional
+  dependency in the imaging domain already failed instructively;
+  klayout did not, and it is the hardest of them to diagnose. An empty
+  `klayout` directory left on the path — a stale install, a
+  `py.typed`-only folder — is a valid NAMESPACE package, so `import
+  klayout` succeeds and only `klayout.db` fails. The bare error then
+  reads "no module named klayout.db", which says the package is
+  installed and merely incomplete, and sends the reader looking in the
+  wrong place. The error now names the interpreter, gives the pip
+  command, and when a shim really is shadowing the package it says
+  where that directory is and why the message mentioned `klayout.db`.
+
+  Found by a blind test on the published 0.4.0 wheel: the agent
+  delivered all three figures it was asked for, and lost its only real
+  time to this.
+
 ## 0.4.0
 
 BREAKING (imaging): the four imaging exits no longer ship a look. klink

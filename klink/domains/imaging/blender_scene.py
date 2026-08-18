@@ -34,6 +34,7 @@ from typing import Any, Dict, Mapping, Optional, Sequence
 from .blender_style import BlenderStyle, BlenderStyleError
 from .visual_stack import VisualStack
 
+from ._util import kdb as _kdb
 
 class BlenderSceneError(ValueError):
     """Bad input; the message says what to fix."""
@@ -436,7 +437,7 @@ def render_device_figure(
     ``{name, z0_um, z1_um, color, alpha?, metallic?}`` — process facts
     the example owns; klink renders exactly what is declared."""
     bpy = _bpy()
-    import klayout.db as kdb
+    kdb = _kdb(BlenderSceneError)
     from mathutils import Vector
 
     ly = kdb.Layout(); ly.read(gds_path)
