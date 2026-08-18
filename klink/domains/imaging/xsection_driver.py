@@ -46,6 +46,7 @@ import json
 import os
 import re
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
+from ._util import kdb as _kdb
 
 PINNED_PYXS = "0.1.13"
 SIDECAR_FORMAT = "klink_imaging_result_v1"
@@ -154,8 +155,7 @@ def parse_steps(recipe_text: str) -> List[Tuple[str, int]]:
 def _make_driver(pyxs_lib, MaterialData):
     """Build the db-only driver class (deferred so importing THIS module
     never imports the engine)."""
-    import klayout.db as kdb
-
+    kdb = _kdb(XSectionError)
     class _KlinkXSection(pyxs_lib.XSectionGenerator):
         """db-only driver: layout in, layout out; no GUI anywhere."""
 
@@ -393,7 +393,7 @@ def run_xsection(
     """
     pyxs_lib, MaterialData = _engine()
     import klayout
-    import klayout.db as kdb
+    kdb = _kdb(XSectionError)
     import klayout_pyxs
 
     if (not isinstance(cut_um, (list, tuple)) or len(cut_um) != 2

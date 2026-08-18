@@ -26,6 +26,7 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from .visual_stack import VisualStack
 
+from ._util import kdb as _kdb
 
 class RasterError(ValueError):
     """Bad input; the message says what to fix."""
@@ -235,8 +236,7 @@ def render_section_png(
     same mapping as the geometry) plus a lateral scale bar: a section
     without a scale is a picture, with one it is a measurement."""
     (np, Image, ImageDraw, ImageFont, *_rest) = _deps()
-    import klayout.db as kdb
-
+    kdb = _kdb(RasterError)
     page, ax = style.page, style.axis
     shade = float(page["geometry_shade"])
     edge_darken = float(page["edge_darken"])
@@ -495,8 +495,7 @@ def render_sem_png(
     what the scale bar says."""
     (np, Image, ImageDraw, ImageFont, binary_dilation, binary_erosion,
      gaussian_filter) = _deps()
-    import klayout.db as kdb
-
+    kdb = _kdb(RasterError)
     from ._util import top_cell_of
 
     bg, edges = style.background, style.edges

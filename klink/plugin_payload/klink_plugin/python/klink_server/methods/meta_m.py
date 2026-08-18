@@ -12,7 +12,7 @@ import pya
 from ..registry import method, all_specs
 
 SERVER_NAME = "klink"
-SERVER_VERSION = "0.4.0"
+SERVER_VERSION = "0.4.1"
 PROTOCOL_VERSION = 1
 
 
