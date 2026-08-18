@@ -68,8 +68,17 @@ class Diagnostics:
         try:
             return ctx._client.handshake()
         except Exception as exc:
+            # Do NOT leave this looking like a verdict on the plugin: the
+            # handshake needs a live round trip, while the `connected` field
+            # above only says a client object exists, so the two can disagree
+            # and read as self-contradiction. Say which one is stale.
             result = evaluate_handshake(__version__, PROTOCOL_VERSION, {})
             result["error"] = str(exc)
+            result["stale"] = True
+            result["next_action"] = (
+                "this block could not be refreshed (the handshake needs a "
+                "live round trip); it says nothing about the plugin. Call "
+                "klink.reconnect, then read klink.status again")
             return result
 
 

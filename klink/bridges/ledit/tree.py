@@ -277,10 +277,18 @@ def import_cell_tree(client, bridge: LEditBridgeClient, cell: str, *,
     instead"), which makes a hierarchical design unreachable from KLayout
     except by flattening. This keeps the instances.
 
-    ``layer_of`` maps an L-Edit layer NAME to a ``(layer, datatype)`` pair;
-    pass the one built from the design's own table
-    (``build_layer_map(bridge.get_layers())``) so numbers stay the design's.
+    ``layer_of`` is a CALLABLE taking an L-Edit layer NAME and returning a
+    ``(layer, datatype)`` pair -- not the mapping itself. Passing the dict
+    from ``build_layer_map()`` directly raises ``'dict' object is not
+    callable``; pass ``mapping.get`` or leave it None to build one from the
+    design's own table so the numbers stay the design's.
     """
+    if layer_of is not None and not callable(layer_of):
+        raise TypeError(
+            "layer_of must be CALLABLE (name -> (layer, datatype)), got %s. "
+            "Pass mapping.get rather than the mapping, or omit it to build "
+            "one from the design's own layer table."
+            % type(layer_of).__name__)
     from .adapter import build_layer_map, selection_to_items
 
     if layer_of is None:

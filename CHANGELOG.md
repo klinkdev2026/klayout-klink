@@ -4,6 +4,40 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project does not use dated entries (versions only).
 
+## 0.3.8
+
+- `drc.run` could silently audit the wrong cell. `top_cell` is only a
+  substitution for `$topcell` in the script: with a `source()` line the
+  script uses it, but WITHOUT one the run is interactive and the engine
+  audits whatever cell the view happens to show, ignoring `top_cell`
+  entirely. Proven both ways round. A caller who passes `top_cell` and reads
+  "0 violations" as "my cell is clean" may be looking at a result for an
+  empty cell, and a verification tool that silently checks the wrong subject
+  is worse than no tool. That combination is now REFUSED with the fix named,
+  and every run reports `audited_cell` and `mode` — without them "0
+  violations" is unfalsifiable.
+- `drc.run`'s description now says `report()` takes a second argument
+  (`report("title", $output_rdb)`). Without it the RDB is never written and
+  the summary comes back empty with no error, so a run looks clean because
+  nothing was RECORDED rather than because nothing was found.
+- `import_cell_tree`'s `layer_of` must be CALLABLE, but the docstring
+  described it as a mapping, so passing `build_layer_map()`'s dict — the
+  obvious reading — died with `'dict' object is not callable` from inside an
+  unrelated frame. It now refuses at the door and names `mapping.get`.
+- `geometry.boolean`'s `write_to` failed with `ERR_NOT_FOUND` when the
+  target cell did not exist, while the neighbouring transfer tools
+  auto-create one. It now creates it and reports `cell_created`, so a typo
+  stays visible instead of costing a round trip.
+- `klink.status` no longer contradicts itself: `connected` (an object
+  exists) and the nested handshake (a live round trip) measure different
+  things, so a handshake that could not be refreshed now says `stale` and
+  points at `klink.reconnect` rather than reading as a verdict on the
+  plugin.
+- a second measured counter-example in the geometry docs: `CONTACT` touching
+  `POLY` is 0.1824 µm² on a broken two-finger NMOS and 0.1152 µm² on the
+  CORRECT one, because a gate contact is supposed to land on a poly pad. A
+  rule like "a contact must not touch poly" would condemn a working device.
+
 ## 0.3.7
 
 - the L-Edit starter drew a wrong device, and its tests could not see it.
