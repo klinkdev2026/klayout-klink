@@ -66,6 +66,8 @@ def _region_stats(reg: pya.Region, dbu: float) -> dict:
         "differ (defaults: b.cell = a.cell), hierarchy is included and "
         "inputs are merged. Returns polygon_count / area_um2 / bbox_um of "
         "the result; pass `write_to` {cell?, layer} to ALSO write the "
+        "(target cell is created if missing; the result says "
+        "cell_created) "
         "result polygons (one undo step; default target cell = a.cell). "
         "Typical checks: overlap between two layers (op=and, area>0 means "
         "a short/contact), difference against an intent region (op=xor, "
@@ -126,14 +128,29 @@ def geometry_boolean(params, ctx):
 
     wt = params.get("write_to")
     if wt is not None:
-        tgt = _resolve_cell(ly, wt["cell"]) if wt.get("cell") is not None else cell_a
+        created = False
+        if wt.get("cell") is not None:
+            # Create the target if it is missing, rather than failing with
+            # ERR_NOT_FOUND: the caller named where the result should go, and
+            # the neighbouring transfer tools already auto-create. Report it
+            # so a typo'd name is visible rather than silent.
+            try:
+                tgt = _resolve_cell(ly, wt["cell"])
+            except Exception:
+                if not isinstance(wt["cell"], str):
+                    raise
+                tgt = ly.create_cell(wt["cell"])
+                created = True
+        else:
+            tgt = cell_a
         ld = _parse_ld(wt["layer"], "write_to.layer")
         li = ly.layer(ld[0], ld[1])
         title = "klink: geometry.%s -> %s %d/%d" % (op, tgt.name, ld[0], ld[1])
         with auto_txn(view, title):
             tgt.shapes(li).insert(res)
         out["written"] = {"cell": tgt.name, "layer": "%d/%d" % ld,
-                          "polygon_count": int(res.count())}
+                          "polygon_count": int(res.count()),
+                          "cell_created": created}
     return out
 
 

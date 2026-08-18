@@ -292,14 +292,19 @@ against the fixed cell (µm², 0 = clean):
 | `CONTACT` not covered by `MET1` | 0.0000 | 0.0000 |
 | `POLY` not enclosed by `NPLUS` | 0.0000 | 0.0000 |
 | `MET1` overlapping `POLY` | 0.4000 | **0.3872** |
+| `CONTACT` touching `POLY` | 0.1824 | **0.1152** |
 
 0.1152 is exactly two 0.24 µm contacts sitting on nothing — the defect,
 located without a line of rectangle arithmetic.
 
-**And read the last row before you trust any of this.** `MET1` overlaps
-`POLY` in the CORRECT cell too, because the gate bus is *supposed* to cross
-the poly pads — that is how the gate gets connected. A truthful number is
-not a verdict: whether an overlap is a short or a connection is DESIGN
+**And read the last two rows before you trust any of this.** Both are
+NONZERO on the CORRECT cell. `MET1` overlaps `POLY` because the gate bus is
+*supposed* to cross the poly pads, and `CONTACT` touches `POLY` because the
+gate contact is *supposed* to land on one — that is how a gate gets
+connected at all. A rule like "a contact must not touch poly" would flag a
+correct device, and an agent that reasoned its way to that rule once
+reported a broken cell for the right verdict on the wrong evidence. A
+truthful number is not a verdict: whether an overlap is a short or a connection is DESIGN
 INTENT, which no layer-relation rule knows. State the intent you are
 checking, and when you cannot, say the check is inconclusive rather than
 calling it a finding. 工具给的数字是诚实的,但"重叠"是短路还是连接取决于

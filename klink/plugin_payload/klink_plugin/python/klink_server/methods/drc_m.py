@@ -149,6 +149,10 @@ def _read_rdb_full(rdb_path: str, limit: int = 200) -> dict:
         "integrated Ruby DRC engine. Accepts DRC DSL source (Ruby-like "
         "syntax with source()/input()/report()/etc.) and executes it.\n"
         "\n"
+        "report() TAKES A SECOND ARGUMENT: report(\"title\", $output_rdb). "
+        "Without it the RDB is never written and rdb_summary comes back "
+        "empty with no error -- the run looks clean because nothing was "
+        "recorded, not because nothing was found.\n"
         "If the script includes source() it runs in standalone mode "
         "(against the specified file). If source() is omitted it runs "
         "in interactive mode against the currently loaded layout.\n"
@@ -199,8 +203,13 @@ def _read_rdb_full(rdb_path: str, limit: int = 200) -> dict:
                 "type": "string",
                 "description": (
                     "Optional top cell name override. Injected as Ruby "
-                    "variable $topcell. The script can use "
-                    "source($input_layout, $topcell) to reference it."
+                    "variable $topcell, for use as "
+                    "source($input_layout, $topcell) in STANDALONE mode. "
+                    "It does NOT choose the cell in interactive mode (no "
+                    "source() line): there the engine audits whatever cell "
+                    "the view shows, so passing a different top_cell is "
+                    "REFUSED rather than silently auditing the wrong cell. "
+                    "Use view.show_cell first."
                 ),
             },
             "result_mode": {
@@ -257,6 +266,19 @@ def _read_rdb_full(rdb_path: str, limit: int = 200) -> dict:
                 },
             },
             "wall_ms": {"type": "number"},
+            "audited_cell": {
+                "type": "string",
+                "description": "The cell the engine actually audited "
+                               "(interactive mode audits the cell the view "
+                               "shows). 'null' when it could not be "
+                               "determined.",
+            },
+            "mode": {
+                "type": "string",
+                "description": "'interactive' (no source() line; audits the "
+                               "loaded layout) or 'standalone' (source() "
+                               "against a file).",
+            },
         },
     },
     mutates=True,
@@ -284,6 +306,37 @@ def drc_run(params, ctx):
     input_layout = params.get("input_layout")
     output_rdb = params.get("output_rdb")
     top_cell = params.get("top_cell")
+
+    # Which layout does this script actually audit?
+    #
+    # `top_cell` is ONLY a substitution for $topcell in the source. With a
+    # source() line (standalone) the script uses it and everything is fine.
+    # WITHOUT source() the DRC engine audits whatever cell the view is
+    # showing, and $topcell is never consulted -- so a caller who passes
+    # top_cell and gets "0 violations" reads it as "my cell is clean" when
+    # the engine may have audited an unrelated (or empty) cell. A
+    # verification tool that silently checks the wrong subject is worse
+    # than no tool, so refuse instead, and always report what WAS audited.
+    interactive = "source(" not in code
+    audited_cell = None
+    if interactive:
+        try:
+            view = pya.Application.instance().main_window().current_view()
+            if view is not None and view.active_cellview() is not None:
+                audited_cell = view.active_cellview().cell.name
+        except Exception:
+            audited_cell = None
+        if top_cell is not None and "$topcell" not in code                 and top_cell != audited_cell:
+            raise RpcError(
+                ErrorCode.BAD_PARAMS,
+                "top_cell=%r cannot be honoured: this script has no source() "
+                "line, so it runs INTERACTIVE and the DRC engine audits the "
+                "cell the view is showing (%s), ignoring top_cell"
+                % (top_cell, audited_cell or "none"),
+                hint="call view.show_cell with the cell you want audited and "
+                     "drop top_cell, or add a source($input_layout, $topcell) "
+                     "line to run standalone against a file",
+            )
 
     try:
         stdout_limit = int(params.get("stdout_limit", DEFAULT_STDOUT_LIMIT))
@@ -366,6 +419,10 @@ def drc_run(params, ctx):
             rdb_summary = _read_rdb_summary(output_rdb)
 
     return {
+        # What did this run actually look at? Without it, "0 violations"
+        # is unfalsifiable.
+        "audited_cell": audited_cell,
+        "mode": "interactive" if interactive else "standalone",
         "stdout": _clip(stdout_raw, stdout_limit),
         "stderr": _clip(stderr_raw, stderr_limit),
         "stdout_truncated": len(stdout_raw) > stdout_limit,
