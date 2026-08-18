@@ -296,7 +296,10 @@ def test_motifs_produce_geometry_and_no_appearance():
     Mo blue-grey, S yellow. That is a convention in the 2D-material
     literature, not a physical fact, so it belongs to the caller. What
     is left here must be positions and bonds only."""
-    import numpy as np
+    # BOTH optional deps go through importorskip: a bare `import numpy`
+    # here is what turned the minimal-deps CI leg red while the
+    # full-featured venv stayed green.
+    np = pytest.importorskip("numpy")
     shapely = pytest.importorskip("shapely.geometry")
 
     from klink.domains.imaging.motifs import graphene, mos2
