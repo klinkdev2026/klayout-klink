@@ -91,6 +91,15 @@ read its `next_action` and follow it; do not invent a profile.
   If the user asks for edits to *their* layout, confirm which tab/cell first.
 - **Errors are instructions.** klink tool errors carry a `next_action`. Follow
   it. This is the real safety net — it works even if you skip these docs.
+- **Never guess the API — ask it.** `client.help("shape.query")` prints the
+  LIVE schema: which parameters are valid, which are required, and **which
+  keys come back**. That last part is what a function signature cannot tell
+  you, and guessing it is how agents end up abandoning klink mid-task
+  (`cell.create` returns `name`, not `cell`; `shape.query` returns `shapes`
+  with `bbox_dbu`, not `bbox_um`). Any RPC name also works as a method:
+  `client.view_new_tab(...)`. Note layer identity is spelled differently per
+  tool — `shape.query` takes a `layer_index`, `geometry.boolean` takes
+  `"L/D"` or `{layer, datatype}`; `help()` says which.
 - **Batch RPCs for generated layouts.** Never one RPC per object; use
   `shape.insert_boxes` / `shape.insert_many` / `instance.insert_many` /
   `instance.insert_pcell_many`.
