@@ -584,7 +584,7 @@
     },
     {
       "name": "geometry.boolean",
-      "description": "Boolean between two layer sources: `op` is one of and/or/xor/not (not = a minus b). `a` and `b` are {cell, layer} — cells may differ (defaults: b.cell = a.cell), hierarchy is included and inputs are merged. Returns polygon_count / area_um2 / bbox_um of the result; pass `write_to` {cell?, layer} to ALSO write the result polygons (one undo step; default target cell = a.cell). Typical checks: overlap between two layers (op=and, area>0 means a short/contact), difference against an intent region (op=xor, area==0 means exact match).",
+      "description": "Boolean between two layer sources: `op` is one of and/or/xor/not (not = a minus b). `a` and `b` are {cell, layer} — cells may differ (defaults: b.cell = a.cell), hierarchy is included and inputs are merged. Returns polygon_count / area_um2 / bbox_um of the result; pass `write_to` {cell?, layer} to ALSO write the (target cell is created if missing; the result says cell_created) result polygons (one undo step; default target cell = a.cell). Typical checks: overlap between two layers (op=and, area>0 means a short/contact), difference against an intent region (op=xor, area==0 means exact match).",
       "inputSchema": {
         "type": "object",
         "required": [
@@ -2069,6 +2069,218 @@
       }
     },
     {
+      "name": "annotation.list",
+      "description": "List the rulers (annotations) in the current view — including the ones the USER drew by hand. Rulers live in the view, not in the layout: they are invisible to selection.get and to any saved GDS, so this is the only way to read them. Each entry carries the FULL points_um list and the segment count; a multi-segment ruler is not reducible to a start/end pair.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "selected_only": {
+            "type": "boolean",
+            "default": false,
+            "description": "Only rulers selected in the GUI."
+          },
+          "category": {
+            "type": "string",
+            "description": "Only rulers with this category tag."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5000,
+            "default": 500
+          }
+        }
+      }
+    },
+    {
+      "name": "annotation.get",
+      "description": "One ruler by id (see annotation.list). Errors if the id is not a live ruler in the current view.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    {
+      "name": "annotation.insert",
+      "description": "Draw a ruler in the current view. This is the agent->user pointing channel for a LINE (view.highlight points at an AREA): propose a cross-section cut, mark a spacing, show where a route will go — the user can then drag the ruler and you re-read it with annotation.list.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "points_um"
+        ],
+        "properties": {
+          "points_um": {
+            "type": "array",
+            "description": "Ruler points in MICRONS: [[x1,y1],[x2,y2],...]. More than two points makes a multi-segment ruler.",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "minItems": 2
+          },
+          "text": {
+            "type": "string",
+            "description": "Literal label (stored as the ruler format string)."
+          },
+          "fmt": {
+            "type": "string",
+            "description": "KLayout format string with measurement placeholders; overrides `text` if both are given."
+          },
+          "style": {
+            "type": "string",
+            "description": "ruler | line | arrow_end | arrow_start | arrow_both | cross_start | cross_end | cross_both"
+          },
+          "outline": {
+            "type": "string",
+            "description": "diag | xy | yx | diag_xy | diag_yx | box | ellipse | angle | radius"
+          },
+          "angle_constraint": {
+            "type": "string",
+            "description": "any | global | horizontal | vertical | ortho | diagonal"
+          },
+          "category": {
+            "type": "string",
+            "description": "Free tag. klink stamps 'klink' by default so agent-drawn rulers can be told apart from the user's."
+          },
+          "snap": {
+            "type": "boolean",
+            "description": "Snap to objects when moved."
+          }
+        }
+      }
+    },
+    {
+      "name": "annotation.update",
+      "description": "Change an existing ruler in place (only the properties you pass). Use annotation.list first to get the id.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "points_um": {
+            "type": "array",
+            "description": "Ruler points in MICRONS: [[x1,y1],[x2,y2],...]. More than two points makes a multi-segment ruler.",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "minItems": 2
+          },
+          "text": {
+            "type": "string",
+            "description": "Literal label (stored as the ruler format string)."
+          },
+          "fmt": {
+            "type": "string",
+            "description": "KLayout format string with measurement placeholders; overrides `text` if both are given."
+          },
+          "style": {
+            "type": "string",
+            "description": "ruler | line | arrow_end | arrow_start | arrow_both | cross_start | cross_end | cross_both"
+          },
+          "outline": {
+            "type": "string",
+            "description": "diag | xy | yx | diag_xy | diag_yx | box | ellipse | angle | radius"
+          },
+          "angle_constraint": {
+            "type": "string",
+            "description": "any | global | horizontal | vertical | ortho | diagonal"
+          },
+          "category": {
+            "type": "string",
+            "description": "Free tag. klink stamps 'klink' by default so agent-drawn rulers can be told apart from the user's."
+          },
+          "snap": {
+            "type": "boolean",
+            "description": "Snap to objects when moved."
+          },
+          "id": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    {
+      "name": "annotation.delete",
+      "description": "Delete rulers by id or by category tag. Pass exactly one of `id` / `category`. To wipe every ruler use annotation.clear.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "category": {
+            "type": "string",
+            "description": "Delete every ruler carrying this tag (e.g. 'klink' for agent-drawn ones)."
+          }
+        }
+      }
+    },
+    {
+      "name": "annotation.clear",
+      "description": "Delete EVERY ruler in the current view, the user's included. Destructive: requires confirm=true. Prefer annotation.delete{category:'klink'} to clear only agent-drawn ones.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "confirm": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      }
+    },
+    {
+      "name": "annotation.measure",
+      "description": "Auto-measure ruler at a seed point: KLayout looks outward from the point along the allowed directions, finds the nearest edges on VISIBLE layers, and pulls a ruler between them. This is 'how wide is this gap / this line' without knowing any coordinates. If nothing is found nearby the measurement fails and the degenerate zero-length ruler is removed again (measured=false).",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "point_um"
+        ],
+        "properties": {
+          "point_um": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "Seed point [x, y] in microns."
+          },
+          "angle_constraint": {
+            "type": "string",
+            "default": "any",
+            "description": "Search directions: any | horizontal | vertical | ortho | diagonal | global"
+          },
+          "category": {
+            "type": "string",
+            "default": "klink"
+          },
+          "keep_failed": {
+            "type": "boolean",
+            "default": false,
+            "description": "Keep the zero-length ruler when the measurement finds nothing."
+          }
+        }
+      }
+    },
+    {
       "name": "view.show_25d",
       "description": "Open KLayout's native 2.5d (extruded 3D) viewer and feed it a display list: one entry per material with a layer, a z range in microns, and optional name/colors. Layers are read from a cell of the active layout (default: the current cell). klink ships no z heights - thickness/elevation are process facts the caller owns (derive the list with klink.stack25d.stack_displays from your StackSpec + z table). Requires a KLayout build with OpenGL.",
       "inputSchema": {
@@ -2222,7 +2434,7 @@
     },
     {
       "name": "drc.run",
-      "description": "Escape hatch: run arbitrary DRC DSL script code in KLayout's integrated Ruby DRC engine. Accepts DRC DSL source (Ruby-like syntax with source()/input()/report()/etc.) and executes it.\n\nIf the script includes source() it runs in standalone mode (against the specified file). If source() is omitted it runs in interactive mode against the currently loaded layout.\n\nOptional variables ($input_layout, $output_rdb, $topcell) are injected into the Ruby interpreter so the script can reference them without hardcoding paths.\n\nstdout/stderr are captured and returned as strings. If output_rdb is specified and the script generates it, the RDB is parsed and a violation summary is returned.\n\nExceptions in DRC scripts do NOT fail the RPC - they come back inside result.exception with any stdout/stderr captured before the error. Only malformed requests (missing code, oversized) return ok=false.",
+      "description": "Escape hatch: run arbitrary DRC DSL script code in KLayout's integrated Ruby DRC engine. Accepts DRC DSL source (Ruby-like syntax with source()/input()/report()/etc.) and executes it.\n\nreport() TAKES A SECOND ARGUMENT: report(\"title\", $output_rdb). Without it the RDB is never written and rdb_summary comes back empty with no error -- the run looks clean because nothing was recorded, not because nothing was found.\nIf the script includes source() it runs in standalone mode (against the specified file). If source() is omitted it runs in interactive mode against the currently loaded layout.\n\nOptional variables ($input_layout, $output_rdb, $topcell) are injected into the Ruby interpreter so the script can reference them without hardcoding paths.\n\nstdout/stderr are captured and returned as strings. If output_rdb is specified and the script generates it, the RDB is parsed and a violation summary is returned.\n\nExceptions in DRC scripts do NOT fail the RPC - they come back inside result.exception with any stdout/stderr captured before the error. Only malformed requests (missing code, oversized) return ok=false.",
       "inputSchema": {
         "type": "object",
         "required": [
@@ -2243,7 +2455,7 @@
           },
           "top_cell": {
             "type": "string",
-            "description": "Optional top cell name override. Injected as Ruby variable $topcell. The script can use source($input_layout, $topcell) to reference it."
+            "description": "Optional top cell name override. Injected as Ruby variable $topcell, for use as source($input_layout, $topcell) in STANDALONE mode. It does NOT choose the cell in interactive mode (no source() line): there the engine audits whatever cell the view shows, so passing a different top_cell is REFUSED rather than silently auditing the wrong cell. Use view.show_cell first."
           },
           "result_mode": {
             "type": "string",
@@ -3142,6 +3354,7 @@
               "multi_session_transfer",
               "geometry_authoring",
               "selection_and_send_memory",
+              "rulers_and_measurement",
               "ports_and_anchors",
               "routing_backends",
               "drc_and_lvs_verification",
@@ -3186,6 +3399,10 @@
             "type": "string",
             "description": "mode='figure': klink_visual_stack_v1 JSON path."
           },
+          "style": {
+            "type": "string",
+            "description": "REQUIRED: klink_blender_style_v1 JSON path — lights, camera, film and the material recipes (metal mottling, dielectric transmission, edge bevel). klink ships NO default look; copy example_template/imaging/blender_style.py (klink init already put one in your project) and run `python blender_style.py` to write its JSON, edit the numbers, save its JSON."
+          },
           "slabs": {
             "type": "array",
             "items": {
@@ -3195,8 +3412,7 @@
           },
           "lattice_a_um": {
             "type": "number",
-            "default": 0.08,
-            "description": "Figure-scale lattice constant (visual parameter; real constants are in the motif library docs)."
+            "description": "Override the style's figure-scale lattice constant (a DRAWING scale, not the physical one). Normally omit it and let blender_style.py declare it."
           },
           "camera": {
             "type": "string",
@@ -3236,7 +3452,8 @@
         },
         "required": [
           "mode",
-          "output_dir"
+          "output_dir",
+          "style"
         ],
         "additionalProperties": false
       }
@@ -3259,6 +3476,10 @@
             "type": "string",
             "description": "Path to a klink_visual_stack_v1 JSON (sem_grey/edge_glow/color per layer)."
           },
+          "style": {
+            "type": "string",
+            "description": "REQUIRED: klink_sem_style_v1 JSON path — background, rim gains, beam blur, grain, scanlines, vignette, false-colour mix and the burnt-in scale bar. klink ships NO default look; copy example_template/imaging/sem_style.py (klink init already put one in your project) and run `python sem_style.py` to write its JSON, edit the numbers, save its JSON."
+          },
           "layers": {
             "type": "array",
             "items": {
@@ -3268,17 +3489,21 @@
           },
           "width_px": {
             "type": "integer",
-            "default": 1600
+            "default": 1600,
+            "description": "Output width in pixels. This is RESOLUTION over the same field of view, not magnification — use window_um to magnify."
+          },
+          "window_um": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 4,
+            "maxItems": 4,
+            "description": "Frame a REGION [x0,y0,x1,y1] in microns instead of the whole cell — a higher-magnification view. Only this changes what the scale bar reads."
           },
           "corner_radius_um": {
             "type": "number",
-            "default": 0.05,
-            "description": "Litho corner rounding applied to every mask."
-          },
-          "seed": {
-            "type": "integer",
-            "default": 7,
-            "description": "Noise seed (same seed = identical image)."
+            "description": "Override the style's litho corner rounding for a one-off run. Normally omit it and let sem_style.py declare it."
           },
           "output_dir": {
             "type": "string"
@@ -3298,6 +3523,7 @@
         },
         "required": [
           "stack",
+          "style",
           "output_dir"
         ],
         "additionalProperties": false
@@ -3320,6 +3546,10 @@
           "stack": {
             "type": "string",
             "description": "Path to a klink_visual_stack_v1 JSON (example/project-owned; klink ships none)."
+          },
+          "style": {
+            "type": "string",
+            "description": "REQUIRED: klink_viewer_style_v1 JSON path — the GLB's surface finish, the colour for materials the stack never declared, and the viewer page's whole palette + starting exposure. klink ships NO default; copy example_template/imaging/viewer_style.py (klink init already put one in your project) and run `python viewer_style.py` to write its JSON."
           },
           "mode": {
             "type": "string",
@@ -3368,6 +3598,7 @@
         },
         "required": [
           "stack",
+          "style",
           "output_dir"
         ],
         "additionalProperties": false
@@ -3403,7 +3634,20 @@
             },
             "minItems": 2,
             "maxItems": 2,
-            "description": "[[x1,y1],[x2,y2]] microns. Explicit only — GUI ruler readout is not available (backlog)."
+            "description": "[[x1,y1],[x2,y2]] microns. Omit it and pass cut_from_ruler=true to take the cut from a ruler drawn in KLayout."
+          },
+          "cut_from_ruler": {
+            "type": "boolean",
+            "default": false,
+            "description": "Read the cut line from a RULER in the live KLayout view (annotation.list) instead of cut_um. With several rulers present, select one in the GUI or name it with ruler_id."
+          },
+          "ruler_id": {
+            "type": "integer",
+            "description": "With cut_from_ruler: which ruler (id from annotation.list)."
+          },
+          "ruler_segment": {
+            "type": "integer",
+            "description": "With cut_from_ruler: which segment of a MULTI-segment ruler to cut along (0-based). A multi-segment ruler is never flattened to its endpoints."
           },
           "output_dir": {
             "type": "string",
@@ -3448,6 +3692,11 @@
             "type": "integer",
             "default": 10
           },
+          "auto_layer_base": {
+            "type": "integer",
+            "default": 300,
+            "description": "First layer number for auto-output materials (a klink convention, like the 999/99 port layer). Move it if your recipe already writes 300/0 and up."
+          },
           "exclude": {
             "type": "array",
             "items": {
@@ -3455,10 +3704,28 @@
             },
             "description": "Recipe material variable names to skip in auto-output (consumed intermediates)."
           },
+          "style": {
+            "type": "string",
+            "description": "klink_section_style_v1 JSON path — REQUIRED when render=true (ignored otherwise, since a section GDS has no look). Page colour, material gradient, outline darkening, z-ruler, label bar, scale bar and the fallback colour for undeclared materials. klink ships NO default; copy example_template/imaging/section_style.py (klink init already put one in your project) and run `python section_style.py` to write its JSON."
+          },
           "render": {
             "type": "boolean",
             "default": false,
             "description": "Also rasterize each section to PNG (+ film strip/GIF with steps=true). Needs numpy/scipy/pillow."
+          },
+          "z_window_um": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "With render: frame the picture to [z_bottom, z_top] in microns. WITHOUT this the engine's multi-micron substrate fills most of the image and the films are a thin band at the top — pass e.g. [-1.0, 1.5]."
+          },
+          "axis": {
+            "type": "boolean",
+            "default": false,
+            "description": "With render: draw a z ruler down the left edge and a lateral scale bar. A section without a scale is a picture; with one it is a measurement."
           },
           "stack": {
             "type": "string",
@@ -3471,7 +3738,6 @@
         },
         "required": [
           "recipe",
-          "cut_um",
           "output_dir"
         ],
         "additionalProperties": false

@@ -8,6 +8,7 @@ glTF JSON chunk (material names), never by pixel/byte goldens.
 
 import hashlib
 import json
+import pathlib
 import struct
 
 import pytest
@@ -39,6 +40,29 @@ STACK = {
          "recipe_symbol": "metal"},
     ],
 }
+
+
+EXAMPLE = (pathlib.Path(__file__).resolve().parents[2]
+           / "examples_klink" / "public" / "imaging")
+
+
+@pytest.fixture(scope="module")
+def viewer_style():
+    """The example owns the finish and the page palette;
+    klink has none, so a test cannot build without it."""
+    import sys
+    sys.path.insert(0, str(EXAMPLE))
+    try:
+        from viewer_style import STYLE
+    finally:
+        sys.path.remove(str(EXAMPLE))
+    return STYLE
+
+
+def _style_json(tmp, style):
+    p = tmp / "viewer_style.json"
+    style.save(str(p))
+    return str(p)
 
 
 def glb_doc(path):
@@ -93,14 +117,14 @@ def device(tmp_path):
     return str(gds), str(stack_path), str(recipe), tmp_path
 
 
-def test_fast_mode_materials_and_determinism(device):
+def test_fast_mode_materials_and_determinism(device, viewer_style):
     from klink.domains.imaging.mesh3d import build_glb_fast
 
     gds, stack_path, _recipe, tmp = device
     stack = VisualStack.load(stack_path)
     g1 = str(tmp / "a.glb"); g2 = str(tmp / "b.glb")
-    r1 = build_glb_fast(gds, stack, g1)
-    build_glb_fast(gds, stack, g2)
+    r1 = build_glb_fast(gds, stack, g1, viewer_style)
+    build_glb_fast(gds, stack, g2, viewer_style)
     assert sha(g1) == sha(g2)
     assert set(glb_material_names(g1)) == {"well", "metal"}
     assert r1["triangles"] > 0
@@ -108,14 +132,15 @@ def test_fast_mode_materials_and_determinism(device):
         {"well": 1, "metal": 1}
 
 
-def test_process_mode_styles_by_recipe_symbol(device):
+def test_process_mode_styles_by_recipe_symbol(device, viewer_style):
     pytest.importorskip("klayout_pyxs")
     from klink.domains.imaging.mesh3d import build_glb_process
 
     gds, stack_path, recipe, tmp = device
     stack = VisualStack.load(stack_path)
     g = str(tmp / "p.glb")
-    r = build_glb_process(gds, stack, recipe, g, slices=5,
+    r = build_glb_process(gds, stack, recipe, g, viewer_style,
+                          slices=5,
                           fraction=0.8)
     names = set(glb_material_names(g))
     # styled via recipe_symbol (mask layers) AND recipe_styles
@@ -124,7 +149,8 @@ def test_process_mode_styles_by_recipe_symbol(device):
     assert r["unstyled"] == []
     assert r["fraction"] == 0.8 and r["slices"] == 5
     g2 = str(tmp / "p2.glb")
-    build_glb_process(gds, stack, recipe, g2, slices=5, fraction=0.8)
+    build_glb_process(gds, stack, recipe, g2, viewer_style,
+                      slices=5, fraction=0.8)
     assert sha(g) == sha(g2)
     # geometry SCALE is layout-scale microns: a lost dbu factor (a real
     # shipped bug — sections came back 1000x too small and no test
@@ -132,7 +158,7 @@ def test_process_mode_styles_by_recipe_symbol(device):
     assert 3.0 < glb_extent(g) < 50.0
 
 
-def test_viewer_html_is_self_contained(device):
+def test_viewer_html_is_self_contained(device, viewer_style):
     from klink.domains.imaging.mesh3d import build_glb_fast
     from klink.domains.imaging.viewer import ViewerError, \
         build_viewer_html
@@ -140,16 +166,16 @@ def test_viewer_html_is_self_contained(device):
     gds, stack_path, _recipe, tmp = device
     stack = VisualStack.load(stack_path)
     glb = str(tmp / "v.glb")
-    build_glb_fast(gds, stack, glb)
+    build_glb_fast(gds, stack, glb, viewer_style)
     html_path = str(tmp / "v.html")
-    build_viewer_html(glb, html_path)
+    build_viewer_html(glb, html_path, viewer_style)
     text = open(html_path, encoding="utf-8").read()
     assert text.count("<script") == 2 and text.count("</script>") == 2
     assert "data:model/gltf-binary;base64," in text
     assert "<model-viewer" in text
     assert "@license" in text          # vendored notices preserved
     with pytest.raises(ViewerError, match="overwrite=True"):
-        build_viewer_html(glb, html_path)
+        build_viewer_html(glb, html_path, viewer_style)
 
 
 def test_missing_triangulation_engine_error_is_instructive(monkeypatch):
@@ -201,23 +227,49 @@ def test_xsection_tool_dispatches_through_registry(device):
     assert "filename stem" in res["content"][0]["text"]
 
 
-def test_blender_tool_instructive_errors_offline():
+def test_blender_tool_instructive_errors_offline(tmp_path):
+    """Both refusals name the exact next step, and the LOOK is refused
+    first: klink ships no default style, so there is nothing to render
+    with even when everything else is present."""
+    import sys
+
     from klink.mcp.local_tools import _LOCAL_TOOLS
 
-    res = _LOCAL_TOOLS["imaging.blender"].handler(None, {
-        "mode": "die", "output_dir": "test_outputs/never"})
+    tool = _LOCAL_TOOLS["imaging.blender"]
+
+    res = tool.handler(None, {"mode": "die",
+                              "output_dir": str(tmp_path / "never")})
+    assert res.get("isError")
+    text = res["content"][0]["text"]
+    assert "style" in text
+    assert "example_template/imaging/blender_style.py" in text
+
+    example = (pathlib.Path(__file__).resolve().parents[2]
+               / "examples_klink" / "public" / "imaging")
+    sys.path.insert(0, str(example))
+    try:
+        from blender_style import STYLE
+    finally:
+        sys.path.remove(str(example))
+    style_json = tmp_path / "style.json"
+    STYLE.save(str(style_json))
+
+    res = tool.handler(None, {"mode": "die", "style": str(style_json),
+                              "output_dir": str(tmp_path / "never2")})
     assert res.get("isError")
     assert "imaging.render3d" in res["content"][0]["text"]
 
 
-def test_render3d_tool_handler_offline(device):
+def test_render3d_tool_handler_offline(device, viewer_style):
     pytest.importorskip("klayout_pyxs")
     from klink.mcp.local_tools import _LOCAL_TOOLS
 
     gds, stack_path, recipe, tmp = device
     tool = _LOCAL_TOOLS["imaging.render3d"]
     res = tool.handler(None, {
-        "gds": gds, "stack": stack_path, "mode": "process",
+        "gds": gds, "stack": stack_path,
+        "style": _style_json(tmp, viewer_style),
+        "mode": "process",
         "recipe": recipe, "slices": 4, "fraction": 0.6,
         "output_dir": str(tmp / "out"), "basename": "r3d"})
     assert not res.get("isError"), res
@@ -226,7 +278,9 @@ def test_render3d_tool_handler_offline(device):
     assert kinds == {"glb", "viewer_html"}
     # process without recipe is an instructive error
     res = tool.handler(None, {
-        "gds": gds, "stack": stack_path, "mode": "process",
+        "gds": gds, "stack": stack_path,
+        "style": _style_json(tmp, viewer_style),
+        "mode": "process",
         "output_dir": str(tmp / "out2")})
     assert res.get("isError")
     assert "mode='fast'" in res["content"][0]["text"]

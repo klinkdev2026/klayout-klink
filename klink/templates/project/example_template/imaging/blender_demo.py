@@ -9,10 +9,16 @@ Two figures from the same declarations the other imaging demos use:
 Both also save a .blend — open it in desktop Blender to adjust
 camera/lights/materials by hand and re-render.
 
+The LOOK is not klink's: lights, camera, film and the material recipes
+all come from `blender_style.py` next to this file. Edit that, not
+klink.
+
 Needs: pip install klayout numpy scipy shapely bpy  (+ trimesh and
 klayout-pyxs==0.1.13 for the die figure, built by render3d_demo)
 Run:   python -m examples_klink.public.imaging.blender_demo
 """
+import os
+import sys
 from pathlib import Path
 
 import klayout.db as kdb
@@ -20,6 +26,11 @@ import klayout.db as kdb
 from klink.domains.imaging.blender_scene import (render_device_figure,
                                                  render_die_glb)
 from klink.domains.imaging.visual_stack import VisualLayer, VisualStack
+
+# same-directory imports work both as a package module and as a copied
+# `klink init` starter script
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from blender_style import STYLE            # noqa: E402  <- YOUR look
 
 HERE = Path(__file__).parent
 OUT = HERE / "_generated"; OUT.mkdir(exist_ok=True)
@@ -53,10 +64,11 @@ def write_device(path):
 def main():
     gds = OUT / "mos2_fet.gds"
     write_device(gds)
+    # the JSON is what the MCP tool (imaging.blender style=...) eats
+    STYLE.save(str(OUT / "blender_style.json"))
     r = render_device_figure(
         str(gds), FIG_STACK, str(OUT / "blender_figure.png"),
-        str(OUT / "blender_figure.blend"), slabs=SLABS,
-        lattice_a_um=0.09)
+        str(OUT / "blender_figure.blend"), STYLE, slabs=SLABS)
     print(f"figure: {r['atoms']} atoms, {r['bonds']} bonds, "
           f"{r['solids']} solids -> blender_figure.png/.blend")
 
@@ -66,7 +78,7 @@ def main():
         # model needs no vertical exaggeration; pass z_scale=N (and say
         # so in the caption) when YOUR stack renders as a hairline
         r = render_die_glb(str(glb), str(OUT / "blender_die.png"),
-                           str(OUT / "blender_die.blend"),
+                           str(OUT / "blender_die.blend"), STYLE,
                            camera="face")
         print(f"die: {r['meshes']} meshes, z x{r['z_scale']:g}"
               f" -> blender_die.png/.blend")

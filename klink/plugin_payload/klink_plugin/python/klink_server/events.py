@@ -21,6 +21,8 @@ from typing import Iterable, Set
 VALID_CHANNELS = {
     "selection_sent",
     "selection_changed",
+    "annotations_changed",
+    "annotation_selection_changed",
     "cellview_changed",
     "viewport_changed",
     "layer_list_changed",

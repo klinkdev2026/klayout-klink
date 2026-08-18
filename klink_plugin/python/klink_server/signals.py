@@ -42,6 +42,11 @@ _VIEW_EVENTS = (
     "on_layer_list_changed",
     "on_cellviews_changed",
     "on_active_cellview_changed",
+    # rulers: added/removed, one edited (fires per drag frame - throttled
+    # in the handler), and the ruler selection
+    "on_annotations_changed",
+    "on_annotation_changed",
+    "on_annotation_selection_changed",
 )
 
 
@@ -643,6 +648,9 @@ def _bind(obj, attr: str, handler) -> str:
 
 class SignalHub:
     _VIEWPORT_MIN_INTERVAL_MS = 150
+    # on_annotation_changed fires per drag frame while a ruler endpoint is
+    # dragged; same treatment as the viewport stream
+    _ANNOTATION_MIN_INTERVAL_MS = 150
     # Coalesce rapid-fire on_layer_list_changed / piggyback triggers: a
     # single user action (or batched RPC) typically fires KLayout's
     # invalidation several times in quick succession. Deferring the
@@ -672,6 +680,7 @@ class SignalHub:
         self._mw = pya.Application.instance().main_window()
         self._view = None
         self._last_viewport_emit = 0.0
+        self._last_annotation_emit = 0.0
         self._bound_view_ids: set = set()
         # Count how many times each handler actually fires - helpful to
         # distinguish "event bound but never triggered" from "never bound".
@@ -814,6 +823,66 @@ class SignalHub:
         # appear within one user action. Debounced so rapid clicks don't
         # run N full diffs.
         self._schedule_diff(source="selection_changed")
+
+    # ------------------------------------------------------------------
+    # Rulers. The payload stays deliberately THIN - ids and a count, not
+    # geometry: a listener that cares calls annotation.list, which is the
+    # one place that knows how to serialise a ruler (including the
+    # multi-segment point list).
+    # ------------------------------------------------------------------
+    def _annotation_summary(self) -> dict:
+        ids, selected = [], []
+        try:
+            for a in self._view.each_annotation():
+                ids.append(int(a.id()))
+        except Exception:
+            pass
+        try:
+            for a in self._view.each_annotation_selected():
+                selected.append(int(a.id()))
+        except Exception:
+            pass
+        return {"count": len(ids), "ids": ids[:50], "selected_ids": selected}
+
+    def _handler_for_on_annotations_changed(self, *args):
+        self._bump("annotations_changed")
+        if not self._is_current():
+            return
+        try:
+            self._emit("annotations_changed", self._annotation_summary())
+        except Exception as e:
+            print(f"[klink] annotations_changed handler error: {e}")
+
+    def _handler_for_on_annotation_changed(self, *args):
+        # fires continuously while the user DRAGS a ruler endpoint, so
+        # throttle it the way viewport_changed is throttled
+        self._bump("annotations_changed")
+        if not self._is_current():
+            return
+        now = time.monotonic() * 1000.0
+        if now - self._last_annotation_emit < self._ANNOTATION_MIN_INTERVAL_MS:
+            return
+        self._last_annotation_emit = now
+        try:
+            data = self._annotation_summary()
+            if args:
+                try:
+                    data["changed_id"] = int(args[0])
+                except Exception:
+                    pass
+            self._emit("annotations_changed", data)
+        except Exception as e:
+            print(f"[klink] annotation_changed handler error: {e}")
+
+    def _handler_for_on_annotation_selection_changed(self, *args):
+        self._bump("annotation_selection_changed")
+        if not self._is_current():
+            return
+        try:
+            self._emit("annotation_selection_changed",
+                       self._annotation_summary())
+        except Exception as e:
+            print(f"[klink] annotation_selection_changed handler error: {e}")
 
     def _handler_for_on_viewport_changed(self, *args):
         self._bump("viewport_changed")

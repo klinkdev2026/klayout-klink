@@ -143,6 +143,34 @@ When the user points at a problem in KLayout:
    facts.
 6. Do not use screenshots unless the user explicitly asks for one.
 
+## Rulers (annotations)
+
+A ruler is a `pya.Annotation` in the VIEW, not in the layout. It is not
+saved with the GDS, and neither `selection.get` nor `shape.query` can see
+it. `annotation.*` is the only way to reach one.
+
+When the user says "the line I drew", "this ruler", "measure this", or
+"section along the ruler", call `annotation.list`.
+
+```text
+annotation.list        every ruler (selected_only / category filters)
+annotation.get         one by id
+annotation.insert      draw a ruler back at the user (agent -> user, a LINE;
+                       view.highlight is the same channel for an AREA)
+annotation.update      edit one in place (id + the fields you change)
+annotation.delete      by id, or by category ('klink' = agent-drawn)
+annotation.measure     auto-measure at a seed point (nearest VISIBLE edges)
+annotation.clear       DESTRUCTIVE, wipes the user's rulers too, needs confirm
+```
+
+**Never reduce a ruler to its first and last point.** Since KLayout 0.28 a
+ruler can be multi-segment; `points_um` is the truth and `segments` says
+how many legs there are. A bent ruler flattened to its endpoints is a line
+the user never drew, and the section taken along it fails silently. Feed a
+cut line with `imaging.xsection_run cut_from_ruler=true` (plus `ruler_id`
+when several exist, `ruler_segment` for a bent one) — it applies that rule
+for you.
+
 ## Creating Layouts
 
 1. Ensure layers with `layer.ensure(layer=L, datatype=D)`.

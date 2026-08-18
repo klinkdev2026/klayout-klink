@@ -134,7 +134,10 @@ def test_bad_inputs_are_instructive(device):
 # --------------------------------------------------------------------- #
 
 def _vl(**kw):
-    base = dict(layer="1/0", z0_um=0.0, z1_um=0.2, name="metal")
+    # colour is REQUIRED on a non-lattice layer: klink ships no
+    # default one, so a test cannot omit it either
+    base = dict(layer="1/0", z0_um=0.0, z1_um=0.2, name="metal",
+                color="#aab8c4")
     base.update(kw)
     return VisualLayer(**base)
 
@@ -193,7 +196,7 @@ def test_from_stackspec_refuses_to_guess():
         {"layer": "20/0", "role": "metal"}]})
     z = {"10/0": (0.0, 0.1), "20/0": (0.3, 0.5)}
     mats = {"10/0": {"name": "poly", "color": "#c94f4f"},
-            "20/0": {"name": "alu", "metallic": 0.9}}
+            "20/0": {"name": "alu", "color": "#aab8c4", "metallic": 0.9}}
     vs = VisualStack.from_stackspec(spec, z, mats, name="lab")
     assert [vl.name for vl in vs.layers] == ["poly", "alu"]
     assert vs.by_layer("10/0").role == "gate"
@@ -201,6 +204,12 @@ def test_from_stackspec_refuses_to_guess():
         VisualStack.from_stackspec(spec, {"10/0": (0, 0.1)}, mats)
     with pytest.raises(VisualStackError, match="materials"):
         VisualStack.from_stackspec(spec, z, {"10/0": {"name": "p"}})
+    # ... and a material named but never COLOURED is refused too:
+    # klink has no house colour to fall back on
+    with pytest.raises(VisualStackError, match="color is required"):
+        VisualStack.from_stackspec(
+            spec, z, {"10/0": {"name": "poly", "color": "#c94f4f"},
+                      "20/0": {"name": "alu"}})
 
 
 def test_output_guard_ignores_comments_and_strings():

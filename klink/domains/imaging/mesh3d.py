@@ -27,7 +27,10 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from .visual_stack import VisualStack, VisualLayer
 
-_DEFAULT_GREY = "#8a8f96"
+#: Placeholder only — the real fallback colour is the caller's
+#: (viewer_style.material.undeclared_color). Nothing here picks a
+#: colour on its own.
+_UNSTYLED = object()
 
 
 class Mesh3DError(ValueError):
@@ -69,20 +72,23 @@ def _hex_rgba(color: str, alpha: float) -> List[float]:
 
 
 def _material(trimesh, name: str, color: str, alpha: float,
-              metallic: float):
+              metallic: float, roughness: float):
     mat = trimesh.visual.material.PBRMaterial(
         name=name,
         baseColorFactor=_hex_rgba(color, alpha),
-        metallicFactor=float(metallic), roughnessFactor=0.6)
+        metallicFactor=float(metallic),
+        roughnessFactor=float(roughness))
     if alpha < 1.0:
         mat.alphaMode = "BLEND"
     return mat
 
 
-def _add_geometry(scene, trimesh, name, meshes, color, alpha, metallic):
+def _add_geometry(scene, trimesh, name, meshes, color, alpha,
+                  metallic, roughness):
     mesh = trimesh.util.concatenate(meshes)
     mesh.visual = trimesh.visual.TextureVisuals(
-        material=_material(trimesh, name, color, alpha, metallic))
+        material=_material(trimesh, name, color, alpha, metallic,
+                           roughness))
     scene.add_geometry(mesh, geom_name=name, node_name=name)
     return len(mesh.faces)
 
@@ -112,6 +118,7 @@ def build_glb_fast(
     gds_path: str,
     stack: VisualStack,
     out_glb: str,
+    style,
     *,
     cell: Optional[str] = None,
 ) -> Dict[str, Any]:
@@ -140,7 +147,7 @@ def build_glb_fast(
                            "solids": 0, "triangles": 0})
             continue
         n = _add_geometry(scene, trimesh, vl.name, meshes, vl.color,
-                          vl.alpha, vl.metallic)
+                          vl.alpha, vl.metallic, style.roughness)
         tris += n
         report.append({"name": vl.name, "layer": vl.layer,
                        "solids": len(meshes), "triangles": n})
@@ -154,6 +161,7 @@ def build_glb_process(
     stack: VisualStack,
     recipe_path: str,
     out_glb: str,
+    style,
     *,
     cell: Optional[str] = None,
     slices: int = 36,
@@ -216,24 +224,25 @@ def build_glb_process(
     scene = trimesh.Scene()
     report: List[Dict[str, Any]] = []
     unstyled: List[str] = []
+    undeclared_color = style.undeclared_color
     tris = 0
     for name in sorted(slabs):
         vl = stack.by_recipe_symbol(name)
-        style = stack.recipe_style(name)
+        recipe_style = stack.recipe_style(name)
         if vl is not None:
             color, alpha, metallic = vl.color, vl.alpha, vl.metallic
             display = vl.name
-        elif style is not None:
-            color = str(style.get("color", _DEFAULT_GREY))
-            alpha = float(style.get("alpha", 1.0))
-            metallic = float(style.get("metallic", 0.0))
-            display = str(style["name"])
+        elif recipe_style is not None:
+            color = str(recipe_style.get("color") or undeclared_color)
+            alpha = float(recipe_style.get("alpha", 1.0))
+            metallic = float(recipe_style.get("metallic", 0.0))
+            display = str(recipe_style["name"])
         else:
             unstyled.append(name)
-            color, alpha, metallic = _DEFAULT_GREY, 1.0, 0.0
+            color, alpha, metallic = undeclared_color, 1.0, 0.0
             display = name
         n = _add_geometry(scene, trimesh, display, slabs[name], color,
-                          alpha, metallic)
+                          alpha, metallic, style.roughness)
         tris += n
         report.append({"name": display, "recipe_symbol": name,
                        "solids": len(slabs[name]), "triangles": n})
