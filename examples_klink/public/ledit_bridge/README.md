@@ -258,6 +258,53 @@ rules the way an agent reasoning from first principles will. 手搓矩形运算
 算得对不代表结论对——几何问题带着工艺含义，凭常识发明规则就会像这样自信
 地报出一个假的「致命错误」。
 
+### Doing it, concretely
+
+klink already answers these; the reason agents hand-roll instead is not
+missing capability, it is not knowing the incantation. Two tools:
+
+```python
+# layer identity is spelled DIFFERENTLY per tool -- shape.query takes a
+# layer_index, geometry.boolean takes "L/D" or {layer, datatype}
+LD = {e["name"]: "%d/%d" % (e["layer"], e["datatype"])
+      for e in k.call("layer.list")["layers"] if e.get("name")}
+
+def area(cell, op, a, b):
+    return k.call("geometry.boolean", {
+        "op": op,                       # and / or / xor / not  (not = a minus b)
+        "a": {"cell": cell, "layer": LD[a]},
+        "b": {"cell": cell, "layer": LD[b]}})["area_um2"]
+
+area(cell, "not", "CONTACT", "MET1")    # >0 : a contact with no metal over it
+area(cell, "and", "MET1",    "POLY")    # >0 : metal touching a gate
+```
+
+`drc.run` is the other half: it takes DRC DSL source INLINE and, with no
+`source()` line, runs against the layout already loaded — no deck file to
+write, no path to configure.
+
+Measured on the two-finger NMOS in this starter, comparing a broken draft
+against the fixed cell (µm², 0 = clean):
+
+| check | broken | fixed |
+|---|---|---|
+| `CONTACT` on neither `ACTIVE` nor `POLY` | **0.1152** | 0.0000 |
+| `CONTACT` not covered by `MET1` | 0.0000 | 0.0000 |
+| `POLY` not enclosed by `NPLUS` | 0.0000 | 0.0000 |
+| `MET1` overlapping `POLY` | 0.4000 | **0.3872** |
+
+0.1152 is exactly two 0.24 µm contacts sitting on nothing — the defect,
+located without a line of rectangle arithmetic.
+
+**And read the last row before you trust any of this.** `MET1` overlaps
+`POLY` in the CORRECT cell too, because the gate bus is *supposed* to cross
+the poly pads — that is how the gate gets connected. A truthful number is
+not a verdict: whether an overlap is a short or a connection is DESIGN
+INTENT, which no layer-relation rule knows. State the intent you are
+checking, and when you cannot, say the check is inconclusive rather than
+calling it a finding. 工具给的数字是诚实的,但"重叠"是短路还是连接取决于
+设计意图——说不清意图就说结论不确定,别当成缺陷报出去。
+
 So: if the question is about geometry, route it. If klink has no such
 capability either, say so plainly instead of approximating it with
 primitives — and if you do fall back to your own analysis, label the answer
