@@ -104,7 +104,16 @@ def test_die_mode_via_subprocess_runner(device):
                     "name": "Au", "color": "#d4af37",
                     "metallic": 1.0}]})
     glb = str(tmp / "die.glb")
-    build_glb_fast(gds, stack, glb)
+    import sys as _sys
+    import pathlib as _pl
+    _ex = (_pl.Path(__file__).resolve().parents[2]
+           / "examples_klink" / "public" / "imaging")
+    _sys.path.insert(0, str(_ex))
+    try:
+        from viewer_style import STYLE as _VS
+    finally:
+        _sys.path.remove(str(_ex))
+    build_glb_fast(gds, stack, glb, _VS)
     payload = {"mode": "die", "glb": glb,
                "out_png": str(tmp / "die.png"),
                "out_blend": str(tmp / "die.blend"),

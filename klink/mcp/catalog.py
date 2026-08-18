@@ -121,6 +121,40 @@ DOMAINS: "OrderedDict[str, dict]" = OrderedDict([
             "phrases to these ids/queries, NOT to screenshots."
         ),
     }),
+    ("rulers_and_measurement", {
+        "title": "Rulers (annotations) & on-canvas measurement",
+        "summary": "Read the rulers the user drew, draw one back, and auto-measure a gap — the line-shaped channel between user and agent.",
+        "prefixes": ["annotation"],
+        "usage": (
+            "A ruler is a `pya.Annotation` living in the VIEW, not in the "
+            "layout: it is not saved with the GDS, selection.get cannot see "
+            "it, and shape.query cannot either. annotation.* is the only way "
+            "to reach one.\n"
+            "Read: annotation.list (every ruler, or selected_only, or by "
+            "category tag), annotation.get by id. Each entry carries the FULL "
+            "points_um list plus `segments` — since KLayout 0.28 a ruler can "
+            "be MULTI-SEGMENT, and its first/last point is then a line the "
+            "user never drew. Never reduce a ruler to a start/end pair "
+            "yourself; klink.annotation.cut_line_um applies the rule.\n"
+            "Write: annotation.insert draws a ruler (the agent->user channel "
+            "for a LINE, as view.highlight is for an AREA — propose a "
+            "cross-section cut, mark a spacing, then let the user drag it and "
+            "re-read with annotation.list). annotation.update edits one in "
+            "place, annotation.delete removes by id or by category "
+            "(agent-drawn rulers are tagged category='klink' by default).\n"
+            "annotation.measure is auto-measurement: give a seed point and "
+            "KLayout pulls a ruler between the nearest edges on VISIBLE "
+            "layers — 'how wide is this gap' without knowing coordinates. It "
+            "reports measured=false (and removes the degenerate ruler) when "
+            "there is nothing to measure nearby.\n"
+            "Feeding a cross-section: imaging.xsection_run cut_from_ruler=true "
+            "takes its cut line from the ruler in the view; add ruler_id when "
+            "several exist, ruler_segment for a multi-segment one.\n"
+            "Destructive here: annotation.clear wipes the USER's rulers too "
+            "and demands confirm=true — prefer "
+            "annotation.delete{category:'klink'}."
+        ),
+    }),
     ("ports_and_anchors", {
         "title": "Ports & anchors (routing markers)",
         "summary": "Mark, list, move, repair the Port and Anchor PCells that the routing backends consume.",

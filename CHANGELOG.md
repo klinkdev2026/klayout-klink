@@ -4,6 +4,101 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project does not use dated entries (versions only).
 
+## 0.4.0
+
+BREAKING (imaging): the four imaging exits no longer ship a look. klink
+is the mechanism layer, so a hardcoded appearance constant in it is a
+bug regardless of what it means — sun energy and camera lens are the
+same category as a layer number or a DRC rule, and this project has
+never allowed those inside `klink/`. Each exit now reads its appearance
+from a declaration YOU own, and refuses to render without one rather
+than falling back to klink's taste. The refusals name the file to copy.
+
+- `imaging.blender` requires `style` (`klink_blender_style_v1`) — lights,
+  camera, film, and the material recipes. Also new there, declared
+  rather than baked: metals run noise -> colour-ramp mottling, so a flat
+  metal stops reading as plastic; dielectrics get transmission, coat and
+  a lowered specular level, so you can see plugs and gates through them;
+  and every material gets a bevelled shading normal, because layout
+  prisms are perfectly sharp and a perfectly sharp edge catches no
+  highlight.
+- `imaging.sem_top` requires `style` (`klink_sem_style_v1`) — background,
+  rim gains, beam blur, grain, scanlines, vignette, false-colour mix.
+  `seed` moved into it; `corner_radius_um` survives as an override.
+- `imaging.xsection_run` requires `style` (`klink_section_style_v1`)
+  ONLY when `render=true`. A section GDS has no look, so asking for
+  geometry alone still needs nothing declared.
+- `imaging.render3d` requires `style` (`klink_viewer_style_v1`) — the
+  GLB's finish and the viewer page's whole palette.
+- A `VisualStack` layer must now declare `color`, unless it is
+  `kind="lattice"` and drawn as atoms. There is no default colour.
+
+Copy the four style files from `example_template/imaging/` and edit the
+numbers; they carry the reasoning for every value.
+
+New in imaging:
+
+- `imaging.sem_top` burns in a SCALE BAR. It never had one, or a way to
+  ask for one, while calling itself an SEM-style view — an image you
+  cannot measure is a picture, and no reviewer accepts one. The length
+  rounds to 1/2/5 x 10^n, the text goes through the CJK-capable font
+  path, and a bar that cannot fit says so instead of drawing junk.
+- `imaging.sem_top` takes `window_um`, a lateral view window. There was
+  no way to magnify: `width_px` only adds pixels over the same field, so
+  the scale bar never changed. Now only a window changes it.
+- `imaging.xsection_run` exposes `z_window_um` and `axis`, which the
+  driver has always supported and the tool never forwarded. Without a
+  window the engine's multi-micron substrate fills the frame and the
+  device is a hairline at the top.
+- `imaging.xsection_run` takes `auto_layer_base`: 300/0 is a klink
+  convention like the 999/99 port layer, but a recipe that already
+  writes 300/0 has to be able to move it.
+
+Fixed in imaging:
+
+- The die render decided for itself what was metal. A luminance guess
+  ("metals in our stacks are light") metallised 11 of 15 materials in a
+  plain CMOS stack — substrate, wells, implants, oxides and spacer are
+  pale, while tungsten and silicide are dark — and because a metallic
+  surface does not read as see-through it also defeated the declared
+  alpha, hiding every tungsten plug inside an opaque white ILD. The
+  stack decides; the renderer does not guess.
+- A Chinese step name rendered as tofu boxes, silently. None of the
+  three fonts tried carries a Han glyph, so a `# klink-step:` marker in
+  Chinese went into the PNG, the film strip, the GIF and the sidecar
+  SHA256 as .notdef squares with nothing failing. Section labels now
+  resolve a CJK-capable face by asking the font whether it actually has
+  the glyphs, and report any character no installed font can draw.
+
+Found by a blind test before the release, not after:
+
+- `scale_bar.plate`, a declared contrast strip behind the bar and its
+  caption, in both the SEM and section exits. A blind agent asked to
+  make an image it could "measure straight off" produced one whose bar
+  landed white-on-white on a metal rail. The plate is blended, not
+  pasted, so the layout stays visible through it; set it to null to
+  switch it off.
+- Step names that sanitise to nothing no longer leave dangling
+  underscores in filenames. Eleven Chinese-named frames came out
+  `film_step03__`, `film_step09__`, `film_step10__1_`. Filenames stay
+  ASCII on purpose, but empty is more honest than punctuation, and any
+  ASCII fragment inside the name is kept. The real name was never lost:
+  it is in the sidecar and burnt into the frame.
+
+New: rulers as data.
+
+- `annotation.list / get / insert / update / delete / clear / measure`.
+  A ruler is a view object, invisible to `selection.get` and to any
+  saved GDS, so these are the only way to read one. `annotation.insert`
+  is the agent-to-user channel for a LINE as `view.highlight` is for an
+  area; `annotation.measure` is auto-measurement from a seed point.
+  New event channels: `annotations_changed`,
+  `annotation_selection_changed`.
+- `imaging.xsection_run` takes `cut_from_ruler`: section along the
+  ruler you drew in KLayout. Since 0.28 a ruler may be multi-segment,
+  and its first and last point are then a line you never drew — klink
+  refuses to flatten one and names the segments to choose from.
+
 ## 0.3.8
 
 - `drc.run` could silently audit the wrong cell. `top_cell` is only a

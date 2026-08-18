@@ -32,9 +32,15 @@ def _mv_js() -> str:
     return js
 
 
-def build_viewer_html(glb_path: str, html_path: str, *,
+def build_viewer_html(glb_path: str, html_path: str, style, *,
                       title: str = "klink 3D",
                       overwrite: bool = False) -> str:
+    """Write the self-contained viewer page.
+
+    ``style`` is a
+    :class:`~klink.domains.imaging.viewer_style.ViewerStyle`. Every
+    colour in the page and its starting exposure come from it — klink
+    ships no palette."""
     if os.path.exists(html_path) and not overwrite:
         raise ViewerError(
             f"{html_path} exists; pass overwrite=True to replace it")
@@ -42,10 +48,21 @@ def build_viewer_html(glb_path: str, html_path: str, *,
         glb_b64 = base64.b64encode(fh.read()).decode("ascii")
     # title is data, not markup — escape it; material names are handled
     # in-page via textContent (never innerHTML); the CSP blocks network
-    # egress so injected content could not beacon anywhere anyway
+    # egress so injected content could not beacon anywhere anyway.
+    # Style colours go through the schema's validator, so only #RRGGBB
+    # can ever reach the page's CSS.
     html = _TEMPLATE.replace("__TITLE__",
-                             _html.escape(str(title), quote=True)) \
-        .replace("__MV_JS__", _mv_js()) \
+                             _html.escape(str(title), quote=True))
+    for token, key in (("__PAGE__", "page"), ("__PANEL__", "panel"),
+                       ("__PANEL_TEXT__", "panel_text"),
+                       ("__BUTTON__", "button"),
+                       ("__BUTTON_HOVER__", "button_hover"),
+                       ("__BUTTON_TEXT__", "button_text")):
+        html = html.replace(token, style.css(key))
+    for token, key in (("__EXPOSURE__", "exposure"),
+                       ("__SHADOW__", "shadow_intensity")):
+        html = html.replace(token, "%g" % float(style.viewer[key]))
+    html = html.replace("__MV_JS__", _mv_js()) \
         .replace("__GLB_B64__", glb_b64)
     with open(html_path, "w", encoding="utf-8") as fh:
         fh.write(html)
@@ -60,10 +77,10 @@ _TEMPLATE = """<!doctype html>
  connect-src data: blob:; worker-src blob:;">
 <script type="module">__MV_JS__</script>
 <style>
-html,body{margin:0;height:100%;background:#14161a;font-family:sans-serif}
+html,body{margin:0;height:100%;background:__PAGE__;font-family:sans-serif}
 #wrap{display:flex;height:100%}
-model-viewer{flex:1;height:100%;background:#14161a}
-#panel{width:230px;background:#1f2328;color:#d5d9de;padding:12px;
+model-viewer{flex:1;height:100%;background:__PAGE__}
+#panel{width:230px;background:__PANEL__;color:__PANEL_TEXT__;padding:12px;
  overflow-y:auto;font-size:12px}
 #panel h3{margin:4px 0 10px;font-size:13px}
 .row{display:flex;align-items:center;justify-content:space-between;
@@ -72,28 +89,29 @@ model-viewer{flex:1;height:100%;background:#14161a}
 input[type=color]{width:44px;height:22px;border:none;background:none;
  padding:0}
 input[type=range]{width:110px}
-button{width:100%;margin-top:10px;padding:6px;background:#3a4756;
- color:#e8ecf0;border:none;border-radius:4px;cursor:pointer}
-button:hover{background:#4a5a6c}
+button{width:100%;margin-top:10px;padding:6px;background:__BUTTON__;
+ color:__BUTTON_TEXT__;border:none;border-radius:4px;cursor:pointer}
+button:hover{background:__BUTTON_HOVER__}
 </style></head>
 <body><div id="wrap">
 <model-viewer id="mv" src="data:model/gltf-binary;base64,__GLB_B64__"
- camera-controls auto-rotate exposure="0.9" shadow-intensity="0.6"
+ camera-controls auto-rotate exposure="__EXPOSURE__" shadow-intensity="__SHADOW__"
  camera-orbit="30deg 65deg auto"></model-viewer>
 <div id="panel">
  <h3>Manual controls</h3>
  <div class="row"><label>background</label>
-  <input type="color" id="bg" value="#14161a"></div>
+  <input type="color" id="bg" value="__PAGE__"></div>
  <div class="row"><label>exposure</label>
   <input type="range" id="exp" min="0.2" max="2.5" step="0.05"
-   value="0.9"></div>
+   value="__EXPOSURE__"></div>
  <div class="row"><label>tone</label>
   <select id="tone"><option value="neutral">neutral</option>
    <option value="aces">aces (film)</option>
    <option value="agx">agx (blender)</option>
    <option value="commerce">commerce</option></select></div>
  <div class="row"><label>shadow</label>
-  <input type="range" id="shi" min="0" max="2" step="0.1" value="0.6"></div>
+  <input type="range" id="shi" min="0" max="2" step="0.1"
+   value="__SHADOW__"></div>
  <div class="row"><label>softness</label>
   <input type="range" id="sho" min="0" max="1" step="0.05" value="1"></div>
  <div class="row"><label>auto-rotate</label>
@@ -183,10 +201,10 @@ document.getElementById('reset').addEventListener('click', () => {
     inp.value = defaults[i].m);
   document.querySelectorAll('#mats .rgh').forEach((inp, i) =>
     inp.value = defaults[i].r);
-  document.getElementById('bg').value = '#14161a';
-  mv.style.background = '#14161a';
-  document.body.style.background = '#14161a';
-  mv.exposure = 0.9; document.getElementById('exp').value = 0.9;
+  document.getElementById('bg').value = '__PAGE__';
+  mv.style.background = '__PAGE__';
+  document.body.style.background = '__PAGE__';
+  mv.exposure = __EXPOSURE__; document.getElementById('exp').value = __EXPOSURE__;
 });
 </script></body></html>
 """

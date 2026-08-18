@@ -37,8 +37,8 @@ classifiers = [
 # speed-only (pure-Python fallbacks exist); `pip install --no-deps` gives the
 # pure-Python core alone when you cannot fetch/build a kernel wheel.
 dependencies = [
-    "klink-boxmaze-rs>=0.3,<0.4",
-    "klink-trackmaze-rs>=0.3,<0.4",
+    "klink-boxmaze-rs>=0.4,<0.5",
+    "klink-trackmaze-rs>=0.4,<0.5",
 ]
 
 [project.optional-dependencies]

@@ -51,9 +51,10 @@ def _safe_basename(value, default: str) -> str:
             "gds": {"type": "string", "description": "mode='figure': layout path. Omit to use the live KLayout session."},
             "cell": {"type": "string"},
             "stack": {"type": "string", "description": "mode='figure': klink_visual_stack_v1 JSON path."},
+            "style": {"type": "string", "description": "REQUIRED: klink_blender_style_v1 JSON path — lights, camera, film and the material recipes (metal mottling, dielectric transmission, edge bevel). klink ships NO default look; copy example_template/imaging/blender_style.py (klink init already put one in your project) and run `python blender_style.py` to write its JSON, edit the numbers, save its JSON."},
             "slabs": {"type": "array", "items": {"type": "object"},
                       "description": "mode='figure': explicit carriers, each {name,z0_um,z1_um,color[,alpha][,metallic]}."},
-            "lattice_a_um": {"type": "number", "default": 0.08, "description": "Figure-scale lattice constant (visual parameter; real constants are in the motif library docs)."},
+            "lattice_a_um": {"type": "number", "description": "Override the style's figure-scale lattice constant (a DRAWING scale, not the physical one). Normally omit it and let blender_style.py declare it."},
             "camera": {"type": "string", "enum": ["default", "face", "top"], "default": "default"},
             "samples": {"type": "integer", "default": 96},
             "transparent": {"type": "boolean", "default": True},
@@ -63,7 +64,7 @@ def _safe_basename(value, default: str) -> str:
             "timeout_s": {"type": "integer", "default": 600},
             "session": {"type": "string"},
         },
-        "required": ["mode", "output_dir"],
+        "required": ["mode", "output_dir", "style"],
         "additionalProperties": False,
     },
 )
@@ -95,7 +96,18 @@ def _tool_imaging_blender(ctx, arguments: dict) -> dict:
                     f"{p} exists; pass overwrite=true to replace it "
                     f"(klink never clobbers silently)")
 
+        if not arguments.get("style"):
+            raise ValueError(
+                "style=<klink_blender_style_v1 json> is required: the "
+                "look (lights, camera, film, material recipes) is YOUR "
+                "data and klink ships no default. Copy "
+                "example_template/imaging/blender_style.py \u2014 klink "
+                "init already put one there \u2014 edit it, then run "
+                "`python blender_style.py` to write the JSON.")
+        from ...domains.imaging.blender_style import BlenderStyle
+        style = BlenderStyle.load(str(arguments["style"]))
         payload = {"mode": mode, "out_png": png, "out_blend": blend,
+                   "style": style.to_dict(),
                    "camera": str(arguments.get("camera") or "default"),
                    "samples": int(arguments.get("samples", 96)),
                    "transparent": bool(
@@ -119,8 +131,10 @@ def _tool_imaging_blender(ctx, arguments: dict) -> dict:
                 stack = VisualStack.load(str(arguments["stack"]))
                 payload["stack"] = stack.to_dict()
                 payload["slabs"] = arguments.get("slabs") or []
-                payload["lattice_a_um"] = float(
-                    arguments.get("lattice_a_um", 0.08))
+                payload["lattice_a_um"] = (
+                    float(arguments["lattice_a_um"])
+                    if arguments.get("lattice_a_um") is not None
+                    else None)
                 payload["cell"] = arguments.get("cell")
                 gds = arguments.get("gds")
                 if not gds:
@@ -179,7 +193,7 @@ def _tool_imaging_blender(ctx, arguments: dict) -> dict:
             "format": "klink_imaging_result_v1",
             "tool": "imaging.blender",
             "inputs": {k: arguments.get(k) for k in
-                       ("mode", "glb", "gds", "cell", "stack",
+                       ("mode", "glb", "gds", "cell", "stack", "style",
                         "camera", "samples", "lattice_a_um")},
             "outputs": {
                 "files": [
@@ -218,16 +232,17 @@ def _tool_imaging_blender(ctx, arguments: dict) -> dict:
             "gds": {"type": "string", "description": "Path to the layout file. Omit to use the live KLayout session."},
             "cell": {"type": "string", "description": "Cell to render (default: top/current cell)."},
             "stack": {"type": "string", "description": "Path to a klink_visual_stack_v1 JSON (sem_grey/edge_glow/color per layer)."},
+            "style": {"type": "string", "description": "REQUIRED: klink_sem_style_v1 JSON path \u2014 background, rim gains, beam blur, grain, scanlines, vignette, false-colour mix and the burnt-in scale bar. klink ships NO default look; copy example_template/imaging/sem_style.py (klink init already put one in your project) and run `python sem_style.py` to write its JSON, edit the numbers, save its JSON."},
             "layers": {"type": "array", "items": {"type": "string"}, "description": "Optional 'L/D' subset (paint order stays stack order)."},
-            "width_px": {"type": "integer", "default": 1600},
-            "corner_radius_um": {"type": "number", "default": 0.05, "description": "Litho corner rounding applied to every mask."},
-            "seed": {"type": "integer", "default": 7, "description": "Noise seed (same seed = identical image)."},
+            "width_px": {"type": "integer", "default": 1600, "description": "Output width in pixels. This is RESOLUTION over the same field of view, not magnification — use window_um to magnify."},
+            "window_um": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4, "description": "Frame a REGION [x0,y0,x1,y1] in microns instead of the whole cell — a higher-magnification view. Only this changes what the scale bar reads."},
+            "corner_radius_um": {"type": "number", "description": "Override the style's litho corner rounding for a one-off run. Normally omit it and let sem_style.py declare it."},
             "output_dir": {"type": "string"},
             "basename": {"type": "string", "default": "semtop"},
             "overwrite": {"type": "boolean", "default": False},
             "session": {"type": "string", "description": "KLayout session id/label (default: primary)."},
         },
-        "required": ["stack", "output_dir"],
+        "required": ["stack", "style", "output_dir"],
         "additionalProperties": False,
     },
 )
@@ -247,6 +262,16 @@ def _tool_imaging_sem_top(ctx, arguments: dict) -> dict:
             return h.hexdigest()
 
         stack = VisualStack.load(str(arguments["stack"]))
+        if not arguments.get("style"):
+            raise ValueError(
+                "style=<klink_sem_style_v1 json> is required: how the "
+                "micrograph LOOKS (background, rims, grain, scanlines, "
+                "vignette, scale bar) is YOUR data and klink ships no "
+                "default. Copy example_template/imaging/sem_style.py — "
+                "klink init already put one there — edit it, then run "
+                "`python sem_style.py` to write the JSON.")
+        from ...domains.imaging.sem_style import SemStyle
+        sem_style = SemStyle.load(str(arguments["style"]))
         out_dir = str(arguments["output_dir"])
         os.makedirs(out_dir, exist_ok=True)
         basename = _safe_basename(arguments.get("basename"), "semtop")
@@ -275,13 +300,15 @@ def _tool_imaging_sem_top(ctx, arguments: dict) -> dict:
                 client.call("layout.save_file", save)
                 gds = tmp_gds
             report = render_sem_png(
-                gds, stack, grey, out_color=color,
+                gds, stack, grey, sem_style, out_color=color,
                 cell=(None if tmp_gds else arguments.get("cell")),
                 layers=arguments.get("layers"),
                 width_px=int(arguments.get("width_px", 1600)),
-                corner_radius_um=float(
-                    arguments.get("corner_radius_um", 0.05)),
-                seed=int(arguments.get("seed", 7)))
+                window_um=arguments.get("window_um"),
+                corner_radius_um=(
+                    float(arguments["corner_radius_um"])
+                    if arguments.get("corner_radius_um") is not None
+                    else None))
         finally:
             if tmp_gds:
                 try:
@@ -302,7 +329,9 @@ def _tool_imaging_sem_top(ctx, arguments: dict) -> dict:
                 "stack": str(arguments["stack"]),
                 "stack_name": stack.name,
                 "layers": arguments.get("layers"),
-                "seed": int(arguments.get("seed", 7)),
+                "window_um": arguments.get("window_um"),
+                "style": str(arguments["style"]),
+                "style_name": sem_style.name,
             },
             "outputs": {
                 "files": [
@@ -344,6 +373,7 @@ def _tool_imaging_sem_top(ctx, arguments: dict) -> dict:
             "gds": {"type": "string", "description": "Path to the layout file. Omit to use the live KLayout session."},
             "cell": {"type": "string", "description": "Cell to render (default: top/current cell)."},
             "stack": {"type": "string", "description": "Path to a klink_visual_stack_v1 JSON (example/project-owned; klink ships none)."},
+            "style": {"type": "string", "description": "REQUIRED: klink_viewer_style_v1 JSON path \u2014 the GLB's surface finish, the colour for materials the stack never declared, and the viewer page's whole palette + starting exposure. klink ships NO default; copy example_template/imaging/viewer_style.py (klink init already put one in your project) and run `python viewer_style.py` to write its JSON."},
             "mode": {"type": "string", "enum": ["fast", "process"], "default": "fast"},
             "recipe": {"type": "string", "description": "Required for mode='process': the .pyxs recipe (trusted Python)."},
             "slices": {"type": "integer", "default": 36, "description": "process mode: number of engine cuts."},
@@ -354,7 +384,7 @@ def _tool_imaging_sem_top(ctx, arguments: dict) -> dict:
             "overwrite": {"type": "boolean", "default": False},
             "session": {"type": "string", "description": "KLayout session id/label (default: primary)."},
         },
-        "required": ["stack", "output_dir"],
+        "required": ["stack", "style", "output_dir"],
         "additionalProperties": False,
     },
 )
@@ -376,6 +406,16 @@ def _tool_imaging_render3d(ctx, arguments: dict) -> dict:
             return h.hexdigest()
 
         stack = VisualStack.load(str(arguments["stack"]))
+        if not arguments.get("style"):
+            raise ValueError(
+                "style=<klink_viewer_style_v1 json> is required: the "
+                "model's finish and the viewer page's palette are YOUR "
+                "data and klink ships no default. Copy "
+                "example_template/imaging/viewer_style.py \u2014 klink "
+                "init already put one there \u2014 edit it, then run "
+                "`python viewer_style.py` to write the JSON.")
+        from ...domains.imaging.viewer_style import ViewerStyle
+        viewer_style = ViewerStyle.load(str(arguments["style"]))
         out_dir = str(arguments["output_dir"])
         os.makedirs(out_dir, exist_ok=True)
         basename = _safe_basename(arguments.get("basename"), "render3d")
@@ -413,12 +453,14 @@ def _tool_imaging_render3d(ctx, arguments: dict) -> dict:
                         "(the engine sweep is recipe-driven); use "
                         "mode='fast' for a plain stack extrusion")
                 report = build_glb_process(
-                    gds, stack, str(recipe), glb, cell=cell,
+                    gds, stack, str(recipe), glb, viewer_style,
+                    cell=cell,
                     slices=int(arguments.get("slices", 36)),
                     fraction=float(arguments.get("fraction", 1.0)),
                     exclude=tuple(arguments.get("exclude") or ()))
             else:
-                report = build_glb_fast(gds, stack, glb, cell=cell)
+                report = build_glb_fast(gds, stack, glb, viewer_style,
+                                        cell=cell)
         finally:
             if tmp_gds:
                 try:
@@ -431,7 +473,7 @@ def _tool_imaging_render3d(ctx, arguments: dict) -> dict:
                 except Exception:
                     pass
 
-        build_viewer_html(glb, html, title=basename,
+        build_viewer_html(glb, html, viewer_style, title=basename,
                           overwrite=overwrite)
         sidecar = {
             "format": "klink_imaging_result_v1",
@@ -484,8 +526,11 @@ def _tool_imaging_render3d(ctx, arguments: dict) -> dict:
                     "type": "array", "items": {"type": "number"},
                     "minItems": 2, "maxItems": 2},
                 "minItems": 2, "maxItems": 2,
-                "description": "[[x1,y1],[x2,y2]] microns. Explicit only — GUI ruler readout is not available (backlog).",
+                "description": "[[x1,y1],[x2,y2]] microns. Omit it and pass cut_from_ruler=true to take the cut from a ruler drawn in KLayout.",
             },
+            "cut_from_ruler": {"type": "boolean", "default": False, "description": "Read the cut line from a RULER in the live KLayout view (annotation.list) instead of cut_um. With several rulers present, select one in the GUI or name it with ruler_id."},
+            "ruler_id": {"type": "integer", "description": "With cut_from_ruler: which ruler (id from annotation.list)."},
+            "ruler_segment": {"type": "integer", "description": "With cut_from_ruler: which segment of a MULTI-segment ruler to cut along (0-based). A multi-segment ruler is never flattened to its endpoints."},
             "output_dir": {"type": "string", "description": "Directory for outputs (created if missing)."},
             "basename": {"type": "string", "default": "xsection", "description": "Plain filename stem (no path separators)."},
             "steps": {"type": "boolean", "default": False, "description": "Per-step film via '# klink-step: <name>' markers."},
@@ -496,12 +541,16 @@ def _tool_imaging_render3d(ctx, arguments: dict) -> dict:
             "below_um": {"type": "number", "default": 2.0},
             "extend_um": {"type": "number", "default": 2.0},
             "delta_dbu": {"type": "integer", "default": 10},
+            "auto_layer_base": {"type": "integer", "default": 300, "description": "First layer number for auto-output materials (a klink convention, like the 999/99 port layer). Move it if your recipe already writes 300/0 and up."},
             "exclude": {"type": "array", "items": {"type": "string"}, "description": "Recipe material variable names to skip in auto-output (consumed intermediates)."},
+            "style": {"type": "string", "description": "klink_section_style_v1 JSON path \u2014 REQUIRED when render=true (ignored otherwise, since a section GDS has no look). Page colour, material gradient, outline darkening, z-ruler, label bar, scale bar and the fallback colour for undeclared materials. klink ships NO default; copy example_template/imaging/section_style.py (klink init already put one in your project) and run `python section_style.py` to write its JSON."},
             "render": {"type": "boolean", "default": False, "description": "Also rasterize each section to PNG (+ film strip/GIF with steps=true). Needs numpy/scipy/pillow."},
+            "z_window_um": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2, "description": "With render: frame the picture to [z_bottom, z_top] in microns. WITHOUT this the engine's multi-micron substrate fills most of the image and the films are a thin band at the top — pass e.g. [-1.0, 1.5]."},
+            "axis": {"type": "boolean", "default": False, "description": "With render: draw a z ruler down the left edge and a lateral scale bar. A section without a scale is a picture; with one it is a measurement."},
             "stack": {"type": "string", "description": "Optional klink_visual_stack_v1 JSON path: colors rendered materials via recipe_symbol/recipe_styles; unmatched get deterministic auto-colors (reported)."},
             "session": {"type": "string", "description": "KLayout session id/label (default: primary)."},
         },
-        "required": ["recipe", "cut_um", "output_dir"],
+        "required": ["recipe", "output_dir"],
         "additionalProperties": False,
     },
 )
@@ -510,12 +559,30 @@ def _tool_imaging_xsection_run(ctx, arguments: dict) -> dict:
         from ...domains.imaging.xsection_driver import run_xsection
 
         gds = arguments.get("gds")
+        from_ruler = bool(arguments.get("cut_from_ruler", False))
+        if bool(arguments.get("cut_um")) == from_ruler:
+            raise ValueError(
+                "pass exactly one of cut_um=[[x1,y1],[x2,y2]] (explicit "
+                "microns) or cut_from_ruler=true (take the line from a "
+                "ruler drawn in the live KLayout view)")
         client = close_after = None
         tmp_gds = None
         try:
-            if not gds or arguments.get("show"):
+            if not gds or arguments.get("show") or from_ruler:
                 client, close_after = ctx._session_scoped_client(
                     arguments.get("session"))
+            cut_um = arguments.get("cut_um")
+            cut_source = "cut_um"
+            if from_ruler:
+                # the plugin hands back rulers; every DECISION about them
+                # (which one, multi-segment policy) is klink-side
+                from ...annotation import cut_line_um, pick_ruler, read_rulers
+                ruler = pick_ruler(
+                    read_rulers(client),
+                    ruler_id=arguments.get("ruler_id"))
+                cut_um = cut_line_um(
+                    ruler, segment=arguments.get("ruler_segment"))
+                cut_source = "ruler id=%s" % ruler.get("id")
             if not gds:
                 fd, tmp_gds = tempfile.mkstemp(suffix=".gds")
                 os.close(fd)
@@ -524,6 +591,20 @@ def _tool_imaging_xsection_run(ctx, arguments: dict) -> dict:
                     save["cell"] = arguments["cell"]
                 client.call("layout.save_file", save)
                 gds = tmp_gds
+            section_style = None
+            if arguments.get("render"):
+                if not arguments.get("style"):
+                    raise ValueError(
+                        "render=true needs style=<klink_section_style_v1 "
+                        "json>: how the PNG looks is YOUR data and klink "
+                        "ships no default. Copy example_template/"
+                        "imaging/section_style.py \u2014 klink init already "
+                        "put one there \u2014 edit it, then run `python "
+                        "section_style.py` to write the JSON \u2014 or drop "
+                        "render and keep just the section GDS.")
+                from ...domains.imaging.section_style import SectionStyle
+                section_style = SectionStyle.load(
+                    str(arguments["style"]))
             stack = None
             if arguments.get("stack"):
                 from ...domains.imaging.visual_stack import VisualStack
@@ -531,7 +612,7 @@ def _tool_imaging_xsection_run(ctx, arguments: dict) -> dict:
             result = run_xsection(
                 gds,
                 str(arguments["recipe"]),
-                arguments["cut_um"],
+                cut_um,
                 output_dir=str(arguments["output_dir"]),
                 basename=_safe_basename(arguments.get("basename"), "xsection"),
                 cell=(None if tmp_gds else arguments.get("cell")),
@@ -545,8 +626,16 @@ def _tool_imaging_xsection_run(ctx, arguments: dict) -> dict:
                 exclude=tuple(arguments.get("exclude") or ()),
                 render=bool(arguments.get("render", False)),
                 stack=stack,
+                style=section_style,
+                auto_layer_base=int(
+                    arguments.get("auto_layer_base", 300)),
+                z_window_um=arguments.get("z_window_um"),
+                axis=bool(arguments.get("axis", False)),
                 source_label=("<live session>" if tmp_gds else None),
             )
+            # the sidecar records the cut COORDINATES; this records where
+            # they came from, so "which line is this picture" survives
+            result["cut_source"] = cut_source
             if arguments.get("show"):
                 shown = [f["path"] for f in result["outputs"]["files"]
                          if f["kind"] == "section_gds"][-1]

@@ -12,6 +12,18 @@ SECURITY / TRUST: a ``.pyxs`` recipe IS Python code and is executed
 in-process with full privileges.  It is a trusted input — treat recipe
 files like you treat your own scripts.  klink does not sandbox them.
 
+ENGINE COUPLING (read before bumping the pin): this is the one place in
+klink that reaches into a third-party library's PRIVATE surface.  The
+driver SUBCLASSES ``klayout_pyxs.pyxs_lib.XSection`` and overrides
+``_setup`` / ``_create_new_layout`` / ``_finalize_view`` (replacing the
+GUI's ruler/view/dialog inputs with ours), calls
+``_update_basic_regions()``, and type-tests recipe variables against
+``MaterialData``.  None of that is public API; upstream can rename any
+of it in a patch release without notice, and the failure would be a
+changed section, not an ImportError.  ``PINNED_PYXS`` exists for exactly
+this reason — bumping it is not a version-string edit, it requires
+re-running the golden section tests and diffing the output GDS.
+
 Determinism: section GDS files are written with GDS timestamps
 DISABLED, so identical inputs give byte-identical files (golden-test
 contract).
@@ -39,6 +51,10 @@ PINNED_PYXS = "0.1.13"
 SIDECAR_FORMAT = "klink_imaging_result_v1"
 STEP_RE = re.compile(r"^#\s*klink-step\s*:\s*(.+?)\s*$", re.M)
 _OUTPUT_LINE_RE = re.compile(r"^\s*output\(.*$", re.M)
+#: First layer number klink assigns to auto-output materials. A
+#: klink convention (like the 999/99 port layer), not process data
+#: — but a recipe that already writes 300/0 needs it moved, so
+#: every entry point takes it as a parameter.
 _AUTO_LAYER_BASE = 300
 
 
@@ -197,7 +213,8 @@ def _make_driver(pyxs_lib, MaterialData):
         def run_text(self, p1_um, p2_um, text: str,
                      auto_output: bool,
                      name_to_layer: Dict[str, str],
-                     exclude: Sequence[str]):
+                     exclude: Sequence[str],
+                     auto_layer_base: int = _AUTO_LAYER_BASE):
             self._target_view = None
             self._target_cell_name = "XSECTION"
             self._setup(kdb.DPoint(*p1_um), kdb.DPoint(*p2_um))
@@ -230,7 +247,7 @@ def _make_driver(pyxs_lib, MaterialData):
                         continue
                     if nm not in name_to_layer:
                         name_to_layer[nm] = "%d/0" % (
-                            _AUTO_LAYER_BASE + len(name_to_layer))
+                            auto_layer_base + len(name_to_layer))
                     super().output(name_to_layer[nm], val)
                     materials[name_to_layer[nm]] = nm
             return materials
@@ -255,6 +272,21 @@ def _make_driver(pyxs_lib, MaterialData):
     return _KlinkXSection
 
 
+def _filename_slug(name: str) -> str:
+    """An ASCII-safe filename fragment for a step name.
+
+    Filenames stay ASCII on purpose (they travel through zips, CI and
+    other people's tooling), but a name written in Chinese used to
+    sanitise to nothing and leave a trail of dangling underscores:
+    eleven steps produced `film_step03__`, `film_step09__`,
+    `film_step10__1_`. Empty is honest — the real name is in the
+    sidecar and burnt into the frame — so this returns "" rather than
+    punctuation, and the caller keeps the step index for uniqueness.
+    """
+    safe = re.sub(r"[^A-Za-z0-9_.-]+", "_", name)
+    return safe.strip("_.-")
+
+
 def run_cut_polygons(
     layout: Any,
     cell_index: int,
@@ -269,6 +301,7 @@ def run_cut_polygons(
     below_um: float = 2.0,
     extend_um: float = 2.0,
     delta_dbu: int = 10,
+    auto_layer_base: int = _AUTO_LAYER_BASE,
 ) -> Dict[str, List[List[Tuple[float, float]]]]:
     """One engine cut -> ``{material name: [poly points (um), ...]}``.
 
@@ -288,7 +321,7 @@ def run_cut_polygons(
     materials = drv.run_text(
         tuple(map(float, cut_um[0])), tuple(map(float, cut_um[1])),
         text, auto_output=True, name_to_layer=name_to_layer,
-        exclude=exclude)
+        exclude=exclude, auto_layer_base=auto_layer_base)
     # read back per-material polygons (ring lists [hull, hole...] —
     # a fully enclosed void, e.g. a keyhole in a trench fill, is real)
     tl = drv._target_layout
@@ -334,6 +367,8 @@ def run_xsection(
     stack: Optional[Any] = None,
     z_window_um: Optional[Sequence[float]] = None,
     axis: bool = False,
+    style: Optional[Any] = None,
+    auto_layer_base: int = _AUTO_LAYER_BASE,
     source_label: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Cross-section ``gds_path`` along ``cut_um`` using ``recipe_path``.
@@ -405,8 +440,9 @@ def run_xsection(
 
     def stage_fname(si: int, stage_name: str) -> str:
         if steps:
-            safe = re.sub(r"[^A-Za-z0-9_.-]+", "_", stage_name)
-            return f"{basename}_step{si:02d}_{safe}.gds"
+            safe = _filename_slug(stage_name)
+            tail = f"_{safe}" if safe else ""
+            return f"{basename}_step{si:02d}{tail}.gds"
         return f"{basename}.gds"
 
     # the run is refuse-BEFORE-first-write: every output path is known
@@ -437,10 +473,12 @@ def run_xsection(
         drv = driver_cls(layout, top.cell_index(), recipe_path, params)
         materials = drv.run_text(
             p1, p2, text, auto_output=True,
-            name_to_layer=name_to_layer, exclude=exclude)
+            name_to_layer=name_to_layer, exclude=exclude,
+            auto_layer_base=auto_layer_base)
         if steps:
-            safe = re.sub(r"[^A-Za-z0-9_.-]+", "_", stage_name)
-            fname = f"{basename}_step{si:02d}_{safe}.gds"
+            safe = _filename_slug(stage_name)
+            tail = f"_{safe}" if safe else ""
+            fname = f"{basename}_step{si:02d}{tail}.gds"
         else:
             fname = f"{basename}.gds"
         path = os.path.join(output_dir, fname)
@@ -466,9 +504,17 @@ def run_xsection(
 
     render_out: Dict[str, Any] = {}
     if render:
+        if style is None:
+            raise XSectionError(
+                "render=True needs style=<SectionStyle>: how the PNG "
+                "LOOKS (page colour, gradient, outlines, ruler, label "
+                "bar, scale bar) is YOUR data and klink ships no "
+                "default. Copy example_template/imaging/section_style"
+                ".py, or drop render=True and keep the section GDS.")
         from .raster import film_strip, render_section_png
         frame_paths: List[str] = []
         auto_colored: List[str] = []
+        unrenderable: List[Dict[str, Any]] = []
         gds_files = list(files)          # snapshot: loop appends to files
         for f, rep in zip(gds_files, stage_reports):
             png = f["path"][: -len(".gds")] + ".png"
@@ -477,17 +523,33 @@ def run_xsection(
                     f"{png} exists; pass overwrite=True to replace it")
             mat_map = {m["layer"]: m["name"] for m in rep["materials"]}
             r = render_section_png(
-                f["path"], mat_map, png, stack=stack,
+                f["path"], mat_map, png, style, stack=stack,
                 z_window_um=z_window_um, axis=axis,
                 label=rep["step"] or basename)
             frame_paths.append(png)
             for sym in r["auto_colored"]:
                 if sym not in auto_colored:
                     auto_colored.append(sym)
+            # a step name whose glyphs no installed font carries would
+            # otherwise be baked into the PNG as tofu boxes and hashed
+            # as if correct; say so instead
+            if r.get("missing_glyphs"):
+                unrenderable.append(
+                    {"label": rep["step"] or basename,
+                     "characters": r["missing_glyphs"]})
             files.append({"path": png.replace(os.sep, "/"),
                           "sha256": _sha256(png),
                           "kind": "section_png", "step": rep["step"]})
         render_out = {"auto_colored": auto_colored}
+        if unrenderable:
+            render_out["font_warnings"] = {
+                "labels": unrenderable,
+                "reason": "no installed font has these glyphs; they are "
+                          "drawn as .notdef boxes. Install a CJK face "
+                          "(Windows: Microsoft YaHei; Linux: "
+                          "fonts-noto-cjk; macOS: PingFang) or use an "
+                          "ASCII '# klink-step:' name",
+            }
         if steps and len(frame_paths) > 1:
             strip = os.path.join(output_dir, f"{basename}_film.png")
             gif = os.path.join(output_dir, f"{basename}_film.gif")

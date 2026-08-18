@@ -49,7 +49,7 @@ class VisualLayer:
     name: str                        # display/material name (prose)
     kind: str = "solid"              # solid | lattice | dielectric
     role: str = ""                   # user vocabulary (gate, channel, ...)
-    color: str = "#999999"           # #RRGGBB
+    color: str = ""                  # #RRGGBB; REQUIRED unless lattice
     alpha: float = 1.0               # dielectric exits render translucent
     metallic: float = 0.0            # 3D/PBR hint
     sem_grey: float = 0.5            # SEM emission level 0..1
@@ -75,6 +75,15 @@ class VisualLayer:
             raise VisualStackError(
                 f"{what}: kind='lattice' needs a motif key "
                 f"(e.g. 'graphene', 'mos2')")
+        # A lattice layer is drawn as ATOMS, so it needs no fill
+        # colour. Everything else does, and klink has none to offer:
+        # picking one here would be klink deciding what your process
+        # looks like.
+        if self.kind != "lattice" and not self.color:
+            raise VisualStackError(
+                f"{what}: color is required (#RRGGBB). klink ships no "
+                f"default colour — what YOUR materials look like is "
+                f"yours to declare, not klink's to guess.")
         if not 0.0 <= self.alpha <= 1.0:
             raise VisualStackError(f"{what}: alpha must be in [0, 1]")
 
@@ -181,7 +190,7 @@ class VisualStack:
                 z0_um=float(d["z0_um"]), z1_um=float(d["z1_um"]),
                 name=str(d["name"]), kind=str(d.get("kind", "solid")),
                 role=str(d.get("role", "")),
-                color=str(d.get("color", "#999999")),
+                color=str(d.get("color", "")),
                 alpha=float(d.get("alpha", 1.0)),
                 metallic=float(d.get("metallic", 0.0)),
                 sem_grey=float(d.get("sem_grey", 0.5)),

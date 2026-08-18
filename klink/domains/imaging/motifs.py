@@ -73,7 +73,7 @@ def bonds_between(p_from, p_to, max_dist: float) -> List[Tuple[int, int]]:
     return out
 
 
-def graphene(polygon_um, a_um: float = 0.05,
+def graphene(polygon_um, a_um: float,
              z_um: float = 0.0) -> Dict[str, Any]:
     """Single-layer graphene: C atoms, in-plane bonds."""
     np, *_ = _deps()
@@ -84,13 +84,13 @@ def graphene(polygon_um, a_um: float = 0.05,
     pairs = bonds_between(A, B, d * 1.1)
     bonds = [(np.append(A[i], z_um), np.append(B[j], z_um))
              for i, j in pairs]
-    return {"species": [{"name": "C", "positions": pos,
-                         "radius_um": a_um * 0.16,
-                         "color": (0.16, 0.17, 0.19, 1.0)}],
-            "bonds": bonds, "bond_radius_um": a_um * 0.055}
+    # GEOMETRY ONLY: how an atom is coloured and how big it is
+    # drawn are the caller's declaration, not klink's.
+    return {"species": [{"name": "C", "positions": pos}],
+            "bonds": bonds, "a_um": a_um}
 
 
-def mos2(polygon_um, a_um: float = 0.08, z_um: float = 0.0,
+def mos2(polygon_um, a_um: float, z_um: float = 0.0,
          dz_um: float = None) -> Dict[str, Any]:
     """Monolayer 2H-MoS2: Mo plane sandwiched by two S planes."""
     np, *_ = _deps()
@@ -105,15 +105,12 @@ def mos2(polygon_um, a_um: float = 0.08, z_um: float = 0.0,
     for i, j in pairs:
         bonds.append((mo[i], s_up[j]))
         bonds.append((mo[i], s_dn[j]))
+    # GEOMETRY ONLY (see graphene above)
     return {"species": [
-                {"name": "Mo", "positions": mo,
-                 "radius_um": a_um * 0.22,
-                 "color": (0.29, 0.46, 0.58, 1.0)},
+                {"name": "Mo", "positions": mo},
                 {"name": "S",
-                 "positions": np.vstack([s_up, s_dn]),
-                 "radius_um": a_um * 0.16,
-                 "color": (0.95, 0.83, 0.28, 1.0)}],
-            "bonds": bonds, "bond_radius_um": a_um * 0.05}
+                 "positions": np.vstack([s_up, s_dn])}],
+            "bonds": bonds, "a_um": a_um}
 
 
 MOTIFS = {"graphene": graphene, "mos2": mos2}

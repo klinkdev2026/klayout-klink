@@ -38,6 +38,13 @@
     "selection.send_context",
     "selection.clear",
     "selection.set_box",
+    "annotation.list",
+    "annotation.get",
+    "annotation.insert",
+    "annotation.update",
+    "annotation.delete",
+    "annotation.clear",
+    "annotation.measure",
     "photonics.import_gf",
     "photonics.connect",
     "photonics.reroute",
@@ -113,7 +120,9 @@
     "geometry.density",
     "view.highlight",
     "imaging.xsection_run",
-    "imaging.sem_top"
+    "imaging.sem_top",
+    "annotation.list",
+    "annotation.get"
    ],
    "harness_tools": [
     "file-read",

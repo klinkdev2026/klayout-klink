@@ -19,6 +19,7 @@ from . import selection_m  # noqa: F401
 from . import edit_m  # noqa: F401
 from . import view_m  # noqa: F401
 from . import marker_m  # noqa: F401
+from . import annotation_m  # noqa: F401
 from . import d25_m  # noqa: F401
 from . import events_m  # noqa: F401
 from . import exec_m  # noqa: F401

@@ -1209,7 +1209,7 @@
   },
   {
     "name": "geometry.boolean",
-    "description": "Boolean between two layer sources: `op` is one of and/or/xor/not (not = a minus b). `a` and `b` are {cell, layer} — cells may differ (defaults: b.cell = a.cell), hierarchy is included and inputs are merged. Returns polygon_count / area_um2 / bbox_um of the result; pass `write_to` {cell?, layer} to ALSO write the result polygons (one undo step; default target cell = a.cell). Typical checks: overlap between two layers (op=and, area>0 means a short/contact), difference against an intent region (op=xor, area==0 means exact match).",
+    "description": "Boolean between two layer sources: `op` is one of and/or/xor/not (not = a minus b). `a` and `b` are {cell, layer} — cells may differ (defaults: b.cell = a.cell), hierarchy is included and inputs are merged. Returns polygon_count / area_um2 / bbox_um of the result; pass `write_to` {cell?, layer} to ALSO write the (target cell is created if missing; the result says cell_created) result polygons (one undo step; default target cell = a.cell). Typical checks: overlap between two layers (op=and, area>0 means a short/contact), difference against an intent region (op=xor, area==0 means exact match).",
     "params": {
       "type": "object",
       "required": [
@@ -3717,6 +3717,328 @@
     ]
   },
   {
+    "name": "annotation.list",
+    "description": "List the rulers (annotations) in the current view — including the ones the USER drew by hand. Rulers live in the view, not in the layout: they are invisible to selection.get and to any saved GDS, so this is the only way to read them. Each entry carries the FULL points_um list and the segment count; a multi-segment ruler is not reducible to a start/end pair.",
+    "params": {
+      "type": "object",
+      "properties": {
+        "selected_only": {
+          "type": "boolean",
+          "default": false,
+          "description": "Only rulers selected in the GUI."
+        },
+        "category": {
+          "type": "string",
+          "description": "Only rulers with this category tag."
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5000,
+          "default": 500
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "count": {
+          "type": "integer"
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "rulers": {
+          "type": "array"
+        }
+      }
+    },
+    "tags": [
+      "annotation",
+      "read"
+    ]
+  },
+  {
+    "name": "annotation.get",
+    "description": "One ruler by id (see annotation.list). Errors if the id is not a live ruler in the current view.",
+    "params": {
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer"
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "ruler": {
+          "type": "object"
+        }
+      }
+    },
+    "tags": [
+      "annotation",
+      "read"
+    ]
+  },
+  {
+    "name": "annotation.insert",
+    "description": "Draw a ruler in the current view. This is the agent->user pointing channel for a LINE (view.highlight points at an AREA): propose a cross-section cut, mark a spacing, show where a route will go — the user can then drag the ruler and you re-read it with annotation.list.",
+    "params": {
+      "type": "object",
+      "required": [
+        "points_um"
+      ],
+      "properties": {
+        "points_um": {
+          "type": "array",
+          "description": "Ruler points in MICRONS: [[x1,y1],[x2,y2],...]. More than two points makes a multi-segment ruler.",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "minItems": 2
+        },
+        "text": {
+          "type": "string",
+          "description": "Literal label (stored as the ruler format string)."
+        },
+        "fmt": {
+          "type": "string",
+          "description": "KLayout format string with measurement placeholders; overrides `text` if both are given."
+        },
+        "style": {
+          "type": "string",
+          "description": "ruler | line | arrow_end | arrow_start | arrow_both | cross_start | cross_end | cross_both"
+        },
+        "outline": {
+          "type": "string",
+          "description": "diag | xy | yx | diag_xy | diag_yx | box | ellipse | angle | radius"
+        },
+        "angle_constraint": {
+          "type": "string",
+          "description": "any | global | horizontal | vertical | ortho | diagonal"
+        },
+        "category": {
+          "type": "string",
+          "description": "Free tag. klink stamps 'klink' by default so agent-drawn rulers can be told apart from the user's."
+        },
+        "snap": {
+          "type": "boolean",
+          "description": "Snap to objects when moved."
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "ruler": {
+          "type": "object"
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "annotation",
+      "write"
+    ]
+  },
+  {
+    "name": "annotation.update",
+    "description": "Change an existing ruler in place (only the properties you pass). Use annotation.list first to get the id.",
+    "params": {
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "points_um": {
+          "type": "array",
+          "description": "Ruler points in MICRONS: [[x1,y1],[x2,y2],...]. More than two points makes a multi-segment ruler.",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "minItems": 2
+        },
+        "text": {
+          "type": "string",
+          "description": "Literal label (stored as the ruler format string)."
+        },
+        "fmt": {
+          "type": "string",
+          "description": "KLayout format string with measurement placeholders; overrides `text` if both are given."
+        },
+        "style": {
+          "type": "string",
+          "description": "ruler | line | arrow_end | arrow_start | arrow_both | cross_start | cross_end | cross_both"
+        },
+        "outline": {
+          "type": "string",
+          "description": "diag | xy | yx | diag_xy | diag_yx | box | ellipse | angle | radius"
+        },
+        "angle_constraint": {
+          "type": "string",
+          "description": "any | global | horizontal | vertical | ortho | diagonal"
+        },
+        "category": {
+          "type": "string",
+          "description": "Free tag. klink stamps 'klink' by default so agent-drawn rulers can be told apart from the user's."
+        },
+        "snap": {
+          "type": "boolean",
+          "description": "Snap to objects when moved."
+        },
+        "id": {
+          "type": "integer"
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "ruler": {
+          "type": "object"
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "annotation",
+      "write"
+    ]
+  },
+  {
+    "name": "annotation.delete",
+    "description": "Delete rulers by id or by category tag. Pass exactly one of `id` / `category`. To wipe every ruler use annotation.clear.",
+    "params": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "category": {
+          "type": "string",
+          "description": "Delete every ruler carrying this tag (e.g. 'klink' for agent-drawn ones)."
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "deleted": {
+          "type": "integer"
+        },
+        "ids": {
+          "type": "array"
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "annotation",
+      "write"
+    ]
+  },
+  {
+    "name": "annotation.clear",
+    "description": "Delete EVERY ruler in the current view, the user's included. Destructive: requires confirm=true. Prefer annotation.delete{category:'klink'} to clear only agent-drawn ones.",
+    "params": {
+      "type": "object",
+      "properties": {
+        "confirm": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "deleted": {
+          "type": "integer"
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "annotation",
+      "write"
+    ]
+  },
+  {
+    "name": "annotation.measure",
+    "description": "Auto-measure ruler at a seed point: KLayout looks outward from the point along the allowed directions, finds the nearest edges on VISIBLE layers, and pulls a ruler between them. This is 'how wide is this gap / this line' without knowing any coordinates. If nothing is found nearby the measurement fails and the degenerate zero-length ruler is removed again (measured=false).",
+    "params": {
+      "type": "object",
+      "required": [
+        "point_um"
+      ],
+      "properties": {
+        "point_um": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "Seed point [x, y] in microns."
+        },
+        "angle_constraint": {
+          "type": "string",
+          "default": "any",
+          "description": "Search directions: any | horizontal | vertical | ortho | diagonal | global"
+        },
+        "category": {
+          "type": "string",
+          "default": "klink"
+        },
+        "keep_failed": {
+          "type": "boolean",
+          "default": false,
+          "description": "Keep the zero-length ruler when the measurement finds nothing."
+        }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "measured": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "integer"
+        },
+        "ruler": {
+          "type": "object"
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "annotation",
+      "write"
+    ]
+  },
+  {
     "name": "view.show_25d",
     "description": "Open KLayout's native 2.5d (extruded 3D) viewer and feed it a display list: one entry per material with a layer, a z range in microns, and optional name/colors. Layers are read from a cell of the active layout (default: the current cell). klink ships no z heights - thickness/elevation are process facts the caller owns (derive the list with klink.stack25d.stack_displays from your StackSpec + z table). Requires a KLayout build with OpenGL.",
     "params": {
@@ -4065,7 +4387,7 @@
   },
   {
     "name": "drc.run",
-    "description": "Escape hatch: run arbitrary DRC DSL script code in KLayout's integrated Ruby DRC engine. Accepts DRC DSL source (Ruby-like syntax with source()/input()/report()/etc.) and executes it.\n\nIf the script includes source() it runs in standalone mode (against the specified file). If source() is omitted it runs in interactive mode against the currently loaded layout.\n\nOptional variables ($input_layout, $output_rdb, $topcell) are injected into the Ruby interpreter so the script can reference them without hardcoding paths.\n\nstdout/stderr are captured and returned as strings. If output_rdb is specified and the script generates it, the RDB is parsed and a violation summary is returned.\n\nExceptions in DRC scripts do NOT fail the RPC - they come back inside result.exception with any stdout/stderr captured before the error. Only malformed requests (missing code, oversized) return ok=false.",
+    "description": "Escape hatch: run arbitrary DRC DSL script code in KLayout's integrated Ruby DRC engine. Accepts DRC DSL source (Ruby-like syntax with source()/input()/report()/etc.) and executes it.\n\nreport() TAKES A SECOND ARGUMENT: report(\"title\", $output_rdb). Without it the RDB is never written and rdb_summary comes back empty with no error -- the run looks clean because nothing was recorded, not because nothing was found.\nIf the script includes source() it runs in standalone mode (against the specified file). If source() is omitted it runs in interactive mode against the currently loaded layout.\n\nOptional variables ($input_layout, $output_rdb, $topcell) are injected into the Ruby interpreter so the script can reference them without hardcoding paths.\n\nstdout/stderr are captured and returned as strings. If output_rdb is specified and the script generates it, the RDB is parsed and a violation summary is returned.\n\nExceptions in DRC scripts do NOT fail the RPC - they come back inside result.exception with any stdout/stderr captured before the error. Only malformed requests (missing code, oversized) return ok=false.",
     "params": {
       "type": "object",
       "required": [
@@ -4086,7 +4408,7 @@
         },
         "top_cell": {
           "type": "string",
-          "description": "Optional top cell name override. Injected as Ruby variable $topcell. The script can use source($input_layout, $topcell) to reference it."
+          "description": "Optional top cell name override. Injected as Ruby variable $topcell, for use as source($input_layout, $topcell) in STANDALONE mode. It does NOT choose the cell in interactive mode (no source() line): there the engine audits whatever cell the view shows, so passing a different top_cell is REFUSED rather than silently auditing the wrong cell. Use view.show_cell first."
         },
         "result_mode": {
           "type": "string",
@@ -4176,6 +4498,14 @@
         },
         "wall_ms": {
           "type": "number"
+        },
+        "audited_cell": {
+          "type": "string",
+          "description": "The cell the engine actually audited (interactive mode audits the cell the view shows). 'null' when it could not be determined."
+        },
+        "mode": {
+          "type": "string",
+          "description": "'interactive' (no source() line; audits the loaded layout) or 'standalone' (source() against a file)."
         }
       }
     },

@@ -71,9 +71,13 @@ STARTERS: dict[str, list[tuple[str, str]]] = {
         ("imaging", "demo_stack.py"),
         ("imaging", "demo.pyxs"),
         ("imaging", "xsection_demo.py"),
+        ("imaging", "section_style.py"),
         ("imaging", "render3d_demo.py"),
+        ("imaging", "viewer_style.py"),
         ("imaging", "sem_demo.py"),
+        ("imaging", "sem_style.py"),
         ("imaging", "blender_demo.py"),
+        ("imaging", "blender_style.py"),
         ("imaging", "README.md"),
     ],
     "ledit_bridge": [
