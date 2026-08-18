@@ -46,15 +46,47 @@ LAYERS = [
 GATE_W_UM = 0.20          # poly finger width (drawn gate length)
 GATE_PITCH_UM = 1.30      # finger to finger
 DIFF_H_UM = 1.20          # active height (device width)
-DIFF_MARGIN_UM = 0.30     # active beyond the outer fingers
+# Active beyond the outer fingers. It has to hold a whole contact column:
+# CONTACT_UM + 2 * CONTACT_ENC_UM. Too small and the end source/drain
+# contacts land off the silicon -- an error you cannot see by eye.
+DIFF_MARGIN_UM = 0.60
 IMPLANT_ENC_UM = 0.55     # n+ enclosure of active
 POLY_OVERHANG_UM = 0.35   # poly beyond active, top and bottom
 CONTACT_UM = 0.24
 CONTACT_ENC_UM = 0.10     # metal enclosure of contact
+GATE_CLEAR_UM = 0.06      # source/drain metal kept off the poly
+# A contact is WIDER than the gate it lands on (0.24 > 0.20), so the poly
+# gets a landing pad above the active. Without it the gate contact sits on
+# nothing -- the classic way a drawn gate ends up unconnected.
+POLY_PAD_ENC_UM = 0.10    # poly enclosure of the gate contact
 
 
 def box(layer, x0, y0, x1, y1):
     return {"kind": "box", "layer": layer, "bbox_um": [x0, y0, x1, y1]}
+
+
+def gate_x(f):
+    """Left edge of finger `f`."""
+    return DIFF_MARGIN_UM + f * GATE_PITCH_UM
+
+
+def diff_width(fingers):
+    return (fingers - 1) * GATE_PITCH_UM + GATE_W_UM + 2 * DIFF_MARGIN_UM
+
+
+def sd_regions(fingers):
+    """The x-spans of the source/drain regions: the gaps BETWEEN the gates
+    plus the two ends. Deriving them from the gate positions is the whole
+    trick -- placing straps on a fixed pitch instead lets them ride over a
+    gate (shorting source to drain through the metal) or slide off the
+    active entirely, and neither is visible at a glance.
+    """
+    edges = [0.0]
+    for f in range(fingers):
+        edges.append(gate_x(f))                 # region ends where the gate starts
+        edges.append(gate_x(f) + GATE_W_UM)     # next one starts after it
+    edges.append(diff_width(fingers))
+    return [(edges[i], edges[i + 1]) for i in range(0, len(edges), 2)]
 
 
 def two_finger_mosfet(fingers=2):
@@ -62,36 +94,49 @@ def two_finger_mosfet(fingers=2):
     if fingers < 1:
         raise ValueError("fingers must be >= 1")
 
-    # source/drain columns sit between and outside the gate fingers
-    diff_w = (fingers - 1) * GATE_PITCH_UM + GATE_W_UM + 2 * DIFF_MARGIN_UM
+    diff_w = diff_width(fingers)
     items = [
         box("NPLUS", -IMPLANT_ENC_UM, -IMPLANT_ENC_UM,
             diff_w + IMPLANT_ENC_UM, DIFF_H_UM + IMPLANT_ENC_UM),
         box("ACTIVE", 0.0, 0.0, diff_w, DIFF_H_UM),
     ]
 
+    pad_y0 = DIFF_H_UM + GATE_CLEAR_UM
+    pad_y1 = pad_y0 + CONTACT_UM + 2 * POLY_PAD_ENC_UM
+    pad_w = CONTACT_UM + 2 * POLY_PAD_ENC_UM
     for f in range(fingers):
-        gx = DIFF_MARGIN_UM + f * GATE_PITCH_UM
+        gx = gate_x(f)
         items.append(box("POLY", gx, -POLY_OVERHANG_UM,
-                         gx + GATE_W_UM, DIFF_H_UM + POLY_OVERHANG_UM))
+                         gx + GATE_W_UM, pad_y1))
+        # landing pad: the finger alone is narrower than the contact
+        pcx = gx + GATE_W_UM / 2.0
+        items.append(box("POLY", pcx - pad_w / 2.0, pad_y0,
+                         pcx + pad_w / 2.0, pad_y1))
 
-    # one contacted strap per source/drain column (fingers + 1 of them)
-    strap_w = GATE_PITCH_UM - GATE_W_UM - 2 * CONTACT_ENC_UM
-    for c in range(fingers + 1):
-        cx = c * GATE_PITCH_UM + DIFF_MARGIN_UM / 2.0
-        items.append(box("MET1", cx, CONTACT_ENC_UM,
-                         cx + strap_w, DIFF_H_UM - CONTACT_ENC_UM))
-        # two contacts up the column, inside the metal enclosure
+    # one contacted strap per source/drain region, inset off the poly
+    for x0, x1 in sd_regions(fingers):
+        sx0 = x0 + (GATE_CLEAR_UM if x0 > 0 else 0.0)
+        sx1 = x1 - (GATE_CLEAR_UM if x1 < diff_w else 0.0)
+        if sx1 - sx0 + 1e-9 < CONTACT_UM + 2 * CONTACT_ENC_UM:
+            raise ValueError(
+                "source/drain region %.3f..%.3f is too narrow for a contact; "
+                "raise DIFF_MARGIN_UM or GATE_PITCH_UM" % (x0, x1))
+        items.append(box("MET1", sx0, CONTACT_ENC_UM,
+                         sx1, DIFF_H_UM - CONTACT_ENC_UM))
+        cx = (sx0 + sx1) / 2.0 - CONTACT_UM / 2.0      # centred in the strap
         for row in (0.30, 0.70):
             cy = DIFF_H_UM * row - CONTACT_UM / 2.0
-            items.append(box("CONTACT",
-                             cx + CONTACT_ENC_UM, cy,
-                             cx + CONTACT_ENC_UM + CONTACT_UM, cy + CONTACT_UM))
+            items.append(box("CONTACT", cx, cy,
+                             cx + CONTACT_UM, cy + CONTACT_UM))
 
-    # gate bus tying the fingers together above the device
-    bus_y = DIFF_H_UM + POLY_OVERHANG_UM
-    items.append(box("MET1", -DIFF_MARGIN_UM, bus_y,
-                     diff_w + DIFF_MARGIN_UM, bus_y + 0.30))
+    # gate bus: one contact per finger, landing inside its poly pad
+    cy0 = pad_y0 + POLY_PAD_ENC_UM
+    for f in range(fingers):
+        pcx = gate_x(f) + GATE_W_UM / 2.0
+        items.append(box("CONTACT", pcx - CONTACT_UM / 2.0, cy0,
+                         pcx + CONTACT_UM / 2.0, cy0 + CONTACT_UM))
+    items.append(box("MET1", -DIFF_MARGIN_UM, cy0 - CONTACT_ENC_UM,
+                     diff_w + DIFF_MARGIN_UM, cy0 + CONTACT_UM + CONTACT_ENC_UM))
     return items
 
 

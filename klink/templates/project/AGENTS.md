@@ -35,8 +35,14 @@ Read-only (shipped references — run them, don't edit them):
   LVS, P&R, fill/boolean/density, gdsfactory, imaging, device fitting. If it
   does: read the cells out (`ledit.import_cell_tree`), do the work with the
   real klink API, push the result back (`ledit.push_cell_tree`, or a GDS via
-  `import_gds`). Rebuilding klink's capabilities out of bridge `draw` calls
-  is the mistake this rule exists to prevent. A KLayout PCell arrives in
+  `import_gds`). The mistake this rule prevents is not only rebuilding a
+  router out of `draw` calls — the quieter one is reading coordinates with
+  `get_cell` and reasoning about them in Python because "it is only
+  geometry". Measured: an agent doing exactly that reported a CRITICAL
+  DESIGN ERROR on a correct NMOS ("n+ covers the gate"), which is simply how
+  a self-aligned device is drawn. Geometry questions carry PROCESS meaning;
+  `geometry.boolean` / `drc_run` encode the process, first-principles
+  reasoning invents rules. A KLayout PCell arrives in
   L-Edit as static geometry unless you port it —
   `tcell_workflows.py from_pcell` scaffolds the T-Cell generator.
 - `recipes/README.md` — the per-domain menu of what klink can build.

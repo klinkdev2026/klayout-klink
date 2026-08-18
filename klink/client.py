@@ -162,6 +162,123 @@ class KLinkClient:
     def methods(self) -> dict:
         return self.call("meta.methods")
 
+    # ------------------------------------------------------------------
+    # Discoverability
+    #
+    # The hand-written wrappers below do not map onto RPC names by any rule
+    # a caller could guess: `view.new_tab` is `new_tab`, `shape.query` is
+    # `shape_query`, `cell.create` is `cell_create`. Guessing wrong gives
+    # either AttributeError or "takes 2 positional arguments but 3 were
+    # given" -- neither says what to call or what to pass. That friction is
+    # enough to make an agent abandon klink and hand-roll the work instead,
+    # which is exactly the outcome the routing rules try to prevent. So:
+    # accept the RPC name itself as a method, and let the client answer
+    # questions about its own surface from the LIVE schema.
+    # ------------------------------------------------------------------
+
+    def _rpc_index(self) -> Dict[str, dict]:
+        """{rpc name -> spec} from the live server, fetched once."""
+        if getattr(self, "_rpc_index_cache", None) is None:
+            try:
+                specs = self.methods().get("methods", [])
+            except Exception:
+                return {}
+            self._rpc_index_cache = {m["name"]: m for m in specs}
+        return self._rpc_index_cache
+
+    @staticmethod
+    def _as_rpc_names(attr: str) -> List[str]:
+        """Candidate RPC names for an attribute like `view_new_tab`."""
+        out = [attr.replace("_", ".", 1), attr]
+        seen, uniq = set(), []
+        for n in out:
+            if n not in seen:
+                seen.add(n)
+                uniq.append(n)
+        return uniq
+
+    def __getattr__(self, attr: str):
+        # Only reached when normal attribute lookup fails.
+        if attr.startswith("_"):
+            raise AttributeError(attr)
+        index = self._rpc_index()
+        for rpc in self._as_rpc_names(attr):
+            if rpc in index:
+                def _invoke(_rpc=rpc, **kwargs):
+                    return self.call(_rpc, kwargs)
+                _invoke.__name__ = attr
+                _invoke.__doc__ = (
+                    "Direct call to RPC " + repr(rpc) + " (keyword args "
+                    "only). client.help(" + repr(rpc) + ") lists its "
+                    "parameters and result keys.")
+                return _invoke
+        raise AttributeError(self._attr_hint(attr))
+
+    def _attr_hint(self, attr: str) -> str:
+        import difflib
+        wrappers = [n for n in dir(type(self)) if not n.startswith("_")]
+        rpcs = list(self._rpc_index())
+        near = (difflib.get_close_matches(attr, wrappers, n=3, cutoff=0.6)
+                + difflib.get_close_matches(attr.replace("_", ".", 1), rpcs,
+                                            n=3, cutoff=0.6))
+        msg = "KLinkClient has no " + repr(attr)
+        if near:
+            msg += "; did you mean " + ", ".join(repr(n) for n in near)
+        if not rpcs:
+            msg += " (not connected, so RPC names could not be checked)"
+        else:
+            msg += (". Any RPC name also works as a method, e.g. "
+                    "client.view_new_tab(...); client.help('<name>') prints "
+                    "its parameters and result keys")
+        return msg
+
+    def help(self, name: str = "", *, contains: str = "") -> str:
+        """Describe an RPC (or list matching ones) from the LIVE schema.
+
+        Answers the two questions a wrapper signature cannot: which
+        parameters are valid, and which keys come back.
+
+            client.help("shape.query")     # or "shape_query"
+            client.help(contains="cell")   # list candidates
+        """
+        nl = chr(10)
+        index = self._rpc_index()
+        if not index:
+            return ("not connected: call connect() first, then help() reads "
+                    "the live method schema")
+        if not name:
+            names = sorted(n for n in index if contains in n)
+            head = str(len(names)) + " RPCs"
+            if contains:
+                head += " matching " + repr(contains)
+            return head + ":" + nl + "  " + (nl + "  ").join(names)
+        rpc = name if name in index else next(
+            (n for n in self._as_rpc_names(name) if n in index), "")
+        if not rpc:
+            near = sorted(n for n in index
+                          if name.replace("_", ".", 1) in n or name in n)
+            out = "no RPC named " + repr(name)
+            if near:
+                out += "; close: " + ", ".join(near[:5])
+            return out
+        spec = index[rpc]
+        lines = [rpc]
+        if spec.get("description"):
+            lines.append("  " + str(spec["description"]))
+        params = (spec.get("params") or {}).get("properties") or {}
+        required = set((spec.get("params") or {}).get("required") or [])
+        if params:
+            lines.append("  params:")
+            for k in sorted(params):
+                t = str(params[k].get("type", ""))
+                d = str(params[k].get("description", ""))
+                flag = "(required) " if k in required else ""
+                lines.append("    %-18s %-8s %s%s" % (k, t, flag, d))
+        returns = (spec.get("returns") or {}).get("properties") or {}
+        if returns:
+            lines.append("  returns: " + ", ".join(sorted(returns)))
+        return nl.join(lines)
+
     def layout_info(self, verbosity: str = "normal") -> dict:
         return self.call("layout.info", {"verbosity": verbosity})
 
