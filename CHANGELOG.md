@@ -4,6 +4,39 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project does not use dated entries (versions only).
 
+## 0.3.7
+
+- the L-Edit starter drew a wrong device, and its tests could not see it.
+  `draw_device_demo.py` placed the source/drain straps on a fixed pitch
+  instead of deriving them from where the gates actually are: for two
+  fingers that put one strap across each gate (metal shorting source to
+  drain) and a third entirely off the active, with two contacts connected to
+  nothing. The gate was never contacted either -- a contact is WIDER than
+  the gate it lands on, so the poly now gets a landing pad. Strap positions
+  now come from the gate coordinates, and a source/drain region too narrow
+  to hold a contact plus its enclosure raises instead of drawing something
+  subtly wrong. The tests that passed the broken device now also ask whether
+  the straps stay ON the active, whether they clear the gates, and whether
+  every gate is contacted, at 1, 2 and 4 fingers.
+- the client answers "what do I call, and what comes back". Wrapper names do
+  not map onto RPC names by any derivable rule (`view.new_tab` is `new_tab`,
+  `shape.query` is `shape_query`), and guessing wrong produced either
+  `AttributeError` or "takes 2 positional arguments but 3 were given" --
+  neither of which names the fix. Now: any RPC name works as a method
+  (`client.view_new_tab(...)`), `client.help("shape.query")` prints the live
+  schema including the RESULT keys a signature can never show, and an
+  unknown attribute suggests near matches and points at `help()`. This is a
+  correctness feature: an agent that cannot work out the API abandons klink
+  and hand-rolls the work instead.
+- the routing rule now carries the case that proves it. "Do not rebuild
+  klink's capability yourself" was read narrowly as being about `draw`
+  calls, so reading coordinates with `get_cell` and reasoning about them in
+  Python looked exempt. Measured: an agent doing exactly that reported a
+  CRITICAL DESIGN ERROR on a correctly drawn NMOS ("n+ covers the gate"),
+  which is simply how a self-aligned device is drawn. Geometry questions
+  carry PROCESS meaning; a tool that encodes the process does not invent
+  rules the way first-principles reasoning does.
+
 ## 0.3.6
 
 - non-ASCII paths work. L-Edit's API is ANSI (the system codepage) while

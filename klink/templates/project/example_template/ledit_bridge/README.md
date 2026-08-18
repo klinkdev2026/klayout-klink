@@ -226,15 +226,42 @@ when a user asks for something *in L-Edit*, the first question is not
 | check the layout / run DRC / does it match the netlist | `drc_run`, `structdevice.lvs_check` |
 | place a netlist, do P&R | `structdevice.build_from_netlist` |
 | fill a region, boolean ops, density, XOR two cells | `cell.fill_region`, `geometry.*` |
+| **is A inside B? do these layers overlap? is every contact covered?** | `geometry.boolean`, `drc_run` — *not* rectangle math you write yourself |
 | generate a photonic circuit / gdsfactory component | `photonics.import_gf`, `routing.gdsfactory_ports` |
 | a cross-section, a 3D view, an SEM-style figure | `imaging.*` |
 | turn measured geometry into a parametric device | `pcell.register_fitted`, `tcell_workflows.py fit` |
 | draw a device / edit shapes / manage designs | the bridge directly — this is its job |
 
-Doing it the other way round — reimplementing klink's routing or DRC out
-of `draw` calls — is the failure mode this section exists to prevent. If
-klink has no such capability either, say so plainly instead of
-approximating it with primitives.
+### The failure mode, concretely
+
+Reimplementing klink's capability yourself is what this section exists to
+prevent — and it does NOT only mean rebuilding a router out of `draw`
+calls. The commoner temptation is quieter: **read the coordinates out with
+`get_cell` and reason about them in Python.** That looks harmless for a
+question as simple as "is this box inside that one", which is exactly why
+it slips through.
+
+It was measured. A capable agent was asked to check a two-finger NMOS and
+chose "Python + coordinate math over KLayout tools, because the check is
+purely geometric". Its rectangle arithmetic was correct. Its conclusion was
+not: it reported a **CRITICAL DESIGN ERROR — "NPLUS covers the gate, the
+transistor can never turn off"**, which is simply how a self-aligned device
+is drawn. The n+ SELECT mask is meant to enclose the whole device; the poly
+blocks the implant, so no channel doping results. Every standard PDK draws
+it that way. Hand-rolled geometry gave the user a confident, alarming,
+wrong answer.
+
+The lesson is not that the arithmetic was hard. It is that geometry
+questions carry PROCESS meaning, and a tool that encodes the process
+(a DRC deck, `geometry.boolean` against the real layers) does not invent
+rules the way an agent reasoning from first principles will. 手搓矩形运算
+算得对不代表结论对——几何问题带着工艺含义，凭常识发明规则就会像这样自信
+地报出一个假的「致命错误」。
+
+So: if the question is about geometry, route it. If klink has no such
+capability either, say so plainly instead of approximating it with
+primitives — and if you do fall back to your own analysis, label the answer
+as unverified rather than as a finding.
 
 Two things do NOT survive the round trip automatically, so decide before
 you start: KLayout **PCells become static geometry** in L-Edit unless you
