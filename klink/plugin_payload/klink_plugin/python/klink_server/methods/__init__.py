@@ -28,5 +28,7 @@ from . import lvs_m  # noqa: F401
 from . import recorder_m  # noqa: F401
 from . import port_m  # noqa: F401
 from . import anchor_m  # noqa: F401
+from . import region_m  # noqa: F401
+from . import intent_m  # noqa: F401
 from . import transfer_m  # noqa: F401
 from . import session_m  # noqa: F401

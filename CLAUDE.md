@@ -244,13 +244,33 @@ before running integration tests, or the live server returns
 - `klink/mcp/` — MCP bridge
 - `klink/mcp/catalog.py` — MCP tool catalog + `find_tools`
 - `klink/domains/` — domain packages (photonics, nanodevice, structdevice,
-  measurement, imaging), each behind one-call orchestrators. The imaging
+  measurement, imaging, fabrication, layoutintent), each behind one-call
+  orchestrators. The imaging
   domain (`imaging.xsection_run` / `render3d` / `sem_top` / `blender`)
   turns one `klink_visual_stack_v1` declaration into cross-sections,
   self-contained 3D viewer pages, SEM-style views and Blender figures;
   stacks/.pyxs recipes are example-owned (`examples_klink/public/imaging/`),
   heavy deps optional with instructive install errors, and `.pyxs`
-  recipes are trusted Python executed in-process
+  recipes are trusted Python executed in-process.
+  The layoutintent domain is the region-driven generation loop: the user
+  drags box/ellipse RULERS around an area, `region.claim` converts them
+  into ONE `klink_Region` marker PCell (reserved layer, default 999/10,
+  consumed rulers, single connected component), then `intent.prepare`
+  plans a pitch grid of an existing cell with unique physical number
+  labels — obstacles are whatever the caller declares (`obstacle_layers`
+  / `obstacle_cells` / `extra_obstacles_um` + `clearance_um`; no
+  declaration needs `allow_empty_obstacles: true`), labels go in a text
+  SLOT circled inside the unit cell (`label.slot_region`, auto-fit font)
+  or at an explicit offset, and numbering is prefix-style or any
+  user-defined grid notation (`numbering.pattern` with `{row}/{col}/
+  {index}`). `intent.apply` commits in ONE transaction (single Ctrl+Z);
+  `intent.regenerate` atomically swaps ONLY this intent's `KLINK_I_*`
+  container and refuses hand-edited (diverged) outputs.
+  `layout.export_clean` is the delivery exit: explicit layer allowlist,
+  all markers stripped by PCell type, output re-read and verified.
+  See `docs/public/layout-intent.md`; runnable demos
+  `examples_klink/public/features/region_claim_fill.py` and
+  `region_array_labeled.py`
 - `klink/spec/` — klink.spec.json v1 contract
 - `klink_plugin/python/klink_server/` — KLayout in-process server
 - `examples_klink/public/` — the open, open-box-runnable example gallery

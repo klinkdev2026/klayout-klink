@@ -156,9 +156,9 @@ DOMAINS: "OrderedDict[str, dict]" = OrderedDict([
         ),
     }),
     ("ports_and_anchors", {
-        "title": "Ports & anchors (routing markers)",
-        "summary": "Mark, list, move, repair the Port and Anchor PCells that the routing backends consume.",
-        "prefixes": ["port", "anchor"],
+        "title": "Ports, anchors & regions (marker PCells)",
+        "summary": "Mark, list, move, repair the Port/Anchor PCells the routing backends consume, and claim Intent Regions (ruler -> Region PCell).",
+        "prefixes": ["port", "anchor", "region"],
         "usage": (
             "Ports are net endpoints (klink_Port PCells: carry net + "
             "orientation + width). Anchors are routing constraints (klink_Anchor "
@@ -172,6 +172,17 @@ DOMAINS: "OrderedDict[str, dict]" = OrderedDict([
             "bad item rejects the whole batch) -- use it instead of looping "
             "port.mark for generated port arrays. The routing tools default "
             "port_layer=999/99, anchor_layer=999/1.\n"
+            "Regions are claimed AREAS (klink_Region PCells, default layer "
+            "999/10): the user drags box/ellipse RULERS around a spot, then "
+            "region.claim converts them into ONE Region PCell and consumes the "
+            "rulers. Roles: include=union, clip=intersect, exclude=subtract "
+            "(half-disc = ellipse clipped by a box; annulus = circle minus "
+            "circle). The result must be one connected component — islands are "
+            "rejected, claim them separately. region.list / get / unclaim / "
+            "set_layer; region.get returns the composed polygon (hull_um) — "
+            "feed it to cell.fill_region to fill the area, or bbox_um to "
+            "view.zoom_box to navigate there. The user can also click a Region "
+            "and SEND it; resolve via interaction.selection.*.\n"
             "Keepouts are NOT an anchor kind — they are obstacle LAYER(s) you "
             "pass to routing tools as obstacle_layers; pass your OWN design's "
             "keepout layer(s). klink ships NO default keepout layer (the generic "
@@ -183,6 +194,35 @@ DOMAINS: "OrderedDict[str, dict]" = OrderedDict([
             "These are the INPUT to routing_backends: mark Ports+Anchors, then "
             "call a routing.* tool. (port.harvest_blackbox is NOT here — it is a "
             "photonics PDK tool; see device_photonics.)"
+        ),
+    }),
+    ("layout_intent", {
+        "title": "Executable layout intent (Region -> deterministic array)",
+        "summary": "Turn a claimed Region into a validated, regenerable array with unique physical number labels.",
+        "prefixes": ["intent"],
+        "usage": (
+            "The Region-driven generation loop (needs a claimed Region — see "
+            "ports_and_anchors for region.claim). intent.prepare analyzes the "
+            "region's occupancy against YOUR declared obstacles — layers, "
+            "named device/blackbox cells (obstacle_cells, bbox per instance "
+            "occurrence), free-form polygons, optional clearance_um — plans "
+            "a pitch grid of ANY existing source cell (rotation_deg/mirror "
+            "supported) with unique polygon-text "
+            "number labels (real geometry, TextGenerator), validates "
+            "containment + obstacles + overlaps, and returns a preview with "
+            "plan_id + plan_hash. NOTHING is written until intent.apply "
+            "{plan_id, plan_hash, confirm: plan_id} commits it as ONE "
+            "transaction into a fresh KLINK_I_* container cell (single Ctrl+Z "
+            "undo; klink_id-stamped root). intent.regenerate re-plans with "
+            "parameter patches (e.g. numbering.start) and the next apply "
+            "atomically swaps ONLY this intent's container — hand-edited "
+            "outputs are detected (diverged) and never silently overwritten. "
+            "intent.list/get show stored intents + live condition; "
+            "intent.rebind re-points an intent at a region explicitly. All "
+            "layers, pitches, and sizes are required inputs: klink ships no "
+            "process defaults. Low-level: intent.apply_managed_plan / "
+            "intent.managed_digest are the plugin primitives the orchestrator "
+            "uses — do not call them directly in normal flows."
         ),
     }),
     ("routing_backends", {

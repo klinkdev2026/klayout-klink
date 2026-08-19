@@ -3,10 +3,13 @@ Layout / view inspection methods.
 
 M1 ships a single read-only method, `layout.info`, as the end-to-end
 smoke test for the protocol. More read methods (cell.list, shape.query,
-selection.get, ...) arrive in M2.
+selection.get, ...) arrive in M2. `layout.export_clean` is the
+fail-closed delivery exit (docs/REGION_INTENT_DESIGN.md sect.10.1).
 """
 
 from __future__ import annotations
+
+import os
 
 import pya
 
@@ -303,7 +306,7 @@ def layout_show_file(params, ctx):
                     pass
 
     finally:
-        # DO NOT clear _show_file_path here — the debounced events
+        # DO NOT clear _show_file_path here -- the debounced events
         # haven't fired yet. The recorder will clear it when it sees
         # the first non-file-load event.
         pass
@@ -445,7 +448,7 @@ def layout_clear(params, ctx):
 @method(
     "layout.import_file",
     description=(
-        "MERGE a layout file (GDS/OASIS/...) into the ACTIVE layout — the "
+        "MERGE a layout file (GDS/OASIS/...) into the ACTIVE layout -- the "
         "load-time mapping workflow (official LoadLayoutOptions), unlike "
         "layout.show_file which opens a file in its own tab. `layer_map` "
         "remaps layers while reading ([{from: 'L/D', to: 'L/D'}, ...]); "
@@ -566,7 +569,7 @@ def layout_import_file(params, ctx):
         # read created. Rationale (probe-verified on 0.30.7): a
         # view-attached layout ignores LoadLayoutOptions' layer map (a
         # detached pya.Layout in the same process honors it), so we move
-        # shapes instead — observable semantics match load-time mapping
+        # shapes instead -- observable semantics match load-time mapping
         # for the imported subtree.
         if parsed_map or not create_other:
             new_cell_objs = [
@@ -617,4 +620,202 @@ def layout_import_file(params, ctx):
         "layers_added": sorted("%d/%d" % ld
                                for ld in layers_after - layers_before),
         "on_conflict": conflict,
+    }
+
+
+# ---------------------------------------------------------------------------
+# layout.export_clean -- the fail-closed delivery exit
+# ---------------------------------------------------------------------------
+
+_KLINK_MARKER_LIBS = ("klink_port", "klink_anchor", "klink_region")
+_KLINK_KEEPOUT_LAYER = "900/0"
+
+
+def _reserved_layer_registry(ly) -> dict:
+    """The ACTUAL configured reserved layers (no wildcards -- marker layers
+    are configurable via *.set_layer, and a user PDK may genuinely use
+    999/x)."""
+    from .anchor_m import _DEFAULT_ANCHOR_LAYER_KEY
+    from .port_m import _DEFAULT_PORT_LAYER_KEY
+    from .region_m import _DEFAULT_REGION_LAYER, _DEFAULT_REGION_LAYER_KEY
+
+    def _meta(key, fallback):
+        try:
+            value = ly.meta_info_value(key)
+        except Exception:
+            value = None
+        return str(value) if value else fallback
+
+    return {
+        "port": _meta(_DEFAULT_PORT_LAYER_KEY, "999/99"),
+        "anchor": _meta(_DEFAULT_ANCHOR_LAYER_KEY, "999/1"),
+        "region": _meta(_DEFAULT_REGION_LAYER_KEY, _DEFAULT_REGION_LAYER),
+        "keepout": _KLINK_KEEPOUT_LAYER,
+    }
+
+
+def _parse_ld(layer_str: str):
+    try:
+        left, right = str(layer_str).split("/", 1)
+        return int(left), int(right)
+    except Exception:
+        raise RpcError(ErrorCode.BAD_PARAMS,
+                       "layer must be 'L/D' format, e.g. '10/0'")
+
+
+def _is_klink_marker_cell(cell) -> bool:
+    try:
+        if cell.pcell_declaration() is None:
+            return False
+        lib = cell.library()
+        return lib is not None and str(lib.name()) in _KLINK_MARKER_LIBS
+    except Exception:
+        return False
+
+
+@method(
+    "layout.export_clean",
+    description=(
+        "Fail-closed delivery export: write ONLY an explicit process-layer "
+        "allowlist to a new GDS/OASIS file, with every klink marker "
+        "(Port/Anchor/Region PCell instance) removed and PCell context "
+        "stripped. Works on a scratch copy -- the live layout is never "
+        "modified. The output is re-read and verified (no reserved layers, "
+        "no marker cells) before being atomically promoted; on any "
+        "verification failure the temp file is deleted and the call errors. "
+        "Refuses allowlists that include a reserved marker layer. Use "
+        "layout.save_file for full working archives; use THIS for masks "
+        "and hand-offs."
+    ),
+    params_schema={
+        "type": "object",
+        "required": ["path", "allowlist_layers"],
+        "properties": {
+            "path": {"type": "string",
+                     "description": "Output file (.gds/.oas)."},
+            "allowlist_layers": {
+                "type": "array", "minItems": 1,
+                "items": {"type": "string"},
+                "description": "EXACT process layers 'L/D' to export -- your "
+                               "project decides; klink ships no default.",
+            },
+            "cellview_index": {"type": "integer", "default": 0},
+        },
+    },
+    returns_schema={"type": "object"},
+    mutates=True,
+    long_running=True,
+    tags=["layout", "write"],
+)
+def layout_export_clean(params, ctx):
+    mw = _mw()
+    lv = mw.current_view()
+    if lv is None:
+        raise RpcError(ErrorCode.NO_LAYOUT, "no layout view open")
+    cv = lv.cellview(int(params.get("cellview_index", 0)))
+    if not cv.is_valid():
+        raise RpcError(ErrorCode.BAD_PARAMS, "cellview is not valid")
+    ly = cv.layout()
+
+    path = str(params["path"])
+    allow = [str(v) for v in params["allowlist_layers"]]
+    allow_pairs = {_parse_ld(v) for v in allow}
+
+    registry = _reserved_layer_registry(ly)
+    reserved_pairs = {name: _parse_ld(value)
+                      for name, value in registry.items()}
+    conflicts = [
+        "%s (%s)" % (registry[name], name)
+        for name, pair in reserved_pairs.items() if pair in allow_pairs
+    ]
+    if conflicts:
+        raise RpcError(
+            ErrorCode.BAD_PARAMS,
+            "allowlist contains reserved klink marker layer(s): %s"
+            % ", ".join(conflicts),
+            hint="reserved layers never go on masks; if your process truly "
+                 "uses this layer number, move the marker layer first "
+                 "(port.set_layer / anchor.set_layer / region.set_layer)",
+        )
+
+    # scratch copy -- the live layout is never touched
+    ly2 = ly.dup()
+
+    marker_cells = [c for c in ly2.each_cell() if _is_klink_marker_cell(c)]
+    marker_indexes = {c.cell_index() for c in marker_cells}
+    removed_instances = 0
+    for cell in ly2.each_cell():
+        if cell.cell_index() in marker_indexes:
+            continue
+        doomed = [inst for inst in cell.each_inst()
+                  if inst.cell is not None
+                  and inst.cell.cell_index() in marker_indexes]
+        for inst in doomed:
+            cell.erase(inst)
+            removed_instances += 1
+    for idx in sorted(marker_indexes, reverse=True):
+        try:
+            ly2.delete_cell(idx)
+        except Exception:
+            pass
+
+    opts = pya.SaveLayoutOptions()
+    ext = os.path.splitext(path)[1].lower()
+    opts.format = "OASIS" if ext in (".oas", ".oasis") else "GDS2"
+    opts.deselect_all_layers()
+    layers_written = []
+    for layer_str in allow:
+        layer, datatype = _parse_ld(layer_str)
+        idx = ly2.find_layer(pya.LayerInfo(layer, datatype))
+        if idx is not None:
+            opts.add_layer(int(idx), pya.LayerInfo(layer, datatype))
+            layers_written.append(layer_str)
+    opts.write_context_info = False
+    opts.no_empty_cells = True
+
+    tmp_path = path + ".klink_tmp"
+    ly2.write(tmp_path, opts)
+
+    # re-read and verify before promoting (fail-closed)
+    problems = []
+    try:
+        check = pya.Layout()
+        check.read(tmp_path)
+        out_pairs = set()
+        for idx in check.layer_indexes():
+            info = check.get_info(idx)
+            out_pairs.add((int(info.layer), int(info.datatype)))
+        illegal = out_pairs - allow_pairs
+        if illegal:
+            problems.append("output contains non-allowlisted layers: %s"
+                            % sorted(illegal))
+        reserved_hit = out_pairs & set(reserved_pairs.values())
+        if reserved_hit:
+            problems.append("output contains reserved layers: %s"
+                            % sorted(reserved_hit))
+    except Exception as exc:
+        problems.append("re-read failed: %s" % exc)
+
+    if problems:
+        try:
+            os.remove(tmp_path)
+        except Exception:
+            pass
+        raise RpcError(
+            ErrorCode.EXEC,
+            "clean export verification failed: %s" % "; ".join(problems),
+            hint="nothing was written to the final path",
+        )
+
+    os.replace(tmp_path, path)
+    return {
+        "path": path,
+        "format": opts.format,
+        "layers_written": layers_written,
+        "layers_requested": allow,
+        "marker_instances_removed": removed_instances,
+        "marker_cells_removed": len(marker_indexes),
+        "reserved_registry": registry,
+        "verified": True,
+        "file_size": os.path.getsize(path),
     }

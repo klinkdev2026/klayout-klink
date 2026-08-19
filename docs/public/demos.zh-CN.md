@@ -126,6 +126,51 @@ tile 数 × 脚印面积 + remaining == 区域面积。实测:手绘 253、整�
 扇形 140、带缝 60、疏排 64 个 tile,每行分毫不差。每次填充是一个撤销步;
 每个 tile 都是填充 cell 的 instance,层次干净。
 
+### Region 认领 + 填充 —— 圈一块区域，铺满它
+
+```bash
+python -m examples_klink.public.features.region_claim_fill
+```
+
+围着一块区域画 box/ellipse 标尺——这里是程序画的，实际使用中是手动拖出
+来的——然后 `region.claim` 把它们合并成**一个** `klink_Region` 标记
+PCell(一个 include box，一角被 exclude 椭圆咬掉一块)。`region.get` +
+`cell.fill_region` 随后在认领出的多边形里铺满一个演示 cell,
+`view.zoom_box` 导航过去。实测输出:认领面积 24810.9 µm²,填充放置 308
+个 tile,`remaining_area_um2` 2098.9(未覆盖的边缘——只放完整落在区域内
+的 tile)。见 [layout-intent.zh-CN.md](layout-intent.zh-CN.md)。
+
+### Region 里的编号传感器阵列 —— 招牌流程
+
+```bash
+python -m examples_klink.public.features.region_array_labeled
+```
+
+完整的可执行版图意图闭环:在单元 cell 内部圈一个文字 SLOT("编号写在这
+里"),再圈目标区域,两处都 `region.claim`,然后 `intent.prepare` 规划单元
+cell 的间距网格,每个副本都带唯一的物理编号、自动适配字号嵌进自己的
+slot——障碍物感知,此时还未写入任何东西。`intent.apply` 一次事务提交;
+`intent.regenerate` 原子替换的只是这个 intent 自己的输出。实测输出:
+区域面积 14000 µm²,预览放置 31 个(4 个因命中障碍物被拒),编号
+`S001`..`S031`,自动适配字号 1.59 µm;应用后 → 31 个实例、167 个编号
+多边形;用 `numbering.start=201` 重新生成 → 编号变为 `S201`..`S231`,
+容器整体替换,一次 apply 对应一次撤销。见
+[layout-intent.zh-CN.md](layout-intent.zh-CN.md)。
+
+### fabrication 位点网格 —— 确定性编号方案
+
+```bash
+python -m examples_klink.public.features.fabrication_sites   # [--port <会话端口>] [--keep]
+```
+
+与 layout-intent 的 Region 闭环共享的确定性网格/编号引擎,这里直接调用:
+一套圆形 die 的位点布局(直径 10 mm、间距 1 mm、边缘留白 500 µm)先
+dry-run 再 live 放置,每个位点带一个假器件实例加一个 prefix 编号标签
+(`D001`、`D002`、……),四个命名的 mark cell 放在 die 四角。实测输出:
+dry-run 与 live 的位点数一致(均为 61),插入 65 个实例(61 个器件 + 4 个
+mark),61 个编号文字 shape 落在 `6/0` 层。见
+[layout-intent.zh-CN.md](layout-intent.zh-CN.md)。
+
 ### 神经电极 harness
 
 ```bash

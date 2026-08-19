@@ -16,6 +16,7 @@ klink 的**正式发布文档**。小而精,面向采用这个工具的用户,�
 | [demos.zh-CN](demos.zh-CN.md) ([English](demos.md)) | 四个 demo 及各自的确切依赖 |
 | [control-plane.zh-CN](control-plane.zh-CN.md) ([English](control-plane.md)) | 类型化 RPC 面、MCP 工具目录(`klink.find_tools`)、批量写入、逃生舱 |
 | [interactive-workflows.zh-CN](interactive-workflows.zh-CN.md) ([English](interactive-workflows.md)) | SEND 选区记忆、多会话搬运、录制回放 |
+| [layout-intent.zh-CN](layout-intent.zh-CN.md) ([English](layout-intent.md)) | 从 KLayout 标尺得到 Region、可执行的编号阵列、clean export |
 
 ## 发布范围(当前)
 
