@@ -4,6 +4,15 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project does not use dated entries (versions only).
 
+## 0.5.1
+
+- `layout.export_clean` gains a `cells` parameter: scope the delivery
+  export to the named top cell(s) and their hierarchy. Without it every
+  top cell in the layout goes into the file -- on a shared session that
+  includes unrelated tops (found by the 0.5.0 release blind test). The
+  re-read verification now also refuses out-of-scope top cells, and an
+  unknown cell name is an instructive error.
+
 ## 0.5.0
 
 New `layoutintent` domain: circle an area with KLayout's own box/ellipse

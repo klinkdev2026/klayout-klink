@@ -82,8 +82,13 @@ Region/Port/Anchor 标记是工作用的辅助标记，画在保留层上——�
 进入最终 mask。`layout.export_clean` 是 fail-closed 的出口：
 
 ```text
-layout.export_clean {path: "out.gds", allowlist_layers: ["10/0", "20/0"]}
+layout.export_clean {path: "out.gds", allowlist_layers: ["10/0", "20/0"],
+                     cells: ["TOP"]}
 ```
+
+传 `cells` 可以把导出限定到这些 top cell 及其层级——不传的话，版图里
+**所有** top cell 都会进文件，包括共享会话里不相关的那些。注意生成的
+`KLINK_I_*` 容器 cell 是真实设计内容而非标记：导出会保留（并验证）它们。
 
 它按 PCell 类型（而不是靠猜层号）移除每一个 klink 标记，只写出你显式
 声明的层白名单，剥离 PCell 上下文，重新读回输出文件做校验，通过后才

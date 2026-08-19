@@ -683,7 +683,10 @@ def _is_klink_marker_cell(cell) -> bool:
         "modified. The output is re-read and verified (no reserved layers, "
         "no marker cells) before being atomically promoted; on any "
         "verification failure the temp file is deleted and the call errors. "
-        "Refuses allowlists that include a reserved marker layer. Use "
+        "Refuses allowlists that include a reserved marker layer. Pass "
+        "`cells` to export ONLY those top cells (+ their hierarchy) -- "
+        "without it the WHOLE layout's top cells go into the file, "
+        "including unrelated ones from a shared session. Use "
         "layout.save_file for full working archives; use THIS for masks "
         "and hand-offs."
     ),
@@ -698,6 +701,13 @@ def _is_klink_marker_cell(cell) -> bool:
                 "items": {"type": "string"},
                 "description": "EXACT process layers 'L/D' to export -- your "
                                "project decides; klink ships no default.",
+            },
+            "cells": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Top cell name(s) to export (each with its "
+                               "full hierarchy). Omit = every top cell in "
+                               "the layout.",
             },
             "cellview_index": {"type": "integer", "default": 0},
         },
@@ -759,9 +769,27 @@ def layout_export_clean(params, ctx):
         except Exception:
             pass
 
+    # optional top-cell scoping (blind-test finding: without it, unrelated
+    # top cells from a shared session ride along into the delivery file)
+    cell_names = [str(v) for v in (params.get("cells") or [])]
+    selected_indexes = []
+    for name in cell_names:
+        cell2 = ly2.cell(name)
+        if cell2 is None:
+            raise RpcError(
+                ErrorCode.NOT_FOUND,
+                "cell %r not found for export scoping" % name,
+                hint="cell.list shows the available cells",
+            )
+        selected_indexes.append(cell2.cell_index())
+
     opts = pya.SaveLayoutOptions()
     ext = os.path.splitext(path)[1].lower()
     opts.format = "OASIS" if ext in (".oas", ".oasis") else "GDS2"
+    if selected_indexes:
+        opts.clear_cells()
+        for idx in selected_indexes:
+            opts.add_cell(idx)
     opts.deselect_all_layers()
     layers_written = []
     for layer_str in allow:
@@ -793,6 +821,13 @@ def layout_export_clean(params, ctx):
         if reserved_hit:
             problems.append("output contains reserved layers: %s"
                             % sorted(reserved_hit))
+        if cell_names:
+            out_tops = {c.name for c in check.top_cells()}
+            extra_tops = out_tops - set(cell_names)
+            if extra_tops:
+                problems.append(
+                    "output contains top cells outside the requested "
+                    "scope: %s" % sorted(extra_tops))
     except Exception as exc:
         problems.append("re-read failed: %s" % exc)
 
@@ -811,6 +846,7 @@ def layout_export_clean(params, ctx):
     return {
         "path": path,
         "format": opts.format,
+        "cells": cell_names or "all_top_cells",
         "layers_written": layers_written,
         "layers_requested": allow,
         "marker_instances_removed": removed_instances,
