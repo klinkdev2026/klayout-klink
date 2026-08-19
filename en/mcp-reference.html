@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>MCP Tool Reference - klink</title>
-  <meta name="description" content="Complete klink MCP / RPC tool reference: 13 domains, 153 tools, each with its function, parameters, and a call example.">
+  <meta name="description" content="Complete klink MCP / RPC tool reference: 14 domains, 171 tools, each with its function, parameters, and a call example.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="../assets/styles.css">
 </head>
@@ -42,6 +42,7 @@
         <a href="tutorial-fit-device.html">Fit device &rarr; PnR &rarr; LVS</a>
         <a href="tutorial-padframe.html">Probe-card-first padframe</a>
         <a href="tutorial-imaging.html">Imaging: cross-section · 3D · SEM · Blender</a>
+        <a href="tutorial-layout-intent.html">Regions &amp; executable layout intent</a>
       </div>
       <div class="sb-group">
         <div class="sb-title">Guides</div>
@@ -91,7 +92,7 @@
       <div class="container">
         <div class="eyebrow">MCP / RPC reference</div>
         <h1>Complete MCP tool reference</h1>
-        <p>klink's control plane is one tool catalogue with two faces: a typed Python client (<code>KLinkClient</code>) and the same methods exposed as MCP tools. Both are generated from the live plugin's method registry — there is no hand-maintained list that can drift. This page lists all <strong>107 plugin RPCs</strong> + <strong>46 MCP local tools</strong> (153 total) across 13 domains: function, parameters, examples.</p>
+        <p>klink's control plane is one tool catalogue with two faces: a typed Python client (<code>KLinkClient</code>) and the same methods exposed as MCP tools. Both are generated from the live plugin's method registry — there is no hand-maintained list that can drift. This page lists all <strong>118 plugin RPCs</strong> + <strong>53 MCP local tools</strong> (171 total) across 14 domains: function, parameters, examples.</p>
       </div>
     </section>
 
@@ -105,15 +106,16 @@
           <a href="#d-session">2 &middot; Sessions &amp; transfer (plugin side)</a>
           <a href="#d-geometry">3 &middot; Geometry authoring</a>
           <a href="#d-selection">4 &middot; Selection &amp; SEND memory</a>
-          <a href="#d-ports">5 &middot; Ports &amp; anchors</a>
-          <a href="#d-routing">6 &middot; Routing backends</a>
-          <a href="#d-verify">7 &middot; DRC &amp; LVS</a>
-          <a href="#d-structdevice">8 &middot; Custom-device P&amp;R</a>
-          <a href="#d-imaging">9 &middot; Imaging</a>
-          <a href="#d-nanodevice">10 &middot; Nanodevices</a>
-          <a href="#d-photonics">11 &middot; Photonics</a>
-          <a href="#d-ledit">12 &middot; L-Edit Bridge</a>
-          <a href="#d-escape">13 &middot; Escape hatch</a>
+          <a href="#d-ports">5 &middot; Ports, anchors &amp; regions</a>
+          <a href="#d-layoutintent">6 &middot; Executable layout intent</a>
+          <a href="#d-routing">7 &middot; Routing backends</a>
+          <a href="#d-verify">8 &middot; DRC &amp; LVS</a>
+          <a href="#d-structdevice">9 &middot; Custom-device P&amp;R</a>
+          <a href="#d-imaging">10 &middot; Imaging</a>
+          <a href="#d-nanodevice">11 &middot; Nanodevices</a>
+          <a href="#d-photonics">12 &middot; Photonics</a>
+          <a href="#d-ledit">13 &middot; L-Edit Bridge</a>
+          <a href="#d-escape">14 &middot; Escape hatch</a>
         </nav>
       </aside>
 
@@ -126,6 +128,7 @@
           <a href="#d-geometry">geometry_authoring</a>
           <a href="#d-selection">selection_and_send_memory</a>
           <a href="#d-ports">ports_and_anchors</a>
+          <a href="#d-layoutintent">layout_intent</a>
           <a href="#d-routing">routing_backends</a>
           <a href="#d-verify">drc_and_lvs_verification</a>
           <a href="#d-structdevice">device_structdevice</a>
@@ -248,7 +251,7 @@ klink.transfer_commit package_id="pkg_0001"</code></pre>
           </tbody>
         </table>
 
-        <h2 id="d-geometry" class="anchor-h">3 &middot; Geometry & cell-structure authoring <span class="tool-count">geometry_authoring &middot; 50 tools</span></h2>
+        <h2 id="d-geometry" class="anchor-h">3 &middot; Geometry & cell-structure authoring <span class="tool-count">geometry_authoring &middot; 51 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="geometry_authoring"</span>
           <p>The core drawing surface. Read first: <code>layout.info</code>, <code>cell.list</code>/<code>cell.tree</code>, <code>layer.list</code>/<code>layer.display_list</code>, <code>shape.query</code>, <code>instance.query</code>, <code>pcell.*</code>, <code>library.list</code>. Author with BATCH RPCs for anything generated &mdash; never one RPC per object. <code>layer.ensure</code> before drawing. <code>edit.undo</code>/<code>redo</code>/<code>status</code> wrap edits in transactions. Beyond basic authoring this domain also carries: <code>geometry.boolean</code>/<code>cell_xor</code>/<code>density</code> (diff and coverage checks), <code>cell.fill_region</code> (dummy fill / test-structure tiling), <code>cell.flatten</code>, <code>layer.load_lyp</code>/<code>save_lyp</code>/<code>set_style</code>/<code>set_visible</code> (view styling), <code>library.list</code>/<code>refresh</code>/<code>register_file</code>, <code>pcell.convert_to_static</code>, <code>shape.change_layer</code>/<code>transform</code>, <code>instance.transform</code>. Destructive: <code>layout.clear</code>, <code>cell.delete</code> &mdash; disposable/test cells only; do NOT touch the user's working tab/layout UNLESS the user explicitly instructs it.</p>
@@ -323,6 +326,7 @@ klink.transfer_commit package_id="pkg_0001"</code></pre>
           <tbody>
             <tr><td><code>layout.show_file</code></td><td><span class="badge kind-rpc">rpc</span></td><td>keep_position, mode, path*, technology</td><td>Load GDS/OAS (reload if open). replace or new tab.</td></tr>
             <tr><td><code>layout.save_file</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cellview_index, path*</td><td>Save; extension picks GDSII/OASIS.</td></tr>
+            <tr><td><code>layout.export_clean</code></td><td><span class="badge kind-rpc">rpc</span></td><td>allowlist_layers*, cells, cellview_index, path*</td><td>Fail-closed delivery export: write ONLY an explicit process-layer allowlist to a new GDS/OASIS file, with every klink marker (Port/Anchor/Region PCell instance) removed and PCell context stripped. Works on a scratch copy &mdash; the live layout is never modified. The output is re-read and verified (no reserved layers, no marker cells) before being atomically promoted; on any verification failure the temp file is deleted and the call errors. Refuses allowlists that include a reserved marker layer. Pass cells to export ONLY those top cells (+ hierarchy) &mdash; without it the whole layout's top cells go into the file, including unrelated ones from a shared session. Use layout.save_file for full working archives; use this for masks and hand-offs.</td></tr>
             <tr><td><code>layout.import_file</code></td><td><span class="badge kind-rpc">rpc</span></td><td>create_other_layers, layer_map, on_conflict, path*</td><td>MERGE a layout file into the ACTIVE layout with layer remap + cell-name-conflict policy (rename/add/overwrite/skip).</td></tr>
             <tr><td><code>layout.clear</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cellview_index</td><td>Destructive: clear the whole layout.</td></tr>
             <tr><td><code>edit.undo</code></td><td><span class="badge kind-rpc">rpc</span></td><td>—</td><td>Undo last undoable op; returns before/after stack.</td></tr>
@@ -396,10 +400,11 @@ interaction.selection.recent limit=2       # -&gt; [sel_0007(B), sel_0006(A)]
 interaction.selection.label id="sel_0006" label="probe pad"
 # now act by id, not by guessing position from a screenshot</code></pre>
 
-        <h2 id="d-ports" class="anchor-h">5 &middot; Ports & anchors (routing markers) <span class="tool-count">ports_and_anchors &middot; 18 tools</span></h2>
+        <h2 id="d-ports" class="anchor-h">5 &middot; Ports, anchors &amp; regions (marker PCells) <span class="tool-count">ports_and_anchors &middot; 25 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="ports_and_anchors"</span>
           <p>Ports are net endpoints (<code>klink_Port</code> PCells: net + orientation + width). Anchors are routing constraints (<code>klink_Anchor</code> PCells) whose <code>kind</code> is <code>waypoint_region</code>, <code>bend_region</code>, or <code>corridor</code> (a plain corridor is a REQUIRED pass-through; label it <code>choice_group=BUS</code> for an OPTIONAL channel). <code>port.mark</code>/<code>list</code>/<code>update</code>/<code>transform</code>/<code>set_layer</code>/<code>unmark</code>/<code>delete_all</code>/<code>repair_names</code>; the same verbs on <code>anchor.*</code> (+ <code>anchor.repair_ids</code>). <code>port.mark_many</code> marks many ports in one cell with a single RPC/undo step (validate-before-mutate) &mdash; use it instead of looping <code>port.mark</code> for generated port arrays. <code>port.harvest_blackbox</code> derives Ports from LIVE gdsfactory/PDK blackbox instance positions via the waveguide stub convention &mdash; a photonics-adjacent tool that lives in this domain. Routing tools default <code>port_layer=999/99</code>, <code>anchor_layer=999/1</code>. Keepouts are NOT an anchor kind &mdash; pass your OWN design's obstacle layer(s) to routing tools as <code>obstacle_layers</code>; klink ships no default keepout layer (<code>900/0</code> is klink's reserved keepout layer, used internally by structdevice). These are the INPUT to routing_backends: mark Ports+Anchors, then call a <code>routing.*</code> tool.</p>
+          <p><strong>Regions are claimed areas</strong> (<code>klink_Region</code> PCells, default layer <code>999/10</code>): the user drags box/ellipse rulers around a spot, then <code>region.claim</code> converts them into ONE Region PCell and <strong>consumes</strong> the rulers. Roles: <code>include</code> = union, <code>clip</code> = intersect, <code>exclude</code> = subtract (half-disc = ellipse clipped by a box; annulus = circle minus circle). The result must be one connected component &mdash; disconnected islands are rejected, claim them separately. <code>region.list</code>/<code>get</code>/<code>unclaim</code>/<code>set_layer</code>; <code>region.get</code> returns the composed polygon (<code>hull_um</code>) &mdash; feed it to <code>cell.fill_region</code> to fill the area, or its <code>bbox_um</code> to <code>view.zoom_box</code> to navigate there. The user can also click a Region and SEND it; resolve via <code>interaction.selection.*</code>. To turn a Region into a validated, uniquely-numbered array, see the <a href="#d-layoutintent">layout_intent</a> domain.</p>
         </div>
         <table class="data-table reftable">
           <thead><tr><th>Tool</th><th>Kind</th><th>Params</th><th>Function</th></tr></thead>
@@ -422,6 +427,13 @@ interaction.selection.label id="sel_0006" label="probe pad"
             <tr><td><code>anchor.repair_ids</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cell*, layer, prefix</td><td>Repair duplicate/empty Anchor ids.</td></tr>
             <tr><td><code>anchor.unmark</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cell*, id*</td><td>Delete one Anchor.</td></tr>
             <tr><td><code>anchor.delete_all</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cell*, layer</td><td>Delete all Anchors in a cell.</td></tr>
+            <tr><td><code>region.set_layer</code></td><td><span class="badge kind-rpc">rpc</span></td><td>layer*</td><td>Configure the default Region PCell marker layer for this layout (default 999/10).</td></tr>
+            <tr><td><code>region.claim</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cell, keep_rulers, layer, name, npoints, rulers*</td><td>Convert box/ellipse rulers into ONE klink_Region PCell (reserved layer, default 999/10) and consume the rulers. Roles: include (union), clip (intersect), exclude (subtract; holes are never writable). The result must be a single connected component; disconnected islands are rejected with per-island bboxes. Ellipses are discretized safely: include/clip inscribed, exclude circumscribed.</td></tr>
+            <tr><td><code>region.list</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cell</td><td>List every klink_Region PCell instance (name, cell, layer, bbox, area, klink_id). Regions are the durable claimed areas; rulers are only drafts.</td></tr>
+            <tr><td><code>region.get</code></td><td><span class="badge kind-rpc">rpc</span></td><td>name*</td><td>One Region by name: composed polygon (instance transform &times; local contours) in target-cell dbu and um, area, holes. Refuses magnification != 1.</td></tr>
+            <tr><td><code>region.occupancy</code></td><td><span class="badge kind-rpc">rpc</span></td><td>exclude_cells, layers, name*, obstacle_cells</td><td>Recursive occupancy facts for one Region: merged obstacle polygons per requested layer and/or per named obstacle cell (every occurrence bbox of those cells inside the region, for custom devices/blackboxes), clipped to the region, plus remaining free area. Everything is explicit &mdash; klink assumes nothing about which layers or cells are obstacles. truncated=true means the result is incomplete and MUST NOT be used for planning.</td></tr>
+            <tr><td><code>region.repair_ids</code></td><td><span class="badge kind-rpc">rpc</span></td><td>keeper*, name*</td><td>Keeper repair for copy-paste duplicated Regions (same name/klink_id on several instances). The user designates the keeper (parent cell + anchor position); the keeper retains the original name, klink_id, and any Intent binding untouched. Every other duplicate gets a fresh auto R### name + klink_id and NO intent &mdash; bind one later with intent.rebind. Never guesses which copy is the original; ambiguous keeper specs are refused.</td></tr>
+            <tr><td><code>region.unclaim</code></td><td><span class="badge kind-rpc">rpc</span></td><td>name*</td><td>Delete one Region PCell instance by name. Deletes ONLY the region marker &mdash; never any generated output or user geometry.</td></tr>
           </tbody>
         </table>
         <p><strong>Example.</strong></p>
@@ -430,9 +442,57 @@ port.mark cell="NET1" name="B" center_um=[80,20] orientation="W" width_um=2 net=
 anchor.mark cell="NET1" kind="waypoint_region" center_um=[40,40] radius_um=6 net="sig"
 port.list cell="NET1"
 
-routing.tapered_hybrid_cell cell="NET1" angle_mode="manhattan" obstacle_layers=["10/0"]</code></pre>
+routing.tapered_hybrid_cell cell="NET1" angle_mode="manhattan" obstacle_layers=["10/0"]
 
-        <h2 id="d-routing" class="anchor-h">6 &middot; Routing backends <span class="tool-count">routing_backends &middot; 9 tools</span></h2>
+# Region: drag rulers around a spot, claim them into one Region marker
+region.claim cell="TOP" layer="999/10" rulers=[{"id":12,"role":"include"}]
+region.get name="R001"</code></pre>
+
+        <h2 id="d-layoutintent" class="anchor-h">6 &middot; Executable layout intent (Region &rarr; deterministic array) <span class="tool-count">layout_intent &middot; 10 tools</span></h2>
+        <div class="domain-intro">
+          <span class="token">klink.find_tools domain="layout_intent"</span>
+          <p>The Region-driven generation loop (needs a claimed Region &mdash; see <a href="#d-ports">ports_and_anchors</a>'s <code>region.claim</code>). <code>intent.prepare</code> analyzes the region's occupancy against YOUR declared obstacles (layers, named device/blackbox cells counted by bbox per instance occurrence, free-form polygons, plus an optional <code>clearance_um</code>), plans a pitch grid of ANY existing source cell (<code>rotation_deg</code>/<code>mirror</code> supported) with unique polygon-text number labels (real geometry, TextGenerator), validates containment + obstacles + overlaps, and returns a preview + <code>plan_id</code> + <code>plan_hash</code> &mdash; <strong>nothing is written</strong>. <code>intent.apply</code> (<code>plan_id</code> + <code>plan_hash</code> + <code>confirm=plan_id</code>) commits it as <strong>one transaction</strong> into a fresh <code>KLINK_I_*</code> container cell (one Ctrl+Z undo; klink_id-stamped root). <code>intent.regenerate</code> re-plans with parameter patches (e.g. <code>numbering.start</code>), and the next apply <strong>atomically swaps ONLY this intent's container</strong> &mdash; hand-edited outputs are detected (diverged) and never silently overwritten. <code>intent.list</code>/<code>get</code> show stored intents + live condition; <code>intent.rebind</code> explicitly re-points an intent at a region (the only path after a region was deleted/repaired); <code>intent.retire</code> decides the output's fate via <code>output_policy</code> (preserve/detach/remove). Layers, pitches, and sizes are all required inputs: klink ships no process defaults. Low-level primitives <code>intent.apply_managed_plan</code>/<code>intent.managed_digest</code>/<code>intent.remove_managed_output</code> are the plugin RPCs the orchestrator tools call &mdash; don't call them directly in normal flows.</p>
+        </div>
+        <h3>Orchestration (MCP local tools)</h3>
+        <table class="data-table reftable">
+          <thead><tr><th>Tool</th><th>Kind</th><th>Params</th><th>Function</th></tr></thead>
+          <tbody>
+            <tr><td><code>intent.prepare</code></td><td><span class="badge kind-local">local</span></td><td>allow_empty_obstacles, clearance_um, extra_obstacles_um, instruction, intent_id, label*, mirror, numbering*, obstacle_cells, obstacle_layers, pitch_um*, project_root, region*, rotation_deg, source_cell*</td><td>Plan an array_labeled intent for a claimed Region: analyze occupancy, place a pitch grid of an existing source cell (rotation/mirror supported) with unique physical number labels (real polygon text), validate containment/obstacles, return a preview + plan_id + plan_hash. Writes nothing. Obstacles are whatever you declare; klink ships no process defaults.</td></tr>
+            <tr><td><code>intent.apply</code></td><td><span class="badge kind-local">local</span></td><td>confirm*, plan_hash*, plan_id*, project_root</td><td>Commit a previewed plan in one KLayout transaction (fresh container cell + klink_id root; regenerate swaps the container). Requires plan_id and plan_hash from intent.prepare plus confirm=plan_id. Refuses stale plans, diverged outputs, and plans with problems. One Ctrl+Z undoes the whole apply.</td></tr>
+            <tr><td><code>intent.regenerate</code></td><td><span class="badge kind-local">local</span></td><td>intent_id*, parameters_patch, project_root</td><td>Re-plan an applied intent (optionally patching parameters, e.g. a new numbering start or pitch) and return a fresh preview; the next intent.apply atomically replaces ONLY this intent's container. Refuses if the output was hand-edited (diverged) &mdash; never a silent overwrite.</td></tr>
+            <tr><td><code>intent.list</code></td><td><span class="badge kind-local">local</span></td><td>project_root</td><td>List stored intents (id, region, executor, revision, output container) with the lazy output condition: applied | diverged | undone_or_deleted | never_applied.</td></tr>
+            <tr><td><code>intent.get</code></td><td><span class="badge kind-local">local</span></td><td>intent_id*, project_root</td><td>One stored intent in full (parameters, output, lazy condition).</td></tr>
+            <tr><td><code>intent.rebind</code></td><td><span class="badge kind-local">local</span></td><td>intent_id*, project_root, region*</td><td>Explicitly bind an intent to a (new) Region name &mdash; the only path after a region was deleted/repaired. Verifies the region exists; never guesses.</td></tr>
+            <tr><td><code>intent.retire</code></td><td><span class="badge kind-local">local</span></td><td>confirm, intent_id*, output_policy, project_root</td><td>Retire an intent. output_policy decides the geometry's fate: preserve (default) keeps the container as ordinary layout and closes the intent; detach additionally forgets the output binding; remove deletes the container via the digest-guarded plugin primitive &mdash; refused if the output was hand-edited (diverged). Never deletes user geometry.</td></tr>
+          </tbody>
+        </table>
+        <h3>Low-level primitives (plugin RPC, called by the orchestrators above)</h3>
+        <table class="data-table reftable">
+          <thead><tr><th>Tool</th><th>Kind</th><th>Params</th><th>Function</th></tr></thead>
+          <tbody>
+            <tr><td><code>intent.apply_managed_plan</code></td><td><span class="badge kind-rpc">rpc</span></td><td>container_cell*, expected_managed_digest, expected_root_klink_id, mode*, parent_cell*, payload*, plan_hash*, root_klink_id*, scope_check</td><td>Mechanically commit a fully-validated managed plan in one transaction: create a fresh container cell from the typed payload, place its root instance (klink_id-stamped) in the parent, and on mode=replace swap out the previous container. All business validation must happen BEFORE this call; TOCTOU is guarded by scope_check (re-run + compare) and expected_managed_digest. Refuses 0 or multiple root matches, digest mismatches, and stale scope. One undo step reverts the whole apply.</td></tr>
+            <tr><td><code>intent.managed_digest</code></td><td><span class="badge kind-rpc">rpc</span></td><td>container_cell*</td><td>Managed digest of a container cell's own content (canonicalized shapes + child instances). Used for the lazy undone/diverged check: compare against the digest recorded by the last apply.</td></tr>
+            <tr><td><code>intent.remove_managed_output</code></td><td><span class="badge kind-rpc">rpc</span></td><td>expected_managed_digest*, parent_cell*, root_klink_id*</td><td>Delete ONE managed output (root instance + container cell) after verifying identity and digest. Refuses 0/multiple root matches and diverged containers (digest mismatch) &mdash; hand-edited output is never silently destroyed. One transaction, one undo step.</td></tr>
+          </tbody>
+        </table>
+        <p><strong>Example.</strong></p>
+        <pre><code># 1) claim a Region (see ports_and_anchors' region.claim)
+region.claim cell="TOP" rulers=[{"id":12,"role":"include"}]
+
+# 2) plan: tile any existing cell on a pitch grid, uniquely numbered
+intent.prepare region="R001" source_cell="SENSOR" pitch_um=[20,20] \
+    obstacle_layers=["10/0"] numbering={"prefix":"S","width":3,"start":1} \
+    label={"layer":"20/0","slot_region":"R00X"}
+# -&gt; preview + plan_id + plan_hash -- review it before anything is written
+
+# 3) apply: one transaction writes it
+intent.apply plan_id="..." plan_hash="..." confirm="..."
+
+# 4) change your mind: regenerate with a new numbering start, apply swaps the old container
+intent.regenerate intent_id="..." parameters_patch={"numbering":{"start":201}}
+intent.apply plan_id="..." plan_hash="..." confirm="..."</code></pre>
+
+        <h2 id="d-routing" class="anchor-h">7 &middot; Routing backends <span class="tool-count">routing_backends &middot; 9 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="routing_backends"</span>
           <p>All read Port/Anchor PCells in a cell and write routes. Pick by topology/quality: <code>routing.tapered_hybrid_cell</code> is the main path+patch backend; <code>routing.tapered_polygon_cell</code> writes continuous taper polygons (first-class, not a fallback); <code>routing.steiner_cell</code> handles multi-terminal nets (&gt;2 ports); the <code>routing.damped_*</code> family adds explicit extra obstacle clearance; <code>routing.global_channel_cell</code> is a global-decision router (candidate-sink assignment + corridor-capacity load-balancing) on top of tapered hybrid geometry; <code>routing.multilayer_escape_cell</code> routes wall-blocked nets via a bridge layer + vias; <code>routing.gdsfactory_ports</code> routes Port markers with a named gdsfactory strategy (needs gdsfactory in the interpreter). <strong>Always inspect the structured result</strong>: <code>ok=false</code>, <code>obstacle_hit_count&gt;0</code>, sibling overlaps, short <code>route_count</code> all mean failure. Pass your own design's <code>obstacle_layers</code> (no default).</p>
@@ -472,7 +532,7 @@ routing.gdsfactory_ports cell="BLOCK" route_layer="1/0" router="bundle" \
     separation_um=5 radius_um=10 path_length_match=true</code></pre>
         <div class="note">"Done" for a route/P&amp;R stage is a live LVS <code>match=True</code> &mdash; marker counts and "looks routed" never substitute. Check <code>ok</code>, <code>obstacle_hit_count</code>, sibling overlap and <code>route_count</code> in the structured result.</div>
 
-        <h2 id="d-verify" class="anchor-h">7 &middot; DRC & LVS verification <span class="tool-count">drc_and_lvs_verification &middot; 2 tools</span></h2>
+        <h2 id="d-verify" class="anchor-h">8 &middot; DRC & LVS verification <span class="tool-count">drc_and_lvs_verification &middot; 2 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="drc_and_lvs_verification"</span>
           <p>Both are long-running, pure pya, domain-agnostic. <code>drc.run</code> runs arbitrary DRC DSL (Ruby) you supply against the layout &mdash; exceptions inside the script come back as results, they do NOT fail the RPC. <code>lvs.run</code> is the connectivity counterpart: extracts the live layout into a device netlist and compares it against a REFERENCE netlist you supply, writes a native <code>.lvsdb</code> and (default) opens it in the Netlist/LVS browser. A P&amp;R/device stage counts as DONE only on a real live LVS <code>match=True</code> &mdash; offline fixtures and marker counts never substitute. For the structdevice flow prefer <code>structdevice.lvs_check</code>.</p>
@@ -495,7 +555,7 @@ m1.space(0.2.um).output("M1_space", "M1 spacing &lt; 0.2um")
 lvs.run cell="BLOCK" conductors=["1/0","3/0"] vias=["2/0"] \
     devices={...} reference={"spice":"ref.spice"} out_lvsdb="block.lvsdb" show=true</code></pre>
 
-        <h2 id="d-structdevice" class="anchor-h">8 &middot; Custom-device netlist → auto P&R → LVS <span class="tool-count">device_structdevice &middot; 6 tools</span></h2>
+        <h2 id="d-structdevice" class="anchor-h">9 &middot; Custom-device netlist → auto P&R → LVS <span class="tool-count">device_structdevice &middot; 6 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="device_structdevice"</span>
           <p>This is the device-AGNOSTIC custom-device P&amp;R flow. A "device" is any cell with an arbitrary parameter set + terminals; klink assumes no parameter names/count and no device vocabulary. The device library, process profile, and terminal source are EXAMPLE/PDK data passed in explicitly &mdash; the tools ship none and return an instructive "write/run an example" error. <code>structdevice.build_from_netlist</code> is the headline one-call flow (confirmation-gated: call once for a proposal, again with the confirm token to build); routing runs on the flexdr engine using a compact physical model where the device's own metal layers double as routing layers. <code>structdevice.declare_nets</code> / <code>connect_nets</code> / <code>lvs_check</code> / <code>spec_write</code> are the SEND-driven interactive path. <code>structdevice.register_pcell</code> wraps the lower-level plugin RPC <code>pcell.register_fitted</code> (listed under <a href="#d-geometry">geometry_authoring</a>).</p>
@@ -529,7 +589,7 @@ structdevice.connect_nets cell="BLOCK" route_layer="3/0" route_width_um=0.5
 structdevice.lvs_check cell="BLOCK" mode="both"
 structdevice.spec_write cell="BLOCK" layer_roles={"1/0":"gate","3/0":"metal1"}</code></pre>
 
-        <h2 id="d-imaging" class="anchor-h">9 &middot; Imaging (cross-section / 3D / SEM / Blender) <span class="tool-count">imaging &middot; 4 tools</span></h2>
+        <h2 id="d-imaging" class="anchor-h">10 &middot; Imaging (cross-section / 3D / SEM / Blender) <span class="tool-count">imaging &middot; 4 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="imaging"</span>
           <p>Everything runs klink-side (no plugin involvement); heavy deps are optional and the error names the exact pip install command. Recipes/VisualStack instances are example-owned &mdash; klink ships mechanism only. <code>imaging.xsection_run</code> makes a process cross-section along an explicit cut line from a <code>.pyxs</code> recipe (engine <code>klayout_pyxs</code>); <code>steps=true</code> + <code>'# klink-step: &lt;name&gt;'</code> recipe markers give a per-step film. <code>imaging.render3d</code> builds a GLB plus a self-contained interactive viewer HTML; <code>mode=fast</code> extrudes a visual-stack declaration, <code>mode=process</code> sweeps the xsection engine so process curvature (LOCOS, CMP) is real; <code>fraction&lt;1</code> exposes a true cutaway section. <code>imaging.sem_top</code> renders deterministic SEM-style top-view PNGs (greyscale + false color). <code>imaging.blender</code> renders a paper-grade image via a headless bpy subprocess &mdash; <code>mode=die</code> polishes a render3d GLB, <code>mode=figure</code> builds a device figure from GDS+stack at 1:1 layout coordinates (lattice layers become atomic-structure motifs).</p>
@@ -544,7 +604,7 @@ structdevice.spec_write cell="BLOCK" layer_roles={"1/0":"gate","3/0":"metal1"}</
           </tbody>
         </table>
 
-        <h2 id="d-nanodevice" class="anchor-h">10 &middot; Nanodevices (Hall bar / EBL / flake) <span class="tool-count">device_nanodevice &middot; 2 tools</span></h2>
+        <h2 id="d-nanodevice" class="anchor-h">11 &middot; Nanodevices (Hall bar / EBL / flake) <span class="tool-count">device_nanodevice &middot; 2 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="device_nanodevice"</span>
           <p><code>nanodevice.hallbar</code> is a one-call closed loop: from a <code>HallBarSpec</code> (bar length/width, contact_count, contact/pad dims, pitch, gaps) it computes and draws the whole device (bar + N symmetric contact arms + pads + Port markers + labels), then delegates routing to the generic router (overlap validation on, optional EBL writefield walls as keepouts), committing to a disposable cell (dry_run supported). Failures return problems/next_action and change nothing. <code>nanodevice.detect_commit</code> commits flake traces as polygons from a precomputed <code>traces.json</code>, or runs live detection from a microscope image (needs cv2 + numpy).</p>
@@ -564,7 +624,7 @@ structdevice.spec_write cell="BLOCK" layer_roles={"1/0":"gate","3/0":"metal1"}</
 
 nanodevice.detect_commit cell="FLAKE" traces_path="out/traces.json"</code></pre>
 
-        <h2 id="d-photonics" class="anchor-h">11 &middot; Photonics (gdsfactory import / connect / reroute) <span class="tool-count">device_photonics &middot; 3 tools</span></h2>
+        <h2 id="d-photonics" class="anchor-h">12 &middot; Photonics (gdsfactory import / connect / reroute) <span class="tool-count">device_photonics &middot; 3 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="device_photonics"</span>
           <p>Photonic circuit flow. Needs gdsfactory in the MCP interpreter. Two port sources, one interactive loop: <code>photonics.import_gf</code> takes a finished user gdsfactory script over into the loop in one call &mdash; device instances become real KLayout cells+instances, routed connections collapse to device-level nets, per-device port templates persist in the spec, and nets are routed by klink. <code>port.harvest_blackbox</code> (listed under <a href="#d-ports">ports_and_anchors</a> &mdash; it derives Ports from live blackbox instance positions) is the other port source; re-run it after moving instances, then route. <code>photonics.connect</code> reads the latest N SENDs as port pairs, auto-names nets, persists, re-harvests, and routes with gdsfactory. <code>photonics.reroute</code> re-routes a cell after the user moved components (reads the persisted net table). Multi-port optical nets are not routed as stars &mdash; insert an explicit splitter/MMI/Y-branch first and route the resulting two-port nets.</p>
@@ -588,7 +648,7 @@ photonics.reroute cell="MZI"     # optics + metal redrawn together, your drag is
 port.harvest_blackbox cell="MZI" tags=["gc","mmi"] wg_layer="1/0" stub_size_um=0.5
 photonics.connect recent_sends=4 cell="MZI" radius_um=10 separation_um=5</code></pre>
 
-        <h2 id="d-ledit" class="anchor-h">12 &middot; L-Edit bridge (file-exchange RPC) <span class="tool-count">bridge_ledit &middot; 3 tools</span></h2>
+        <h2 id="d-ledit" class="anchor-h">13 &middot; L-Edit bridge (file-exchange RPC) <span class="tool-count">bridge_ledit &middot; 3 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="bridge_ledit"</span>
           <p>Requires L-Edit running with the bridge macro loaded as SOURCE (<code>example_template/ledit_bridge/ledit_bridge.cpp</code> via Tools &gt; Macro &gt; Load Macro..., zero compile). Transport is a JSON file exchange under <code>%LOCALAPPDATA%\klink\ledit_bridge\&lt;namespace&gt;</code>; one namespace per L-Edit instance, only ONE L-Edit may hold a namespace at a time. <code>ledit.status</code> is discovery + handshake &mdash; call it first when anything misbehaves; errors name the exact fix. <code>ledit.import_selection</code> does a fresh GET of the user's current L-Edit selection into a new KLayout landing cell. <code>ledit.push_cell</code> pushes a flat KLayout cell back into L-Edit (append-only; use a fresh target cell to regenerate). Deeper T-Cell workflows live in the Python API <code>klink.bridges.ledit</code> &mdash; see the <a href="ledit-bridge.html">L-Edit Bridge guide</a>.</p>
@@ -602,7 +662,7 @@ photonics.connect recent_sends=4 cell="MZI" radius_um=10 separation_um=5</code><
           </tbody>
         </table>
 
-        <h2 id="d-escape" class="anchor-h">13 &middot; Escape hatch (pya exec, events, recorder) <span class="tool-count">escape_hatch &middot; 9 tools</span></h2>
+        <h2 id="d-escape" class="anchor-h">14 &middot; Escape hatch (pya exec, events, recorder) <span class="tool-count">escape_hatch &middot; 9 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="escape_hatch"</span>
           <p><strong>Prefer typed RPCs.</strong> <code>exec.python</code> runs raw pya for operations no typed RPC covers / debugging / compact one-offs (<code>exec.reset</code> clears its namespace); it still schedules recorder + layout-diff detection. <code>events.*</code> (<code>channels</code>/<code>status</code>/<code>subscribe</code>/<code>unsubscribe</code>) is the live event stream the bridge subscribes to for SEND memory &mdash; usually you read <code>interaction.*</code> instead. <code>recorder.*</code> (<code>start</code>/<code>stop</code>/<code>status</code>) generates a replay SCRIPT (not a literal RPC log); a bulk RPC may expand into replay actions. Check <code>recorder.status</code> before tests so you never clobber a user recording.</p>

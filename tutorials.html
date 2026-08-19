@@ -42,6 +42,7 @@
         <a href="tutorial-fit-device.html">拟合器件 → PnR → LVS</a>
         <a href="tutorial-padframe.html">针卡优先 padframe</a>
         <a href="tutorial-imaging.html">成像：剖面 · 3D · SEM · Blender</a>
+        <a href="tutorial-layout-intent.html">Region 与可执行版图意图</a>
       </div>
       <div class="sb-group">
         <div class="sb-title">指南</div>
@@ -286,6 +287,26 @@
     <section class="section alt">
       <div class="container">
         <div class="section-head">
+          <h2 id="layout-intent" class="anchor-h">Region 与可执行版图意图 <code>layoutintent</code></h2>
+          <p>圈出一块区域，把任意已有 cell 铺成带唯一编号标签的阵列：<code>region.claim</code> 认领 + <code>intent.prepare</code> 规划预览（不写入）+ <code>intent.apply</code> 一次事务写入 + <code>intent.regenerate</code> 原子替换输出，需要 live KLayout 会话。</p>
+        </div>
+        <div class="grid two">
+          <a class="card" href="tutorial-layout-intent.html">
+            <span class="feature-kicker">layoutintent · Region</span>
+            <span class="tier live">需 live KLayout 会话</span>
+            <h3>圈区域 → 编号阵列 → 可重新生成</h3>
+            <p>标尺认领区域（include/clip/exclude 三种角色），<code>intent.prepare</code> 规划带唯一编号标签的间距网格（障碍物/间距/编号方案全部显式声明），<code>intent.apply</code> 一次事务写入，<code>intent.regenerate</code> 原子替换输出，外加 <code>layout.export_clean</code> 的 clean 交付出口。</p>
+            <p class="card-run"><code>python -m examples_klink.public.features.region_array_labeled</code></p>
+            <p class="card-metric">区域 14000 µm² · placed 31（4 rejected）· S001..S031 → regenerate S201..S231</p>
+            <span class="card-more">看分步教程 →</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-head">
           <h2 id="control-plane" class="anchor-h">控制面 · 协作 <code>control plane</code></h2>
           <p>不是画某种器件，而是控制面本身：一个 agent 同时驱动多个 KLayout 窗口，人和 agent 靠工具栏协作。</p>
         </div>
@@ -301,7 +322,7 @@
       </div>
     </section>
 
-    <section class="section">
+    <section class="section alt">
       <div class="container">
         <div class="section-head">
           <h2 id="guides" class="anchor-h">指南 <code>guides</code></h2>

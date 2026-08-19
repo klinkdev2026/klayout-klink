@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Step-by-step tutorial: regions and executable layout intent - klink</title>
+  <meta name="description" content="Circle an area with klink's layoutintent domain and tile any existing cell into it with a unique number label per copy: region.claim claims the area, intent.prepare plans and previews it (writing nothing), intent.apply commits in one transaction, and intent.regenerate atomically swaps the output. klink ships no process defaults -- obstacles, clearance, and the numbering scheme are all declared explicitly.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../assets/styles.css">
+  <style>
+    /* Minimal stage-kicker styling, following the site's existing card/note
+       language -- assets/styles.css has no such usage yet, so this stays
+       scoped to this page until it lands there (same convention as
+       tutorial-imaging.html). */
+    .stage-kicker {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 26px;
+      height: 26px;
+      padding: 0 8px;
+      border-radius: 6px;
+      background: #dff1ee;
+      color: #12654b;
+      font-weight: 800;
+      font-size: 13px;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body data-page="tutorials" class="has-sidebar">
+  <aside class="site-sidebar">
+    <a class="sb-brand" href="index.html"><span class="brand-mark">k</span>klink</a>
+    <nav class="sb-nav" aria-label="Site structure">
+      <div class="sb-group">
+        <div class="sb-title">Get started</div>
+        <a href="index.html">Home · what klink is</a>
+        <a href="quickstart.html">Quickstart</a>
+        <a href="concepts.html">Core concepts</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Workflows · human+agent</div>
+        <a href="workflows.html">Workflows in depth (illustrated)</a>
+        <a href="tutorial-multiwindow.html">Multi-window collaboration</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Chat walkthroughs</div>
+        <a href="case-hallbar-chat.html">Hall bar from one sentence</a>
+        <a href="case-drc-chat.html">DRC catch &amp; fix</a>
+        <a href="case-fit-lvs-chat.html">Fit a device to LVS</a>
+        <a href="case-gf-reroute-chat.html">Photonics: ports &amp; drag-reroute</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Step-by-step tutorials</div>
+        <a href="tutorials.html">Tutorials overview</a>
+        <a href="tutorial-hallbar.html">Hall bar device</a>
+        <a href="tutorial-ebl-wraparound.html">EBL wraparound</a>
+        <a href="tutorial-neural-electrode.html">Neural electrode array</a>
+        <a href="tutorial-gf-ports.html">Photonics · three ways to ports</a>
+        <a href="tutorial-gf-mzi.html">Photonics · gf MZI takeover</a>
+        <a href="tutorial-passives.html">Passive templates</a>
+        <a href="tutorial-fit-device.html">Fit device &rarr; PnR &rarr; LVS</a>
+        <a href="tutorial-padframe.html">Probe-card-first padframe</a>
+        <a href="tutorial-imaging.html">Imaging: cross-section · 3D · SEM · Blender</a>
+        <a href="tutorial-layout-intent.html">Regions &amp; executable layout intent</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Guides</div>
+        <a href="drc-lvs.html">DRC · LVS</a>
+        <a href="25d-view.html">2.5D View</a>
+        <a href="ledit-bridge.html">L-Edit Bridge</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Reference</div>
+        <a href="mcp-reference.html">MCP tool catalog</a>
+        <a href="plugin-packages.html">Writing extension packages</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Architecture</div>
+        <a href="architecture.html">Architecture &amp; boundaries</a>
+      </div>
+    </nav>
+    <div class="sb-foot">
+      <a href="https://github.com/klinkdev2026/klayout-klink">GitHub ↗</a>
+      <a href="../index.html">中文</a>
+    </div>
+  </aside>
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="index.html" data-nav="home">Home</a>
+        <a href="quickstart.html" data-nav="quickstart">Quickstart</a>
+        <a href="tutorials.html" data-nav="tutorials" class="active">Tutorials</a>
+        <a href="workflows.html" data-nav="workflows">Workflows</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP Reference</a>
+        <a href="architecture.html" data-nav="architecture">Architecture</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="Language switch">
+          <a href="../tutorial-layout-intent.html">CN</a>
+          <a class="active" href="tutorial-layout-intent.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Step-by-step tutorial · layout intent</div>
+        <h1>Step-by-step: circle an area, generate a regenerable numbered array</h1>
+        <p>klink's <code>layoutintent</code> domain turns "tile this area with an array, every copy uniquely numbered" into a pipeline with a preview and an atomic swap: drag rulers around the area &rarr; <code>region.claim</code> claims it &rarr; <code>intent.prepare</code> plans and previews (writing nothing) &rarr; <code>intent.apply</code> commits in one transaction &rarr; change your mind and <code>intent.regenerate</code> atomically swaps the output. klink ships no process defaults -- obstacles, clearance, and the numbering scheme are all declared by you, explicitly.</p>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#what">What this is</a>
+          <a href="#prereqs">Prerequisites</a>
+          <a href="#regions">① Claiming a Region</a>
+          <a href="#hero">② Plan and apply: a numbered array</a>
+          <a href="#regenerate">③ Regenerate semantics</a>
+          <a href="#export">Delivery: clean export</a>
+          <a href="#sites">Site engine (fabrication domain)</a>
+          <a href="#boundaries">What this does NOT do</a>
+          <a href="#next">Next steps</a>
+        </nav>
+      </aside>
+
+      <article class="content">
+        <h2 id="what" class="anchor-h">What this is</h2>
+        <p>Beyond drawing a whole layout in one shot, there's a common need one level down: <strong>circle an area you want to use, then tile it with many copies of one thing, each uniquely identifiable</strong> -- sites on a sensor array, dies on a wafer, cells in a test-structure matrix. The <code>layoutintent</code> domain (new in klink 0.5.0) splits that into four explicit RPC calls:</p>
+        <pre><code>drag rulers around a spot          (KLayout's own ruler tool: box / ellipse)
+  -&gt; region.claim                  rulers become ONE Region marker PCell
+  -&gt; intent.prepare                analyze + plan + validate (writes nothing)
+  -&gt; intent.apply                  one transaction, one Ctrl+Z
+  -&gt; intent.regenerate             change numbering / pitch, swap the output atomically</code></pre>
+        <p>This tutorial walks two runnable demos: <code>region_claim_fill.py</code> (claim an area + fill it, no numbering involved) and <code>region_array_labeled.py</code> (the full hero flow: claim &rarr; plan/preview &rarr; apply &rarr; regenerate). The layers, sizes, and pitches in both scripts are example-owned demo data -- <strong>klink itself ships not one of those numbers</strong>.</p>
+
+        <h2 id="prereqs" class="anchor-h">Prerequisites</h2>
+        <ul>
+          <li>Install klink: <code>pip install klayout-klink</code>.</li>
+          <li>You need a <strong>live KLayout session</strong> (klink plugin installed, port 8765 listening) -- this path is not offline: <code>region.claim</code>/<code>intent.*</code> are plugin-side RPCs that edit the live layout directly. No extra optional dependencies are needed (no gdsfactory, numpy, or bpy).</li>
+        </ul>
+        <div class="note">Both scripts below connect to the default session (8765) with <code>KLinkClient().connect()</code> and no <code>--port</code> argument. Use an empty or test-dedicated window, not your hand-built working tab -- each script starts by deleting any old demo cell of the same name before rebuilding it.</div>
+
+        <h2 id="regions" class="anchor-h"><span class="stage-kicker">1</span>Claiming a Region</h2>
+        <p>A <strong>Region</strong> is a claimed area: a <code>klink_Region</code> PCell on the reserved marker layer (default <code>999/10</code>, configurable via <code>region.set_layer</code>). It lives in your layout -- it travels with the GDS, survives restarts, and can be clicked + SENT to the agent like any other object. Rulers are only the input gesture: a successful claim <strong>consumes</strong> the rulers it used (undo brings back both the rulers and the pre-claim state).</p>
+        <p>Claims compose several rulers with three roles:</p>
+        <table class="data-table">
+          <thead><tr><th>role</th><th>meaning</th><th>example</th></tr></thead>
+          <tbody>
+            <tr><td><code>include</code></td><td>union (default)</td><td>two boxes &rarr; L-shape</td></tr>
+            <tr><td><code>clip</code></td><td>intersect</td><td>ellipse &cap; box &rarr; half disc</td></tr>
+            <tr><td><code>exclude</code></td><td>subtract (holes are never writable)</td><td>circle &minus; circle &rarr; annulus</td></tr>
+          </tbody>
+        </table>
+        <p>Ellipses are discretized conservatively: <code>include</code>/<code>clip</code> use an inscribed polygon, <code>exclude</code> a circumscribed one -- the writable area only ever shrinks, never crosses what you drew. The result must be <strong>one connected component</strong>; disconnected islands are rejected with their bboxes so you can claim them separately.</p>
+        <p><code>region_claim_fill.py</code> draws one big box as <code>include</code>, then an ellipse as <code>exclude</code> that bites a corner off it -- the same two shapes the ruler tool produces in real use; the script draws them programmatically with <code>annotation.insert</code> so it can be re-run offline:</p>
+        <pre><code>include = c.call("annotation.insert", {
+    "points_um": [[0, 0], [200, 140]],
+    "outline": "box",
+    "category": "klink_demo_region",
+})["ruler"]["id"]
+exclude = c.call("annotation.insert", {
+    "points_um": [[140, 80], [220, 160]],
+    "outline": "ellipse",
+    "category": "klink_demo_region",
+})["ruler"]["id"]
+
+claimed = c.call("region.claim", {
+    "cell": "REGION_DEMO",
+    "layer": "999/10",
+    "rulers": [
+        {"id": include, "role": "include"},
+        {"id": exclude, "role": "exclude"},
+    ],
+})
+# claimed["name"], claimed["klink_id"], claimed["area_um2"] == 24810.9</code></pre>
+        <p>Once claimed, a Region is useful on its own, before any generation:</p>
+        <ul>
+          <li><code>region.get</code> returns the polygon -- feed <code>hull_um</code> to <code>cell.fill_region</code></li>
+          <li><code>region.occupancy</code> reports what is inside: per-layer obstacles, named obstacle cells, free area</li>
+          <li><code>view.zoom_box</code> on <code>bbox_um</code> navigates there</li>
+        </ul>
+        <p><code>region_claim_fill.py</code> then does the simplest thing with it -- no numbered array, just feeding the Region's polygon to <code>cell.fill_region</code>:</p>
+        <pre><code>got = c.call("region.get", {"name": claimed["name"]})
+filled = c.call("cell.fill_region", {
+    "cell": "REGION_DEMO",
+    "fill_cell": "REGION_DEMO_SENSOR",
+    "polygons_um": [got["hull_um"]],
+    "exclude_layers": ["10/0"],
+})
+# filled["placed"] == 308, filled["remaining_area_um2"] == 2098.9</code></pre>
+        <p>Measured output: claimed area 24810.9 &micro;m&sup2;, fill placed 308 tiles, <code>remaining_area_um2</code> 2098.9 (the uncovered rim -- only tiles that fit entirely inside the region are placed; <code>placed &times; footprint area + remaining == region area</code> checks out).</p>
+
+        <h2 id="hero" class="anchor-h"><span class="stage-kicker">2</span>Plan and apply: a numbered array</h2>
+        <p><code>intent.prepare</code> plans a pitch grid of <strong>any existing cell</strong> inside a Region, with a <strong>unique physical number label per copy</strong> (real polygon text, previewed exactly as it will be applied). <strong>Nothing is written</strong> until you confirm with <code>intent.apply</code>.</p>
+        <p>Everything is explicit -- klink ships no process defaults:</p>
+        <ul>
+          <li><strong>Obstacles are whatever you declare</strong>: <code>obstacle_layers</code> (your design layers), <code>obstacle_cells</code> (named device/blackbox cells -- every instance occurrence counts by bbox), <code>extra_obstacles_um</code> (free-form polygons), plus <code>clearance_um</code>. Declaring none requires an explicit <code>allow_empty_obstacles: true</code>.</li>
+          <li><strong>Instances, not polygons</strong>: the arrayed thing is an instance of your cell, with <code>rotation_deg</code> (0/90/180/270) and <code>mirror</code> supported.</li>
+          <li><strong>Labels</strong> have two modes:
+            <ul>
+              <li><em>offset</em>: <code>{layer, height_um, offset_um}</code> relative to each footprint center;</li>
+              <li><em>slot</em> (recommended): circle a small region <strong>inside the unit cell</strong> that says "the number goes here", and pass <code>{layer, slot_region: "R00X"}</code>. Every copy gets its own number auto-fitted into its own slot; the slot moves and rotates with the instance. Drag the slot and regenerate -- every number follows.</li>
+            </ul>
+          </li>
+          <li><strong>Numbering</strong> has two modes:
+            <ul>
+              <li><em>prefix</em>: <code>{prefix: "S", width: 3, start: 1, order: "top_down"}</code> &rarr; S001, S002, &hellip;</li>
+              <li><em>pattern</em>: any grid notation your project uses -- <code>"{row}+{col}"</code> &rarr; 1+2, <code>"{row}-{col}"</code> &rarr; 1-3, <code>"R{row}C{col}"</code>, <code>"{row:A}{col}"</code> &rarr; A1 (letters), with per-axis <code>{start, step, order}</code>. Rejected sites never leave numbering gaps.</li>
+            </ul>
+          </li>
+        </ul>
+        <p>Every plan is validated before you see it: footprint and label containment, obstacle clearance, overlap, duplicate numbers. A plan with problems cannot be applied; a layout that changed between prepare and apply is refused (re-prepare).</p>
+        <p><code>region_array_labeled.py</code> walks the full flow: first circle a text slot <strong>inside the unit cell</strong>, then circle the target area -- both are <code>region.claim</code> calls -- then <code>intent.prepare</code> to plan and <code>intent.apply</code> to confirm:</p>
+        <pre><code># 2a. circle the text SLOT inside the unit cell ("the number goes here")
+rid_slot = c.call("annotation.insert", {
+    "points_um": [[0.5, 0.5], [7.5, 2.5]],
+    "outline": "box",
+    "category": "klink_demo_intent",
+})["ruler"]["id"]
+slot = c.call("region.claim",
+              {"cell": "INTENT_DEMO_SENSOR", "rulers": [{"id": rid_slot}]})
+
+# 2b. circle the target area
+rid = c.call("annotation.insert", {
+    "points_um": [[0, 0], [140, 100]],
+    "outline": "box",
+    "category": "klink_demo_intent",
+})["ruler"]["id"]
+region = c.call("region.claim",
+                {"cell": "INTENT_DEMO", "rulers": [{"id": rid}]})
+
+# 3. prepare (pure analysis + plan; nothing written)
+preview = orchestrator.prepare(
+    c, store,
+    region=region["name"],
+    source_cell="INTENT_DEMO_SENSOR",
+    obstacle_layers=["10/0"],
+    pitch_um=[20.0, 20.0],
+    numbering={"prefix": "S", "width": 3, "start": 1, "order": "top_down"},
+    label={"layer": "20/0", "slot_region": slot["name"], "margin_um": 0.2},
+    instruction="tile a SENSOR array here, numbers go in each cell's text slot",
+)
+# preview["placed"] == 31, 4 rejected for hitting the obstacle
+# preview["label_range"] == ("S001", "S031"), preview["label_height_um"] == 1.59
+
+# 4. apply (one transaction, one undo step)
+result = orchestrator.apply(
+    c, store, plan_id=preview["plan_id"],
+    plan_hash=preview["plan_hash"], confirm=preview["plan_id"])
+# result["container_cell"], result["instances"] == 31, result["label_shapes"] == 167</code></pre>
+        <p>Measured output: region area 14000 &micro;m&sup2;, preview placed 31 (4 rejected for hitting the example's <code>OBSTACLE_BOX_UM</code> obstacle), labels <code>S001</code>..<code>S031</code>, font auto-fit to the slot at 1.59 &micro;m; applied &rarr; 31 instances, 167 label polygons (each digit label is built from several glyph polygons).</p>
+
+        <h2 id="regenerate" class="anchor-h"><span class="stage-kicker">3</span>Regenerate semantics</h2>
+        <p>Applied output lands in a dedicated <code>KLINK_I_*</code> container cell with a stable identity, so changing your mind later doesn't mean manually cleaning up and redrawing:</p>
+        <ul>
+          <li><strong>Atomic container swap</strong>: <code>intent.regenerate</code> replaces only the one container cell this intent previously generated, as a single whole swap -- not instance-by-instance edits.</li>
+          <li><strong>Diverged refusal</strong>: if you hand-edited the output (added an instance by hand inside the <code>KLINK_I_*</code> container, deleted a label), regenerate detects the divergence and <strong>refuses</strong> -- your hand edits are never silently overwritten.</li>
+          <li><strong>One Ctrl+Z</strong>: <code>apply</code> itself is one transaction, so one undo reverts the whole apply (or the whole regenerate) at once.</li>
+        </ul>
+        <p><code>region_array_labeled.py</code> regenerates with a new numbering start, passing only what changed:</p>
+        <pre><code># 5. regenerate with a new numbering start; apply swaps the old container
+preview2 = orchestrator.regenerate(
+    c, store, intent_id=result["intent_id"],
+    parameters_patch={"numbering": {"start": 201}})
+result2 = orchestrator.apply(
+    c, store, plan_id=preview2["plan_id"],
+    plan_hash=preview2["plan_hash"], confirm=preview2["plan_id"])
+# preview2["label_range"] == ("S201", "S231")
+# result2["container_cell"] replaced result2["replaced_container"]</code></pre>
+        <p>Measured output: after regenerating, labels read <code>S201</code>..<code>S231</code>; one container wholly replaced the other (<code>replaced_container</code> reports which one was swapped out), and the whole apply still counts as one undo step.</p>
+
+        <h2 id="export" class="anchor-h">Delivery: clean export</h2>
+        <p>Region/Port/Anchor markers are working aids on reserved layers -- they must never reach a mask. <code>layout.export_clean</code> is the fail-closed exit:</p>
+        <pre><code>c.call("layout.export_clean", {
+    "path": "out.gds",
+    "allowlist_layers": ["10/0", "20/0"],
+    "cells": ["TOP"],
+})</code></pre>
+        <p>It removes every klink marker by PCell type (not by guessing layer numbers), writes only your explicit layer allowlist, strips PCell context, re-reads the output file to verify it, and only then promotes it into place. <strong>The live layout is never touched</strong> -- <code>layout.save_file</code> remains the full working archive; the two serve different purposes.</p>
+        <div class="note"><strong>New in 0.5.1, the <code>cells</code> parameter:</strong> scope the export to those top cells and their hierarchy -- without it, <strong>every</strong> top cell in the layout goes into the file, including unrelated ones from a shared session (found by a blind test after the 0.5.0 release). Re-read verification now also refuses out-of-scope top cells; an unknown cell name gets an instructive error.</div>
+        <p>Note that generated <code>KLINK_I_*</code> container cells are <strong>real design content</strong>, not markers: the export keeps (and verifies) them -- only working markers on reserved layers like Region/Port/Anchor get stripped.</p>
+
+        <h2 id="sites" class="anchor-h">Site engine (fabrication domain)</h2>
+        <p>The deterministic grid/numbering core behind <code>intent.prepare</code> is shared with the <code>fabrication</code> domain and usable directly, without going through the Region/intent layer:</p>
+        <ul>
+          <li><code>generate_grid_sites</code> / <code>generate_circular_die_sites</code> -- site grids over a bbox or a circular die</li>
+          <li><code>number_sites</code> -- rowcol / sequential / prefix / serpentine schemes with <code>order</code> and <code>start</code></li>
+          <li><code>pattern_site_ids</code> -- the grid-notation engine behind numbering patterns, the same one <code>intent.prepare</code>'s <code>numbering.pattern</code> mode is built on</li>
+        </ul>
+        <pre><code>python -m examples_klink.public.features.fabrication_sites   # [--port &lt;session-port&gt;] [--keep]</code></pre>
+        <p>The example is a circular-die site layout (10 mm diameter, 1 mm pitch, 500 &micro;m edge exclusion), placed once dry-run and once live; every site gets a placeholder device instance plus a prefix-numbered label (<code>D001</code>, <code>D002</code>, &hellip;), and four named mark cells go at the die corners. Measured output: dry-run and live site counts agree at 61; 65 instances inserted (61 device + 4 marks); 61 number-label text shapes on <code>6/0</code>.</p>
+
+        <h2 id="boundaries" class="anchor-h">What this does NOT do</h2>
+        <ul>
+          <li><strong>It does not invent a device</strong>: what gets arrayed is always an instance of <strong>a cell you already have</strong> -- a PCell or a static cell. <code>layoutintent</code> does not design or fit a device for you; that capability lives on a different path (the <code>structdevice</code> fit/netlist P&amp;R flow, see the fit-device tutorial).</li>
+          <li><strong>It ships no process defaults</strong>: obstacle layers, clearance, label font size, and the numbering scheme are never guessed -- an undeclared one is an instructive error (e.g. <code>allow_empty_obstacles</code>).</li>
+          <li><strong>It is not a full DRC signoff</strong>: the obstacle-clearance check inside <code>intent.prepare</code> is a placement-planning check, not a full DRC deck; real DRC/LVS is the <a href="drc-lvs.html">DRC · LVS guide</a>.</li>
+          <li><strong>Export never guesses layer numbers</strong>: <code>layout.export_clean</code> writes only your explicit <code>allowlist_layers</code>; klink markers are removed by PCell type, not by a layer-number blacklist guess.</li>
+        </ul>
+
+        <h2 id="next" class="anchor-h">Next steps</h2>
+        <p>Copy <code>region_claim_fill.py</code> or <code>region_array_labeled.py</code> into your own project, swap in your real cell, layer numbers, pitch, and obstacle declarations, and rerun the scripts unchanged. To work against the MCP tools directly, <code>klink.find_tools domain=layoutintent</code> shows the full <code>region.*</code>/<code>intent.*</code> parameter list and usage notes.</p>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>geometry-first: mark intent on geometry, let algorithms complete the wiring, verify with structured evidence.</p></div>
+      <div><h3>Keep reading</h3><p><a href="tutorials.html">Core concepts &amp; tutorials</a></p><p><a href="mcp-reference.html">MCP tool reference</a></p></div>
+      <div><h3>Install</h3><p><a href="quickstart.html">Quickstart</a></p></div>
+    </div>
+  </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

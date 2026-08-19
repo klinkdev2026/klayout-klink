@@ -48,6 +48,7 @@
         <a href="tutorial-fit-device.html">拟合器件 → PnR → LVS</a>
         <a href="tutorial-padframe.html">针卡优先 padframe</a>
         <a href="tutorial-imaging.html">成像：剖面 · 3D · SEM · Blender</a>
+        <a href="tutorial-layout-intent.html">Region 与可执行版图意图</a>
       </div>
       <div class="sb-group">
         <div class="sb-title">指南</div>
@@ -309,6 +310,12 @@ python example_template/nanodevice/ebl_wraparound.py</code></pre>
             <h3>自定义器件数字 P&amp;R → LVS</h3>
             <p>从合成 exemplar 拟合器件、放置、detailed routing 到 live LVS。实测 routed 94/94、<strong>LVS match=True</strong>、173 器件；器件无关网表流见 <code>structdevice.*</code>。</p>
             <span class="card-more">看 fit-device demo →</span>
+          </a>
+          <a class="card" href="tutorial-layout-intent.html">
+            <span class="feature-kicker">Region · 意图</span>
+            <h3>Region 与可执行版图意图</h3>
+            <p>圈一块区域，把任意已有 cell 铺成带唯一编号标签的阵列：<code>region.claim</code> 认领 + <code>intent.prepare</code> 预览 + <code>intent.apply</code> 写入 + <code>intent.regenerate</code> 原子替换。实测区域 14000 µm²、placed 31（4 rejected）、regenerate 后编号整体换成 S201..S231。</p>
+            <span class="card-more">看 layout intent 教程 →</span>
           </a>
         </div>
       </div>

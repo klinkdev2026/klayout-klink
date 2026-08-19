@@ -42,6 +42,7 @@
         <a href="tutorial-fit-device.html">Fit device &rarr; PnR &rarr; LVS</a>
         <a href="tutorial-padframe.html">Probe-card-first padframe</a>
         <a href="tutorial-imaging.html">Imaging: cross-section · 3D · SEM · Blender</a>
+        <a href="tutorial-layout-intent.html">Regions &amp; executable layout intent</a>
       </div>
       <div class="sb-group">
         <div class="sb-title">Guides</div>
@@ -286,6 +287,26 @@
     <section class="section alt">
       <div class="container">
         <div class="section-head">
+          <h2 id="layout-intent" class="anchor-h">Regions &amp; executable layout intent <code>layoutintent</code></h2>
+          <p>Circle an area and tile any existing cell into it with a unique number label per copy: <code>region.claim</code> claims the area, <code>intent.prepare</code> plans and previews (writing nothing), <code>intent.apply</code> commits in one transaction, and <code>intent.regenerate</code> atomically swaps the output -- needs a live KLayout session.</p>
+        </div>
+        <div class="grid two">
+          <a class="card" href="tutorial-layout-intent.html">
+            <span class="feature-kicker">layoutintent · Region</span>
+            <span class="tier live">Needs a live KLayout session</span>
+            <h3>Circle an area &rarr; numbered array &rarr; regenerable</h3>
+            <p>Rulers claim a Region (include/clip/exclude roles), <code>intent.prepare</code> plans a pitch grid with a unique number label per copy (obstacles/clearance/numbering scheme all declared explicitly), <code>intent.apply</code> commits in one transaction, <code>intent.regenerate</code> atomically swaps the output, plus the <code>layout.export_clean</code> delivery exit.</p>
+            <p class="card-run"><code>python -m examples_klink.public.features.region_array_labeled</code></p>
+            <p class="card-metric">region 14000 &micro;m&sup2; · placed 31 (4 rejected) · S001..S031 &rarr; regenerate S201..S231</p>
+            <span class="card-more">Read the tutorial →</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-head">
           <h2 id="control-plane" class="anchor-h">Control plane · collaboration <code>control plane</code></h2>
           <p>Not a kind of device but the control plane itself: one agent driving several KLayout windows at once, humans and the agent collaborating through the toolbar.</p>
         </div>
@@ -301,7 +322,7 @@
       </div>
     </section>
 
-    <section class="section">
+    <section class="section alt">
       <div class="container">
         <div class="section-head">
           <h2 id="guides" class="anchor-h">Guides <code>guides</code></h2>

@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>分步教程：Region 与可执行版图意图 - klink</title>
+  <meta name="description" content="用 klink 的 layoutintent 域圈出一块区域、把任意已有 cell 铺成带唯一编号标签的阵列：region.claim 认领区域，intent.prepare 规划并预览（不写入任何东西），intent.apply 一次事务写入，intent.regenerate 原子替换输出；klink 不带任何工艺默认值，障碍物、间距、编号方案全部显式声明。">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="assets/styles.css">
+  <style>
+    /* Minimal stage-kicker styling, following the site's existing card/note
+       language -- assets/styles.css has no such usage yet, so this stays
+       scoped to this page until it lands there (same convention as
+       tutorial-imaging.html). */
+    .stage-kicker {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 26px;
+      height: 26px;
+      padding: 0 8px;
+      border-radius: 6px;
+      background: #dff1ee;
+      color: #12654b;
+      font-weight: 800;
+      font-size: 13px;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body data-page="tutorials" class="has-sidebar">
+  <aside class="site-sidebar">
+    <a class="sb-brand" href="index.html"><span class="brand-mark">k</span>klink</a>
+    <nav class="sb-nav" aria-label="站点结构">
+      <div class="sb-group">
+        <div class="sb-title">开始</div>
+        <a href="index.html">首页 · klink 是什么</a>
+        <a href="quickstart.html">快速上手</a>
+        <a href="concepts.html">核心思路</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">工作流 · 人机协作</div>
+        <a href="workflows.html">工作流详解（图文）</a>
+        <a href="tutorial-multiwindow.html">跨窗口协作实战</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">对话案例</div>
+        <a href="case-hallbar-chat.html">一句话画 Hall bar</a>
+        <a href="case-drc-chat.html">DRC 查违例并修好</a>
+        <a href="case-fit-lvs-chat.html">拟合器件跑到 LVS</a>
+        <a href="case-gf-reroute-chat.html">硅光：标端口 · 拖动重连</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">分步教程</div>
+        <a href="tutorials.html">教程总览</a>
+        <a href="tutorial-hallbar.html">Hall bar 器件</a>
+        <a href="tutorial-ebl-wraparound.html">EBL wraparound</a>
+        <a href="tutorial-neural-electrode.html">神经电极阵列</a>
+        <a href="tutorial-gf-ports.html">硅光 · 三种拿端口</a>
+        <a href="tutorial-gf-mzi.html">硅光 · gf MZI 接管</a>
+        <a href="tutorial-passives.html">无源器件模板</a>
+        <a href="tutorial-fit-device.html">拟合器件 → PnR → LVS</a>
+        <a href="tutorial-padframe.html">针卡优先 padframe</a>
+        <a href="tutorial-imaging.html">成像：剖面 · 3D · SEM · Blender</a>
+        <a href="tutorial-layout-intent.html">Region 与可执行版图意图</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">指南</div>
+        <a href="drc-lvs.html">DRC · LVS</a>
+        <a href="25d-view.html">2.5D 视图</a>
+        <a href="ledit-bridge.html">L-Edit 桥</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">参考</div>
+        <a href="mcp-reference.html">MCP 工具全表</a>
+        <a href="plugin-packages.html">编写扩展包</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">架构</div>
+        <a href="architecture.html">架构与边界</a>
+      </div>
+    </nav>
+    <div class="sb-foot">
+      <a href="https://github.com/klinkdev2026/klayout-klink">GitHub ↗</a>
+      <a href="en/index.html">English</a>
+    </div>
+  </aside>
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="主导航">
+        <a href="index.html" data-nav="home">首页</a>
+        <a href="quickstart.html" data-nav="quickstart">快速上手</a>
+        <a href="tutorials.html" data-nav="tutorials" class="active">教程</a>
+        <a href="workflows.html" data-nav="workflows">工作流</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP 参考</a>
+        <a href="architecture.html" data-nav="architecture">架构</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="语言切换">
+          <a class="active" href="tutorial-layout-intent.html">CN</a>
+          <a href="en/tutorial-layout-intent.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="打开导航" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Step-by-step tutorial · layout intent</div>
+        <h1>分步教程：圈一块区域，生成可重新生成的编号阵列</h1>
+        <p>klink 的 <code>layoutintent</code> 域把"在这块区域里铺一个阵列，每个都带唯一编号"变成一条带预览、带原子替换的流水线：拖标尺圈区域 → <code>region.claim</code> 认领 → <code>intent.prepare</code> 规划并预览（不写入任何东西）→ <code>intent.apply</code> 一次事务写入 → 改主意后 <code>intent.regenerate</code> 原子替换输出。klink 不带任何工艺默认值——障碍物、间距、编号方案，全部由你显式声明。</p>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#what">这是什么</a>
+          <a href="#prereqs">前置条件</a>
+          <a href="#regions">① 认领 Region</a>
+          <a href="#hero">② 规划与应用：编号阵列</a>
+          <a href="#regenerate">③ 重新生成的语义</a>
+          <a href="#export">交付：clean export</a>
+          <a href="#sites">位点引擎（fabrication 域）</a>
+          <a href="#boundaries">这不做什么</a>
+          <a href="#next">下一步</a>
+        </nav>
+      </aside>
+
+      <article class="content">
+        <h2 id="what" class="anchor-h">这是什么</h2>
+        <p>一次性画完整个版图之外，还有一类常见需求：<strong>先圈出一块要用的区域，再往里面铺一个东西的很多份，每份都要能被唯一识别</strong>——传感器阵列上的一格格 site、晶圆上的 die、测试结构矩阵。<code>layoutintent</code> 域（klink 0.5.0 新增）把这条流程拆成四步，每一步都是显式的 RPC 调用：</p>
+        <pre><code>拖标尺圈一块区域          (KLayout 自带的标尺工具：box / ellipse)
+  -&gt; region.claim         标尺合并成一个 Region 标记 PCell
+  -&gt; intent.prepare       分析 + 规划 + 校验（不写入任何东西）
+  -&gt; intent.apply         一次事务，一次 Ctrl+Z
+  -&gt; intent.regenerate    改编号 / 间距，原子替换输出</code></pre>
+        <p>这篇教程走两个可跑 demo：<code>region_claim_fill.py</code>（认领区域 + 铺 fill，不涉及编号）和 <code>region_array_labeled.py</code>（完整的 hero 流程：认领 → 规划预览 → 应用 → 重新生成）。两份脚本的层号、尺寸、间距都是脚本自己声明的示例数据——<strong>klink 本身不带任何一个数字</strong>。</p>
+
+        <h2 id="prereqs" class="anchor-h">前置条件</h2>
+        <ul>
+          <li>安装 klink：<code>pip install klayout-klink</code>。</li>
+          <li>需要一个 <strong>live 的 KLayout 会话</strong>（装了 klink 插件、8765 端口在监听）——这条链路不是离线的：<code>region.claim</code>/<code>intent.*</code> 都是插件侧 RPC，直接改动 live 版图。不需要额外的可选依赖（不需要 gdsfactory、numpy、bpy 之类）。</li>
+        </ul>
+        <div class="note">下面两个脚本都用 <code>KLinkClient().connect()</code> 直接连默认 session（8765），不带 <code>--port</code> 参数。用空的或测试专用窗口，不要用你手工的工作 tab——脚本一开始会先删除同名的旧 demo cell 再重建。</div>
+
+        <h2 id="regions" class="anchor-h"><span class="stage-kicker">1</span>认领 Region</h2>
+        <p>一个 <strong>Region</strong> 是一块已认领的区域：保留标记层（默认 <code>999/10</code>，可用 <code>region.set_layer</code> 配置）上的一个 <code>klink_Region</code> PCell。它活在你的版图里——随 GDS 一起走、重启后还在，也能像其它对象一样被点击 + SEND 给 agent。标尺只是输入手势：认领成功会<strong>消耗掉</strong>用到的标尺（撤销会同时带回标尺和认领前的状态）。</p>
+        <p>一次认领可以组合多把标尺，各带三种角色之一：</p>
+        <table class="data-table">
+          <thead><tr><th>角色</th><th>含义</th><th>例子</th></tr></thead>
+          <tbody>
+            <tr><td><code>include</code></td><td>并集（默认）</td><td>两个 box → L 形</td></tr>
+            <tr><td><code>clip</code></td><td>交集</td><td>椭圆 ∩ box → 半圆</td></tr>
+            <tr><td><code>exclude</code></td><td>差集（挖出的洞永不可写）</td><td>圆 − 圆 → 圆环</td></tr>
+          </tbody>
+        </table>
+        <p>椭圆的离散化是保守的：<code>include</code>/<code>clip</code> 用内切多边形，<code>exclude</code> 用外切——可写区域只会缩小，绝不会超出你画的范围。结果必须是<strong>一个连通分量</strong>；不连通的孤岛会被拒绝，并把各自的 bbox 报回来，方便你分开认领。</p>
+        <p><code>region_claim_fill.py</code> 画一个大 box 当 <code>include</code>，再用一个椭圆当 <code>exclude</code> 在角上咬一口——这就是标尺工具在真实使用中拖出来的两种形状，脚本里用 <code>annotation.insert</code> 程序化地画出来，方便离线重复跑：</p>
+        <pre><code>include = c.call("annotation.insert", {
+    "points_um": [[0, 0], [200, 140]],
+    "outline": "box",
+    "category": "klink_demo_region",
+})["ruler"]["id"]
+exclude = c.call("annotation.insert", {
+    "points_um": [[140, 80], [220, 160]],
+    "outline": "ellipse",
+    "category": "klink_demo_region",
+})["ruler"]["id"]
+
+claimed = c.call("region.claim", {
+    "cell": "REGION_DEMO",
+    "layer": "999/10",
+    "rulers": [
+        {"id": include, "role": "include"},
+        {"id": exclude, "role": "exclude"},
+    ],
+})
+# claimed["name"], claimed["klink_id"], claimed["area_um2"] == 24810.9</code></pre>
+        <p>认领之后，Region 本身就有用——不必接下一步的生成流程：</p>
+        <ul>
+          <li><code>region.get</code> 返回多边形——把 <code>hull_um</code> 喂给 <code>cell.fill_region</code></li>
+          <li><code>region.occupancy</code> 报告区域内部有什么：逐层障碍物、命名的障碍 cell、空闲面积</li>
+          <li><code>view.zoom_box</code> 用 <code>bbox_um</code> 导航过去</li>
+        </ul>
+        <p><code>region_claim_fill.py</code> 接下来就是最简单的用法——不铺编号阵列，只把 Region 的多边形喂给 <code>cell.fill_region</code> 铺一遍 demo cell：</p>
+        <pre><code>got = c.call("region.get", {"name": claimed["name"]})
+filled = c.call("cell.fill_region", {
+    "cell": "REGION_DEMO",
+    "fill_cell": "REGION_DEMO_SENSOR",
+    "polygons_um": [got["hull_um"]],
+    "exclude_layers": ["10/0"],
+})
+# filled["placed"] == 308, filled["remaining_area_um2"] == 2098.9</code></pre>
+        <p>实测输出：认领面积 24810.9 µm²，铺出 308 块 fill tile，<code>remaining_area_um2</code> 2098.9（贴边贴不满的剩余面积——只有完全落在区域内部的 tile 才会被放置；<code>placed × footprint 面积 + remaining == region 面积</code> 自洽）。</p>
+
+        <h2 id="hero" class="anchor-h"><span class="stage-kicker">2</span>规划与应用：编号阵列</h2>
+        <p><code>intent.prepare</code> 在一个 Region 里规划<strong>任意已有 cell</strong> 的间距网格，<strong>每个副本都带唯一的物理编号标签</strong>（真实多边形文字，预览与最终应用效果完全一致）。在你用 <code>intent.apply</code> 确认之前<strong>不会写入任何东西</strong>。</p>
+        <p>一切都是显式的——klink 不带任何工艺默认值：</p>
+        <ul>
+          <li><strong>障碍物由你声明</strong>：<code>obstacle_layers</code>（你的设计层）、<code>obstacle_cells</code>（命名的器件/blackbox cell——每个实例出现都按 bbox 计入）、<code>extra_obstacles_um</code>（自由形式多边形），加上 <code>clearance_um</code>。什么都不声明需要显式传 <code>allow_empty_obstacles: true</code>。</li>
+          <li><strong>是实例，不是多边形</strong>：阵列出来的是你 cell 的一个实例，支持 <code>rotation_deg</code>（0/90/180/270）和 <code>mirror</code>。</li>
+          <li><strong>标签</strong>有两种模式：
+            <ul>
+              <li><em>offset</em>：<code>{layer, height_um, offset_um}</code>，相对每个 footprint 中心的偏移；</li>
+              <li><em>slot</em>（推荐）：在<strong>单元 cell 内部</strong>圈一小块区域，表示"编号写在这里"，然后传 <code>{layer, slot_region: "R00X"}</code>。每个副本的编号都会自动适配字号、精确嵌进自己的 slot；slot 会跟着实例一起移动、旋转。拖动 slot 再重新生成——所有编号都跟着走。</li>
+            </ul>
+          </li>
+          <li><strong>编号</strong>有两种模式：
+            <ul>
+              <li><em>prefix</em>：<code>{prefix: "S", width: 3, start: 1, order: "top_down"}</code> → S001, S002, …</li>
+              <li><em>pattern</em>：你项目用的任何网格记法——<code>"{row}+{col}"</code> → 1+2、<code>"{row}-{col}"</code> → 1-3、<code>"R{row}C{col}"</code>、<code>"{row:A}{col}"</code> → A1（字母），每根轴各带 <code>{start, step, order}</code>。被拒绝的位点永远不会在编号里留空档。</li>
+            </ul>
+          </li>
+        </ul>
+        <p>每份计划在你看到之前都会被校验：footprint 和标签的包含关系、障碍物净空、重叠、重复编号。有问题的计划无法应用；如果版图在 prepare 和 apply 之间发生了变化，apply 会被拒绝（重新 prepare 即可）。</p>
+        <p><code>region_array_labeled.py</code> 走完整流程：先在 <strong>单元 cell 内部</strong>圈一个文字 slot，再圈目标区域，两次都是 <code>region.claim</code>；然后 <code>intent.prepare</code> 规划、<code>intent.apply</code> 确认：</p>
+        <pre><code># 2a. 在单元 cell 内部圈文字 slot（"编号写在这里"）
+rid_slot = c.call("annotation.insert", {
+    "points_um": [[0.5, 0.5], [7.5, 2.5]],
+    "outline": "box",
+    "category": "klink_demo_intent",
+})["ruler"]["id"]
+slot = c.call("region.claim",
+              {"cell": "INTENT_DEMO_SENSOR", "rulers": [{"id": rid_slot}]})
+
+# 2b. 圈目标区域
+rid = c.call("annotation.insert", {
+    "points_um": [[0, 0], [140, 100]],
+    "outline": "box",
+    "category": "klink_demo_intent",
+})["ruler"]["id"]
+region = c.call("region.claim",
+                {"cell": "INTENT_DEMO", "rulers": [{"id": rid}]})
+
+# 3. 规划（纯分析 + 计划；不写入任何东西）
+preview = orchestrator.prepare(
+    c, store,
+    region=region["name"],
+    source_cell="INTENT_DEMO_SENSOR",
+    obstacle_layers=["10/0"],
+    pitch_um=[20.0, 20.0],
+    numbering={"prefix": "S", "width": 3, "start": 1, "order": "top_down"},
+    label={"layer": "20/0", "slot_region": slot["name"], "margin_um": 0.2},
+    instruction="在这里铺 SENSOR 阵列，编号写进每个单元的文字槽",
+)
+# preview["placed"] == 31，4 个因为撞上障碍物被拒绝
+# preview["label_range"] == ("S001", "S031")，preview["label_height_um"] == 1.59
+
+# 4. 应用（一次事务，一次 undo）
+result = orchestrator.apply(
+    c, store, plan_id=preview["plan_id"],
+    plan_hash=preview["plan_hash"], confirm=preview["plan_id"])
+# result["container_cell"]，result["instances"] == 31，result["label_shapes"] == 167</code></pre>
+        <p>实测输出：区域面积 14000 µm²，预览放置 31 个（4 个因为撞上示例里那块 <code>OBSTACLE_BOX_UM</code> 障碍物被拒绝），编号 <code>S001</code>..<code>S031</code>，字号按 slot 尺寸自动适配到 1.59 µm；应用后 → 31 个实例、167 个标签多边形（每个数字标签由若干多边形字形拼成）。</p>
+
+        <h2 id="regenerate" class="anchor-h"><span class="stage-kicker">3</span>重新生成的语义</h2>
+        <p>应用后的输出落在一个身份稳定的专属 <code>KLINK_I_*</code> 容器 cell 里，所以改主意之后不需要手动清理重画：</p>
+        <ul>
+          <li><strong>原子容器替换</strong>：<code>intent.regenerate</code> 只替换这一个 intent 之前生成的那个容器 cell，一次性整体换掉，不是逐个实例增删。</li>
+          <li><strong>偏离即拒绝</strong>：如果你手动改过输出（比如在 <code>KLINK_I_*</code> 容器里手工加了个实例、删了个标签），regenerate 会检测到偏离并<strong>拒绝</strong>——绝不会静默覆盖你的手改。</li>
+          <li><strong>一次 Ctrl+Z</strong>：<code>apply</code> 本身是一次事务，一次撤销就能把这次应用（或这次重新生成）整体撤掉。</li>
+        </ul>
+        <p><code>region_array_labeled.py</code> 用新的编号起点重新生成，只需要传变化的那部分参数：</p>
+        <pre><code># 5. 用新的编号起点重新生成；apply 会替换掉旧容器
+preview2 = orchestrator.regenerate(
+    c, store, intent_id=result["intent_id"],
+    parameters_patch={"numbering": {"start": 201}})
+result2 = orchestrator.apply(
+    c, store, plan_id=preview2["plan_id"],
+    plan_hash=preview2["plan_hash"], confirm=preview2["plan_id"])
+# preview2["label_range"] == ("S201", "S231")
+# result2["container_cell"] 替换了 result2["replaced_container"]</code></pre>
+        <p>实测输出：重新生成后编号变成 <code>S201</code>..<code>S231</code>，一个容器整体替换了另一个（<code>replaced_container</code> 报告被换下的那个），整次应用仍然只算一次 undo 步骤。</p>
+
+        <h2 id="export" class="anchor-h">交付：clean export</h2>
+        <p>Region/Port/Anchor 标记是工作用的辅助标记，画在保留层上——它们绝不能进入最终 mask。<code>layout.export_clean</code> 是 fail-closed 的出口：</p>
+        <pre><code>c.call("layout.export_clean", {
+    "path": "out.gds",
+    "allowlist_layers": ["10/0", "20/0"],
+    "cells": ["TOP"],
+})</code></pre>
+        <p>它按 PCell 类型（而不是靠猜层号）移除每一个 klink 标记，只写出你显式声明的层白名单，剥离 PCell 上下文，重新读回输出文件做校验，通过后才把它替换到位。<strong>live 版图本身从不被触碰</strong>——<code>layout.save_file</code> 仍然是完整的工作存档，两者用途不同。</p>
+        <div class="note"><strong>0.5.1 新增 <code>cells</code> 参数：</strong>把导出限定到这些 top cell 及其层级——不传的话，版图里<strong>所有</strong> top cell 都会进文件，包括共享会话里不相关的那些（这条是 0.5.0 发布后的一次盲测发现的真实问题）。重新读回校验现在也会拒绝范围外的 top cell；传一个不存在的 cell 名字会得到一条指导性错误。</div>
+        <p>注意生成的 <code>KLINK_I_*</code> 容器 cell 是<strong>真实设计内容</strong>而不是标记：导出会保留（并校验）它们——只有 Region/Port/Anchor 这类保留层上的工作标记会被清除。</p>
+
+        <h2 id="sites" class="anchor-h">位点引擎（fabrication 域）</h2>
+        <p><code>intent.prepare</code> 背后的确定性网格/编号内核与 <code>fabrication</code> 域共享，也可以直接使用，不必经过 Region/intent 这一层：</p>
+        <ul>
+          <li><code>generate_grid_sites</code> / <code>generate_circular_die_sites</code> —— 在一个 bbox 或圆形 die 上生成位点网格</li>
+          <li><code>number_sites</code> —— rowcol / sequential / prefix / serpentine 几种编号方案，带 <code>order</code> 和 <code>start</code></li>
+          <li><code>pattern_site_ids</code> —— 编号 pattern 背后的网格记法引擎，就是上面 <code>intent.prepare</code> 的 <code>numbering.pattern</code> 模式所用的同一套</li>
+        </ul>
+        <pre><code>python -m examples_klink.public.features.fabrication_sites   # [--port &lt;端口&gt;] [--keep]</code></pre>
+        <p>示例是一个圆形 die 的位点布局（直径 10 mm、间距 1 mm、边缘留白 500 µm），dry-run 和 live 两遍各生成一次，每个位点放一个占位器件实例加一个 prefix 编号标签（<code>D001</code>、<code>D002</code>……），die 四角各放一个命名 mark cell。实测输出：dry-run 与 live 的位点数一致，都是 61；插入 65 个实例（61 个器件 + 4 个 mark）；<code>6/0</code> 层上 61 个编号文字形状。</p>
+
+        <h2 id="boundaries" class="anchor-h">这不做什么</h2>
+        <ul>
+          <li><strong>不发明器件</strong>：阵列出来的永远是<strong>你已经有的一个 cell</strong> 的实例——PCell 也好、静态 cell 也好。<code>layoutintent</code> 不会替你设计或拟合一个器件；要那个能力是另一条链路（<code>structdevice</code> 的拟合/网表 P&R 流程，见拟合器件教程）。</li>
+          <li><strong>不带任何工艺默认值</strong>：障碍物层、净空、字体大小、编号方案，klink 一个都不猜——不声明就报指导性错误（比如 <code>allow_empty_obstacles</code>）。</li>
+          <li><strong>不是完整的 DRC 签核</strong>：<code>intent.prepare</code> 里的障碍物净空检查是放置阶段的规划性校验，不是一整套 DRC deck；真正的 DRC/LVS 走 <a href="drc-lvs.html">DRC · LVS 指南</a>。</li>
+          <li><strong>导出不猜层号</strong>：<code>layout.export_clean</code> 只写你显式声明的 <code>allowlist_layers</code>，klink 标记按 PCell 类型清除，不是按层号黑名单猜测。</li>
+        </ul>
+
+        <h2 id="next" class="anchor-h">下一步</h2>
+        <p>把 <code>region_claim_fill.py</code> 或 <code>region_array_labeled.py</code> 拷到你自己的项目里，换成你真实的 cell、层号、间距和障碍物声明，两份脚本原样重跑就能看到效果。想直接对着 MCP 工具写，<code>klink.find_tools domain=layoutintent</code> 能看到 <code>region.*</code>/<code>intent.*</code> 完整的参数列表和用法说明。</p>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>geometry-first：在几何上标意图，让算法补全布线，用结构化证据验证。</p></div>
+      <div><h3>继续阅读</h3><p><a href="tutorials.html">核心思路与教程</a></p><p><a href="mcp-reference.html">MCP 工具参考</a></p></div>
+      <div><h3>安装</h3><p><a href="quickstart.html">快速上手</a></p></div>
+    </div>
+  </footer>
+  <script src="assets/app.js"></script>
+</body>
+</html>

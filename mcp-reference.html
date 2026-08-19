@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>MCP 工具参考 - klink</title>
-  <meta name="description" content="klink MCP / RPC 工具完整参考：13 个领域、153 个工具，每个工具的功能、参数和调用示例。">
+  <meta name="description" content="klink MCP / RPC 工具完整参考：14 个领域、171 个工具，每个工具的功能、参数和调用示例。">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="assets/styles.css">
 </head>
@@ -42,6 +42,7 @@
         <a href="tutorial-fit-device.html">拟合器件 → PnR → LVS</a>
         <a href="tutorial-padframe.html">针卡优先 padframe</a>
         <a href="tutorial-imaging.html">成像：剖面 · 3D · SEM · Blender</a>
+        <a href="tutorial-layout-intent.html">Region 与可执行版图意图</a>
       </div>
       <div class="sb-group">
         <div class="sb-title">指南</div>
@@ -91,7 +92,7 @@
       <div class="container">
         <div class="eyebrow">MCP / RPC reference</div>
         <h1>MCP 工具完整参考</h1>
-        <p>klink 的控制面只有一份工具目录，两张脸：typed Python client（<code>KLinkClient</code>）和暴露给 agent 的 MCP 工具。二者都由 live plugin 的 method registry 生成，不存在会漂移的手写清单。本页把 <strong>107 个 plugin RPC</strong> + <strong>46 个 MCP 本地工具</strong>（共 153 个）按 13 个领域逐一列出：功能、参数、示例。</p>
+        <p>klink 的控制面只有一份工具目录，两张脸：typed Python client（<code>KLinkClient</code>）和暴露给 agent 的 MCP 工具。二者都由 live plugin 的 method registry 生成，不存在会漂移的手写清单。本页把 <strong>118 个 plugin RPC</strong> + <strong>53 个 MCP 本地工具</strong>（共 171 个）按 14 个领域逐一列出：功能、参数、示例。</p>
       </div>
     </section>
 
@@ -105,15 +106,16 @@
           <a href="#d-session">2 &middot; 多会话与搬运（plugin 侧）</a>
           <a href="#d-geometry">3 &middot; 几何与单元结构</a>
           <a href="#d-selection">4 &middot; 选择与 SEND 记忆</a>
-          <a href="#d-ports">5 &middot; Port 与 Anchor</a>
-          <a href="#d-routing">6 &middot; 路由后端</a>
-          <a href="#d-verify">7 &middot; DRC 与 LVS</a>
-          <a href="#d-structdevice">8 &middot; 自定义器件 P&amp;R</a>
-          <a href="#d-imaging">9 &middot; 成像</a>
-          <a href="#d-nanodevice">10 &middot; 纳米器件</a>
-          <a href="#d-photonics">11 &middot; 硅光</a>
-          <a href="#d-ledit">12 &middot; L-Edit 桥</a>
-          <a href="#d-escape">13 &middot; Escape hatch</a>
+          <a href="#d-ports">5 &middot; Port、Anchor 与 Region</a>
+          <a href="#d-layoutintent">6 &middot; 可执行版图意图</a>
+          <a href="#d-routing">7 &middot; 路由后端</a>
+          <a href="#d-verify">8 &middot; DRC 与 LVS</a>
+          <a href="#d-structdevice">9 &middot; 自定义器件 P&amp;R</a>
+          <a href="#d-imaging">10 &middot; 成像</a>
+          <a href="#d-nanodevice">11 &middot; 纳米器件</a>
+          <a href="#d-photonics">12 &middot; 硅光</a>
+          <a href="#d-ledit">13 &middot; L-Edit 桥</a>
+          <a href="#d-escape">14 &middot; Escape hatch</a>
         </nav>
       </aside>
 
@@ -126,6 +128,7 @@
           <a href="#d-geometry">geometry_authoring</a>
           <a href="#d-selection">selection_and_send_memory</a>
           <a href="#d-ports">ports_and_anchors</a>
+          <a href="#d-layoutintent">layout_intent</a>
           <a href="#d-routing">routing_backends</a>
           <a href="#d-verify">drc_and_lvs_verification</a>
           <a href="#d-structdevice">device_structdevice</a>
@@ -257,7 +260,7 @@ klink.transfer_commit package_id="pkg_0001"</code></pre>
           </tbody>
         </table>
 
-        <h2 id="d-geometry" class="anchor-h">3 &middot; 几何与单元结构 <span class="tool-count">geometry_authoring &middot; 50 tools</span></h2>
+        <h2 id="d-geometry" class="anchor-h">3 &middot; 几何与单元结构 <span class="tool-count">geometry_authoring &middot; 51 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="geometry_authoring"</span>
           <p>核心绘图面。先读：<code>layout.info</code>、<code>cell.list</code>/<code>cell.tree</code>、<code>layer.list</code>/<code>layer.display_list</code>、<code>shape.query</code>、<code>instance.query</code>、<code>pcell.*</code>、<code>library.list</code>。生成式版图<strong>永远不要</strong>一次 RPC 画一个对象，用批量 RPC。画之前先 <code>layer.ensure</code>。编辑都包在事务里，<code>edit.undo</code>/<code>redo</code>/<code>status</code> 操作它们。本域除基础绘图外还带：<code>geometry.boolean</code>/<code>cell_xor</code>/<code>density</code>（几何差异与覆盖率检查）、<code>cell.fill_region</code>（dummy fill/测试结构平铺）、<code>cell.flatten</code>、<code>layer.load_lyp</code>/<code>save_lyp</code>/<code>set_style</code>/<code>set_visible</code>（视图样式）、<code>library.list</code>/<code>refresh</code>/<code>register_file</code>、<code>pcell.convert_to_static</code>、<code>shape.change_layer</code>/<code>transform</code>、<code>instance.transform</code>。破坏性的 <code>layout.clear</code>、<code>cell.delete</code> 只对一次性测试 cell 用，除非用户明确要求，别碰用户的工作 tab。</p>
@@ -332,6 +335,7 @@ klink.transfer_commit package_id="pkg_0001"</code></pre>
           <tbody>
             <tr><td><code>layout.show_file</code></td><td><span class="badge kind-rpc">rpc</span></td><td>keep_position, mode, path*, technology</td><td>载入 GDS/OAS（已开则 reload）。mode=replace 当前视图 / new 新 tab。录制时合并为一行。</td></tr>
             <tr><td><code>layout.save_file</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cellview_index, path*</td><td>存盘。扩展名决定格式：.gds/.gds2 GDSII，.oas/.oasis OASIS。</td></tr>
+            <tr><td><code>layout.export_clean</code></td><td><span class="badge kind-rpc">rpc</span></td><td>allowlist_layers*, cells, cellview_index, path*</td><td>fail-closed 的交付导出：只把显式声明的 allowlist_layers 写进一份新 GDS/OASIS 文件，移除每一个 klink 标记（Port/Anchor/Region PCell 实例）并剥离 PCell 上下文。在一份草稿副本上操作——live 版图从不被改动。输出会被重新读回校验（无保留层、无标记 cell）才原子提升到位；校验失败则删掉临时文件并报错。allowlist 里含保留标记层会被拒绝。传 cells 只导出这些 top cell（+ 层级）——不传的话整幅版图的所有 top cell 都会进文件，包括共享 session 里不相关的那些。完整工作存档用 layout.save_file；mask 和交付用这个。</td></tr>
             <tr><td><code>layout.import_file</code></td><td><span class="badge kind-rpc">rpc</span></td><td>create_other_layers, layer_map, on_conflict, path*</td><td>把一个版图文件合并进当前 layout，带图层重映射与同名 cell 冲突策略（rename/add/overwrite/skip）。</td></tr>
             <tr><td><code>layout.clear</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cellview_index</td><td>破坏性：清空整幅 layout（所有 cell/形状/层级）。</td></tr>
             <tr><td><code>edit.undo</code></td><td><span class="badge kind-rpc">rpc</span></td><td>—</td><td>撤销最近一次可撤销操作（klink RPC、Macro IDE 编辑或 GUI 编辑）。返回前后栈快照。</td></tr>
@@ -405,10 +409,11 @@ interaction.selection.recent limit=2       # → [sel_0007(B), sel_0006(A)]
 interaction.selection.label id="sel_0006" label="probe pad"
 # 现在按 id 去 mark port / 声明 net，而不是靠截图猜位置</code></pre>
 
-        <h2 id="d-ports" class="anchor-h">5 &middot; Port 与 Anchor（路由标记） <span class="tool-count">ports_and_anchors &middot; 18 tools</span></h2>
+        <h2 id="d-ports" class="anchor-h">5 &middot; Port、Anchor 与 Region（标记 PCell） <span class="tool-count">ports_and_anchors &middot; 25 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="ports_and_anchors"</span>
           <p>Port 是网络端点（<code>klink_Port</code> PCell：带 net + 朝向 + 宽度）。Anchor 是路由约束（<code>klink_Anchor</code> PCell），<code>kind</code> 为 <code>waypoint_region</code> / <code>bend_region</code> / <code>corridor</code>（普通 corridor 是<strong>必经</strong>通道；给它 <code>choice_group=BUS</code> 才变成可选通道）。<code>port.mark</code>/<code>list</code>/<code>update</code>/<code>transform</code>/<code>set_layer</code>/<code>unmark</code>/<code>delete_all</code>/<code>repair_names</code>，<code>anchor.*</code>（+ <code>anchor.repair_ids</code>）同名动词对应。<code>port.mark_many</code> 一次 RPC/一个 undo 步在一个 cell 里标很多 port（先校验再写）——生成式 port 阵列用它而不是循环 <code>port.mark</code>。<code>port.harvest_blackbox</code> 按 waveguide stub 约定从 live 的 gdsfactory/PDK blackbox 实例位置派生 Port（这个偏硅光的工具归在本域）。路由工具默认 <code>port_layer=999/99</code>、<code>anchor_layer=999/1</code>。<strong>Keepout 不是 anchor 类型</strong>——把你自己设计的 <code>obstacle_layers</code> 传给路由工具；klink 不带默认 keepout 层（<code>900/0</code> 是 klink 保留 keepout 层，structdevice 内部用它）。<strong>这些是路由后端的输入</strong>：先 mark Port+Anchor，再调 <code>routing.*</code>。</p>
+          <p><strong>Region 是已认领的区域</strong>（<code>klink_Region</code> PCell，默认层 <code>999/10</code>）：用户拖 box/ellipse 标尺圈一块地方，<code>region.claim</code> 把它们合并成一个 Region PCell 并<strong>消耗掉</strong>标尺。角色：<code>include</code>=并集、<code>clip</code>=交集、<code>exclude</code>=差集（半圆=椭圆被 box 裁剪；圆环=圆减圆）。结果必须是一个连通分量——不连通的孤岛会被拒绝，分开认领。<code>region.list</code>/<code>get</code>/<code>unclaim</code>/<code>set_layer</code>；<code>region.get</code> 返回合成多边形（<code>hull_um</code>）——喂给 <code>cell.fill_region</code> 铺区域，或把 <code>bbox_um</code> 喂给 <code>view.zoom_box</code> 导航过去。用户也可以点击一个 Region 并 SEND，用 <code>interaction.selection.*</code> 解析。把 Region 变成带唯一编号的可执行阵列，见 <a href="#d-layoutintent">layout_intent</a> 域。</p>
         </div>
         <table class="data-table reftable">
           <thead><tr><th>工具</th><th>类型</th><th>参数</th><th>功能</th></tr></thead>
@@ -431,6 +436,13 @@ interaction.selection.label id="sel_0006" label="probe pad"
             <tr><td><code>anchor.repair_ids</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cell*, layer, prefix</td><td>修复重复/空 Anchor id（GUI 手插的）。</td></tr>
             <tr><td><code>anchor.unmark</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cell*, id*</td><td>按 id 删一个 Anchor。</td></tr>
             <tr><td><code>anchor.delete_all</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cell*, layer</td><td>删 cell 里全部 Anchor。</td></tr>
+            <tr><td><code>region.set_layer</code></td><td><span class="badge kind-rpc">rpc</span></td><td>layer*</td><td>配置本 layout 的默认 Region PCell 标记层（默认 999/10）。</td></tr>
+            <tr><td><code>region.claim</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cell, keep_rulers, layer, name, npoints, rulers*</td><td>把 box/ellipse 标尺合并成一个 klink_Region PCell（保留层，默认 999/10）并消耗掉这些标尺。角色：include（并集）/clip（交集）/exclude（差集，洞不可写）。结果必须是一个连通分量，不连通的孤岛会被拒绝并各自报 bbox。椭圆离散化是安全的：include/clip 内切，exclude 外切。</td></tr>
+            <tr><td><code>region.list</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cell</td><td>列出全部 klink_Region PCell 实例（name、cell、layer、bbox、area、klink_id）。Region 是持久的已认领区域；标尺只是草稿。</td></tr>
+            <tr><td><code>region.get</code></td><td><span class="badge kind-rpc">rpc</span></td><td>name*</td><td>按名字读一个 Region：合成后的多边形（实例变换 × 局部轮廓），目标 cell 的 dbu 和微米坐标、面积、洞。拒绝 magnification != 1。</td></tr>
+            <tr><td><code>region.occupancy</code></td><td><span class="badge kind-rpc">rpc</span></td><td>exclude_cells, layers, name*, obstacle_cells</td><td>一个 Region 的递归占用事实：按声明的层和/或命名障碍 cell（该 cell 在区域内每次出现的 bbox，用于自定义器件/blackbox）合并出障碍多边形，裁剪到区域内，加上剩余空闲面积。一切显式——klink 不假设哪些层/cell 是障碍。truncated=true 表示结果不完整，禁止用于规划。</td></tr>
+            <tr><td><code>region.repair_ids</code></td><td><span class="badge kind-rpc">rpc</span></td><td>keeper*, name*</td><td>给复制粘贴出的重复 Region（同名/同 klink_id 出现在多个实例上）修复身份。用户指定 keeper（父 cell + 锚点位置）；keeper 保留原名、原 klink_id 和任何 Intent 绑定不变。其余每个副本都拿到全新的 R### 名字 + klink_id，且不带 intent——之后用 intent.rebind 单独绑定。绝不猜哪个副本是原件；keeper 指定有歧义就拒绝。</td></tr>
+            <tr><td><code>region.unclaim</code></td><td><span class="badge kind-rpc">rpc</span></td><td>name*</td><td>按名字删除一个 Region PCell 实例。只删除区域标记本身——绝不删除生成的输出或用户几何。</td></tr>
           </tbody>
         </table>
         <p><strong>示例。</strong></p>
@@ -439,9 +451,57 @@ port.mark cell="NET1" name="B" center_um=[80,20] orientation="W" width_um=2 net=
 anchor.mark cell="NET1" kind="waypoint_region" center_um=[40,40] radius_um=6 net="sig"
 port.list cell="NET1"
 
-routing.tapered_hybrid_cell cell="NET1" angle_mode="manhattan" obstacle_layers=["10/0"]</code></pre>
+routing.tapered_hybrid_cell cell="NET1" angle_mode="manhattan" obstacle_layers=["10/0"]
 
-        <h2 id="d-routing" class="anchor-h">6 &middot; 路由后端 <span class="tool-count">routing_backends &middot; 9 tools</span></h2>
+# Region：拖标尺圈一块地方，认领成一个 Region 标记
+region.claim cell="TOP" layer="999/10" rulers=[{"id":12,"role":"include"}]
+region.get name="R001"</code></pre>
+
+        <h2 id="d-layoutintent" class="anchor-h">6 &middot; 可执行版图意图（Region → 确定性阵列） <span class="tool-count">layout_intent &middot; 10 tools</span></h2>
+        <div class="domain-intro">
+          <span class="token">klink.find_tools domain="layout_intent"</span>
+          <p>Region 驱动的生成闭环（需要一个已认领的 Region——见 <a href="#d-ports">ports_and_anchors</a> 的 <code>region.claim</code>）。<code>intent.prepare</code> 对着你声明的障碍物（层、命名的器件/blackbox cell 按每次出现的 bbox 计入、自由多边形，外加可选 <code>clearance_um</code>）分析区域占用，把任意已有的 source cell（支持 <code>rotation_deg</code>/<code>mirror</code>）规划成间距网格，每个副本带唯一的多边形文字编号标签（真实几何，TextGenerator），校验包含关系 + 障碍物 + 重叠，返回预览 + <code>plan_id</code> + <code>plan_hash</code>——<strong>不写入任何东西</strong>。<code>intent.apply</code>（<code>plan_id</code> + <code>plan_hash</code> + <code>confirm=plan_id</code>）把它作为<strong>一次事务</strong>提交进一个全新的 <code>KLINK_I_*</code> 容器 cell（一次 Ctrl+Z 撤销；klink_id 打标的根实例）。<code>intent.regenerate</code> 带参数补丁（比如 <code>numbering.start</code>）重新规划，下一次 apply 会<strong>原子替换只属于这个 intent</strong> 的容器——手改过的输出会被检测到（偏离）并绝不静默覆盖。<code>intent.list</code>/<code>get</code> 显示已存储的 intent + 实时状态；<code>intent.rebind</code> 显式把 intent 重新指向一个 region（region 被删除/修复之后唯一的路径）；<code>intent.retire</code> 按 <code>output_policy</code> 决定几何去留（preserve/detach/remove）。层、间距、尺寸全部是必填输入：klink 不带工艺默认值。底层原语 <code>intent.apply_managed_plan</code>/<code>intent.managed_digest</code>/<code>intent.remove_managed_output</code> 是编排工具背后调用的 plugin RPC——正常流程不要直接调它们。</p>
+        </div>
+        <h3>编排（MCP 本地工具）</h3>
+        <table class="data-table reftable">
+          <thead><tr><th>工具</th><th>类型</th><th>参数</th><th>功能</th></tr></thead>
+          <tbody>
+            <tr><td><code>intent.prepare</code></td><td><span class="badge kind-local">local</span></td><td>allow_empty_obstacles, clearance_um, extra_obstacles_um, instruction, intent_id, label*, mirror, numbering*, obstacle_cells, obstacle_layers, pitch_um*, project_root, region*, rotation_deg, source_cell*</td><td>为一个已认领的 Region 规划 array_labeled 意图：分析占用情况，把任意已有的 source cell（支持 rotation/mirror）铺成间距网格，每个副本带唯一物理编号标签（真实多边形文字），校验包含关系/障碍物，返回预览 + plan_id + plan_hash。不写入任何东西。障碍物完全由你声明；klink 不带工艺默认值。</td></tr>
+            <tr><td><code>intent.apply</code></td><td><span class="badge kind-local">local</span></td><td>confirm*, plan_hash*, plan_id*, project_root</td><td>在一次 KLayout 事务里提交一份已预览的计划（新建容器 cell + klink_id 根实例；regenerate 会替换这个容器）。需要 intent.prepare 给的 plan_id 和 plan_hash，加上 confirm=plan_id。拒绝过期计划、偏离的输出，以及带问题的计划。一次 Ctrl+Z 撤销整次 apply。</td></tr>
+            <tr><td><code>intent.regenerate</code></td><td><span class="badge kind-local">local</span></td><td>intent_id*, parameters_patch, project_root</td><td>重新规划一个已应用的 intent（可选打补丁改参数，比如新的编号起点或间距），返回新预览；下一次 intent.apply 会原子替换只属于这个 intent 的容器。如果输出被手动改过（偏离），拒绝——绝不静默覆盖。</td></tr>
+            <tr><td><code>intent.list</code></td><td><span class="badge kind-local">local</span></td><td>project_root</td><td>列出所有已存储的 intent（id、region、executor、revision、输出容器），带惰性输出状态：applied / diverged / undone_or_deleted / never_applied。</td></tr>
+            <tr><td><code>intent.get</code></td><td><span class="badge kind-local">local</span></td><td>intent_id*, project_root</td><td>读一个已存储 intent 的完整信息（参数、输出、惰性状态）。</td></tr>
+            <tr><td><code>intent.rebind</code></td><td><span class="badge kind-local">local</span></td><td>intent_id*, project_root, region*</td><td>显式把一个 intent 绑定到一个（新的）Region 名字——Region 被删除/修复之后唯一的路径。会校验该 Region 确实存在；绝不猜。</td></tr>
+            <tr><td><code>intent.retire</code></td><td><span class="badge kind-local">local</span></td><td>confirm, intent_id*, output_policy, project_root</td><td>退休一个 intent。output_policy 决定几何的去向：preserve（默认）保留容器作为普通版图、只关闭 intent；detach 额外忘记输出绑定；remove 通过带 digest 校验的 plugin 原语删除容器——输出被手动改过（偏离）则拒绝。绝不删除用户几何。</td></tr>
+          </tbody>
+        </table>
+        <h3>底层原语（plugin RPC，编排工具背后调用）</h3>
+        <table class="data-table reftable">
+          <thead><tr><th>工具</th><th>类型</th><th>参数</th><th>功能</th></tr></thead>
+          <tbody>
+            <tr><td><code>intent.apply_managed_plan</code></td><td><span class="badge kind-rpc">rpc</span></td><td>container_cell*, expected_managed_digest, expected_root_klink_id, mode*, parent_cell*, payload*, plan_hash*, root_klink_id*, scope_check</td><td>机械地在一次事务里提交一份已完全校验的 managed plan：从类型化 payload 建一个全新容器 cell，把根实例（打上 klink_id）放进父 cell，mode=replace 时替换掉旧容器。业务校验必须在调用之前完成；TOCTOU 由 scope_check（重跑+对比）和 expected_managed_digest 防护。0 个或多个根匹配、digest 不一致、scope 过期都会被拒绝。一次撤销步骤能撤掉整次 apply。</td></tr>
+            <tr><td><code>intent.managed_digest</code></td><td><span class="badge kind-rpc">rpc</span></td><td>container_cell*</td><td>一个容器 cell 自身内容（规范化的形状 + 子实例）的 managed digest。用于惰性的 undone/diverged 判断：和上一次 apply 记录的 digest 比对。</td></tr>
+            <tr><td><code>intent.remove_managed_output</code></td><td><span class="badge kind-rpc">rpc</span></td><td>expected_managed_digest*, parent_cell*, root_klink_id*</td><td>校验身份和 digest 之后删除一个 managed 输出（根实例 + 容器 cell）。0/多个根匹配、偏离的容器（digest 不一致）都会被拒绝——手改过的输出绝不会被静默销毁。一次事务，一次撤销。</td></tr>
+          </tbody>
+        </table>
+        <p><strong>示例。</strong></p>
+        <pre><code># 1) 认领区域（见 ports_and_anchors 的 region.claim）
+region.claim cell="TOP" rulers=[{"id":12,"role":"include"}]
+
+# 2) 规划：任意已有 cell 铺间距网格，带唯一编号
+intent.prepare region="R001" source_cell="SENSOR" pitch_um=[20,20] \
+    obstacle_layers=["10/0"] numbering={"prefix":"S","width":3,"start":1} \
+    label={"layer":"20/0","slot_region":"R00X"}
+# -&gt; preview + plan_id + plan_hash，写入任何东西之前先看这份预览
+
+# 3) 应用：一次事务写入
+intent.apply plan_id="..." plan_hash="..." confirm="..."
+
+# 4) 改主意：换个编号起点重新生成，apply 原子替换旧容器
+intent.regenerate intent_id="..." parameters_patch={"numbering":{"start":201}}
+intent.apply plan_id="..." plan_hash="..." confirm="..."</code></pre>
+
+        <h2 id="d-routing" class="anchor-h">7 &middot; 路由后端 <span class="tool-count">routing_backends &middot; 9 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="routing_backends"</span>
           <p>都读一个 cell 里的 Port/Anchor PCell 并写出路由几何。按拓扑/质量选后端：<code>routing.tapered_hybrid_cell</code> 是主要的 path+patch 后端；<code>routing.tapered_polygon_cell</code> 写连续 taper 多边形（正式后端，不是备选）；<code>routing.steiner_cell</code> 处理多端网络（&gt;2 port）；<code>routing.damped_*</code> 系列显式加额外障碍间距；<code>routing.global_channel_cell</code> 是在 hybrid 几何之上的全局决策路由（候选 sink 分配+corridor 容量负载均衡）；<code>routing.multilayer_escape_cell</code> 用 bridge 层+via 给被墙挡住的网络逃逸；<code>routing.gdsfactory_ports</code> 用命名 gdsfactory 策略路由 Port 标记（需解释器里有 gdsfactory）。<strong>永远检查结构化结果</strong>：<code>ok=false</code>、<code>obstacle_hit_count&gt;0</code>、sibling 重叠、<code>route_count</code> 偏少都算失败。障碍处理要传<strong>你自己</strong>设计的 <code>obstacle_layers</code>（无默认）。</p>
@@ -488,7 +548,7 @@ routing.gdsfactory_ports cell="BLOCK" route_layer="1/0" router="bundle" \
     separation_um=5 radius_um=10 path_length_match=true</code></pre>
         <div class="note">路由完成的判据是<strong>结构化报告</strong>，不是“看起来连上了”。检查 <code>ok</code>、<code>obstacle_hit_count</code>、sibling overlap 和 <code>route_count</code>。真正的“完成”只有 live LVS <code>match=True</code>。</div>
 
-        <h2 id="d-verify" class="anchor-h">7 &middot; DRC 与 LVS 验证 <span class="tool-count">drc_and_lvs_verification &middot; 2 tools</span></h2>
+        <h2 id="d-verify" class="anchor-h">8 &middot; DRC 与 LVS 验证 <span class="tool-count">drc_and_lvs_verification &middot; 2 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="drc_and_lvs_verification"</span>
           <p>两个都是长耗时、纯 pya、领域无关的逃生舱式检查。<code>drc.run</code> 跑你提供的任意 DRC DSL（Ruby）脚本——脚本内异常作为结果返回，<strong>不会</strong>让 RPC 失败。<code>lvs.run</code> 是连通性对应物：把 live 版图抽成器件网表，和你提供的<strong>参考网表</strong>比对，写 <code>.lvsdb</code> 并（默认显示）在 Netlist/LVS 浏览器打开做 cross-probe。一个 P&amp;R/器件阶段只有在真实 live LVS <code>match=True</code> 时才算 DONE——离线 fixture 和 marker 计数都不能替代。structdevice 流程优先用 <code>structdevice.lvs_check</code>。</p>
@@ -511,7 +571,7 @@ m1.space(0.2.um).output("M1_space", "M1 spacing &lt; 0.2um")
 lvs.run cell="BLOCK" conductors=["1/0","3/0"] vias=["2/0"] \
     devices={...} reference={"spice":"ref.spice"} out_lvsdb="block.lvsdb" show=true</code></pre>
 
-        <h2 id="d-structdevice" class="anchor-h">8 &middot; 自定义器件网表 → 自动 P&R → LVS <span class="tool-count">device_structdevice &middot; 6 tools</span></h2>
+        <h2 id="d-structdevice" class="anchor-h">9 &middot; 自定义器件网表 → 自动 P&R → LVS <span class="tool-count">device_structdevice &middot; 6 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="device_structdevice"</span>
           <p>这是<strong>器件无关</strong>的自定义器件 P&amp;R 流。“器件”=任何带任意参数集 + 端子的 cell；klink 不假设参数名/数量，也没有器件词汇表。器件库、工艺 profile、端子来源都是示例/PDK 数据显式传入——工具不带任何工艺，缺工艺时返回<strong>有指导性的错误</strong>（“写/跑一个 example”），绝不猜。<code>structdevice.build_from_netlist</code> 是<strong>一次调用的主流程</strong>（确认门控：先调一次拿 proposal，带 confirm token 再调才真正 build）；路由跑在 flexdr 引擎上，物理模型很紧凑：器件自己的金属层同时当路由层用。<code>structdevice.declare_nets</code>/<code>connect_nets</code>/<code>lvs_check</code>/<code>spec_write</code> 是 SEND 驱动的交互路径。<code>structdevice.register_pcell</code> 封装了更底层的 plugin RPC <code>pcell.register_fitted</code>（列在 <a href="#d-geometry">geometry_authoring</a> 域）。</p>
@@ -545,7 +605,7 @@ structdevice.connect_nets cell="BLOCK" route_layer="3/0" route_width_um=0.5
 structdevice.lvs_check cell="BLOCK" mode="both"
 structdevice.spec_write cell="BLOCK" layer_roles={"1/0":"gate","3/0":"metal1"}</code></pre>
 
-        <h2 id="d-imaging" class="anchor-h">9 &middot; 成像（剖面 / 3D / SEM / Blender） <span class="tool-count">imaging &middot; 4 tools</span></h2>
+        <h2 id="d-imaging" class="anchor-h">10 &middot; 成像（剖面 / 3D / SEM / Blender） <span class="tool-count">imaging &middot; 4 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="imaging"</span>
           <p>全部在 klink 侧运行（不涉及插件）；重依赖是可选的，缺失时错误会指名确切的 pip install 命令。Recipe/VisualStack 实例是示例自有的——klink 只提供机制。<code>imaging.xsection_run</code> 沿显式切割线，按 <code>.pyxs</code> 工艺配方（引擎 <code>klayout_pyxs</code>）做工艺剖面；<code>steps=true</code> + 配方里的 <code>'# klink-step: &lt;name&gt;'</code> 标记可给每个工艺步骤各出一张剖面。<code>imaging.render3d</code> 生成 GLB + 自包含交互查看器 HTML；<code>mode=fast</code> 按 visual-stack 声明挤出，<code>mode=process</code> 用剖面引擎扫过全片让工艺曲率（LOCOS、CMP）真实；<code>fraction&lt;1</code> 暴露真正的剖切截面。<code>imaging.sem_top</code> 渲染确定性的 SEM 风格俯视图 PNG（灰度+假彩色）。<code>imaging.blender</code> 用无头 bpy 子进程做论文级渲染——<code>mode=die</code> 给 render3d 的 GLB 抛光，<code>mode=figure</code> 按 GDS+stack 以 1:1 版图坐标建器件图（lattice 层变成原子结构图案）。</p>
@@ -560,7 +620,7 @@ structdevice.spec_write cell="BLOCK" layer_roles={"1/0":"gate","3/0":"metal1"}</
           </tbody>
         </table>
 
-        <h2 id="d-nanodevice" class="anchor-h">10 &middot; 纳米器件（Hall bar / EBL / flake） <span class="tool-count">device_nanodevice &middot; 2 tools</span></h2>
+        <h2 id="d-nanodevice" class="anchor-h">11 &middot; 纳米器件（Hall bar / EBL / flake） <span class="tool-count">device_nanodevice &middot; 2 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="device_nanodevice"</span>
           <p><code>nanodevice.hallbar</code> 用一次调用完成整个流程：从 <code>HallBarSpec</code>（bar 长宽、contact 数、contact/pad 尺寸、pitch、gap）算并画整个器件（bar + N 对称接触臂 + pad + Port 标记 + label），然后把实际路由<strong>交给</strong>通用 router 把 contact 接到 pad（开启重叠校验，可选 EBL writefield 墙当 keepout），提交到一次性 cell（支持 dry_run）。失败返回 problems/next_action，什么都不改。<code>nanodevice.detect_commit</code> 从预算 <code>traces.json</code> 提交 flake trace 为多边形，或对显微图像做实时检测（需 cv2 + numpy）。</p>
@@ -580,7 +640,7 @@ structdevice.spec_write cell="BLOCK" layer_roles={"1/0":"gate","3/0":"metal1"}</
 
 nanodevice.detect_commit cell="FLAKE" traces_path="out/traces.json"</code></pre>
 
-        <h2 id="d-photonics" class="anchor-h">11 &middot; 硅光（gdsfactory 导入 / 连接 / 重路由） <span class="tool-count">device_photonics &middot; 3 tools</span></h2>
+        <h2 id="d-photonics" class="anchor-h">12 &middot; 硅光（gdsfactory 导入 / 连接 / 重路由） <span class="tool-count">device_photonics &middot; 3 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="device_photonics"</span>
           <p>光子电路流，需 MCP 解释器里有 gdsfactory。两个端口来源、一个交互循环：<code>photonics.import_gf</code> 一次把成品 gdsfactory 脚本接管进循环——器件实例变成真实 KLayout cell+实例，routed 连接坍缩成器件级网络，per-device port 模板持久化进 spec，网络由 klink 路由。<code>port.harvest_blackbox</code>（列在 <a href="#d-ports">ports_and_anchors</a> 域——从 live blackbox 实例位置派生 Port）是另一个端口来源；移动实例后重跑它，再路由。<code>photonics.connect</code> 读最近 N 次 SEND 当端口对，自动命名网络，持久化，重新 harvest，再用 gdsfactory 路由。<code>photonics.reroute</code> 在用户移动组件后重路由一个 cell（读持久 net 表）。多端光学网络不按星形路由——先插入显式 splitter/MMI/Y-branch，再路由拆出来的两端网络。</p>
@@ -604,7 +664,7 @@ photonics.reroute cell="MZI"     # 光学 + 金属一起重画，保住你的拖
 port.harvest_blackbox cell="MZI" tags=["gc","mmi"] wg_layer="1/0" stub_size_um=0.5
 photonics.connect recent_sends=4 cell="MZI" radius_um=10 separation_um=5</code></pre>
 
-        <h2 id="d-ledit" class="anchor-h">12 &middot; L-Edit 桥（文件交换 RPC） <span class="tool-count">bridge_ledit &middot; 3 tools</span></h2>
+        <h2 id="d-ledit" class="anchor-h">13 &middot; L-Edit 桥（文件交换 RPC） <span class="tool-count">bridge_ledit &middot; 3 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="bridge_ledit"</span>
           <p>前提是用户把 <code>example_template/ledit_bridge/ledit_bridge.cpp</code> 以<strong>源码</strong>方式装载进 L-Edit（Tools → Macro → Load Macro…，零编译）。传输是 <code>%LOCALAPPDATA%\klink\ledit_bridge\&lt;namespace&gt;</code> 下的 JSON 文件交换，单命名空间——同时只保留一个装宏的 L-Edit。<code>ledit.status</code> 是发现与握手——任何异常先调它，错误信息直接写明下一步。<code>ledit.import_selection</code> 现拉用户当前 L-Edit 选区到新的 KLayout 落地 cell。<code>ledit.push_cell</code> 把 KLayout 平坦 cell 推回 L-Edit（追加式，重新生成用新 target cell）。更深的 T-Cell 工作流走 Python API <code>klink.bridges.ledit</code>；详见 <a href="ledit-bridge.html">《L-Edit 桥》指南</a>。</p>
@@ -618,7 +678,7 @@ photonics.connect recent_sends=4 cell="MZI" radius_um=10 separation_um=5</code><
           </tbody>
         </table>
 
-        <h2 id="d-escape" class="anchor-h">13 &middot; Escape hatch（pya exec、事件、recorder） <span class="tool-count">escape_hatch &middot; 9 tools</span></h2>
+        <h2 id="d-escape" class="anchor-h">14 &middot; Escape hatch（pya exec、事件、recorder） <span class="tool-count">escape_hatch &middot; 9 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="escape_hatch"</span>
           <p><strong>优先用 typed RPC。</strong> <code>exec.python</code> 跑原始 pya，仅用于没有 typed RPC 覆盖的操作 / 调试 / 紧凑一次性（<code>exec.reset</code> 清空其命名空间）——它仍会触发 recorder + layout-diff 检测。<code>events.*</code>（<code>channels</code>/<code>status</code>/<code>subscribe</code>/<code>unsubscribe</code>）是桥为 SEND 记忆订阅的 live 事件流（通常你改读 <code>interaction.*</code>）。<code>recorder.*</code>（<code>start</code>/<code>stop</code>/<code>status</code>）生成回放<strong>脚本</strong>（不是字面 RPC 日志）；测试前先看 <code>recorder.status</code>，别覆盖用户正在录的东西。</p>

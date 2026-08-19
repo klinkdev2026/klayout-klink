@@ -48,6 +48,7 @@
         <a href="tutorial-fit-device.html">Fit device &rarr; PnR &rarr; LVS</a>
         <a href="tutorial-padframe.html">Probe-card-first padframe</a>
         <a href="tutorial-imaging.html">Imaging: cross-section · 3D · SEM · Blender</a>
+        <a href="tutorial-layout-intent.html">Regions &amp; executable layout intent</a>
       </div>
       <div class="sb-group">
         <div class="sb-title">Guides</div>
@@ -309,6 +310,12 @@ python example_template/nanodevice/ebl_wraparound.py</code></pre>
             <h3>Custom-device digital P&amp;R → LVS</h3>
             <p>Fit a device from synthetic exemplars, place, detailed-route, verify with live LVS. Measured routed 94/94, <strong>LVS match=True</strong>, 173 devices; the device-agnostic netlist flow is <code>structdevice.*</code>.</p>
             <span class="card-more">See the fit-device demo →</span>
+          </a>
+          <a class="card" href="tutorial-layout-intent.html">
+            <span class="feature-kicker">Region · intent</span>
+            <h3>Regions &amp; executable layout intent</h3>
+            <p>Circle an area and tile any existing cell into it with a unique number label per copy: <code>region.claim</code> claims + <code>intent.prepare</code> previews + <code>intent.apply</code> commits + <code>intent.regenerate</code> atomically swaps. Measured region 14000 &micro;m&sup2;, placed 31 (4 rejected), regenerate relabels the whole array to S201..S231.</p>
+            <span class="card-more">See the layout intent tutorial →</span>
           </a>
         </div>
       </div>
