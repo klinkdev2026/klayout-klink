@@ -84,9 +84,19 @@ def _material(trimesh, name: str, color: str, alpha: float,
     return mat
 
 
+#: Layout space is Z-up but glTF mandates +Y-up: rotate -90° about X
+#: ((x, y, z) -> (x, z, -y)) so spec-compliant viewers (the html page,
+#: Blender's importer, ...) show the die lying flat, not on its side.
+_GLTF_YUP = [[1.0, 0.0, 0.0, 0.0],
+             [0.0, 0.0, 1.0, 0.0],
+             [0.0, -1.0, 0.0, 0.0],
+             [0.0, 0.0, 0.0, 1.0]]
+
+
 def _add_geometry(scene, trimesh, name, meshes, color, alpha,
                   metallic, roughness):
     mesh = trimesh.util.concatenate(meshes)
+    mesh.apply_transform(_GLTF_YUP)
     mesh.visual = trimesh.visual.TextureVisuals(
         material=_material(trimesh, name, color, alpha, metallic,
                            roughness))

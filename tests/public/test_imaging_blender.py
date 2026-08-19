@@ -8,6 +8,7 @@ missing-dep error, runner usage) always run.
 
 import json
 import os
+import pathlib
 import subprocess
 import sys
 
@@ -16,6 +17,20 @@ import pytest
 HEAVY = pytest.mark.skipif(
     not os.environ.get("KLINK_BPY_TESTS"),
     reason="heavy bpy renders; set KLINK_BPY_TESTS=1 to run")
+
+EXAMPLE = (pathlib.Path(__file__).resolve().parents[2]
+           / "examples_klink" / "public" / "imaging")
+
+
+@pytest.fixture(scope="module")
+def blender_style():
+    """The example owns the look; klink ships none."""
+    sys.path.insert(0, str(EXAMPLE))
+    try:
+        from blender_style import STYLE
+    finally:
+        sys.path.remove(str(EXAMPLE))
+    return STYLE
 
 
 def test_missing_bpy_error_is_instructive(monkeypatch):
@@ -71,7 +86,7 @@ def device(tmp_path):
 
 
 @HEAVY
-def test_device_figure_lattice_and_solids(device):
+def test_device_figure_lattice_and_solids(device, blender_style):
     pytest.importorskip("bpy")
     from PIL import Image
 
@@ -81,7 +96,8 @@ def test_device_figure_lattice_and_solids(device):
     gds, tmp = device
     png = str(tmp / "fig.png"); blend = str(tmp / "fig.blend")
     report = render_device_figure(
-        gds, VisualStack.from_dict(STACK), png, blend, slabs=SLABS,
+        gds, VisualStack.from_dict(STACK), png, blend, blender_style,
+        slabs=SLABS,
         lattice_a_um=0.12, samples=6, resolution=(320, 200))
     assert report["atoms"] > 50 and report["bonds"] > 50
     assert report["solids"] == 2 + 2          # 2 slabs + 2 electrodes
@@ -91,7 +107,7 @@ def test_device_figure_lattice_and_solids(device):
 
 
 @HEAVY
-def test_die_mode_via_subprocess_runner(device):
+def test_die_mode_via_subprocess_runner(device, blender_style):
     pytest.importorskip("bpy")
     pytest.importorskip("trimesh")
     from klink.domains.imaging.mesh3d import build_glb_fast
@@ -115,6 +131,7 @@ def test_die_mode_via_subprocess_runner(device):
         _sys.path.remove(str(_ex))
     build_glb_fast(gds, stack, glb, _VS)
     payload = {"mode": "die", "glb": glb,
+               "style": blender_style.to_dict(),
                "out_png": str(tmp / "die.png"),
                "out_blend": str(tmp / "die.blend"),
                "samples": 6, "resolution": [320, 200],
