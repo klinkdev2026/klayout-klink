@@ -378,12 +378,12 @@ def render_die_glb(
 
     col = _new_scene(bpy)
     bpy.ops.import_scene.gltf(filepath=os.path.abspath(glb_path))
-    # trimesh exports Z-up data into Y-up glTF; stand the die back flat
-    rot = Matrix.Rotation(math.radians(-90), 4, "X")
+    # mesh3d GLBs are spec Y-up; Blender's importer already stands the
+    # die flat, so only the z exaggeration remains
     if z_scale <= 0:
         raise BlenderSceneError(
             f"z_scale must be > 0, got {z_scale!r}")
-    xform = Matrix.Scale(z_scale, 4, (0.0, 0.0, 1.0)) @ rot
+    xform = Matrix.Scale(z_scale, 4, (0.0, 0.0, 1.0))
     n_mesh = 0
     for obj in bpy.data.objects:
         if obj.type == "MESH":

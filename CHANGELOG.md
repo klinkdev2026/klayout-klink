@@ -4,6 +4,27 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project does not use dated entries (versions only).
 
+## 0.5.2
+
+Real-user feedback on the 3D viewer (`imaging.render3d`):
+
+- GLB export is now spec-compliant +Y-up (was Z-up, which stood the die
+  on its side in every glTF viewer), and the viewer page frees
+  model-viewer's default 22.5-157.5 deg polar clamp to the full
+  0-180 deg range. Together these fix the reported "rotation gets stuck
+  and the device front face is unreachable". The Blender die renderer
+  drops its old Z-up compensation to match.
+- The viewer page's per-material panel gains an alpha slider (A, next
+  to metallic/roughness): fade layers to highlight or de-emphasize
+  them. Alpha < 1 switches the material to BLEND; Reset restores the
+  declared alpha and alpha mode.
+
+Also:
+
+- `layout.export_clean` tolerates a stringified `cells` array (a stale
+  MCP schema can deliver the list as one string) and refuses malformed
+  input with instructive errors instead of mis-parsing it.
+
 ## 0.5.1
 
 - `layout.export_clean` gains a `cells` parameter: scope the delivery

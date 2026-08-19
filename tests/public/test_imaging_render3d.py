@@ -92,6 +92,19 @@ def glb_extent(path):
     return max(vals) if vals else 0.0
 
 
+def glb_abs_axis_max(path):
+    """Per-axis max |coordinate| over all accessor min/max."""
+    doc = glb_doc(path)
+    out = [0.0, 0.0, 0.0]
+    for acc in doc.get("accessors", []):
+        for k in ("min", "max"):
+            v = acc.get(k)
+            if isinstance(v, list) and len(v) == 3:
+                for ax in range(3):
+                    out[ax] = max(out[ax], abs(float(v[ax])))
+    return out
+
+
 def sha(path):
     h = hashlib.sha256()
     with open(path, "rb") as fh:
@@ -130,6 +143,13 @@ def test_fast_mode_materials_and_determinism(device, viewer_style):
     assert r1["triangles"] > 0
     assert {m["name"]: m["solids"] for m in r1["materials"]} == \
         {"well": 1, "metal": 1}
+    # glTF mandates +Y-up: the thin stack z range must land on axis Y,
+    # plan extents on X/Z (real-user report: the old Z-up GLB stood the
+    # die on its side, so the orbit's polar clamp walled off the die
+    # face). Axis 1 bound covers stack height plus unit normals.
+    ax = glb_abs_axis_max(g1)
+    assert ax[0] > 4 and ax[2] > 4
+    assert ax[1] <= 1.0
 
 
 def test_process_mode_styles_by_recipe_symbol(device, viewer_style):
@@ -174,6 +194,10 @@ def test_viewer_html_is_self_contained(device, viewer_style):
     assert "data:model/gltf-binary;base64," in text
     assert "<model-viewer" in text
     assert "@license" in text          # vendored notices preserved
+    # real-user fixes: full polar orbit range + per-material alpha
+    assert 'min-camera-orbit="-Infinity 0deg auto"' in text
+    assert 'max-camera-orbit="Infinity 180deg auto"' in text
+    assert "slider('alp'" in text and "'BLEND'" in text
     with pytest.raises(ViewerError, match="overwrite=True"):
         build_viewer_html(glb, html_path, viewer_style)
 

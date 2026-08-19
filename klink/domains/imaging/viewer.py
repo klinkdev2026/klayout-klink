@@ -96,7 +96,9 @@ button:hover{background:__BUTTON_HOVER__}
 <body><div id="wrap">
 <model-viewer id="mv" src="data:model/gltf-binary;base64,__GLB_B64__"
  camera-controls auto-rotate exposure="__EXPOSURE__" shadow-intensity="__SHADOW__"
- camera-orbit="30deg 65deg auto"></model-viewer>
+ camera-orbit="30deg 65deg auto"
+ min-camera-orbit="-Infinity 0deg auto"
+ max-camera-orbit="Infinity 180deg auto"></model-viewer>
 <div id="panel">
  <h3>Manual controls</h3>
  <div class="row"><label>background</label>
@@ -116,7 +118,7 @@ button:hover{background:__BUTTON_HOVER__}
   <input type="range" id="sho" min="0" max="1" step="0.05" value="1"></div>
  <div class="row"><label>auto-rotate</label>
   <input type="checkbox" id="rot" checked></div>
- <h3>Layers (color / metal / rough)</h3>
+ <h3>Layers (M metal / R rough / A alpha)</h3>
  <div id="mats"></div>
  <button id="png">Export PNG</button>
  <button id="reset">Reset</button>
@@ -135,7 +137,7 @@ mv.addEventListener('load', () => {
     const pbr = m.pbrMetallicRoughness;
     const c = pbr.baseColorFactor;
     defaults[i] = {c: [...c], m: pbr.metallicFactor,
-                   r: pbr.roughnessFactor};
+                   r: pbr.roughnessFactor, am: m.getAlphaMode()};
     // material names come from user DATA (stack/GLB): build the panel
     // with textContent/DOM APIs only — never innerHTML interpolation
     const row = document.createElement('div');
@@ -154,18 +156,28 @@ mv.addEventListener('load', () => {
       s.style.opacity = .6; s.textContent = t; return s; };
     const slider = (cls, val) => { const s = document.createElement('input');
       s.type = 'range'; s.className = cls; s.min = 0; s.max = 1;
-      s.step = 0.05; s.value = val; s.style.width = '70px'; return s; };
+      s.step = 0.05; s.value = val; s.style.width = '46px'; return s; };
     const met = slider('met', pbr.metallicFactor);
     const rgh = slider('rgh', pbr.roughnessFactor);
-    r2.append(tag('M'), met, tag('R'), rgh);
+    const alp = slider('alp', c[3]);
+    r2.append(tag('M'), met, tag('R'), rgh, tag('A'), alp);
     row.append(r1, r2);
     box.appendChild(row);
     colInp.addEventListener('input', e =>
-      pbr.setBaseColorFactor(rgba(e.target.value, defaults[i].c[3])));
+      pbr.setBaseColorFactor(rgba(e.target.value,
+                                  pbr.baseColorFactor[3])));
     met.addEventListener('input', e =>
       pbr.setMetallicFactor(parseFloat(e.target.value)));
     rgh.addEventListener('input', e =>
       pbr.setRoughnessFactor(parseFloat(e.target.value)));
+    alp.addEventListener('input', e => {
+      const a = parseFloat(e.target.value);
+      const cur = pbr.baseColorFactor;
+      // alpha only renders in BLEND mode; restore the material's own
+      // mode at full opacity so opaque stacks keep their depth sorting
+      m.setAlphaMode(a < 1 ? 'BLEND' : defaults[i].am);
+      pbr.setBaseColorFactor([cur[0], cur[1], cur[2], a]);
+    });
   });
 });
 document.getElementById('bg').addEventListener('input', e => {
@@ -191,6 +203,7 @@ document.getElementById('png').addEventListener('click', () => {
 document.getElementById('reset').addEventListener('click', () => {
   mv.model.materials.forEach((m, i) => {
     const d = defaults[i], pbr = m.pbrMetallicRoughness;
+    m.setAlphaMode(d.am);
     pbr.setBaseColorFactor([...d.c]);
     pbr.setMetallicFactor(d.m);
     pbr.setRoughnessFactor(d.r);
@@ -201,6 +214,8 @@ document.getElementById('reset').addEventListener('click', () => {
     inp.value = defaults[i].m);
   document.querySelectorAll('#mats .rgh').forEach((inp, i) =>
     inp.value = defaults[i].r);
+  document.querySelectorAll('#mats .alp').forEach((inp, i) =>
+    inp.value = defaults[i].c[3]);
   document.getElementById('bg').value = '__PAGE__';
   mv.style.background = '__PAGE__';
   document.body.style.background = '__PAGE__';

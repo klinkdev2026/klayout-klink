@@ -3725,7 +3725,7 @@
     },
     {
       "name": "layout.export_clean",
-      "description": "Fail-closed delivery export: write ONLY an explicit process-layer allowlist to a new GDS/OASIS file, with every klink marker (Port/Anchor/Region PCell instance) removed and PCell context stripped. Works on a scratch copy -- the live layout is never modified. The output is re-read and verified (no reserved layers, no marker cells) before being atomically promoted; on any verification failure the temp file is deleted and the call errors. Refuses allowlists that include a reserved marker layer. Use layout.save_file for full working archives; use THIS for masks and hand-offs.",
+      "description": "Fail-closed delivery export: write ONLY an explicit process-layer allowlist to a new GDS/OASIS file, with every klink marker (Port/Anchor/Region PCell instance) removed and PCell context stripped. Works on a scratch copy -- the live layout is never modified. The output is re-read and verified (no reserved layers, no marker cells) before being atomically promoted; on any verification failure the temp file is deleted and the call errors. Refuses allowlists that include a reserved marker layer. Pass `cells` to export ONLY those top cells (+ their hierarchy) -- without it the WHOLE layout's top cells go into the file, including unrelated ones from a shared session. Use layout.save_file for full working archives; use THIS for masks and hand-offs.",
       "inputSchema": {
         "type": "object",
         "required": [
@@ -3744,6 +3744,13 @@
               "type": "string"
             },
             "description": "EXACT process layers 'L/D' to export -- your project decides; klink ships no default."
+          },
+          "cells": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Top cell name(s) to export (each with its full hierarchy). Omit = every top cell in the layout."
           },
           "cellview_index": {
             "type": "integer",

@@ -10,6 +10,7 @@ fail-closed delivery exit (docs/REGION_INTENT_DESIGN.md sect.10.1).
 from __future__ import annotations
 
 import os
+import re
 
 import pya
 
@@ -770,8 +771,33 @@ def layout_export_clean(params, ctx):
             pass
 
     # optional top-cell scoping (blind-test finding: without it, unrelated
-    # top cells from a shared session ride along into the delivery file)
-    cell_names = [str(v) for v in (params.get("cells") or [])]
+    # top cells from a shared session ride along into the delivery file).
+    # Tolerant input shape: a stale/loose MCP client may deliver the array
+    # as its string form — accept JSON-array strings and comma/space lists,
+    # and NEVER fall through to iterating a string character by character
+    # (the 0.5.1 blind test hit exactly that as "cell '[' not found").
+    raw_cells = params.get("cells")
+    if isinstance(raw_cells, str):
+        text = raw_cells.strip()
+        if text.startswith("["):
+            import json as _json
+            try:
+                raw_cells = _json.loads(text)
+            except Exception:
+                raise RpcError(
+                    ErrorCode.BAD_PARAMS,
+                    "cells looks like a JSON array string but does not parse",
+                    hint='pass a real array: cells: ["TOP_A", "TOP_B"]',
+                )
+        else:
+            raw_cells = [t for t in re.split(r"[,\s]+", text) if t]
+    if raw_cells is not None and not isinstance(raw_cells, (list, tuple)):
+        raise RpcError(
+            ErrorCode.BAD_PARAMS,
+            "cells must be an array of top cell names",
+            hint='cells: ["TOP_A"] — or omit it to export every top cell',
+        )
+    cell_names = [str(v) for v in (raw_cells or [])]
     selected_indexes = []
     for name in cell_names:
         cell2 = ly2.cell(name)
