@@ -169,6 +169,7 @@
       </aside>
 
       <article class="content">
+        <div class="warning"><strong>Breaking in 0.4.0:</strong> all four imaging tools now <strong>require</strong> a <code>style</code>. klink is the mechanism layer, and it used to hold numbers that are somebody's taste tuned against somebody's device — sun energy, camera lens, beam blur, page colour, even the colour of every atom in a lattice figure. All of it now lives with you; klink ships none of it and refuses to guess. Upgrading is three steps: <code>klink update</code> for the four style files, <code>python sem_style.py</code> to write its JSON, then pass <code>style=</code>. Full notes in the <a href="https://github.com/klinkdev2026/klayout-klink/releases/tag/v0.4.0" target="_blank" rel="noopener">v0.4.0 release</a>. (A section GDS has no look, so <code>imaging.xsection_run</code> without <code>render</code> still needs nothing.)</div>
         <h2 id="what" class="anchor-h">What this is</h2>
         <p>One GDS, plus three files you own, gets you five kinds of picture. Only these three EXAMPLE-owned files drive them -- klink supplies mechanism only (binding the xsection engine, generating GLB meshes, SEM raster rendering, building Blender scenes), zero process constants:</p>
         <table class="data-table">
@@ -177,6 +178,7 @@
             <tr><td><code>demo_layout.py</code></td><td>The example layout: a row of four CMOS transistors (two NMOS in the p-substrate, two PMOS in an n-well), poly gates, a contact on every source/drain, and metal-1 straps plus power rails. Also exports the section cut line, <code>CUT_UM</code>. <strong>Editing this file is how you switch to your own device.</strong></td></tr>
             <tr><td><code>demo.pyxs</code></td><td>The process recipe -- trusted Python, executed in-process; <code># klink-step: &lt;name&gt;</code> comments mark each process step. <strong>Editing this file is how you switch to your own flow.</strong></td></tr>
             <tr><td><code>demo_stack.py</code></td><td>A <code>klink_visual_stack_v1</code> declaration: per-layer <code>z0_um</code>/<code>z1_um</code>, color, SEM greyscale level (<code>sem_grey</code>), material class (solid / lattice / dielectric), and the matching recipe symbol (<code>recipe_symbol</code>). <strong>Editing this file is how you switch to your own process.</strong></td></tr>
+            <tr><td><code>section_style.py</code><br><code>sem_style.py</code><br><code>viewer_style.py</code><br><code>blender_style.py</code></td><td>Four <strong>appearance</strong> declarations, one per exit: page colours, rulers, beam parameters, lighting, camera, material recipes. <strong>klink ships no default for any of them</strong> — a render with no style is refused rather than drawn with somebody else's taste. Every number in these files says what it controls and what happens if you change it. <strong>Editing these is how you change the look.</strong></td></tr>
           </tbody>
         </table>
         <p>This tutorial walks the shipped starter: <code>example_template/imaging/demo_layout.py</code>, <code>demo.pyxs</code>, <code>demo_stack.py</code>, and the four demo scripts (<code>xsection_demo.py</code> / <code>render3d_demo.py</code> / <code>sem_demo.py</code> / <code>blender_demo.py</code>). Everything runs offline; outputs land in <code>_generated/</code>.</p>
@@ -263,13 +265,13 @@ planarize(into=[metal1], less=0.22)</code></pre>
         <p><code>render3d_demo.py</code> turns the same four-transistor CMOS row into two GLB models plus two self-contained web viewers:</p>
         <pre><code>python render3d_demo.py</code></pre>
         <pre><code>fast_glb = OUT / "render3d_fast.glb"
-build_glb_fast(str(GDS), STACK, str(fast_glb))                    # extrudes the STACK declaration
-build_viewer_html(str(fast_glb), str(OUT / "render3d_fast.html"))
+build_glb_fast(str(GDS), STACK, str(fast_glb), STYLE)                    # extrudes the STACK declaration
+build_viewer_html(str(fast_glb), str(OUT / "render3d_fast.html"), STYLE)
 
 proc_glb = OUT / "render3d_process.glb"
 build_glb_process(str(GDS), STACK, str(RECIPE), str(proc_glb),
-                  slices=24, fraction=0.6)                        # sweeps the real recipe; fraction<1 = cutaway
-build_viewer_html(str(proc_glb), str(OUT / "render3d_process.html"))</code></pre>
+                  STYLE, slices=24, fraction=0.6)                        # sweeps the real recipe; fraction<1 = cutaway
+build_viewer_html(str(proc_glb), str(OUT / "render3d_process.html"), STYLE)</code></pre>
         <p><strong>Fast mode</strong> directly extrudes the <code>z0_um</code>/<code>z1_um</code> from <code>demo_stack.py</code> -- quick, but the shapes are idealized layer blocks; <strong>process mode</strong> sweeps the real <code>.pyxs</code> recipe slice by slice, so real topology like LOCOS, conformal layers, or CMP curvature shows up -- this run also passes <code>fraction=0.6</code>, producing a cutaway where the exposed face is a true cross-section. The generated <code>.html</code> is <strong>fully self-contained and offline</strong> (the viewer JS and the model data are both encoded into the same file): double-click to open in a browser, drag to rotate, and a right-hand panel lets you tune each layer's color/metallic/roughness and export a PNG.</p>
         <figure class="tut-figure">
           <iframe src="../assets/tutorials/imaging/viewer-process.html" title="klink imaging: interactive 3D viewer for the process-mode cutaway" loading="lazy" style="width:100%;height:520px;border:1px solid var(--border,#d8d8d2);border-radius:6px;background:#14161a" allowfullscreen></iframe>

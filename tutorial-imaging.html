@@ -169,6 +169,7 @@
       </aside>
 
       <article class="content">
+        <div class="warning"><strong>0.4.0 破坏性变更:</strong>四个 imaging 工具现在都<strong>必须</strong>传 <code>style</code>——因为 klink 是机制层,却曾经攥着一堆"某个人对着某台设备调出来的"数字(太阳能量、镜头焦距、束流模糊、页面配色、连晶格图里每个原子的颜色)。那些现在全部外置,klink 一个都不带、也不猜。升级三步:<code>klink update</code> 刷出四份 style 文件 → <code>python sem_style.py</code> 生成 JSON → 调用时加 <code>style=</code>。完整说明见 <a href="https://github.com/klinkdev2026/klayout-klink/releases/tag/v0.4.0" target="_blank" rel="noopener">v0.4.0 release notes</a>。（截面只要 GDS、不加 <code>render</code> 时不需要 style。）</div>
         <h2 id="what" class="anchor-h">这是什么</h2>
         <p>一份 GDS，加上你自己拥有的三份文件，能出五种"图"。驱动它们的只有这三份 EXAMPLE-owned 文件——klink 只提供机制（xsection 引擎绑定、GLB 网格生成、SEM 光栅渲染、Blender 场景搭建），零工艺常数：</p>
         <table class="data-table">
@@ -177,6 +178,7 @@
             <tr><td><code>demo_layout.py</code></td><td>示例版图：一整排四晶体管 CMOS 器件（p 衬底两个 NMOS + n-well 两个 PMOS，多晶硅栅极、每个源漏上的接触、金属1加电源轨），并导出切线 <code>CUT_UM</code>。<strong>改成你的器件就是改这份文件。</strong></td></tr>
             <tr><td><code>demo.pyxs</code></td><td>工艺配方——受信 Python，进程内执行；<code># klink-step: &lt;名字&gt;</code> 注释标记每个工艺步。<strong>改成你的流程就是改这份文件。</strong></td></tr>
             <tr><td><code>demo_stack.py</code></td><td>一份 <code>klink_visual_stack_v1</code> 声明：每层的 <code>z0_um</code>/<code>z1_um</code>、颜色、SEM 灰阶（<code>sem_grey</code>）、材质类别（solid / lattice / dielectric）、对应的配方符号（<code>recipe_symbol</code>）。<strong>改成你的工艺就是改这份文件。</strong></td></tr>
+            <tr><td><code>section_style.py</code><br><code>sem_style.py</code><br><code>viewer_style.py</code><br><code>blender_style.py</code></td><td>四份<strong>外观</strong>声明,每个出口一份:页面配色、标尺、束流参数、布光、相机、材质配方。<strong>klink 自带零个默认值</strong>——不给 style 的渲染会被直接拒绝,而不是用别人的审美画一张图给你。每份文件里每个数字都注明了它控制什么、调大调小会怎样。<strong>改外观就是改这四份。</strong></td></tr>
           </tbody>
         </table>
         <p>这篇教程走一遍随包 starter：<code>example_template/imaging/demo_layout.py</code>、<code>demo.pyxs</code>、<code>demo_stack.py</code> 和四个 demo 脚本（<code>xsection_demo.py</code> / <code>render3d_demo.py</code> / <code>sem_demo.py</code> / <code>blender_demo.py</code>），全部离线跑，输出落进 <code>_generated/</code>。</p>
@@ -263,13 +265,13 @@ planarize(into=[metal1], less=0.22)</code></pre>
         <p><code>render3d_demo.py</code> 把同一份四晶体管 CMOS 版图出成两个 GLB + 两个自含网页查看器：</p>
         <pre><code>python render3d_demo.py</code></pre>
         <pre><code>fast_glb = OUT / "render3d_fast.glb"
-build_glb_fast(str(GDS), STACK, str(fast_glb))                    # 拉伸 STACK 声明
-build_viewer_html(str(fast_glb), str(OUT / "render3d_fast.html"))
+build_glb_fast(str(GDS), STACK, str(fast_glb), STYLE)                    # 拉伸 STACK 声明
+build_viewer_html(str(fast_glb), str(OUT / "render3d_fast.html"), STYLE)
 
 proc_glb = OUT / "render3d_process.glb"
 build_glb_process(str(GDS), STACK, str(RECIPE), str(proc_glb),
-                  slices=24, fraction=0.6)                        # 扫过真实配方，fraction<1 是切角
-build_viewer_html(str(proc_glb), str(OUT / "render3d_process.html"))</code></pre>
+                  STYLE, slices=24, fraction=0.6)                        # 扫过真实配方，fraction<1 是切角
+build_viewer_html(str(proc_glb), str(OUT / "render3d_process.html"), STYLE)</code></pre>
         <p><strong>fast 模式</strong>直接拉伸 <code>demo_stack.py</code> 里的 <code>z0_um</code>/<code>z1_um</code>，快但形状是理想化的层块；<strong>process 模式</strong>沿着真实的 <code>.pyxs</code> 配方做切片扫描，LOCOS/保形层/CMP 那种真实拓扑都会体现出来——本例还传了 <code>fraction=0.6</code>，做出一个切角（cutaway），暴露面就是一个真实的剖面。生成的 <code>.html</code>是<strong>完全自含、离线</strong>的（查看器 JS + 模型数据都编码进同一个文件），双击直接在浏览器打开，拖动旋转，右侧面板能调每层的颜色/金属度/粗糙度、导出 PNG。</p>
         <figure class="tut-figure">
           <iframe src="assets/tutorials/imaging/viewer-process.html" title="klink imaging：process 模式 cutaway 的交互式 3D 查看器" loading="lazy" style="width:100%;height:520px;border:1px solid var(--border,#d8d8d2);border-radius:6px;background:#14161a" allowfullscreen></iframe>
