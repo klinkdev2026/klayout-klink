@@ -33,6 +33,10 @@ klink 是一个面向 [KLayout](https://www.klayout.de/) 的 AI-native 控制面
   数千个 shape/instance/PCell)。
 - 读取 layout、cell、layer、shape、view、selection 和方法元数据。
 - 创建和编辑 shape、text、cell、instance、PCell、Port 和 Anchor。
+- Region 与可执行意图:用 KLayout 标尺圈一块区域,把它认领成 Region 标记,
+  并在其中生成经过校验、可重新生成的编号阵列(障碍物感知、单元 cell 内的
+  文字槽、用户自定义的网格记法);fail-closed 的 clean export 会为交付
+  剥离所有标记。
 - 布线:基于 Port/Anchor 标记的 tapered/steiner/damped/channel 后端,以及
   面向自定义器件电路的详细布线 → 在线 LVS 流程。
 - 通过 `klink-mcp` 把 KLayout 操作暴露成 MCP 工具,用 `klink.find_tools`
@@ -401,6 +405,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 - [`docs/public/api-stability.zh-CN.md`](docs/public/api-stability.zh-CN.md): 什么算公开 API,以及 0.x 阶段的兼容性政策。
 - [`docs/public/drc-lvs.zh-CN.md`](docs/public/drc-lvs.zh-CN.md): 编写并运行 DRC/LVS,含 profile 推导 deck(`profile.drc_script()`)。
 - [`docs/public/drc-lvs-agent-handout.zh-CN.md`](docs/public/drc-lvs-agent-handout.zh-CN.md): 直接粘给 agent 的配方,教会 agent 写 KLayout DRC/LVS。
+- [`docs/public/layout-intent.zh-CN.md`](docs/public/layout-intent.zh-CN.md): 从 KLayout 标尺得到 Region、可执行的编号阵列,以及 fail-closed 的 clean export。
 
 - [`docs/public/plugin-packages.zh-CN.md`](docs/public/plugin-packages.zh-CN.md): 用你自己的 pip 包扩展 klink(`klink.plugins` entry points)。
 - [`docs/public/25d-view.zh-CN.md`](docs/public/25d-view.zh-CN.md): 用你的 StackSpec + z 表驱动原生 2.5d(3D 叠层)视图。

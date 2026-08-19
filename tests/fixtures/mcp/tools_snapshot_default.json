@@ -47,143 +47,6 @@
       }
     },
     {
-      "name": "layout.info",
-      "description": "Snapshot of the currently active layout view: number of open views, active cellview index, top cell name, source file path, database unit, the full top-cell list and the registered layer/datatype pairs. Safe to call often - this is the method an LLM agent should use to refresh its world view.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "verbosity": {
-            "type": "string",
-            "enum": [
-              "summary",
-              "normal",
-              "full"
-            ],
-            "default": "normal",
-            "description": "'summary' omits layer list; 'full' adds hierarchy counts"
-          }
-        }
-      }
-    },
-    {
-      "name": "layout.show_file",
-      "description": "Load a GDS/OAS file into KLayout. If the file is already open in a tab, reload it. Otherwise open it in the current view (mode='replace') or a new tab (mode='new'). When recording is active, all shape/cell events triggered by the file load are merged into a single `layout_show_file()` line.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "path": {
-            "type": "string",
-            "description": "Absolute path to the GDS/OAS file to load"
-          },
-          "mode": {
-            "type": "string",
-            "enum": [
-              "replace",
-              "new"
-            ],
-            "default": "replace",
-            "description": "'replace' loads into the current view; 'new' opens a new tab"
-          },
-          "keep_position": {
-            "type": "boolean",
-            "default": true,
-            "description": "Restore viewport after loading"
-          },
-          "technology": {
-            "type": "string",
-            "description": "KLayout technology name to apply to the loaded layout"
-          }
-        },
-        "required": [
-          "path"
-        ]
-      }
-    },
-    {
-      "name": "layout.save_file",
-      "description": "Save the active layout to a GDS or OASIS file on disk. Extension determines format: .gds/.gds2 for GDSII, .oas/.oasis for OASIS.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "path": {
-            "type": "string",
-            "description": "Absolute file path to write. Extension determines format."
-          },
-          "cellview_index": {
-            "type": "integer",
-            "default": 0,
-            "description": "Which cellview to save (0 = active)."
-          }
-        },
-        "required": [
-          "path"
-        ]
-      }
-    },
-    {
-      "name": "layout.clear",
-      "description": "Clear the entire layout: removes all cells, shapes, and hierarchy in one operation. Leaves an empty layout ready for new content. Useful before restoring a version-control snapshot.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "cellview_index": {
-            "type": "integer",
-            "default": 0,
-            "description": "Which cellview to clear (0 = active)."
-          }
-        }
-      }
-    },
-    {
-      "name": "layout.import_file",
-      "description": "MERGE a layout file (GDS/OASIS/...) into the ACTIVE layout — the load-time mapping workflow (official LoadLayoutOptions), unlike layout.show_file which opens a file in its own tab. `layer_map` remaps layers while reading ([{from: 'L/D', to: 'L/D'}, ...]); `create_other_layers` (default true) controls whether unlisted layers are read too; `on_conflict` decides same-name cells: 'rename' (default, new cells get a $1-style suffix), 'add' (content merged into the existing cell), 'overwrite' (old cell replaced), 'skip' (new cell dropped). One undo step. Returns cells/layers added and the new top cells.",
-      "inputSchema": {
-        "type": "object",
-        "required": [
-          "path"
-        ],
-        "properties": {
-          "path": {
-            "type": "string"
-          },
-          "layer_map": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "required": [
-                "from",
-                "to"
-              ],
-              "properties": {
-                "from": {
-                  "type": "string"
-                },
-                "to": {
-                  "type": "string"
-                }
-              }
-            },
-            "description": "[{from: 'L/D', to: 'L/D'}, ...]"
-          },
-          "create_other_layers": {
-            "type": "boolean",
-            "default": true
-          },
-          "on_conflict": {
-            "type": "string",
-            "enum": [
-              "rename",
-              "add",
-              "overwrite",
-              "skip"
-            ],
-            "default": "rename"
-          }
-        },
-        "additionalProperties": false
-      }
-    },
-    {
       "name": "cell.list",
       "description": "Flat, paginated list of cells in the active layout. Use this to discover what cells exist. For hierarchy use cell.tree instead. Filtering: 'name_prefix' is a case-sensitive prefix match; 'top_only' restricts to top cells. Pagination: 'offset' + 'limit'.",
       "inputSchema": {
@@ -3338,6 +3201,491 @@
       }
     },
     {
+      "name": "region.claim",
+      "description": "Convert box/ellipse rulers into ONE klink_Region PCell (reserved layer, default 999/10) and consume the rulers. Roles: include (union), clip (intersect), exclude (subtract; holes are never writable). The result must be a single connected component; disconnected islands are rejected with per-island bboxes -- claim them separately. Ellipses are discretized safely: include/clip inscribed, exclude circumscribed.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "rulers"
+        ],
+        "properties": {
+          "rulers": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "id"
+              ],
+              "properties": {
+                "id": {
+                  "type": "integer"
+                },
+                "role": {
+                  "type": "string",
+                  "enum": [
+                    "include",
+                    "clip",
+                    "exclude"
+                  ],
+                  "default": "include"
+                }
+              }
+            },
+            "description": "Ruler ids from annotation.list with roles."
+          },
+          "cell": {
+            "description": "Target cell name or cell_index (default: active cell)"
+          },
+          "layer": {
+            "type": "string",
+            "description": "'L/D' region marker layer override"
+          },
+          "name": {
+            "type": "string",
+            "description": "Region name (default auto R###)"
+          },
+          "npoints": {
+            "type": "integer",
+            "default": 64
+          },
+          "keep_rulers": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      }
+    },
+    {
+      "name": "region.list",
+      "description": "List every klink_Region PCell instance (name, cell, layer, bbox, area, klink_id). Regions are the durable claimed areas; rulers are only drafts.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cell": {
+            "description": "Restrict to one parent cell (name or index)"
+          }
+        }
+      }
+    },
+    {
+      "name": "region.get",
+      "description": "One Region by name: composed polygon (instance transform x local contours) in target-cell DBU and um, area, holes. Refuses magnification != 1.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "region.occupancy",
+      "description": "Recursive occupancy facts for one Region: merged obstacle polygons per requested layer AND/OR per named obstacle CELL (every occurrence bbox of those cells inside the region -- for custom devices/blackboxes), clipped to the region polygon, plus the remaining free area. Everything is explicit -- klink assumes nothing about which layers or cells are obstacles. `truncated: true` means the result is incomplete and MUST NOT be used for planning.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "layers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Obstacle layers 'L/D' to scan (explicit)."
+          },
+          "obstacle_cells": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Cell names whose every instance occurrence (recursive, bbox footprint) counts as an obstacle -- custom devices/blackboxes."
+          },
+          "exclude_cells": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Child cell names whose instance paths are skipped in BOTH scans (an intent's own output container when regenerating)."
+          }
+        }
+      }
+    },
+    {
+      "name": "region.unclaim",
+      "description": "Delete one Region PCell instance by name. Deletes ONLY the region marker -- never any generated output or user geometry.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "region.repair_ids",
+      "description": "Keeper repair for copy-paste duplicated Regions (same name / klink_id on several instances). The USER designates the keeper (parent cell + anchor position); the keeper retains the original name, klink_id, and any Intent binding untouched. Every other duplicate gets a fresh auto R### name + klink_id and NO intent -- bind one later with intent.rebind. Never guesses which copy is the original; ambiguous keeper specs are refused.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "name",
+          "keeper"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The duplicated Region name."
+          },
+          "keeper": {
+            "type": "object",
+            "required": [
+              "cell",
+              "anchor_dbu"
+            ],
+            "properties": {
+              "cell": {
+                "type": "string"
+              },
+              "anchor_dbu": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "description": "Instance displacement of the copy to KEEP (region.list shows each copy's bbox; anchor = bbox lower-left)."
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "region.set_layer",
+      "description": "Configure the default Region PCell marker layer for this layout (default 999/10).",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "layer"
+        ],
+        "properties": {
+          "layer": {
+            "type": "string",
+            "description": "'L/D', e.g. '999/10'"
+          }
+        }
+      }
+    },
+    {
+      "name": "intent.remove_managed_output",
+      "description": "Delete ONE managed output (root instance + container cell) after verifying identity and digest. Refuses 0/multiple root matches and diverged containers (digest mismatch) -- hand-edited output is never silently destroyed. One transaction, one undo step.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "parent_cell",
+          "root_klink_id",
+          "expected_managed_digest"
+        ],
+        "properties": {
+          "parent_cell": {
+            "description": "name or cell_index"
+          },
+          "root_klink_id": {
+            "type": "string"
+          },
+          "expected_managed_digest": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "intent.managed_digest",
+      "description": "Managed digest of a container cell's own content (canonicalized shapes + child instances). Used for the lazy undone/diverged check: compare against the digest recorded by the last apply.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "container_cell"
+        ],
+        "properties": {
+          "container_cell": {
+            "description": "name or index"
+          }
+        }
+      }
+    },
+    {
+      "name": "intent.apply_managed_plan",
+      "description": "Mechanically commit a fully-validated managed plan in ONE transaction: create a fresh container cell from the typed payload, place its root instance (klink_id-stamped) in the parent, and on mode=replace swap out the previous container. All business validation must happen BEFORE this call; TOCTOU is guarded by scope_check (re-run + compare) and expected_managed_digest. Refuses 0 or multiple root matches, digest mismatches, and stale scope. One undo step reverts the whole apply.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "mode",
+          "parent_cell",
+          "container_cell",
+          "root_klink_id",
+          "payload",
+          "plan_hash"
+        ],
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "create",
+              "replace"
+            ]
+          },
+          "parent_cell": {
+            "description": "name or cell_index"
+          },
+          "container_cell": {
+            "type": "string",
+            "description": "Fresh container cell name (revisioned, e.g. KLINK_I_ab12_r2); must not exist yet."
+          },
+          "root_klink_id": {
+            "type": "string"
+          },
+          "expected_root_klink_id": {
+            "type": "string",
+            "description": "replace mode: klink_id of the CURRENT root instance to swap out."
+          },
+          "expected_managed_digest": {
+            "type": "string",
+            "description": "replace mode: managed digest of the current container (from the last apply); mismatch = diverged = refuse."
+          },
+          "scope_check": {
+            "type": "object",
+            "description": "{region_name, layers[], expected_hash}: the occupancy fingerprint from prepare time; re-run and compared before writing.",
+            "properties": {
+              "region_name": {
+                "type": "string"
+              },
+              "layers": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "exclude_cells": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "obstacle_cells": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "expected_hash": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "region_name",
+              "layers",
+              "expected_hash"
+            ]
+          },
+          "payload": {
+            "type": "object",
+            "properties": {
+              "shapes": {
+                "type": "array"
+              },
+              "instances": {
+                "type": "array"
+              },
+              "root_trans_dbu": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2
+              }
+            }
+          },
+          "plan_hash": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "layout.info",
+      "description": "Snapshot of the currently active layout view: number of open views, active cellview index, top cell name, source file path, database unit, the full top-cell list and the registered layer/datatype pairs. Safe to call often - this is the method an LLM agent should use to refresh its world view.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "verbosity": {
+            "type": "string",
+            "enum": [
+              "summary",
+              "normal",
+              "full"
+            ],
+            "default": "normal",
+            "description": "'summary' omits layer list; 'full' adds hierarchy counts"
+          }
+        }
+      }
+    },
+    {
+      "name": "layout.show_file",
+      "description": "Load a GDS/OAS file into KLayout. If the file is already open in a tab, reload it. Otherwise open it in the current view (mode='replace') or a new tab (mode='new'). When recording is active, all shape/cell events triggered by the file load are merged into a single `layout_show_file()` line.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Absolute path to the GDS/OAS file to load"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "replace",
+              "new"
+            ],
+            "default": "replace",
+            "description": "'replace' loads into the current view; 'new' opens a new tab"
+          },
+          "keep_position": {
+            "type": "boolean",
+            "default": true,
+            "description": "Restore viewport after loading"
+          },
+          "technology": {
+            "type": "string",
+            "description": "KLayout technology name to apply to the loaded layout"
+          }
+        },
+        "required": [
+          "path"
+        ]
+      }
+    },
+    {
+      "name": "layout.save_file",
+      "description": "Save the active layout to a GDS or OASIS file on disk. Extension determines format: .gds/.gds2 for GDSII, .oas/.oasis for OASIS.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Absolute file path to write. Extension determines format."
+          },
+          "cellview_index": {
+            "type": "integer",
+            "default": 0,
+            "description": "Which cellview to save (0 = active)."
+          }
+        },
+        "required": [
+          "path"
+        ]
+      }
+    },
+    {
+      "name": "layout.clear",
+      "description": "Clear the entire layout: removes all cells, shapes, and hierarchy in one operation. Leaves an empty layout ready for new content. Useful before restoring a version-control snapshot.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cellview_index": {
+            "type": "integer",
+            "default": 0,
+            "description": "Which cellview to clear (0 = active)."
+          }
+        }
+      }
+    },
+    {
+      "name": "layout.import_file",
+      "description": "MERGE a layout file (GDS/OASIS/...) into the ACTIVE layout -- the load-time mapping workflow (official LoadLayoutOptions), unlike layout.show_file which opens a file in its own tab. `layer_map` remaps layers while reading ([{from: 'L/D', to: 'L/D'}, ...]); `create_other_layers` (default true) controls whether unlisted layers are read too; `on_conflict` decides same-name cells: 'rename' (default, new cells get a $1-style suffix), 'add' (content merged into the existing cell), 'overwrite' (old cell replaced), 'skip' (new cell dropped). One undo step. Returns cells/layers added and the new top cells.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "path"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "layer_map": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "from",
+                "to"
+              ],
+              "properties": {
+                "from": {
+                  "type": "string"
+                },
+                "to": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "[{from: 'L/D', to: 'L/D'}, ...]"
+          },
+          "create_other_layers": {
+            "type": "boolean",
+            "default": true
+          },
+          "on_conflict": {
+            "type": "string",
+            "enum": [
+              "rename",
+              "add",
+              "overwrite",
+              "skip"
+            ],
+            "default": "rename"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "layout.export_clean",
+      "description": "Fail-closed delivery export: write ONLY an explicit process-layer allowlist to a new GDS/OASIS file, with every klink marker (Port/Anchor/Region PCell instance) removed and PCell context stripped. Works on a scratch copy -- the live layout is never modified. The output is re-read and verified (no reserved layers, no marker cells) before being atomically promoted; on any verification failure the temp file is deleted and the call errors. Refuses allowlists that include a reserved marker layer. Use layout.save_file for full working archives; use THIS for masks and hand-offs.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "path",
+          "allowlist_layers"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Output file (.gds/.oas)."
+          },
+          "allowlist_layers": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            },
+            "description": "EXACT process layers 'L/D' to export -- your project decides; klink ships no default."
+          },
+          "cellview_index": {
+            "type": "integer",
+            "default": 0
+          }
+        }
+      }
+    },
+    {
       "name": "klink.find_tools",
       "description": "Discover klink tools by domain or keyword. Call with NO args for the domain index; domain=<token> for that domain's tools + detailed usage; query=<keywords> to rank matching tools (optionally within one domain). tools/list already contains every tool and they are all callable — this is for NAVIGATION and on-demand detailed usage, not a gate. Use it whenever you are unsure which tool to use.",
       "inputSchema": {
@@ -3356,6 +3704,7 @@
               "selection_and_send_memory",
               "rulers_and_measurement",
               "ports_and_anchors",
+              "layout_intent",
               "routing_backends",
               "drc_and_lvs_verification",
               "device_structdevice",
@@ -3830,6 +4179,311 @@
             "type": "boolean"
           }
         },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "intent.prepare",
+      "description": "Plan an array_labeled intent for a claimed Region: analyze occupancy, place a pitch grid of an existing source cell (any custom cell; rotation/mirror supported) with UNIQUE physical number labels (real polygon text), validate containment/obstacles, and return a preview + plan_id + plan_hash. Writes NOTHING to the layout. Obstacles are whatever YOU declare: layers, named device/blackbox cells, free-form polygons, plus an optional clearance margin -- klink ships no process defaults and assumes nothing. Apply with intent.apply after reviewing.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "region": {
+            "type": "string",
+            "description": "Region name, e.g. R001 (region.list)."
+          },
+          "source_cell": {
+            "type": "string",
+            "description": "Existing cell to array."
+          },
+          "obstacle_layers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Your design's obstacle layers 'L/D' (explicit; klink has no default)."
+          },
+          "obstacle_cells": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Cell names whose every instance in the region is an obstacle (bbox footprint) -- custom devices/blackboxes."
+          },
+          "extra_obstacles_um": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2
+              }
+            },
+            "description": "Free-form obstacle polygons [[x,y],...] in um, target-cell coords."
+          },
+          "clearance_um": {
+            "type": "number",
+            "default": 0.0,
+            "description": "Keep-away margin grown around every obstacle."
+          },
+          "rotation_deg": {
+            "type": "integer",
+            "enum": [
+              0,
+              90,
+              180,
+              270
+            ],
+            "default": 0,
+            "description": "Orientation of every placed instance."
+          },
+          "mirror": {
+            "type": "boolean",
+            "default": false
+          },
+          "allow_empty_obstacles": {
+            "type": "boolean",
+            "default": false,
+            "description": "Required acknowledgement when passing NO obstacle source at all."
+          },
+          "pitch_um": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "[x, y] CENTER-to-center pitch in um."
+          },
+          "numbering": {
+            "type": "object",
+            "description": "Two modes. PREFIX: {prefix: 'S', width: 3, start: 1, order: 'top_down'|'bottom_up'} -> S001... PATTERN (any grid notation, user-defined): {pattern: '{row}+{col}'} -> 1+2; '{row}-{col}' -> 1-3; 'R{row}C{col}'; '{row:A}{col}' -> A1 (letters); 'S{index:03d}'. Optional per-axis specs: row/col/index: {start, step, order} with row order top_down|bottom_up, col order left_to_right|right_to_left.",
+            "properties": {
+              "prefix": {
+                "type": "string"
+              },
+              "width": {
+                "type": "integer",
+                "default": 3
+              },
+              "start": {
+                "type": "integer"
+              },
+              "order": {
+                "type": "string",
+                "enum": [
+                  "top_down",
+                  "bottom_up"
+                ]
+              },
+              "pattern": {
+                "type": "string"
+              },
+              "row": {
+                "type": "object"
+              },
+              "col": {
+                "type": "object"
+              },
+              "index": {
+                "type": "object"
+              }
+            }
+          },
+          "label": {
+            "type": "object",
+            "description": "Two modes. OFFSET: {layer, height_um, offset_um: [dx,dy] from footprint center}. SLOT (preferred): {layer, slot_region: 'R00X'} where the user circled a text slot INSIDE the unit cell (region.claim with cell=<source_cell>); each array copy gets its own number auto-fitted into that slot, which moves/rotates with the instance.",
+            "required": [
+              "layer"
+            ],
+            "properties": {
+              "layer": {
+                "type": "string"
+              },
+              "height_um": {
+                "type": "number"
+              },
+              "offset_um": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "slot_region": {
+                "type": "string",
+                "description": "Region name claimed inside the SOURCE cell."
+              },
+              "margin_um": {
+                "type": "number",
+                "default": 0.0
+              },
+              "min_height_um": {
+                "type": "number",
+                "description": "Refuse the plan if the auto-fitted text would be smaller."
+              }
+            }
+          },
+          "instruction": {
+            "type": "string",
+            "description": "The user's original wording (audit)."
+          },
+          "intent_id": {
+            "type": "string",
+            "description": "Existing intent to revise (else a new one is created)."
+          },
+          "project_root": {
+            "type": "string",
+            "description": "Project directory holding .klink/ (default: the configured klink project)."
+          }
+        },
+        "required": [
+          "region",
+          "source_cell",
+          "pitch_um",
+          "numbering",
+          "label"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "intent.apply",
+      "description": "Commit a previewed plan in ONE KLayout transaction (fresh container cell + klink_id root; regenerate swaps the container). Requires the plan_id AND plan_hash from intent.prepare plus confirm=plan_id. Refuses stale plans (layout changed since prepare), diverged outputs, and plans with problems. One Ctrl+Z undoes the whole apply.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "plan_id": {
+            "type": "string"
+          },
+          "plan_hash": {
+            "type": "string"
+          },
+          "confirm": {
+            "type": "string",
+            "description": "Must equal plan_id."
+          },
+          "project_root": {
+            "type": "string",
+            "description": "Project directory holding .klink/ (default: the configured klink project)."
+          }
+        },
+        "required": [
+          "plan_id",
+          "plan_hash",
+          "confirm"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "intent.regenerate",
+      "description": "Re-plan an applied intent (optionally patching parameters, e.g. a new numbering start or pitch) and return a fresh preview; the next intent.apply atomically replaces ONLY this intent's container. Refuses if the output was hand-edited (diverged) -- never a silent overwrite.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "intent_id": {
+            "type": "string"
+          },
+          "parameters_patch": {
+            "type": "object",
+            "description": "Partial update of the stored parameters, e.g. {numbering: {start: 201}}."
+          },
+          "project_root": {
+            "type": "string",
+            "description": "Project directory holding .klink/ (default: the configured klink project)."
+          }
+        },
+        "required": [
+          "intent_id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "intent.list",
+      "description": "List stored intents (id, region, executor, revision, output container) with the lazy output condition: applied | diverged | undone_or_deleted | never_applied.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_root": {
+            "type": "string",
+            "description": "Project directory holding .klink/ (default: the configured klink project)."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "intent.get",
+      "description": "One stored intent in full (parameters, output, lazy condition).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "intent_id": {
+            "type": "string"
+          },
+          "project_root": {
+            "type": "string",
+            "description": "Project directory holding .klink/ (default: the configured klink project)."
+          }
+        },
+        "required": [
+          "intent_id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "intent.retire",
+      "description": "Retire an intent. output_policy decides the geometry's fate: 'preserve' (default) keeps the container as ordinary layout and just closes the intent; 'detach' additionally forgets the output binding (container stays, no longer managed); 'remove' deletes the container via the digest-guarded plugin primitive -- refused if the output was hand-edited (diverged). Never deletes user geometry.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "intent_id": {
+            "type": "string"
+          },
+          "output_policy": {
+            "type": "string",
+            "enum": [
+              "preserve",
+              "detach",
+              "remove"
+            ],
+            "default": "preserve"
+          },
+          "confirm": {
+            "type": "string",
+            "description": "Required for output_policy=remove: must equal the intent_id."
+          },
+          "project_root": {
+            "type": "string",
+            "description": "Project directory holding .klink/ (default: the configured klink project)."
+          }
+        },
+        "required": [
+          "intent_id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "intent.rebind",
+      "description": "Explicitly bind an intent to a (new) Region name -- the ONLY path after a region was deleted/repaired. Verifies the region exists; never guesses.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "intent_id": {
+            "type": "string"
+          },
+          "region": {
+            "type": "string"
+          },
+          "project_root": {
+            "type": "string",
+            "description": "Project directory holding .klink/ (default: the configured klink project)."
+          }
+        },
+        "required": [
+          "intent_id",
+          "region"
+        ],
         "additionalProperties": false
       }
     },

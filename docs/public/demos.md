@@ -146,6 +146,53 @@ circle 187, sector 140, gapped 60, spaced 64 tiles — every row balances
 exactly. Each fill is one undo step; every tile is an instance of the fill
 cell, so hierarchy stays clean.
 
+### Region claim + fill — circle an area, tile it
+
+```bash
+python -m examples_klink.public.features.region_claim_fill
+```
+
+Draws box/ellipse rulers around an area — programmatically here, dragged by
+hand in real use — then `region.claim` composes them into ONE `klink_Region`
+marker PCell (an include box with an exclude-ellipse bite taken out of one
+corner). `region.get` + `cell.fill_region` then tiles a demo cell inside the
+claimed polygon, and `view.zoom_box` navigates there. Measured output:
+claimed area 24810.9 µm², fill placed 308 tiles, `remaining_area_um2`
+2098.9 (the uncovered rim — only tiles that fit entirely inside the region
+are placed). See [layout-intent.md](layout-intent.md).
+
+### Numbered sensor array in a Region — the hero flow
+
+```bash
+python -m examples_klink.public.features.region_array_labeled
+```
+
+The full executable-layout-intent loop: circle a text SLOT inside the unit
+cell ("the number goes here"), circle the target area, `region.claim` both,
+then `intent.prepare` plans a pitch grid of the unit cell with a unique
+physical number label auto-fitted into each copy's own slot — obstacle-aware,
+nothing written yet. `intent.apply` commits in one transaction; `intent.
+regenerate` swaps only this intent's output, atomically. Measured output:
+region area 14000 µm², preview placed 31 (4 rejected for hitting the
+obstacle), labels `S001`..`S031` at auto-fit font 1.59 µm; applied → 31
+instances, 167 label polygons; regenerated with `numbering.start=201` →
+labels now `S201`..`S231`, one container swapped, one undo step covers the
+whole apply. See [layout-intent.md](layout-intent.md).
+
+### Fabrication site grids — deterministic numbering schemes
+
+```bash
+python -m examples_klink.public.features.fabrication_sites   # [--port <session-port>] [--keep]
+```
+
+The deterministic grid/numbering engine shared with the layout-intent Region
+loop, used directly: a circular-die site layout (10 mm diameter, 1 mm pitch,
+500 µm edge exclusion) is placed both dry-run and live, every site gets a
+dummy device instance plus a prefix-numbered label (`D001`, `D002`, …), and
+four named mark cells go at the die corners. Measured output: dry-run and
+live site counts agree at 61, 65 instances inserted (61 device + 4 marks),
+61 number-label text shapes on `6/0`. See [layout-intent.md](layout-intent.md).
+
 ### Neural-electrode harness
 
 ```bash

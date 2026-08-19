@@ -27,6 +27,7 @@ from .signals import SignalHub
 from .klive_compat import KliveCompatServer
 from .anchor_pcell import register_anchor_library
 from .port_pcell import register_port_library
+from .region_pcell import register_region_library
 from .structdevice_pcell import register_structdevice_library
 from .session_registry import KLayoutSessionRegistry
 
@@ -220,6 +221,12 @@ def start() -> None:
         _log.info("klink_anchor PCell library registered")
     except Exception as e:
         _log.error("klink_anchor library registration failed: %s", e, exc_info=True)
+
+    try:
+        register_region_library()
+        _log.info("klink_region PCell library registered")
+    except Exception as e:
+        _log.error("klink_region library registration failed: %s", e, exc_info=True)
 
     try:
         register_structdevice_library()

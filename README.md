@@ -42,6 +42,10 @@ artifacts are intentionally not part of a clean release.
   layouts (thousands of shapes/instances/PCells per call).
 - Reads layout, cell, layer, shape, view, selection, and method metadata.
 - Creates and edits shapes, text, cells, instances, PCells, Ports, and Anchors.
+- Regions & executable intent — circle an area with KLayout rulers, claim it
+  as a Region marker, and generate validated, regenerable numbered arrays
+  into it (obstacle-aware, text slots inside the unit cell, user-defined
+  grid notations); fail-closed clean export strips all markers for delivery.
 - Routes: tapered/steiner/damped/channel backends over Port/Anchor markers,
   plus a detailed-router → live LVS flow for custom-device circuits.
 - Exposes KLayout operations as MCP tools through `klink-mcp`, navigable with
@@ -450,6 +454,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 - [`docs/public/api-stability.md`](docs/public/api-stability.md): what counts as public API and the 0.x compatibility policy.
 - [`docs/public/drc-lvs.md`](docs/public/drc-lvs.md): writing and running DRC/LVS, including the profile-derived deck (`profile.drc_script()`).
 - [`docs/public/drc-lvs-agent-handout.md`](docs/public/drc-lvs-agent-handout.md): paste-to-agent recipe that teaches an agent to author KLayout DRC/LVS.
+- [`docs/public/layout-intent.md`](docs/public/layout-intent.md): Regions from KLayout rulers, executable numbered arrays, and the fail-closed clean export.
 - [`docs/public/plugin-packages.md`](docs/public/plugin-packages.md): extend klink from your own pip package (`klink.plugins` entry points).
 - [`docs/public/25d-view.md`](docs/public/25d-view.md): the native 2.5d (3D stack) view driven from your StackSpec + z table.
 - [`CLAUDE.md`](CLAUDE.md): Claude Code operating rules and project context.

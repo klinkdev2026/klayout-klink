@@ -4,6 +4,50 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project does not use dated entries (versions only).
 
+## 0.5.0
+
+New `layoutintent` domain: circle an area with KLayout's own box/ellipse
+rulers, claim it as a Region marker, and generate validated, regenerable
+numbered arrays into it.
+
+- Region markers: `region.claim` composes one or more rulers (`include` /
+  `clip` / `exclude` roles) into a single `klink_Region` PCell on a
+  reserved marker layer (default `999/10`, configurable via
+  `region.set_layer`); consumed rulers, single-connected-component
+  enforcement, disconnected islands rejected with their bboxes so they
+  can be claimed separately. `region.list` / `region.get` /
+  `region.unclaim` / `region.occupancy` / `region.repair_ids` round out
+  the plugin RPC family.
+- Executable intent tools: `intent.prepare` plans a pitch grid of an
+  existing cell inside a Region with a unique physical number label per
+  copy (nothing written until confirmed), `intent.apply` commits in one
+  transaction into a dedicated `KLINK_I_*` container with a stable
+  identity, and `intent.regenerate` atomically swaps a previously applied
+  container — refusing if the output has diverged from what klink last
+  generated (hand-edited output is detected, never silently overwritten).
+  `intent.list` / `intent.get` / `intent.rebind` / `intent.retire` manage
+  intent lifecycle. `intent.apply_managed_plan`, `intent.managed_digest`,
+  and `intent.remove_managed_output` are the lower-level primitives those
+  orchestrators are built on.
+- Label slot mode: circle a small region *inside the unit cell* that says
+  "the number goes here" and pass `label: {slot_region: "R00X"}` — every
+  array copy gets its own number auto-fitted into its own slot, and the
+  slot moves and rotates with the instance.
+- Pattern numbering engine: `fabrication.sites.pattern_site_ids` turns a
+  user-defined grid notation (`"{row}+{col}"`, `"R{row}C{col}"`,
+  `"{row:A}{col}"`, …) with per-axis `{start, step, order}` into unique
+  site ids, never leaving gaps for rejected sites; `intent.prepare`'s
+  `numbering.pattern` mode is built on the same engine.
+- `number_sites` gains `order` and `start` parameters (existing defaults
+  unchanged).
+- `layout.export_clean`: the fail-closed delivery exit. Removes every
+  klink marker by PCell type (not by guessing layer numbers), writes only
+  an explicit layer allowlist, strips PCell context, verifies the output
+  file by re-reading it, and only then promotes it into place; the live
+  layout is never touched.
+- The `fabrication` domain (site grids, numbering schemes, mark/mapping,
+  complete-mask composition) is now part of the public release.
+
 ## 0.4.1
 
 - A missing `klayout` now says what to install. Every other optional
