@@ -88,7 +88,8 @@ Region/Port/Anchor markers are working aids on reserved layers — they must
 never reach a mask. `layout.export_clean` is the fail-closed exit:
 
 ```text
-layout.export_clean {path: "out.gds", allowlist_layers: ["10/0", "20/0"]}
+layout.export_clean {path: "out.gds", allowlist_layers: ["10/0", "20/0"],
+                     cells: ["TOP"]}
 ```
 
 It removes every klink marker (by PCell type, not by guessing layer
@@ -96,6 +97,12 @@ numbers), writes ONLY your explicit layer allowlist, strips PCell context,
 verifies the output file by re-reading it, and only then promotes it into
 place. The live layout is never touched. `layout.save_file` remains the
 full working archive.
+
+Pass `cells` to scope the export to those top cells and their hierarchy —
+without it, **every** top cell in the layout goes into the file, including
+unrelated ones from a shared session. Note that generated `KLINK_I_*`
+container cells are real design content, not markers: they are kept (and
+verified) in the export.
 
 ## Site engine (fabrication domain)
 
