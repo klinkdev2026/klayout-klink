@@ -66,3 +66,29 @@ def test_plugin_payload_readme_marks_it_generated():
     text = readme.read_text(encoding="utf-8")
     assert "do not edit" in text
     assert "sync_plugin_payload" in text
+
+
+def test_no_untracked_plugin_sources():
+    """The sync and the guard above both enumerate via `git ls-files`,
+    so a brand-new module that was never `git add`ed is invisible to
+    BOTH: the payload ships without it and everything reports green.
+    That false green bit twice (annotation_m.py sat out of the payload
+    with the full suite passing; the same gap false-alarmed the public
+    tree at a release gate). Fail loudly instead."""
+    import subprocess
+    try:
+        out = subprocess.run(
+            ["git", "ls-files", "--others", "--exclude-standard",
+             "klink_plugin"],
+            cwd=REPO_ROOT, capture_output=True, text=True, check=True,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return  # not a git checkout (sdist): nothing to assert
+    untracked = [l for l in out.stdout.splitlines()
+                 if l.strip() and "__pycache__" not in l
+                 and not l.endswith((".pyc", ".pyo"))]
+    assert not untracked, (
+        f"klink_plugin/ has untracked file(s) {untracked}; the payload "
+        f"sync only mirrors git-tracked files, so these would be missing "
+        f"from the wheel. `git add` them, then re-run "
+        f"tools/sync_plugin_payload.py")

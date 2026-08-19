@@ -48,6 +48,13 @@ directory back to the shipped state (your `_generated/` outputs are
 left alone).
 
 要点 / notes:
+- **Windows 终端里中文步骤名显示成 `?`/乱码 ≠ 数据坏了。** 那是控制台
+  codepage(GBK)显示不了 UTF-8,文件本身是好的——打开生成的 PNG(标题
+  是真字形)或用 UTF-8 读 sidecar JSON 核对即可;真正的字体缺字会记进
+  sidecar 的 `font_warnings`,不会静默。Garbled CJK in the *terminal* is
+  a console-codepage display issue, not a data bug: check the rendered
+  PNG or the sidecar; real missing glyphs are reported in
+  `font_warnings`.
 - 剖面切线 `cut_um=[[x1,y1],[x2,y2]]` 必须显式给(µm);
 - 光栅取景:`z_window_um=(下,上)` 把画面框在器件上(引擎的衬底有好几
   微米深,不框就是一大片体硅),`axis=True` 画 z 标尺和比例尺;
