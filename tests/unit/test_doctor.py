@@ -5,7 +5,7 @@ import sys
 import types
 from pathlib import Path
 
-from klink.doctor import format_issue_report, main, run_doctor
+from klink.doctor import _check_latest, format_issue_report, main, run_doctor
 from klink._meta import __version__
 
 
@@ -226,3 +226,60 @@ def test_doctor_main_report_flag_prints_fenced_block(capsys):
     assert __version__ in captured.out
     # port 0 is never reachable, so the report describes a real failure.
     assert code == 1
+
+
+def _run_check_latest(fetch):
+    checks = []
+
+    def add(name, ok, detail, fix=""):
+        entry = {"name": name, "ok": bool(ok), "detail": detail}
+        if fix:
+            entry["fix"] = fix
+        checks.append(entry)
+
+    _check_latest(add, fetch)
+    assert len(checks) == 1
+    return checks[0]
+
+
+def test_check_latest_offline_is_informational_ok():
+    check = _run_check_latest(lambda: None)
+    assert check["name"] == "latest"
+    assert check["ok"] is True
+    assert "offline is fine" in check["detail"]
+
+
+def test_check_latest_newer_on_pypi_flags_upgrade():
+    # Construct a version that is unambiguously newer than the installed one
+    # by bumping the leading numeric component, so this test never rots.
+    leading = int(__version__.split(".")[0])
+    newer = f"{leading + 1}.0.0"
+
+    check = _run_check_latest(lambda: newer)
+    assert check["ok"] is False
+    assert __version__ in check["detail"]
+    assert newer in check["detail"]
+    assert "pip install -U klayout-klink" in check["fix"]
+    assert "klink plugin install" in check["fix"]
+
+
+def test_check_latest_current_version_is_ok():
+    check = _run_check_latest(lambda: __version__)
+    assert check["ok"] is True
+    assert __version__ in check["detail"]
+    assert "fix" not in check
+
+
+def test_run_doctor_default_has_no_latest_check():
+    # want_latest defaults to False so the library API never hits the
+    # network unless a caller opts in (CI/unit tests must never hit PyPI).
+    report = run_doctor(port=0)
+    checks = _by_name(report)
+    assert "latest" not in checks
+
+
+def test_run_doctor_want_latest_uses_injected_fetcher_no_network():
+    report = run_doctor(port=0, want_latest=True, latest_fetcher=lambda: None)
+    checks = _by_name(report)
+    assert "latest" in checks
+    assert checks["latest"]["ok"] is True

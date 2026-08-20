@@ -4,6 +4,27 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project does not use dated entries (versions only).
 
+## Unreleased
+
+Staying current (klink releases fast; stale installs were the top
+support trap):
+
+- `python -m klink.doctor` now probes PyPI for the latest release
+  (best-effort, 2s timeout, silently skipped offline; `--no-latest`
+  disables) and reports "installed X, latest Y" with the exact update
+  steps. The probe is opt-in for the library API (`run_doctor`
+  defaults to no network) and on by default only for the CLI.
+- The version handshake now flags PACKAGE skew, not just protocol
+  skew: a protocol-compatible but older plugin (e.g. plugin 0.3.8
+  under client 0.5.2 — a real setup) gets `version_skew` +
+  an instructive `next_action` naming `klink plugin install`. Both
+  `klink.status` (MCP) and the doctor's new `plugin_version` check
+  surface it.
+- README and the quickstart now say it out loud: run the doctor
+  before a work session; updating is three steps that travel
+  together (pip upgrade -> `klink plugin install` + KLayout restart
+  -> MCP reconnect).
+
 ## 0.5.3
 
 Two fixes from watching a real agent work the L-Edit bridge:

@@ -94,6 +94,52 @@ def _check_kernels(add) -> None:
     add("kernels", True, detail)
 
 
+_PYPI_JSON_URL = "https://pypi.org/pypi/klayout-klink/json"
+_PYPI_TIMEOUT_S = 2.0
+
+
+def _fetch_latest_version(timeout: float = _PYPI_TIMEOUT_S) -> Optional[str]:
+    """Latest klayout-klink version on PyPI, or None on ANY failure.
+
+    Best-effort by contract: offline labs are a normal environment, so
+    this never raises and never blocks longer than ``timeout``."""
+    try:
+        import json as _json
+        from urllib.request import urlopen
+
+        with urlopen(_PYPI_JSON_URL, timeout=timeout) as fh:
+            return str(_json.load(fh)["info"]["version"])
+    except Exception:
+        return None
+
+
+def _check_latest(add, fetch=_fetch_latest_version) -> None:
+    """klink releases fast; being releases behind is the #1 support trap.
+
+    Offline (or PyPI unreachable) is informational, never a failure."""
+    latest = fetch()
+    if latest is None:
+        add(
+            "latest",
+            True,
+            "PyPI unreachable (offline is fine); latest-version check "
+            "skipped",
+        )
+        return
+    if _parse_version_prefix(latest) > _parse_version_prefix(__version__):
+        add(
+            "latest",
+            False,
+            f"installed {__version__}, latest on PyPI is {latest}",
+            "klink moves fast — update before starting work: "
+            "pip install -U klayout-klink, then `klink plugin install` + "
+            "restart KLayout so the plugin matches, and reconnect the MCP "
+            "server so new tool schemas load.",
+        )
+    else:
+        add("latest", True, f"{__version__} is current (PyPI: {latest})")
+
+
 def _check_klayout_pip(add) -> None:
     try:
         # Import the real DB module, not bare `klayout`: a stray directory on
@@ -247,6 +293,8 @@ def run_doctor(
     *,
     want_gdsfactory: bool = False,
     want_scan: bool = False,
+    want_latest: bool = False,
+    latest_fetcher=None,
 ) -> Dict[str, Any]:
     checks: List[Dict[str, Any]] = []
 
@@ -260,6 +308,8 @@ def run_doctor(
     add("klink", True, f"klink {__version__} (protocol {PROTOCOL_VERSION})")
     _check_kernels(add)
     _check_klayout_pip(add)
+    if want_latest:
+        _check_latest(add, latest_fetcher or _fetch_latest_version)
     try:
         _check_ledit_bridge(add)
     except Exception as exc:  # a check must never take the report down
@@ -294,8 +344,21 @@ def run_doctor(
             handshake["compatible"],
             f"client protocol {handshake['client_protocol']} / "
             f"plugin protocol {handshake.get('server_protocol')}",
+            "" if handshake["compatible"] else
             handshake.get("next_action", ""),
         )
+        # Same protocol is necessary, not sufficient: a plugin releases
+        # behind still answers protocol 1 but misses every RPC added
+        # since. evaluate_handshake stamps `version_skew` for that.
+        sv = handshake.get("server_version")
+        if handshake["compatible"] and sv:
+            skew = handshake.get("version_skew")
+            add(
+                "plugin_version",
+                skew is None,
+                f"plugin {sv} / client {__version__}",
+                handshake.get("next_action", "") if skew else "",
+            )
         if handshake.get("klayout_version"):
             add("klayout", True, f"KLayout {handshake['klayout_version']}")
 
@@ -351,6 +414,10 @@ def format_issue_report(report: Dict[str, Any]) -> str:
     lines: List[str] = ["```"]
     lines.append(f"klink: {checks['klink']['detail']}")
 
+    latest = checks.get("latest")
+    if latest:
+        lines.append(f"latest: {latest['detail']}")
+
     interpreter = checks.get("interpreter")
     if interpreter:
         lines.append(f"interpreter: {_redact_home(interpreter['detail'])}")
@@ -377,6 +444,10 @@ def format_issue_report(report: Dict[str, Any]) -> str:
     protocol = checks.get("protocol")
     if protocol:
         lines.append(f"protocol: {protocol['detail']}")
+
+    plugin_version = checks.get("plugin_version")
+    if plugin_version:
+        lines.append(f"plugin version: {plugin_version['detail']}")
 
     klayout_desktop = checks.get("klayout")
     if klayout_desktop:
@@ -416,6 +487,14 @@ def main(argv: Optional[List[str]] = None) -> int:
             "klink session instead of guessing the port"
         ),
     )
+    ap.add_argument(
+        "--no-latest",
+        action="store_true",
+        help=(
+            "skip the PyPI latest-version probe (it is best-effort with a "
+            f"{_PYPI_TIMEOUT_S:g}s timeout and degrades silently offline)"
+        ),
+    )
     ap.add_argument("--json", action="store_true", help="emit the report as JSON")
     ap.add_argument(
         "--report",
@@ -433,6 +512,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         args.port,
         want_gdsfactory=args.gdsfactory or args.report,
         want_scan=args.scan or args.report,
+        want_latest=not args.no_latest,
     )
 
     if args.report:

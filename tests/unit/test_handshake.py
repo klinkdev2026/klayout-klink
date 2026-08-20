@@ -41,3 +41,28 @@ def test_missing_server_info_names_missing_plugin():
         assert r["compatible"] is False
         assert r["server_protocol"] is None
         assert "missing or too old" in r["next_action"]
+
+
+def test_compatible_equal_versions_no_skew():
+    r = evaluate_handshake("0.1.0", 1, _server(1))
+    assert r["compatible"] is True
+    assert "version_skew" not in r
+    assert "next_action" not in r
+
+
+def test_compatible_older_plugin_version_flags_plugin_older():
+    server = _server(1)
+    server["version"] = "0.0.9"
+    r = evaluate_handshake("0.1.0", 1, server)
+    assert r["compatible"] is True
+    assert r["version_skew"] == "plugin_older"
+    assert "klink plugin install" in r["next_action"]
+
+
+def test_compatible_newer_plugin_version_flags_client_older():
+    server = _server(1)
+    server["version"] = "0.2.0"
+    r = evaluate_handshake("0.1.0", 1, server)
+    assert r["compatible"] is True
+    assert r["version_skew"] == "client_older"
+    assert "pip install -U klayout-klink" in r["next_action"]

@@ -314,6 +314,27 @@ When upgrading, close KLayout, run `klink plugin install` again (it replaces
 the old copy — from a checkout, remove the old `salt/klink_plugin` and re-copy
 instead), then restart KLayout.
 
+## Staying Current
+
+klink ships improvements frequently, often driven directly by real user
+feedback — being a few releases behind is the most common support trap.
+Before starting a work session, run `python -m klink.doctor`: it checks
+whether your install is behind the latest release on PyPI and, live against
+KLayout, whether the plugin has fallen behind the Python package.
+
+An update is three steps that must travel together:
+
+```powershell
+python -m pip install -U klayout-klink   # 1. upgrade the Python package
+klink plugin install                     # 2. sync the plugin, then restart KLayout (or reload the macro)
+# 3. reconnect the MCP server so new tool schemas load
+```
+
+`klink update <projectdir>` separately refreshes a project's
+`example_template/` starters, leaving your own files untouched. The doctor's
+PyPI probe is best-effort (2s timeout) and degrades to informational offline;
+pass `--no-latest` to skip it outright.
+
 ## Smoke Test
 
 Start KLayout with the plugin loaded, then connect directly from Python:
