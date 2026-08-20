@@ -41,9 +41,11 @@ Exchange dir: %LOCALAPPDATA%\klink\ledit_bridge\default\
   `from klink.bridges.ledit import LEditBridgeClient`):
   `read` / `variants` / `writeback` / `verify` (byte-exact differential) /
   `fit` (geometry-only: harvest → v3 repeat-group fit → byte-exact gate →
-  KLayout PCell) / **`from_pcell`** (the other direction: scaffold T-Cell
-  generator code from a live KLayout PCell — see the PCell → T-Cell
-  section).
+  KLayout PCell) / **`to_pcell`** (the code-true route `fit` REFUSE points
+  to: verify a ported Python reference byte-exact, then register it as a
+  live KLayout PCell — see the T-Cell → PCell section) / **`from_pcell`**
+  (the other direction: scaffold T-Cell generator code from a live
+  KLayout PCell — see the PCell → T-Cell section).
 - `tcell_template.cpp` — byte-exact-verified COPY-AND-ADAPT template for
   generator code you write back. Do not hand-write UPI C++ from scratch.
 
@@ -146,6 +148,9 @@ python tcell_workflows.py writeback MyGen --code gen.cpp --params "[...]"
 python tcell_workflows.py verify MyGen --reference ref.py:boxes --paramsets "[...]"
 python tcell_workflows.py fit MyGen --paramsets "[...]" --check "[...]" ^
     --out fit.json --register MY_DEVICE
+python tcell_workflows.py to_pcell MyGen --reference ref.py:boxes ^
+    --params-spec "[...]" --paramsets "[...]" --check "[...]" ^
+    --register MY_DEVICE
 ```
 
 `read` parses the generator source (stored in the cell's
@@ -180,9 +185,9 @@ it is the workflow:
   **pin the refusing parameter to one value and re-fit** — the fit then
   learns every other axis and the table is honest about the envelope
   (you get the single-value DECIDE warning). For the full axis, use
-  `writeback` + `verify` (code handles anything). 叉指器件的奇偶交替是
-  常态：把引发 REFUSE 的参数钉在单值重拟合（其余轴照学，包络如实记录），
-  要完整轴就走代码移植路线。
+  `to_pcell` (code handles anything — see the section below). 叉指器件的
+  奇偶交替是常态：把引发 REFUSE 的参数钉在单值重拟合（其余轴照学，包络
+  如实记录），要完整轴就走 `to_pcell` 代码移植路线。
 - `DECIDE: param X has a single sampled value` — that axis was not
   learned; the fit is only valid at that value. Add exemplars if you
   need the axis.
@@ -360,7 +365,50 @@ is what makes the byte-exact gate possible at all. 采样时数量参数取 3~4,
 
 For the opposite direction (an existing T-Cell you want usable in
 KLayout), `tcell_workflows.py fit` already does it geometry-only, with the
-same byte-exact gate.
+same byte-exact gate; when `fit` REFUSES, `to_pcell` (next section) is the
+full-code fallback.
+
+## T-Cell -> PCell: the transpile route / T-Cell 反向带参数过来
+
+`fit` REFUSES geometry its locked v3 model cannot express exactly and
+uniquely — alternating/parity finger structure, M*L bilinear extents, that
+kind of thing (normal in real devices, see the `fit` section above). The
+refusal is not a dead end; it names the exit: port the generator's LOGIC
+(not its fitted geometry envelope) to Python and register THAT function as
+a live KLayout PCell — full parameter fidelity, any code, no model class
+to fit into. `fit` 的 REFUSE 不是死路,是指路牌:把生成器的**逻辑**(不是
+拟合出来的几何包络)搬成 Python,把这个函数本身注册成活的 KLayout PCell —
+参数完整保真,任意代码,没有模型类限制。
+
+```bash
+# 1. read the T-Cell's parameters + generator code
+python tcell_workflows.py read NFET_Generator
+# 2. port the geometry logic into a Python reference function --
+#    def nfet_boxes(params: dict) -> {layer_name: [[x0,y0,x1,y1] int-nm,
+#    ...], ...} (harvest-native: same dict shape `verify` already uses).
+#    That edit IS the port.
+# 3. to_pcell verifies BYTE-EXACT against L-Edit first (nothing is
+#    registered on a mismatch), THEN registers the SAME function as a
+#    live KLayout PCell and byte-checks a placed instance against a
+#    FRESH L-Edit variant
+python tcell_workflows.py to_pcell NFET_Generator \
+    --reference nfet_ref.py:nfet_boxes \
+    --params-spec "[{\"name\":\"L\",\"type\":\"int\",\"default\":2}, ...]" \
+    --paramsets "[{\"L\":2,\"W\":5,\"M\":1}, ...]" \
+    --check "[{\"L\":3,\"W\":8,\"M\":2}, ...]" \
+    --register NFET_DEVICE
+```
+
+Acceptance is ALL-BYTE-EXACT at every stage, not "close enough": the
+reference must reproduce every `--paramsets` point before anything is
+registered, and the registered PCell's live KLayout placement must match a
+FRESH L-Edit variant at every `--check` point. 验收全程逐字节:先过
+`--paramsets` 逐字节验证才准注册,注册后再核对活的 KLayout 摆放跟新鲜
+L-Edit 变体逐字节一致 — 缺一步都不算数。
+
+Unlike `fit`, there is no envelope limit here: any code the reference
+function can express registers, at the price of porting it yourself
+instead of letting the fitter infer it.
 
 ## Bulk transfer: what is actually slow / 批量写回的真实瓶颈
 

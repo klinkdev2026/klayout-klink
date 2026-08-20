@@ -13,6 +13,25 @@ Claude-Code specifics:
   process purity, batch RPCs, selection-first debugging, LVS-only pass, and the
   never-commit-GDS rule — is in AGENTS.md.
 
+## Tanner L-Edit workflow
+
+If the user mentions L-Edit, Tanner, `.tdb`, or T-Cell, klink drives that
+editor too — never go hunting window titles, processes, or recent-file
+lists:
+
+- **First call `ledit.status`.** It answers "what is in L-Edit right
+  now": bridge liveness, the open design (.tdb path), the active cell,
+  and the design's cell list (T-Cells flagged) when the macro supports
+  it.
+- Tool map for the bridge: `klink.find_tools domain=bridge_ledit`.
+- Workflows (draw, cell/hierarchy transfer both ways, T-Cell
+  read/variants/writeback/verify/fit/to_pcell):
+  `example_template/ledit_bridge/README.md`.
+- Route the WORK, not reimplement it: import cells into KLayout
+  (`ledit.import_cell_tree`), use the real klink tools there (routing,
+  DRC, LVS, geometry, device fitting), push results back. The bridge is
+  transport, not a toolbox.
+
 ## Photonics / gdsfactory workflow
 
 For photonic circuits, prefer the one-call orchestrators over ad-hoc glue:

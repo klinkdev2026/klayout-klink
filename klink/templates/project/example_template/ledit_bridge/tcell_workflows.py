@@ -1,6 +1,6 @@
 """T-Cell workflows over the klink L-Edit bridge (generic; no device data).
 
-Five verbs cover the agent-facing T-Cell loop:
+Six verbs cover the agent-facing T-Cell loop:
 
   read      show a T-Cell's parameters (parsed from its generator code)
             and their default values
@@ -24,7 +24,16 @@ Five verbs cover the agent-facing T-Cell loop:
             message naming the box family) anything it cannot express
             exactly and uniquely — a refusal is guidance, not a crash:
             follow it (add exemplars on both sides of a count step, or
-            take the writeback/transpile route which handles any code).
+            take the to_pcell route which handles any code).
+  to_pcell  the code-true route the fitter's REFUSE points to: port the
+            generator's LOGIC (not its geometry envelope) to a Python
+            reference function, prove it byte-exact against L-Edit
+            (same differential as verify), then register THAT SAME
+            verified function as a native KLayout PCell — full
+            parameter fidelity, any code, no model-class limit. Nothing
+            is registered until the reference passes; the registered
+            PCell is then byte-checked live in KLayout against a FRESH
+            L-Edit variant at every --check point.
 
 Usage examples:
   python tcell_workflows.py read NFET_Generator
@@ -41,6 +50,12 @@ Usage examples:
       parameter, cross EVERY count threshold...]" \
       --check "[{\"w\":0.6,\"pitch\":0.8,\"n\":6}]" \
       --out my_fit.json --register MY_DEVICE
+  python tcell_workflows.py to_pcell NFET_Generator \
+      --reference nfet_ref.py:nfet_boxes \
+      --params-spec "[{\"name\":\"L\",\"type\":\"int\",\"default\":2}, ...]" \
+      --paramsets "[{\"L\":2,\"W\":5,\"M\":1}, ...]" \
+      --check "[{\"L\":3,\"W\":8,\"M\":2}, ...]" \
+      --register NFET_DEVICE
 
 Landmines this script already handles or warns about:
 - L-Edit CACHES T-Cell variants: after changing a T-Cell's code, identical
@@ -398,6 +413,77 @@ def _gds_layer_map(bridge):
     return out
 
 
+def _gds_truth_fn(bridge, tcell, lmap, probe_cell=PROBE, factory=None):
+    """VariantFactory + harvest_boxes, with L-Edit layer NAMES mapped to
+    GDS 'L/D' keys via ``lmap`` (see :func:`_gds_layer_map`) -- the key
+    convention both ``pcell.register_fitted`` and
+    :mod:`klink.domains.structdevice.pcell_native` require. Shared by
+    ``fit --register`` and ``to_pcell`` so both compare against exactly
+    the same truth, in the same layer vocabulary the registered PCell
+    will draw in. Pass an existing ``factory`` to share its variant
+    cache with a raw (un-mapped) truth_fn over the same T-Cell."""
+    if factory is None:
+        factory = VariantFactory(bridge, tcell, probe_cell=probe_cell)
+
+    def truth_fn(params):
+        raw = harvest_boxes(bridge.get_cell(factory.variant(params)))
+        out = {}
+        for lname, boxes in raw.items():
+            if lname not in lmap:
+                raise SystemExit(
+                    f"layer {lname!r} has no GDS number assigned in "
+                    f"L-Edit; assign one (Setup > Layers) and re-run — "
+                    f"klink never invents GDS numbers (tape-out critical)")
+            out[lmap[lname]] = boxes
+        return out
+    return truth_fn
+
+
+_HARVEST_CODE_TEMPLATE = """
+import pya, json
+_ly = pya.Application.instance().main_window().current_view() \
+    .active_cellview().layout()
+_cell = _ly.cell(%r)
+_out = {}
+for _li in _ly.layer_indexes():
+    _info = _ly.get_info(_li)
+    _boxes = []
+    _it = _cell.begin_shapes_rec(_li)
+    while not _it.at_end():
+        _sh = _it.shape()
+        if _sh.is_box():
+            _b = _sh.box.transformed(_it.trans())
+            _boxes.append([_b.left, _b.bottom, _b.right, _b.top])
+        _it.next()
+    if _boxes:
+        _out["%%d/%%d" %% (_info.layer, _info.datatype)] = sorted(_boxes)
+json.dumps(_out)
+"""
+
+
+def _probe_pcell_boxes(kc, pcell, library, params, probe_cell):
+    """Place ONE instance of ``pcell`` (from ``library``) at ``params``
+    into a FRESH ``probe_cell``, harvest its boxes as {'L/D': sorted
+    [[x0,y0,x1,y1] int dbu, ...]}, delete the probe cell, return the
+    boxes. Shared by ``fit --register`` and ``to_pcell``'s acceptance
+    loop -- the same place+harvest+compare machinery, not two copies of
+    it drifting apart."""
+    kc.cell_create(probe_cell)
+    try:
+        kc.instance_insert_pcell(probe_cell, pcell, library=library,
+                                 params=dict(params), position_um=[0, 0])
+        res = kc.exec_python(_HARVEST_CODE_TEMPLATE % probe_cell)
+        if res["exception"] is not None:
+            raise RuntimeError("KLayout harvest failed: %s"
+                               % (res["exception"],))
+        return json.loads(res["return_value"])
+    finally:
+        try:
+            kc.cell_delete(probe_cell, recursive=True)
+        except Exception:
+            pass
+
+
 def cmd_fit(bridge, args):
     from klink.domains.structdevice.pcell_repeat import (
         analyze_boxes, fit_table_v3, render_table)
@@ -415,19 +501,7 @@ def cmd_fit(bridge, args):
                          f"{param_names}; missing: {sorted(set(missing))}")
 
     lmap = _gds_layer_map(bridge)
-    factory = VariantFactory(bridge, args.tcell, probe_cell=PROBE)
-
-    def truth_fn(ps):
-        raw = harvest_boxes(bridge.get_cell(factory.variant(ps)))
-        out = {}
-        for lname, boxes in raw.items():
-            if lname not in lmap:
-                raise SystemExit(
-                    f"layer {lname!r} has no GDS number assigned in "
-                    f"L-Edit; assign one (Setup > Layers) and re-run — "
-                    f"klink never invents GDS numbers (tape-out critical)")
-            out[lmap[lname]] = boxes
-        return out
+    truth_fn = _gds_truth_fn(bridge, args.tcell, lmap)
 
     exemplars = []
     for ps in paramsets:
@@ -462,8 +536,8 @@ def cmd_fit(bridge, args):
               f"here likely {suspects}. PIN it to ONE value in every "
               f"--paramsets entry and vary the others, e.g. {example} — "
               f"the fit then learns the remaining axes and records the "
-              f"envelope honestly. Full-axis fidelity = the writeback/"
-              f"transpile route (see README).")
+              f"envelope honestly. Full-axis fidelity = the to_pcell "
+              f"route (see README).")
         return 2                       # summary already names each family
     table = fit_table_v3(report, sample_order=paramsets)
     with open(args.out, "w", encoding="utf-8") as f:
@@ -478,7 +552,7 @@ def cmd_fit(bridge, args):
         if not diff.all_ok:
             print("fitted table does not reproduce L-Edit at the --check "
                   "points; do NOT register it. Add exemplars near the "
-                  "failing points and re-run, or take the transpile route.")
+                  "failing points and re-run, or take the to_pcell route.")
             return 1
 
     if args.register:
@@ -494,26 +568,6 @@ def _register_and_probe_klayout(args, check, truth_fn):
     a fresh L-Edit variant. Requires a running KLayout with klink."""
     from klink import KLinkClient
 
-    harvest_code = """
-import pya, json
-_ly = pya.Application.instance().main_window().current_view() \
-    .active_cellview().layout()
-_cell = _ly.cell(%r)
-_out = {}
-for _li in _ly.layer_indexes():
-    _info = _ly.get_info(_li)
-    _boxes = []
-    _it = _cell.begin_shapes_rec(_li)
-    while not _it.at_end():
-        _sh = _it.shape()
-        if _sh.is_box():
-            _b = _sh.box.transformed(_it.trans())
-            _boxes.append([_b.left, _b.bottom, _b.right, _b.top])
-        _it.next()
-    if _boxes:
-        _out["%%d/%%d" %% (_info.layer, _info.datatype)] = sorted(_boxes)
-json.dumps(_out)
-"""
     point = dict(check[0]) if check else None
     with KLinkClient().connect() as kc:
         reg = kc.call("pcell.register_fitted", {
@@ -527,32 +581,147 @@ json.dumps(_out)
                   "is proven byte-exact in KLayout, not only offline)")
             return 0
         probe = args.register + "_PROBE"
-        kc.cell_create(probe)
         try:
-            kc.instance_insert_pcell(
-                probe, args.register, library="klink_structdevice",
-                params={**point, "style": "default"}, position_um=[0, 0])
-            res = kc.exec_python(harvest_code % probe)
-            if res["exception"] is not None:
-                print("KLayout harvest failed:", res["exception"])
-                return 1
-            got = json.loads(res["return_value"])
-            truth = truth_fn(point)
-            if got == truth:
-                print(f"KLayout placement at {point}: BYTE-EXACT vs L-Edit "
-                      f"({sum(len(v) for v in truth.values())} boxes)")
-                return 0
-            print(f"KLayout placement at {point}: MISMATCH vs L-Edit")
-            for layer in sorted(set(truth) | set(got)):
-                t, o = truth.get(layer, []), got.get(layer, [])
-                if t != o:
-                    print(f"  {layer}: truth {len(t)} vs drawn {len(o)} boxes")
+            got = _probe_pcell_boxes(kc, args.register, "klink_structdevice",
+                                     {**point, "style": "default"}, probe)
+        except Exception as exc:
+            print("KLayout harvest failed:", exc)
             return 1
-        finally:
+        truth = truth_fn(point)
+        if got == truth:
+            print(f"KLayout placement at {point}: BYTE-EXACT vs L-Edit "
+                  f"({sum(len(v) for v in truth.values())} boxes)")
+            return 0
+        print(f"KLayout placement at {point}: MISMATCH vs L-Edit")
+        for layer in sorted(set(truth) | set(got)):
+            t, o = truth.get(layer, []), got.get(layer, [])
+            if t != o:
+                print(f"  {layer}: truth {len(t)} vs drawn {len(o)} boxes")
+        return 1
+
+
+def cmd_to_pcell(bridge, args):
+    """The forward transpile route: port a T-Cell generator's LOGIC to a
+    Python reference, prove it byte-exact against L-Edit, THEN register
+    that same function as a live KLayout PCell -- full parameter
+    fidelity, any code, no model-class limit. Registers nothing on any
+    mismatch at any stage."""
+    from klink import KLinkClient
+    from klink.domains.structdevice.pcell_native import (
+        NativePCellError, register_native_pcell)
+
+    mod_path, fn_name = args.reference.rsplit(":", 1)
+    spec = importlib.util.spec_from_file_location("_ref", mod_path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    ref_fn = getattr(mod, fn_name)
+    with open(mod_path, "r", encoding="utf-8") as f:
+        generator_source = f.read()
+
+    params_spec = _load_json_arg(args.params_spec, "--params-spec")
+    paramsets = _load_json_arg(args.paramsets, "--paramsets")
+    check = (_load_json_arg(args.check, "--check") if args.check
+             else paramsets)
+
+    # step 1/3: byte-exact differential -- same harness as `verify`, same
+    # harvest-native contract (raw L-Edit layer NAMES) the reference
+    # generator must satisfy. Share ONE VariantFactory with the GDS-keyed
+    # truth_fn built below so a --paramsets point instanced here is never
+    # re-instanced for the acceptance loop.
+    factory = VariantFactory(bridge, args.tcell, probe_cell=PROBE)
+
+    def truth_fn_raw(params):
+        return harvest_boxes(bridge.get_cell(factory.variant(params)))
+
+    print(f"step 1/3: byte-exact verify -- {fn_name} vs L-Edit "
+          f"{args.tcell} at {len(paramsets)} paramset(s) ...")
+    report = verify_differential(ref_fn, truth_fn_raw, paramsets)
+    print(report.summary())
+    if not report.all_ok:
+        print(f"REFUSED: {fn_name} does not reproduce L-Edit exactly -- "
+              f"fix the reference generator and re-run. NOTHING was "
+              f"registered.")
+        return 2
+
+    # registration needs GDS 'L/D' numbers for every layer name the
+    # generator emits; refuse BEFORE touching KLayout if one is missing,
+    # same rule `fit` already enforces (klink never invents GDS numbers)
+    lmap = _gds_layer_map(bridge)
+    layer_names = set()
+    for ps in paramsets:
+        layer_names |= set(ref_fn(dict(ps)).keys())
+    missing = sorted(layer_names - set(lmap))
+    if missing:
+        print(f"REFUSED: layer(s) {missing} used by {fn_name} have no GDS "
+              f"number assigned in L-Edit (Setup > Layers); assign one and "
+              f"re-run -- klink never invents GDS numbers (tape-out "
+              f"critical). NOTHING was registered.")
+        return 2
+
+    print(f"step 2/3: registering {args.register!r} in library "
+          f"{args.library!r} (layer_map {lmap}) ...")
+    with KLinkClient(port=args.port).connect() as kc:
+        try:
+            reg = register_native_pcell(
+                kc, generator_source, fn_name, args.register, params_spec,
+                library=args.library, layer_map=lmap)
+        except NativePCellError as exc:
+            print(f"REFUSED: {exc}")
+            return 2
+        print(f"registered KLayout PCell {reg['pcell']} (library "
+              f"{reg['library']}, params {reg['params']})")
+
+        # step 3/3: acceptance loop -- place the REGISTERED pcell live,
+        # harvest it back, byte-compare against a FRESH L-Edit variant.
+        # Same place+harvest+compare machinery as `fit --register`
+        # (_probe_pcell_boxes), and the same GDS-keyed truth vocabulary
+        # (_gds_truth_fn), sharing the step-1 VariantFactory's cache.
+        truth_fn_gds = _gds_truth_fn(bridge, args.tcell, lmap,
+                                     factory=factory)
+        print(f"step 3/3: acceptance loop -- {len(check)} --check "
+              f"point(s), live KLayout placement vs fresh L-Edit variant "
+              f"...")
+        probe = args.register + "_PROBE"
+        all_ok = True
+        for i, ps in enumerate(check):
+            print(f"  [{i + 1}/{len(check)}] {ps} ...", end="", flush=True)
+            truth = truth_fn_gds(ps)
             try:
-                kc.cell_delete(probe, recursive=True)
-            except Exception:
-                pass
+                got = _probe_pcell_boxes(kc, args.register, args.library,
+                                         ps, probe)
+            except Exception as exc:
+                all_ok = False
+                print(f" FAILED ({exc})")
+                continue
+            if got == truth:
+                print(f" BYTE-EXACT ({sum(len(v) for v in truth.values())}"
+                      f" boxes)")
+            else:
+                all_ok = False
+                print(" MISMATCH")
+                for layer in sorted(set(truth) | set(got)):
+                    t, o = truth.get(layer, []), got.get(layer, [])
+                    if t != o:
+                        print(f"    {layer}: truth {len(t)} vs drawn "
+                              f"{len(o)} boxes")
+        if not all_ok:
+            print(f"REFUSED: {args.register} is registered in KLayout but "
+                  f"did NOT byte-match L-Edit at every --check point -- "
+                  f"see the mismatch detail above. Fix the reference "
+                  f"generator; re-registering under the SAME name is "
+                  f"refused (restart KLayout, or pick a new name).")
+            return 2
+
+    print("SUCCESS")
+    print(f"  library  : {reg['library']}")
+    print(f"  pcell    : {reg['pcell']}")
+    print(f"  params   : {reg['params']}")
+    print(f"  layer_map: {lmap}")
+    print(f"  verified : {len(paramsets)} paramset(s) byte-exact vs "
+          f"L-Edit (step 1)")
+    print(f"  checked  : {len(check)} paramset(s) byte-exact live in "
+          f"KLayout (step 3)")
+    return 0
 
 
 def main():
@@ -616,12 +785,41 @@ def main():
                    help="also register the table as this KLayout PCell "
                         "name and byte-verify a live placement")
 
+    p = sub.add_parser("to_pcell")
+    p.add_argument("tcell")
+    p.add_argument("--reference", required=True,
+                   help="pythonfile.py:function; entry(params: dict) -> "
+                        "{layer_name: sorted [[x0,y0,x1,y1] int-nm, ...]} "
+                        "-- harvest-native, SAME dict feeds the verify "
+                        "gate and the registered PCell's geometry")
+    p.add_argument("--params-spec", required=True,
+                   help="inline JSON (or .json path) PCell parameter "
+                        "table: [{\"name\":..., \"type\":\"int\"|\"float\", "
+                        "\"default\":...}, ...]")
+    p.add_argument("--paramsets", required=True,
+                   help="parameter sets for the byte-exact verify gate: "
+                        "inline JSON list or a path to a .json file. "
+                        "NOTHING is registered unless every point passes")
+    p.add_argument("--check", default="",
+                   help="held-out parameter sets for the live-KLayout "
+                        "acceptance loop after registration (inline JSON "
+                        "or .json path); defaults to --paramsets")
+    p.add_argument("--register", required=True,
+                   help="KLayout PCell name to register the reference "
+                        "generator as")
+    p.add_argument("--library", default="klink_custom",
+                   help="KLayout library to register into "
+                        "(default %(default)s)")
+    p.add_argument("--port", type=int, default=8765,
+                   help="klink session port of the running KLayout")
+
     args = ap.parse_args()
     bridge = LEditBridgeClient()
     return {"read": cmd_read, "variants": cmd_variants,
             "writeback": cmd_writeback, "verify": cmd_verify,
             "from_pcell": cmd_from_pcell,
-            "fit": cmd_fit}[args.verb](bridge, args) or 0
+            "fit": cmd_fit,
+            "to_pcell": cmd_to_pcell}[args.verb](bridge, args) or 0
 
 
 if __name__ == "__main__":

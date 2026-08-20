@@ -185,6 +185,68 @@ def test_open_design_reopening_active_design_is_fine(live_bridge):
     assert out["file"] == "user_design.tdb"
 
 
+def test_status_omits_designs_and_cells_when_macro_lacks_them(live_bridge):
+    # Old macros without list_designs/list_cells must not gain new keys or
+    # silent error noise -- absence stays absence, exactly like before.
+    c = live_bridge(lambda req: {
+        "ok": True, "result": {"file": "unit.tdb", "design_ready": True,
+                               "capabilities": []}})
+    out = c.status()
+    assert out["design_ready"] is True
+    assert "designs" not in out and "designs_error" not in out
+    assert "cells" not in out and "cells_error" not in out
+
+
+def test_status_reports_designs_and_cells_when_supported(live_bridge):
+    def handler(req):
+        if req["cmd"] == "ping":
+            return {"ok": True, "result": {
+                "file": "unit.tdb", "design_ready": True,
+                "capabilities": ["list_designs", "list_cells"]}}
+        if req["cmd"] == "list_designs":
+            return {"ok": True, "result": {"designs": [
+                {"file": "unit.tdb", "visible": True, "changed": False,
+                 "cells": 3},
+                {"file": "other.tdb", "visible": False, "changed": True,
+                 "cells": 1}], "count": 2}}
+        if req["cmd"] == "list_cells":
+            return {"ok": True, "result": {"cells": [
+                {"name": "TOP", "is_tcell": False},
+                {"name": "GEN1", "is_tcell": True}]}}
+        raise AssertionError("unexpected cmd: %s" % req["cmd"])
+
+    c = live_bridge(handler)
+    out = c.status()
+    assert out["designs"] == [
+        {"file": "unit.tdb", "visible": True, "changed": False, "cells": 3},
+        {"file": "other.tdb", "visible": False, "changed": True, "cells": 1}]
+    assert out["cells"] == [
+        {"name": "TOP", "is_tcell": False},
+        {"name": "GEN1", "is_tcell": True}]
+    assert "designs_error" not in out and "cells_error" not in out
+
+
+def test_status_captures_list_cells_error_without_raising(live_bridge):
+    def handler(req):
+        if req["cmd"] == "ping":
+            return {"ok": True, "result": {
+                "file": "unit.tdb", "design_ready": True,
+                "capabilities": ["list_designs", "list_cells"]}}
+        if req["cmd"] == "list_designs":
+            return {"ok": True, "result": {"designs": [], "count": 0}}
+        if req["cmd"] == "list_cells":
+            return {"ok": False, "error": {
+                "code": "ERR_BRIDGE", "message": "no visible cell",
+                "next_action": "open a cell"}}
+        raise AssertionError("unexpected cmd: %s" % req["cmd"])
+
+    c = live_bridge(handler)
+    out = c.status()  # must not raise even though list_cells failed
+    assert "cells" not in out
+    assert "no visible cell" in out["cells_error"]
+    assert out["designs"] == []
+
+
 def test_timeout_is_instructive(tmp_path):
     root = make_ns(tmp_path)  # hello fresh but nobody answers
     c = LEditBridgeClient(root=root, poll_s=0.02)

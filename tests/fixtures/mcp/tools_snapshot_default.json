@@ -4496,7 +4496,7 @@
     },
     {
       "name": "ledit.status",
-      "description": "Discover L-Edit bridge namespaces and report liveness + handshake for one: hello heartbeat age, macro version/capabilities, current .tdb file and cell. Start here when any ledit.* call misbehaves; errors name the exact fix (load/reload the macro, close a modal dialog, ...).",
+      "description": "Discover L-Edit bridge namespaces and report liveness + handshake for one: hello heartbeat age, macro version/capabilities, current .tdb file and cell. When the macro supports it, also lists every open design (designs, with the visible/changed flags) and the active design's cells (with T-Cell flags) -- one call answers \"what is in L-Edit right now\". Start here when any ledit.* call misbehaves; errors name the exact fix (load/reload the macro, close a modal dialog, ...).",
       "inputSchema": {
         "type": "object",
         "properties": {
