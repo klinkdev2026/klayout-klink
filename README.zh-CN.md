@@ -274,6 +274,24 @@ cp -R klink_plugin ~/.klayout/salt/
 
 升级时，先关闭 KLayout，重新运行 `klink plugin install`（会替换旧副本；从仓库检出则删除旧的 `salt/klink_plugin` 后重新复制），然后重启。
 
+## 保持最新
+
+klink 更新很快，很多改进直接来自真实用户反馈——落后好几个版本是最常见的
+支持坑。开始一次工作前，先跑 `python -m klink.doctor`：它会检查你的安装
+相对 PyPI 最新版是否落后，并在 KLayout 在线时检查插件是否落后于 Python 包。
+
+升级是必须一起走完的三步：
+
+```powershell
+python -m pip install -U klayout-klink   # 1. 升级 Python 包
+klink plugin install                     # 2. 同步插件，然后重启 KLayout(或重载宏)
+# 3. 重新连接 MCP server，让新工具 schema 生效
+```
+
+`klink update <项目目录>` 单独刷新项目里的 `example_template/` starter，
+不动你自己的文件。doctor 的 PyPI 探测是尽力而为(2 秒超时)——离线时只降级
+为提示信息；传 `--no-latest` 可以直接跳过。
+
 ## 连接测试
 
 先启动 KLayout 并确认插件已加载，然后直接用 Python 客户端连接：

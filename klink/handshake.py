@@ -12,7 +12,22 @@ here the mismatch is named up front with the command to run.
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
+
+
+def _version_key(version: str) -> Tuple[int, ...]:
+    """Leading numeric dotted prefix, '0.28.1rc1' -> (0, 28, 1)."""
+    out = []
+    for chunk in str(version).split("."):
+        digits = ""
+        for ch in chunk:
+            if not ch.isdigit():
+                break
+            digits += ch
+        if not digits:
+            break
+        out.append(int(digits))
+    return tuple(out)
 
 
 def evaluate_handshake(
@@ -38,6 +53,29 @@ def evaluate_handshake(
         "compatible": server_protocol == client_protocol,
     }
     if result["compatible"]:
+        # Same protocol is NECESSARY, not sufficient: a plugin many
+        # releases behind still answers protocol 1 but is missing every
+        # RPC added since — that staleness used to be invisible here
+        # (a live setup ran plugin 0.3.8 under client 0.5.2, all green).
+        sv = result["server_version"]
+        if sv and str(sv) != str(client_version):
+            if _version_key(sv) < _version_key(client_version):
+                result["version_skew"] = "plugin_older"
+                result["next_action"] = (
+                    f"protocol-compatible, but the KLayout plugin is "
+                    f"{sv} while this client is {client_version} — RPCs "
+                    f"added since {sv} are missing on the plugin side. "
+                    "Run `klink plugin install`, then restart KLayout "
+                    "(or reload the klink macro)."
+                )
+            elif _version_key(sv) > _version_key(client_version):
+                result["version_skew"] = "client_older"
+                result["next_action"] = (
+                    f"protocol-compatible, but this klink client is "
+                    f"{client_version} while the KLayout plugin is {sv}. "
+                    "Upgrade the Python package: pip install -U "
+                    "klayout-klink."
+                )
         return result
 
     if server_protocol is None:
