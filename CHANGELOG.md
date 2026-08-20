@@ -4,7 +4,7 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project does not use dated entries (versions only).
 
-## Unreleased
+## 0.5.4
 
 Staying current (klink releases fast; stale installs were the top
 support trap):
