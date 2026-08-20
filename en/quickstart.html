@@ -103,6 +103,7 @@
           <a href="#python">Python package</a>
           <a href="#plugin">KLayout plugin</a>
           <a href="#smoke">Smoke test</a>
+          <a href="#staying-current">Staying current</a>
           <a href="#demo">First result</a>
           <a href="#mcp">MCP setup</a>
           <a href="#trouble">Troubleshooting</a>
@@ -165,6 +166,15 @@ with KLinkClient(port=8766) as c:
     print(c.ping())</code></pre>
         <p>Run the preflight check when in doubt:</p>
         <pre><code>python -m klink.doctor --port 8765</code></pre>
+
+        <h2 id="staying-current">Staying current</h2>
+        <p>klink ships improvements fast, often straight from real user feedback. Run a preflight check before you start:</p>
+        <pre><code>python -m klink.doctor</code></pre>
+        <p>It checks whether your install is behind the latest release on PyPI, and, live against KLayout, whether the plugin has fallen behind the Python package. An update is three steps that travel together:</p>
+        <pre><code>python -m pip install -U klayout-klink   # 1. upgrade the Python package
+klink plugin install                     # 2. sync the plugin, restart KLayout (or reload the macro)
+# 3. reconnect the MCP server</code></pre>
+        <div class="note">The doctor's PyPI probe is best-effort (2s timeout) and skips automatically offline; pass <code>--no-latest</code> to disable it outright.</div>
 
         <h2 id="demo">Your first result</h2>
         <h3>Offline: EBL wraparound</h3>

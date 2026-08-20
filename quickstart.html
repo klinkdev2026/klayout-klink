@@ -103,6 +103,7 @@
           <a href="#python">安装 Python 包</a>
           <a href="#plugin">安装 KLayout 插件</a>
           <a href="#smoke">连接测试</a>
+          <a href="#staying-current">保持最新</a>
           <a href="#demo">第一个结果</a>
           <a href="#mcp">接入 MCP</a>
           <a href="#trouble">排错</a>
@@ -170,6 +171,15 @@ with KLinkClient(port=8766) as c:
     print(c.ping())</code></pre>
         <p>也可以直接跑 preflight：</p>
         <pre><code>python -m klink.doctor --port 8765</code></pre>
+
+        <h2 id="staying-current">保持最新</h2>
+        <p>klink 更新很快，很多改进直接来自真实用户反馈。开始工作前先跑一次 preflight：</p>
+        <pre><code>python -m klink.doctor</code></pre>
+        <p>它会检查你的安装相对 PyPI 最新版是否落后，并在 KLayout 在线时检查插件是否落后于 Python 包。升级是必须一起走完的三步：</p>
+        <pre><code>python -m pip install -U klayout-klink   # 1. 升级 Python 包
+klink plugin install                     # 2. 同步插件，重启 KLayout(或重载宏)
+# 3. 重新连接 MCP server</code></pre>
+        <div class="note">doctor 的 PyPI 探测是尽力而为(2 秒超时)，离线环境自动跳过；传 <code>--no-latest</code> 可以直接禁用。</div>
 
         <h2 id="demo">第一个结果</h2>
         <h3>完全离线：EBL wraparound</h3>
