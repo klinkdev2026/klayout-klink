@@ -4,6 +4,31 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project does not use dated entries (versions only).
 
+## 0.5.3
+
+Two fixes from watching a real agent work the L-Edit bridge:
+
+- New transpile route for T-Cells the fitter refuses. The v3 fitter
+  honestly REFUSES geometry outside its locked model class (parity-
+  alternating fingers, M*L extents, count steps) -- that refusal now
+  has a scaffolded exit: port the generator's logic to a small Python
+  reference function, and `tcell_workflows.py to_pcell` proves it
+  byte-exact against L-Edit BEFORE registering it as a native KLayout
+  PCell (new mechanism module
+  `klink.domains.structdevice.pcell_native`, registration through the
+  explicit `exec.python` escape hatch -- no plugin RPC accepts code),
+  then byte-checks live placements against fresh L-Edit variants.
+  Full L/W/M fidelity where fitting structurally cannot reach;
+  acceptance on a real fitter-refused device was byte-exact at every
+  point. The REFUSE messages and the bridge docs now name the route.
+- `ledit.status` now also reports the open designs and the active
+  design's cell list (T-Cell flags included) when the macro supports
+  it, so "what is in L-Edit right now" is one call. The project
+  template's agent docs route L-Edit requests to it explicitly
+  (status first -- never window titles), and a wrong `shape.query`
+  parameter claim in the template was fixed (`layers` array, not
+  `layer_index`).
+
 ## 0.5.2
 
 Real-user feedback on the 3D viewer (`imaging.render3d`):

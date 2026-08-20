@@ -439,7 +439,12 @@ DOMAINS: "OrderedDict[str, dict]" = OrderedDict([
             "generator code back) live in the Python API "
             "klink.bridges.ledit — drive them from an example/script, and "
             "accept a parametric port ONLY on an ALL-BYTE-EXACT "
-            "verify_differential report."
+            "verify_differential report. Porting direction matters: "
+            "KLayout PCell -> T-Cell is tcell_workflows.py from_pcell; "
+            "T-Cell -> native KLayout PCell (full parameter fidelity, "
+            "including geometry the fitter REFUSES such as parity "
+            "alternation or M*L extents) is tcell_workflows.py to_pcell "
+            "in the ledit_bridge examples."
         ),
     }),
     ("device_nanodevice", {

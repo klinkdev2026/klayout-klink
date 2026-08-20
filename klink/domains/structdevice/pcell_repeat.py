@@ -481,9 +481,13 @@ def analyze_boxes(
         "structure to a single value and re-fit — the table is then valid "
         "at that envelope (the single-value warning documents it); (b) if "
         "the cause is an unpinned count law, add exemplars on BOTH sides "
-        "of a count step (bin edges pin it uniquely); (c) transpile the "
-        "generator source and gate it with "
-        "pcell_diff.verify_differential (code expresses anything).")
+        "of a count step (bin edges pin it uniquely); (c) transpile: port "
+        "the generator's logic to a Python reference generator, prove it "
+        "byte-exact (pcell_diff.verify_differential), then register that "
+        "same function as a native PCell "
+        "(klink.domains.structdevice.pcell_native; for L-Edit T-Cells the "
+        "one-command loop is tcell_workflows.py to_pcell in the "
+        "ledit_bridge examples). Code expresses anything the fit cannot.")
     for layer in sorted(layers):
         fam_sets = [_families_of(ex.get("boxes", {}).get(layer, []))
                     for ex in exemplars]

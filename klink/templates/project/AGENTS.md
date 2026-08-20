@@ -24,10 +24,14 @@ Read-only (shipped references — run them, don't edit them):
   that, don't rely on any enumeration elsewhere. Run one as-is, then copy it
   into `custom_devices/` and adapt.
 - **Tanner L-Edit** (not KLayout) — if the user says L-Edit, Tanner, `.tdb`
-  or T-Cell, klink drives that editor too, over a file-exchange bridge:
-  `example_template/ledit_bridge/` (start with its `README.md`, then
-  `draw_device_demo.py`). `python -m klink.doctor` reports the bridge's
-  liveness alongside the KLayout checks.
+  or T-Cell, klink drives that editor too, over a file-exchange bridge.
+  **First call `ledit.status`** — it answers "what is in L-Edit right
+  now" (bridge liveness, open design, active cell, and the cell list
+  when the macro supports it); never go hunting window titles or
+  processes. Workflows live in `example_template/ledit_bridge/` (start
+  with its `README.md`, then `draw_device_demo.py`).
+  `python -m klink.doctor` reports the bridge's liveness alongside the
+  KLayout checks.
   **L-Edit is where the design lives; KLayout is where klink's capability
   lives.** The bridge's command set is the transport (draw/read/place/
   manage), not the toolbox. When a user asks for something in L-Edit, first
@@ -98,8 +102,9 @@ read its `next_action` and follow it; do not invent a profile.
   (`cell.create` returns `name`, not `cell`; `shape.query` returns `shapes`
   with `bbox_dbu`, not `bbox_um`). Any RPC name also works as a method:
   `client.view_new_tab(...)`. Note layer identity is spelled differently per
-  tool — `shape.query` takes a `layer_index`, `geometry.boolean` takes
-  `"L/D"` or `{layer, datatype}`; `help()` says which.
+  tool — `shape.query` takes a `layers` array (`"L/D"` strings, indexes,
+  or `{layer, datatype}`), `geometry.boolean` takes `"L/D"` or
+  `{layer, datatype}`; `help()` says which.
 - **Batch RPCs for generated layouts.** Never one RPC per object; use
   `shape.insert_boxes` / `shape.insert_many` / `instance.insert_many` /
   `instance.insert_pcell_many`.

@@ -346,7 +346,9 @@ class LEditBridgeClient:
         ``next_action``, because the caller asking this question is usually
         the one that just hit a problem. ``macro_alive`` (the poll loop is
         ticking) and ``design_ready`` (a .tdb is open, so commands can act)
-        fail differently and are reported separately.
+        fail differently and are reported separately. When the macro
+        supports it, this also reports the open designs and the active
+        design's cells, so one call answers "what is in L-Edit right now".
         """
         out: Dict[str, Any] = {
             "root": default_root(),
@@ -389,6 +391,19 @@ class LEditBridgeClient:
         except LEditBridgeError as exc:
             out["error"] = str(exc)
             out["next_action"] = exc.next_action
+            return out
+
+        caps = ping.get("capabilities") or []
+        if "list_designs" in caps:
+            try:
+                out["designs"] = self.list_designs()
+            except LEditBridgeError as exc:
+                out["designs_error"] = str(exc)
+        if "list_cells" in caps and out["design_ready"]:
+            try:
+                out["cells"] = self.list_cells()
+            except LEditBridgeError as exc:
+                out["cells_error"] = str(exc)
         return out
 
     def ping(self) -> Dict[str, Any]:
