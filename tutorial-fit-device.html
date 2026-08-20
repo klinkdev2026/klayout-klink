@@ -215,6 +215,7 @@ table = fitter.fit_table(
           <img src="assets/tutorials/fit-device/step-02-exemplar-detail-annotated.png" alt="W=10 L=4 范例的放大图，蓝色双向箭头标出沟道宽 w_um 和源漏间隙 l_um，橙色方框标出源极外缘是 coef=0 的常数边">
           <figcaption>Step 2 · 拟合结果落在几何上：蓝色箭头 = 参数驱动的边（沟道宽 <code>w_um</code>、源漏间隙 <code>l_um</code>），橙色框 = 拟合器判为常数（<code>coef=0</code>）的源极外缘。有了这张表，器件可以画在<strong>任意</strong>参数值上，不只 4 个范例点。</figcaption>
         </figure>
+        <p>这里拟合的是范例几何，不是 L-Edit T-Cell——如果你要拟合的是一个活的 L-Edit T-Cell，且它的结构让拟合器判定 REFUSE（奇偶交替的手指、M×L 双线性延展这类结构），全保真的出路是 L-Edit 桥的 <a href="ledit-bridge.html#tcell">to_pcell 移植路线</a>，而不是硬凑更多范例点。</p>
 
         <h2 id="stage-3" class="anchor-h"><span class="stage-kicker">3</span>注册成 PCell，画出变体</h2>
         <p>拟合表交给 KLayout 插件侧的 <code>pcell.register_fitted</code>，就注册出一个真 PCell（库名 <code>klink_structdevice</code>）：参数进、几何出，拟合表在注册时绑定，画出的实例只携带几何参数。改参数画 3 个变体，验证参数化是真的：</p>

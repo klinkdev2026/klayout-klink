@@ -215,6 +215,7 @@ table = fitter.fit_table(
           <img src="../assets/tutorials/fit-device/step-02-exemplar-detail-annotated.png" alt="Zoomed view of the W=10 L=4 exemplar with blue double-headed arrows marking channel width w_um and source-drain gap l_um, and an orange box marking the source outer edge as a coef=0 constant edge">
           <figcaption>Step 2 · The fit result laid over the geometry: blue arrows = parameter-driven edges (channel width <code>w_um</code>, source–drain gap <code>l_um</code>), orange box = the source outer edge the fitter classified as constant (<code>coef=0</code>). With this table the device draws at <strong>any</strong> parameter values, not just the 4 exemplar points.</figcaption>
         </figure>
+        <p>This fits exemplar geometry, not an L-Edit T-Cell -- if what you're fitting is a live L-Edit T-Cell, and its structure makes the fitter REFUSE (parity-alternating fingers, M×L bilinear extents), the full-fidelity exit is the L-Edit bridge's <a href="ledit-bridge.html#tcell">to_pcell transpile route</a>, not piling on more exemplar points.</p>
 
         <h2 id="stage-3" class="anchor-h"><span class="stage-kicker">3</span>Register a PCell, draw variants</h2>
         <p>Hand the fit table to <code>pcell.register_fitted</code> on the KLayout plugin side and you get a real PCell (library <code>klink_structdevice</code>): parameters in, geometry out. The table binds at registration, so a drawn instance carries only its geometry parameters. Draw 3 variants at different parameters to prove the parametrization is real:</p>

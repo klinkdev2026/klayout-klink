@@ -7,6 +7,29 @@
   <meta name="description" content="klink's L-Edit bridge: a load-as-source UPI macro plus JSON file-exchange transport. Agents create designs/layers, draw, read selections and whole cells, exchange with KLayout, and work T-Cells in both directions (read generator code, instance with parameters, write back native parametric T-Cells) — accepted only on byte-exact verification.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="../assets/styles.css">
+  <style>
+    /* Minimal figure styling, matching tutorial-fit-device.html's scoped
+       .tut-figure pattern (assets/styles.css has no <img> usage yet). */
+    .tut-figure {
+      margin: 16px 0 26px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .tut-figure img {
+      width: 100%;
+      display: block;
+      background: #fff;
+    }
+    .tut-figure figcaption {
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      background: #f7fafb;
+    }
+  </style>
 </head>
 <body data-page="tutorials" class="has-sidebar">
   <aside class="site-sidebar">
@@ -121,24 +144,49 @@
         </table>
 
         <h2>Exchanging with KLayout (one-call MCP tools)</h2>
+        <p>Once klink MCP is configured, an agent gets five intent-level tools in the <code>bridge_ledit</code> domain:</p>
         <ul>
-          <li><code>ledit.status</code> — discovery and triage: macro liveness, whether a design is open, heartbeat age. Call it first when anything misbehaves; errors name the fix.</li>
+          <li><code>ledit.status</code> — discovery and triage: macro liveness, whether a design is open, heartbeat age. Call it first when anything misbehaves; errors name the fix. <strong>New in 0.5.3:</strong> when the macro supports list_designs/list_cells, it also reports the open designs and the active design's cell list (with T-Cell flags) — "what's in L-Edit right now" is one call; older macros behave exactly as before (capability-gated).</li>
           <li><code>ledit.import_selection</code> — you select in L-Edit, the agent imports into a fresh KLayout cell: circles stay parametric (CIRCLE PCells), layers migrate <strong>by name and GDS number</strong> (conflicts append, never overwrite), non-convertibles are listed, never dropped.</li>
           <li><code>ledit.push_cell</code> — flat KLayout cell back into L-Edit (layers created by name there too).</li>
+          <li><code>ledit.import_cell_tree</code> — import an L-Edit cell AND its whole hierarchy into KLayout: children-first rebuild, instances stay instances (never flattened to shapes), layer identity migrates by name and GDS number the same way; every target cell is recreated, so re-importing is idempotent; shapes with no convertible outline are listed in <code>not_convertible</code>, never silently dropped.</li>
+          <li><code>ledit.push_cell_tree</code> — the other direction: push a KLayout cell and every cell below it into L-Edit, same children-first order, instances rebuilt as real instances; <code>clear=True</code> by default keeps re-pushing idempotent (L-Edit's draw only appends); the whole tree goes over as one batched request; placements L-Edit can't express exactly (magnification, non-orthogonal rotation, skewed arrays) are reported in <code>unsupported_instances</code>, never approximated.</li>
         </ul>
 
-        <h2>T-Cells: parametric in both directions</h2>
+        <h2 id="tcell">T-Cells: parametric in both directions</h2>
         <p>A T-Cell's generator source lives in a cell property the bridge can read whole; parameter names parse deterministically from the generated DO-NOT-EDIT section. That opens both directions, with a single acceptance bar: <strong>byte-exact</strong> (sorted integer-nanometer boxes, element for element, with L-Edit's own generated geometry as ground truth).</p>
         <pre><code>python tcell_workflows.py read NFET_Generator      # params + defaults
 python tcell_workflows.py variants NFET_Generator --paramsets "[...]" --out ex.json
 python tcell_workflows.py writeback MyGen --code gen.cpp --params "[...]"
 python tcell_workflows.py verify MyGen --reference ref.py:boxes --paramsets "[...]"
-python tcell_workflows.py fit MyGen --paramsets "[...]" --check "[...]" --out fit.json --register MY_DEVICE</code></pre>
+python tcell_workflows.py fit MyGen --paramsets "[...]" --check "[...]" --out fit.json --register MY_DEVICE
+python tcell_workflows.py to_pcell MyGen --reference ref.py:boxes --params-spec spec.json --paramsets ps.json --check chk.json --register MY_DEVICE</code></pre>
         <ul>
-          <li><strong>T-Cell → KLayout, geometry-only</strong>: <code>fit</code> (v0.2.2) harvests exemplars and fits the v3 repeat-group model — counts, pitch and positions as exact integer laws, byte-verified against fresh L-Edit variants at held-out points, then registered as a live KLayout PCell (placement byte-verified too). What the model cannot express exactly and uniquely it REFUSES, naming the box family — alternating/parity structure stays on the code route below.</li>
-          <li><strong>T-Cell → KLayout</strong>: read the code → the agent ports the logic to a KLayout-side generator/PCell → <code>verify</code> byte-exact on a grid that crosses repetition thresholds.</li>
+          <li><strong>T-Cell → KLayout, geometry-only</strong>: <code>fit</code> (v0.2.2) harvests exemplars and fits the v3 repeat-group model — counts, pitch and positions as exact integer laws, byte-verified against fresh L-Edit variants at held-out points, then registered as a live KLayout PCell (placement byte-verified too). What the model cannot express exactly and uniquely it REFUSES, naming the box family — alternating/parity structure stays on the <code>to_pcell</code> code route below.</li>
+          <li><strong>T-Cell → KLayout, code route (<code>to_pcell</code>)</strong>: <code>to_pcell</code> is the scaffolded version of the code-porting route — all three stages have to pass before anything is registered; any stage failing exits non-zero with instructive text, never leaving a half-done result. Step 1: byte-exact differential of your ported reference generator (Python, <code>entry(params) -&gt; {layer_name: [[x1,y1,x2,y2] int-nm boxes]}</code>, harvest-native, the same dict shape <code>verify</code> uses) against fresh L-Edit variants at several <code>--paramsets</code>. Step 2: register that same function, unmodified, as a native KLayout PCell (library <code>klink_custom</code>; the mechanism is a new <code>klink.domains.structdevice.pcell_native</code>, and registration goes through the explicit <code>exec.python</code> escape hatch — deliberately, no plugin RPC accepts code directly; layer names map to GDS L/D numbers through your design's own layer table, and any GDS number not in that table is refused — klink never invents one). Step 3: an acceptance loop — at every <code>--check</code> point, place the registered PCell live in KLayout, harvest the drawn boxes back, and byte-compare against a fresh L-Edit variant. This route covers exactly the structure the v3 fitter REFUSES — parity-alternating fingers, M×L bilinear extents, count-stepped structure — with full L/W/M parameter fidelity.</li>
           <li><strong>KLayout → T-Cell</strong>: the agent emits UPI code → <code>writeback</code> (also defines the parameter table) → L-Edit compiles it in place → a native parametric T-Cell, indistinguishable from a hand-written one.</li>
         </ul>
+        <p>Here is a real run against L-Edit's own stock <code>NFET_Generator</code> sample — the exact device whose parity/M×L structure the fitter REFUSES:</p>
+        <pre><code>$ python tcell_workflows.py to_pcell NFET_Generator --reference nfet_ref.py:nfet_boxes \
+    --params-spec spec.json --paramsets ps.json --check chk.json --register NFET_KLINK
+step 1/3: byte-exact verify -- nfet_boxes vs L-Edit NFET_Generator at 5 paramset(s) ...
+{'L': 2, 'W': 5, 'M': 1}: 10 boxes -&gt; BYTE-EXACT
+{'L': 2, 'W': 8, 'M': 2}: 16 boxes -&gt; BYTE-EXACT
+{'L': 3, 'W': 12, 'M': 3}: 24 boxes -&gt; BYTE-EXACT
+{'L': 2.5, 'W': 9, 'M': 4}: 24 boxes -&gt; BYTE-EXACT
+{'L': 2, 'W': 9.5, 'M': 2}: 16 boxes -&gt; BYTE-EXACT
+VERDICT: ALL BYTE-EXACT
+step 2/3: registering 'NFET_KLINK' in library 'klink_custom' ...
+registered KLayout PCell NFET_KLINK (library klink_custom, params ['L', 'W', 'M'])
+step 3/3: acceptance loop -- 3 --check point(s), live KLayout placement vs fresh L-Edit variant ...
+  [1/3] {'L': 4, 'W': 15, 'M': 5} ... BYTE-EXACT (34 boxes)
+  [2/3] {'L': 2, 'W': 6, 'M': 2} ... BYTE-EXACT (13 boxes)
+  [3/3] {'L': 3.5, 'W': 10.5, 'M': 3} ... BYTE-EXACT (20 boxes)
+SUCCESS</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/ledit/to-pcell-variants.png" alt="Three instances of a to_pcell-registered native PCell in KLayout, labelled M=1, M=2, M=5, finger count increasing with M, contact row count following a floor law in W, and metal columns alternating between hooking to the top and bottom rail">
+          <figcaption>A <strong>synthetic demonstration device</strong> (its own arbitrary dimensions, not any real process) drawn live by a <code>to_pcell</code>-registered native PCell at M=1 / M=2 / M=5: finger count follows M, contact row count follows a floor law in W, and the metal columns alternate hooking to the top vs. bottom rail — exactly the parity structure the fitter REFUSES. <code>to_pcell</code> carries it into KLayout unchanged, byte-exact.</figcaption>
+        </figure>
 
         <h2>Known boundaries &amp; troubleshooting</h2>
         <table>

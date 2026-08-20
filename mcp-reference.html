@@ -664,17 +664,19 @@ photonics.reroute cell="MZI"     # 光学 + 金属一起重画，保住你的拖
 port.harvest_blackbox cell="MZI" tags=["gc","mmi"] wg_layer="1/0" stub_size_um=0.5
 photonics.connect recent_sends=4 cell="MZI" radius_um=10 separation_um=5</code></pre>
 
-        <h2 id="d-ledit" class="anchor-h">13 &middot; L-Edit 桥（文件交换 RPC） <span class="tool-count">bridge_ledit &middot; 3 tools</span></h2>
+        <h2 id="d-ledit" class="anchor-h">13 &middot; L-Edit 桥（文件交换 RPC） <span class="tool-count">bridge_ledit &middot; 5 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="bridge_ledit"</span>
-          <p>前提是用户把 <code>example_template/ledit_bridge/ledit_bridge.cpp</code> 以<strong>源码</strong>方式装载进 L-Edit（Tools → Macro → Load Macro…，零编译）。传输是 <code>%LOCALAPPDATA%\klink\ledit_bridge\&lt;namespace&gt;</code> 下的 JSON 文件交换，单命名空间——同时只保留一个装宏的 L-Edit。<code>ledit.status</code> 是发现与握手——任何异常先调它，错误信息直接写明下一步。<code>ledit.import_selection</code> 现拉用户当前 L-Edit 选区到新的 KLayout 落地 cell。<code>ledit.push_cell</code> 把 KLayout 平坦 cell 推回 L-Edit（追加式，重新生成用新 target cell）。更深的 T-Cell 工作流走 Python API <code>klink.bridges.ledit</code>；详见 <a href="ledit-bridge.html">《L-Edit 桥》指南</a>。</p>
+          <p>前提是用户把 <code>example_template/ledit_bridge/ledit_bridge.cpp</code> 以<strong>源码</strong>方式装载进 L-Edit（Tools → Macro → Load Macro…，零编译）。传输是 <code>%LOCALAPPDATA%\klink\ledit_bridge\&lt;namespace&gt;</code> 下的 JSON 文件交换，单命名空间——同时只保留一个装宏的 L-Edit。<code>ledit.status</code> 是发现与握手——任何异常先调它，错误信息直接写明下一步。<code>ledit.import_selection</code> 现拉用户当前 L-Edit 选区到新的 KLayout 落地 cell。<code>ledit.push_cell</code> 把 KLayout 平坦 cell 推回 L-Edit（追加式，重新生成用新 target cell）。<code>ledit.import_cell_tree</code> 把一个 cell 连同整棵层级导入 KLayout，children-first、实例照旧建成实例。<code>ledit.push_cell_tree</code> 反方向把整棵子树推回 L-Edit，同样保留层级，摆不出的摆放如实列出、绝不近似。更深的 T-Cell 工作流走 Python API <code>klink.bridges.ledit</code>；详见 <a href="ledit-bridge.html">《L-Edit 桥》指南</a>。</p>
         </div>
         <table class="data-table reftable">
           <thead><tr><th>工具</th><th>类型</th><th>参数</th><th>功能</th></tr></thead>
           <tbody>
             <tr><td><code>ledit.import_selection</code></td><td><span class="badge kind-local">local</span></td><td>namespace, session, target_cell</td><td>把用户当前在 L-Edit 里的选区导入 KLayout 新落地 cell（每次现拉，绝不用陈旧几何）。能力匹配转换：box→box、wire→path、circle→CIRCLE PCell、其余轮廓兜底 polygon；层连名带号迁移；不可转换对象如实列出。</td></tr>
             <tr><td><code>ledit.push_cell</code></td><td><span class="badge kind-local">local</span></td><td>cell*, ledit_cell, namespace, session</td><td>把 KLayout 平坦 cell 推回 L-Edit（box/path→wire/polygon；层带名建立并盖 GDS 号）。子实例计入 skipped.instance 不静默丢。L-Edit 侧 draw 是追加式：重新生成请换新 ledit_cell。</td></tr>
-            <tr><td><code>ledit.status</code></td><td><span class="badge kind-local">local</span></td><td>namespace</td><td>发现与分诊：宏活性（心跳年龄）、设计是否打开、宏版本与能力表、当前 .tdb 与 cell。任何 ledit.* 异常先叫它——错误信息直接写明下一步。</td></tr>
+            <tr><td><code>ledit.import_cell_tree</code></td><td><span class="badge kind-local">local</span></td><td>cell*, namespace, session</td><td>把 L-Edit 一个 cell 连同它整棵层级导入 KLayout，建成真实的 cell + 实例（<code>ledit.import_selection</code> 读的是选区，按设计会丢实例）。children-first 重建；层身份连名带号迁移；每个目标 cell 都重新建出，重复导入幂等；没有可转换轮廓的形状列进 <code>not_convertible</code>。</td></tr>
+            <tr><td><code>ledit.push_cell_tree</code></td><td><span class="badge kind-local">local</span></td><td>cell*, clear, expect_file, namespace, session</td><td>把 KLayout 一个 cell 连同它下面整棵子树推回 L-Edit，保留层级（<code>ledit.push_cell</code> 是平坦版——遇子实例会拒绝）：children-first 建 cell，实例重建成真实实例；默认 <code>clear=True</code> 让重复推送幂等（L-Edit 的 draw 只会追加）；整棵树作为一次有序批量请求发送；L-Edit 摆放表达不了的实例（缩放、非正交旋转、错切阵列）列进 <code>unsupported_instances</code>，绝不近似凑合。推整个设计更适合走 <code>import_gds</code> 的 GDS 文件。</td></tr>
+            <tr><td><code>ledit.status</code></td><td><span class="badge kind-local">local</span></td><td>namespace</td><td>发现与分诊：宏活性（心跳年龄）、设计是否打开、宏版本与能力表、当前 .tdb 与 cell。任何 ledit.* 异常先叫它——错误信息直接写明下一步。0.5.3 起，宏支持时还会一并报出当前打开的设计与活动设计的 cell 列表（含 T-Cell 标记）。</td></tr>
           </tbody>
         </table>
 

@@ -274,9 +274,10 @@ build_glb_process(str(GDS), STACK, str(RECIPE), str(proc_glb),
                   STYLE, slices=24, fraction=0.6)                        # 扫过真实配方，fraction<1 是切角
 build_viewer_html(str(proc_glb), str(OUT / "render3d_process.html"), STYLE)</code></pre>
         <p><strong>fast 模式</strong>直接拉伸 <code>demo_stack.py</code> 里的 <code>z0_um</code>/<code>z1_um</code>，快但形状是理想化的层块；<strong>process 模式</strong>沿着真实的 <code>.pyxs</code> 配方做切片扫描，LOCOS/保形层/CMP 那种真实拓扑都会体现出来——本例还传了 <code>fraction=0.6</code>，做出一个切角（cutaway），暴露面就是一个真实的剖面。生成的 <code>.html</code>是<strong>完全自含、离线</strong>的（查看器 JS + 模型数据都编码进同一个文件），双击直接在浏览器打开，拖动旋转，右侧面板能调每层的颜色/金属度/粗糙度、导出 PNG。</p>
+        <p>0.5.2 版按两条真实用户反馈修了两处：GLB 导出现在遵循 glTF 规范的 +Y-up 朝向，查看器还放开了 model-viewer 默认 22.5°–157.5° 的俯仰钳制、变成完整的 0°–180°——旋转不再被墙挡住，die 的每一个面都能转到；查看器面板每种材质还新增一条透明度滑条（A，挨着金属度 M、粗糙度 R），把某一层调淡来突出或弱化它——低于 1 材质会自动切到 BLEND 混合模式，回到 1 恢复它声明的模式，Reset 还原成声明时的样子。下面嵌的就是用新版本构建出的查看器——拖满一整圈试试，也拉一下 A 滑条。</p>
         <figure class="tut-figure">
           <iframe src="assets/tutorials/imaging/viewer-process.html" title="klink imaging：process 模式 cutaway 的交互式 3D 查看器" loading="lazy" style="width:100%;height:520px;border:1px solid var(--border,#d8d8d2);border-radius:6px;background:#14161a" allowfullscreen></iframe>
-          <figcaption><strong>这就是 <code>render3d_demo.py</code> 生成的那个文件本身</strong>，原样嵌在这里：拖动旋转、滚轮缩放，右侧面板调背景/曝光/色调映射/阴影、逐材质改颜色与金属度，还能导出 PNG。它是单文件、离线的——查看器 JS 和模型数据都编码在这一个 HTML 里，<a href="assets/tutorials/imaging/viewer-process.html" target="_blank" rel="noopener">单独打开</a>或拷给同事双击都一样能跑，不连网、不装东西。</figcaption>
+          <figcaption><strong>这就是 <code>render3d_demo.py</code> 生成的那个文件本身</strong>，原样嵌在这里：拖动旋转、滚轮缩放，右侧面板调背景/曝光/色调映射/阴影、逐材质改颜色/金属度/透明度，还能导出 PNG。它是单文件、离线的——查看器 JS 和模型数据都编码在这一个 HTML 里，<a href="assets/tutorials/imaging/viewer-process.html" target="_blank" rel="noopener">单独打开</a>或拷给同事双击都一样能跑，不连网、不装东西。</figcaption>
         </figure>
         <figure class="tut-figure">
           <img src="assets/tutorials/imaging/blender-die.png" alt="process-cutaway GLB 的渲染：一整条矩形 die，顶面沿长度方向有一道浅槽，均匀分布着四个深红色多晶硅栅极凸起，栅极之间是深灰色的竖直接触/金属列，透明背景带柔和阴影">

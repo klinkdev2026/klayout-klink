@@ -7,6 +7,29 @@
   <meta name="description" content="klink 的 L-Edit 桥：一个源码即装载的 UPI 宏 + JSON 文件交换传输，agent 可以建库建层画图、读取选区与整 cell、导入导出 KLayout、双向操作 T-Cell（读生成器代码、程序化传参实例化、写回原生参数化 T-Cell），并以逐字节一致为验收标准。">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="assets/styles.css">
+  <style>
+    /* Minimal figure styling, matching tutorial-fit-device.html's scoped
+       .tut-figure pattern (assets/styles.css has no <img> usage yet). */
+    .tut-figure {
+      margin: 16px 0 26px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .tut-figure img {
+      width: 100%;
+      display: block;
+      background: #fff;
+    }
+    .tut-figure figcaption {
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      background: #f7fafb;
+    }
+  </style>
 </head>
 <body data-page="tutorials" class="has-sidebar">
   <aside class="site-sidebar">
@@ -121,25 +144,49 @@
         </table>
 
         <h2>与 KLayout 互导（MCP 一调用）</h2>
-        <p>配好 klink MCP 后，agent 直接获得 <code>bridge_ledit</code> 域的三个意图级工具：</p>
+        <p>配好 klink MCP 后，agent 直接获得 <code>bridge_ledit</code> 域的五个意图级工具：</p>
         <ul>
-          <li><code>ledit.status</code> —— 发现与分诊：宏活性、设计是否打开、心跳年龄。任何异常先叫它，错误信息会直接写明下一步。</li>
+          <li><code>ledit.status</code> —— 发现与分诊：宏活性、设计是否打开、心跳年龄。任何异常先叫它，错误信息会直接写明下一步。<strong>0.5.3 新增：</strong>宏支持 list_designs/list_cells 时，还会一并报出当前打开的设计和活动设计的 cell 列表（含 T-Cell 标记）——“L-Edit 里现在有什么”一次调用问完；旧版本宏行为不变（能力探测式降级）。</li>
           <li><code>ledit.import_selection</code> —— 你在 L-Edit 里选中，agent 导入 KLayout 新 cell：圆保持参数化（CIRCLE PCell）、层<strong>连名带号</strong>迁移（重名追加不覆盖）、不可转换对象如实列出。</li>
           <li><code>ledit.push_cell</code> —— KLayout 平坦 cell 推回 L-Edit（层同样带名建立）。</li>
+          <li><code>ledit.import_cell_tree</code> —— 把 L-Edit 里一个 cell 连同它<strong>整棵层级</strong>导入 KLayout：children-first 重建，实例照旧建成实例（不是拍平成形状），层身份同样连名带号迁移；每个目标 cell 都会被重新建出，所以重复导入是幂等的；没有可转换轮廓的形状列进 <code>not_convertible</code>，绝不悄悄丢弃。</li>
+          <li><code>ledit.push_cell_tree</code> —— 反方向：把 KLayout 一个 cell 连同它下面<strong>整棵</strong>子树推回 L-Edit，同样 children-first、实例重建成实例；默认 <code>clear=True</code>，让重复推送保持幂等（L-Edit 的 draw 只会追加）；整棵树作为<strong>一次</strong>批量请求发过去；L-Edit 摆放表达不了的实例（缩放、非正交旋转、错切阵列）会如实列进 <code>unsupported_instances</code>，绝不近似凑合。</li>
         </ul>
 
-        <h2>T-Cell：双向参数化</h2>
+        <h2 id="tcell">T-Cell：双向参数化</h2>
         <p>T-Cell 的生成器代码存在 cell 属性里，桥可以整段读出——参数名从代码的 DO-NOT-EDIT 段稳定解析。由此打通两个方向，验收标准只有一个：<strong>逐字节一致</strong>（整数纳米坐标逐箱相等，以 L-Edit 实际生成的几何为真值）。</p>
         <pre><code>python tcell_workflows.py read NFET_Generator      # 参数与默认值
 python tcell_workflows.py variants NFET_Generator --paramsets "[...]" --out ex.json
 python tcell_workflows.py writeback MyGen --code gen.cpp --params "[...]"
 python tcell_workflows.py verify MyGen --reference ref.py:boxes --paramsets "[...]"
-python tcell_workflows.py fit MyGen --paramsets "[...]" --check "[...]" --out fit.json --register MY_DEVICE</code></pre>
+python tcell_workflows.py fit MyGen --paramsets "[...]" --check "[...]" --out fit.json --register MY_DEVICE
+python tcell_workflows.py to_pcell MyGen --reference ref.py:boxes --params-spec spec.json --paramsets ps.json --check chk.json --register MY_DEVICE</code></pre>
         <ul>
-          <li><strong>T-Cell → KLayout（纯几何路线）</strong>：<code>fit</code>（v0.2.2）采样样本并拟合 v3 重复组模型——数量、间距、位置全部是精确整数律，在留出检查点上与 L-Edit 新鲜变体逐字节对决，然后注册为 KLayout PCell（放置同样逐字节验证）。模型表达不了或钉不死的结构一律 REFUSE 并点名箱族——交替/奇偶结构请走下面的代码移植路线。</li>
-          <li><strong>T-Cell → KLayout</strong>：读代码 → agent 移植为 KLayout 侧生成器/PCell → <code>verify</code> 在跨越重复阈值的参数网格上逐字节对决。</li>
+          <li><strong>T-Cell → KLayout（纯几何路线）</strong>：<code>fit</code>（v0.2.2）采样样本并拟合 v3 重复组模型——数量、间距、位置全部是精确整数律，在留出检查点上与 L-Edit 新鲜变体逐字节对决，然后注册为 KLayout PCell（放置同样逐字节验证）。模型表达不了或钉不死的结构一律 REFUSE 并点名箱族——交替/奇偶结构请走下面的 <code>to_pcell</code> 移植路线。</li>
+          <li><strong>T-Cell → KLayout（代码移植路线，<code>to_pcell</code>）</strong>：<code>to_pcell</code> 是这条移植路线的脚手架化版本——三个阶段全部过关才注册，任何一步不过直接以非零退出码退出并给出指令性文字，绝不留半成品。第 1 步：把你移植好的参考生成器（Python，<code>entry(params) -&gt; {层名: [[x1,y1,x2,y2] 整数纳米盒子]}</code>，harvest 原生格式，和 <code>verify</code> 用的字典结构完全一致）在若干 <code>--paramsets</code> 上与 L-Edit 新鲜变体逐字节对决；第 2 步：同一个函数原样注册成原生 KLayout PCell（库名 <code>klink_custom</code>；机制是新的 <code>klink.domains.structdevice.pcell_native</code>，注册走显式的 <code>exec.python</code> 逃生舱——刻意不开一条能直接接收代码的 plugin RPC；层名按你设计自己的层表映射到 GDS L/D 号，没在层表里的 GDS 号一律拒绝，klink 从不替你发明）；第 3 步：验收循环——在每个 <code>--check</code> 点把注册好的 PCell 真的放进 live KLayout、把画出的盒子收割回来，再和一份新鲜的 L-Edit 变体逐字节对决。这条路线覆盖 v3 拟合器 REFUSE 的那类结构——奇偶交替的手指、M×L 双线性延展、按计数分档的结构——完整的 L/W/M 参数保真度。</li>
           <li><strong>KLayout → T-Cell</strong>：agent 生成 UPI 代码 → <code>writeback</code> 写入（同时定义参数表）→ L-Edit 现场编译 → 得到和手写无异的原生参数化 T-Cell。</li>
         </ul>
+        <p>下面是一次真实运行，针对的是 L-Edit 自带的 <code>NFET_Generator</code> 范例——正是拟合器会因为奇偶/M×L 结构而 REFUSE 的那个器件：</p>
+        <pre><code>$ python tcell_workflows.py to_pcell NFET_Generator --reference nfet_ref.py:nfet_boxes \
+    --params-spec spec.json --paramsets ps.json --check chk.json --register NFET_KLINK
+step 1/3: byte-exact verify -- nfet_boxes vs L-Edit NFET_Generator at 5 paramset(s) ...
+{'L': 2, 'W': 5, 'M': 1}: 10 boxes -&gt; BYTE-EXACT
+{'L': 2, 'W': 8, 'M': 2}: 16 boxes -&gt; BYTE-EXACT
+{'L': 3, 'W': 12, 'M': 3}: 24 boxes -&gt; BYTE-EXACT
+{'L': 2.5, 'W': 9, 'M': 4}: 24 boxes -&gt; BYTE-EXACT
+{'L': 2, 'W': 9.5, 'M': 2}: 16 boxes -&gt; BYTE-EXACT
+VERDICT: ALL BYTE-EXACT
+step 2/3: registering 'NFET_KLINK' in library 'klink_custom' ...
+registered KLayout PCell NFET_KLINK (library klink_custom, params ['L', 'W', 'M'])
+step 3/3: acceptance loop -- 3 --check point(s), live KLayout placement vs fresh L-Edit variant ...
+  [1/3] {'L': 4, 'W': 15, 'M': 5} ... BYTE-EXACT (34 boxes)
+  [2/3] {'L': 2, 'W': 6, 'M': 2} ... BYTE-EXACT (13 boxes)
+  [3/3] {'L': 3.5, 'W': 10.5, 'M': 3} ... BYTE-EXACT (20 boxes)
+SUCCESS</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/ledit/to-pcell-variants.png" alt="三个由 to_pcell 注册出的原生 PCell 在 KLayout 里的实例，分别标注 M=1、M=2、M=5，手指数随 M 增加，接触行数随 W 呈 floor 律，金属列在上下轨之间交替勾连">
+          <figcaption>一个<strong>合成演示器件</strong>（自定的任意尺寸，不对应任何真实工艺）在 M=1 / M=2 / M=5 三组参数下由 <code>to_pcell</code> 注册出的原生 PCell 现场画出：手指数量跟着 M 走，接触行数按 W 的 floor 律走，金属列在上下轨之间交替勾连——这正是拟合器会 REFUSE 的那种奇偶结构，<code>to_pcell</code> 把它原样搬进 KLayout，逐字节保真。</figcaption>
+        </figure>
 
         <h2>已知边界与排障</h2>
         <table>
