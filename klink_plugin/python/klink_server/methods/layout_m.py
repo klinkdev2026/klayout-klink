@@ -177,12 +177,147 @@ def layout_info(params, ctx):
     return out
 
 
+def _safe_file_manifest(path):
+    """Best-effort manifest for load/import returns: the load already
+    succeeded, so a manifest failure must not fail the call."""
+    try:
+        return _file_manifest(path)
+    except Exception:
+        return None
+
+
+def _file_manifest(path, detail="summary"):
+    """What does the FILE itself contain? Read into a throwaway
+    pya.Layout and discard — the live session is never touched, so the
+    answer cannot be contaminated by open tabs (a measured agent
+    failure mode: import merged a file into a dirty layout, then
+    session queries reported leftover cells/layers as the file's)."""
+    import os
+
+    if not path or not os.path.isfile(path):
+        raise RpcError(
+            ErrorCode.BAD_PARAMS,
+            "path %r does not exist or is not a file; pass an absolute "
+            "path to a layout file KLayout can read" % (path,))
+    tmp = pya.Layout()
+    try:
+        tmp.read(str(path))
+    except Exception as exc:
+        raise RpcError(
+            ErrorCode.BAD_PARAMS,
+            "KLayout could not read %r as a layout file: %s" % (path, exc))
+    tops = sorted(c.name for c in tmp.top_cells())
+    layers = []
+    counts = {}
+    for li in tmp.layer_indexes():
+        info = tmp.get_info(li)
+        ent = {"layer": int(info.layer), "datatype": int(info.datatype)}
+        if info.name:
+            ent["name"] = str(info.name)
+        layers.append(ent)
+        if detail == "counts":
+            kinds = {"boxes": 0, "polygons": 0, "paths": 0,
+                     "texts": 0, "others": 0}
+            for cell in tmp.each_cell():
+                for sh in cell.shapes(li).each():
+                    if sh.is_box():
+                        kinds["boxes"] += 1
+                    elif sh.is_path():
+                        kinds["paths"] += 1
+                    elif sh.is_text():
+                        kinds["texts"] += 1
+                    elif sh.is_polygon():
+                        kinds["polygons"] += 1
+                    else:
+                        kinds["others"] += 1
+            kinds["total"] = (kinds["boxes"] + kinds["polygons"]
+                              + kinds["paths"] + kinds["texts"]
+                              + kinds["others"])
+            counts["%d/%d" % (info.layer, info.datatype)] = kinds
+    layers.sort(key=lambda e: (e["layer"], e["datatype"]))
+    bbox_of = {}
+    for name in tops:
+        b = tmp.cell(name).bbox()
+        bbox_of[name] = [b.left, b.bottom, b.right, b.top]
+    out = {
+        "path": str(path),
+        "dbu": tmp.dbu,
+        "cells_total": int(tmp.cells()),
+        "top_cells": tops,
+        "layers": layers,
+        "bbox_dbu_of": bbox_of,
+    }
+    if detail == "counts":
+        out["layer_shape_counts"] = counts
+    return out
+
+
+@method(
+    "layout.file_info",
+    description=(
+        "Answer \"what is inside this layout FILE?\" without touching "
+        "the session: the file is read into a throwaway layout and "
+        "discarded, so open tabs cannot contaminate the answer (a "
+        "measured agent failure mode: importing merged the file into a "
+        "dirty layout, then session queries reported leftover "
+        "cells/layers as the file's). Returns dbu, top cells, total "
+        "cell count, the file's own layer list, and each top cell's "
+        "bbox in dbu; detail='counts' adds per-layer stored-shape "
+        "counts split by kind (boxes/polygons/paths/texts/others + "
+        "total; slower on big files) -- a question about 'boxes' means "
+        "the 'boxes' entry, not 'total'. Use THIS to inspect a file; use "
+        "layout.show_file to open one in a tab; layout.import_file "
+        "MERGES into the active layout."
+    ),
+    params_schema={
+        "type": "object",
+        "required": ["path"],
+        "properties": {
+            "path": {
+                "type": "string",
+                "description": "Absolute path to the layout file",
+            },
+            "detail": {
+                "type": "string",
+                "enum": ["summary", "counts"],
+                "default": "summary",
+                "description": "'counts' adds per-layer stored-shape "
+                               "counts (walks every cell; slower on "
+                               "very large files)",
+            },
+        },
+        "additionalProperties": False,
+    },
+    returns_schema={
+        "type": "object",
+        "properties": {
+            "path": {"type": "string"},
+            "dbu": {"type": "number"},
+            "cells_total": {"type": "integer"},
+            "top_cells": {"type": "array", "items": {"type": "string"}},
+            "layers": {"type": "array"},
+            "bbox_dbu_of": {"type": "object"},
+            "layer_shape_counts": {"type": "object"},
+        },
+    },
+    mutates=False,
+    long_running=True,
+    tags=["layout", "read"],
+)
+def layout_file_info(params, ctx):
+    return _file_manifest(params.get("path"),
+                          str(params.get("detail") or "summary"))
+
+
 @method(
     "layout.show_file",
     description=(
         "Load a GDS/OAS file into KLayout. If the file is already open "
         "in a tab, reload it. Otherwise open it in the current view "
-        "(mode='replace') or a new tab (mode='new'). "
+        "(mode='replace') or a new tab (mode='new'). The return's "
+        "`file_info` block reports what the FILE itself contains (read "
+        "separately from the file, immune to session state) -- answer "
+        "file-content questions from it, not from session queries. "
         "When recording is active, all shape/cell events triggered by the "
         "file load are merged into a single `layout_show_file()` line."
     ),
@@ -217,6 +352,7 @@ def layout_info(params, ctx):
             "loaded": {"type": "string"},
             "type": {"type": "string", "enum": ["open", "reload"]},
             "cells": {"type": "integer"},
+            "file_info": {"type": "object"},
         },
     },
     mutates=True,
@@ -320,11 +456,13 @@ def layout_show_file(params, ctx):
         except Exception:
             pass
 
-    return {
+    out = {
         "loaded": path,
         "type": load_type,
         "cells": n_cells,
     }
+    out["file_info"] = _safe_file_manifest(path)
+    return out
 
 
 @method(
@@ -458,7 +596,13 @@ def layout_clear(params, ctx):
         "'rename' (default, new cells get a $1-style suffix), 'add' "
         "(content merged into the existing cell), 'overwrite' (old cell "
         "replaced), 'skip' (new cell dropped). One undo step. Returns "
-        "cells/layers added and the new top cells."
+        "cells/layers added, the new top cells, and a `file_info` block "
+        "describing what the FILE itself contained -- after a merge, "
+        "session queries (cell.list/layer.list) describe the MIXED "
+        "layout, never the file; answer file-content questions from "
+        "file_info or layout.file_info instead. To merely INSPECT a "
+        "file, do not import it: use layout.file_info (session "
+        "untouched) or layout.show_file (own tab)."
     ),
     params_schema={
         "type": "object",
@@ -492,6 +636,7 @@ def layout_clear(params, ctx):
             "new_cells": {"type": "array", "items": {"type": "string"}},
             "layers_added": {"type": "array", "items": {"type": "string"}},
             "on_conflict": {"type": "string"},
+            "file_info": {"type": "object"},
         },
     },
     mutates=True,
@@ -621,6 +766,8 @@ def layout_import_file(params, ctx):
         "layers_added": sorted("%d/%d" % ld
                                for ld in layers_after - layers_before),
         "on_conflict": conflict,
+        # what the FILE contained -- the merged layout no longer knows
+        "file_info": _safe_file_manifest(path),
     }
 
 

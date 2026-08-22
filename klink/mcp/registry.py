@@ -30,6 +30,7 @@ _ALWAYS_ON_LOCAL = {"klink.find_tools", "klink.status", "klink.reconnect"}
 _ALWAYS_LONG_RUNNING = {
     "drc.run",
     "exec.python",
+    "layout.file_info",
     "layout.save_file",
     "layout.show_file",
     "shape.query",

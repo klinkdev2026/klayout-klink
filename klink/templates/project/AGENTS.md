@@ -12,9 +12,28 @@ You may create and edit only:
 - `pdk.py` — the process (layers, vias, dimensions) + the device library
   (`DEVICES`/`LIBRARY`) and the sizing CHOICE (`SIZING`) for P&R. Sizing is a
   design decision YOU specify here (klink ships the mechanism, never the choice).
-- `custom_devices/` — build scripts you write
+- `custom_devices/` — code you write, in TWO strata (see its README):
+  - `toolbox/` — reusable, verified tools (a real package;
+    `__init__.py` is the index — read it BEFORE writing a generator,
+    the tool may already exist);
+  - `runs/<date>_<slug>/` — one folder per task holding its `run.py`,
+    its `out/` artifacts, and its `notes.md` record TOGETHER.
 - `specs/` — `.klink` specs
-- `out/` — generated artifacts
+- `out/` — generated artifacts (legacy shared pile; prefer the
+  current run's own `out/`)
+
+**Run discipline** (this is how the project stays navigable):
+START every task with `klink run new <slug>` — it creates the
+date-stamped run folder (run.py + out/ + notes.md) and registers it
+in `runs/INDEX.md` as "(in progress)" so the ledger can never miss a
+folder. FINISH by filling `notes.md` (what was asked, what you did,
+and REAL verification output — LVS/geometry numbers, never "looks
+done"), replacing the ledger's "(in progress)" with a one-line
+summary + PASS/FAIL, and a git commit. If you used the recorder, copy the replay script
+into the run folder. When a run's code proves out and is the second
+time this shape was needed, propose GRADUATING it into `toolbox/`
+(docstring + export entry) — writing the same function twice is the
+signal.
 
 Read-only (shipped references — run them, don't edit them):
 

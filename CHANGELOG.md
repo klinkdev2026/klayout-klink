@@ -4,6 +4,42 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project does not use dated entries (versions only).
 
+## 0.5.5
+
+Session-isolation fix for file inspection (a benchmarked agent
+failure: importing merged a file into a dirty layout, then session
+queries reported leftover cells/layers as the file's — two of four
+tested models fell into exactly this):
+
+- New RPC `layout.file_info(path, detail)`: answers "what is inside
+  this layout FILE?" by reading it into a throwaway layout that never
+  touches the session — open tabs cannot contaminate the answer.
+  Returns dbu, top cells, cell count, the file's own layer list and
+  per-top bboxes; `detail='counts'` adds per-layer stored-shape
+  counts split by kind (boxes/polygons/paths/texts/others + total) —
+  a question about "boxes" means the boxes entry, not the total.
+- `layout.show_file` and `layout.import_file` returns now carry a
+  `file_info` block describing what the FILE contained (read
+  separately from the file), and their descriptions state the merge
+  semantics loudly and point to the right tool for each intent.
+- Re-tested with the same small model that originally failed: the
+  contamination disappeared (it reached for `layout.file_info`
+  unprompted).
+
+Project layering for user code (`klink init` projects):
+
+- `custom_devices/` now scaffolds two strata: `toolbox/` (your
+  reusable, verified tools — its `__init__.py` is the index) and
+  `runs/<YYYY-MM-DD>_<slug>/` (one folder per task holding its
+  driver, its artifacts, and its `notes.md` record together, with a
+  `runs/INDEX.md` ledger). New CLI `klink run new <slug>` creates the
+  date-stamped run folder (driver stub, `out/`, `notes.md` template)
+  and registers it in the ledger at birth as "(in progress)", so the
+  ledger can never miss a directory. The agent rules add the run
+  discipline: start every task with `klink run new`, records carry
+  real verification output, reusable code graduates into the toolbox,
+  one commit per run. Flat scripts in `custom_devices/` keep working.
+
 ## 0.5.4
 
 Staying current (klink releases fast; stale installs were the top

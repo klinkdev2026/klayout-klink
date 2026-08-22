@@ -240,6 +240,113 @@ def update(target: str, *, dry_run: bool = False) -> int:
     return 0
 
 
+_NOTES_TEMPLATE = """\
+# {name}
+
+## Request
+
+(what was asked, in one or two lines)
+
+## What was done
+
+(steps, tools, key parameters)
+
+## Verification evidence
+
+(REAL output: LVS result, geometry counts/asserts -- never "looks done")
+
+## Files
+
+- run.py -- the driver
+- out/   -- artifacts of this run
+"""
+
+_RUN_PY_TEMPLATE = """\
+\"\"\"Run driver: {slug}. Artifacts go to this folder's out/.\"\"\"
+
+import sys
+from pathlib import Path
+
+# project root (two levels up: custom_devices/runs/<this>/)
+ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "custom_devices"))
+
+from pdk import PROCESS            # noqa: E402  process facts live ONLY here
+# from toolbox import ...          # check toolbox/__init__.py before rewriting a tool
+
+OUT = Path(__file__).resolve().parent / "out"
+
+
+def main():
+    from klink import KLinkClient
+    with KLinkClient().connect() as c:
+        ...
+
+
+if __name__ == "__main__":
+    main()
+"""
+
+
+def run_new(slug: str, *, project: str = ".") -> int:
+    """Create runs/<today>_<slug>/ and register it in the ledger.
+
+    The folder is born WITH its INDEX.md line ("in progress"), so the
+    ledger can never miss a directory even if the finishing discipline
+    slips. Date-prefixed names sort chronologically and cannot collide
+    (an existing name gets a _2 suffix)."""
+    import datetime
+    import re
+
+    proj = Path(project).resolve()
+    cd = proj / "custom_devices"
+    if not (proj / "pdk.py").exists() or not cd.is_dir():
+        print(f"{proj} does not look like a klink project "
+              "(pdk.py + custom_devices/ expected). Run `klink init` "
+              "first, or pass --project.")
+        return 2
+    slug = re.sub(r"[^a-zA-Z0-9._-]+", "-", slug.strip()).strip("-")
+    if not slug:
+        print("slug must contain some letters/digits, e.g. "
+              "`klink run new my-first-task`")
+        return 2
+    runs = cd / "runs"
+    runs.mkdir(exist_ok=True)
+    today = datetime.date.today().isoformat()
+    name = f"{today}_{slug}"
+    n = 2
+    while (runs / name).exists():
+        name = f"{today}_{slug}_{n}"
+        n += 1
+    rd = runs / name
+    (rd / "out").mkdir(parents=True)
+    (rd / "notes.md").write_text(_NOTES_TEMPLATE.format(name=name),
+                                 encoding="utf-8", newline="\n")
+    (rd / "run.py").write_text(_RUN_PY_TEMPLATE.format(slug=slug),
+                               encoding="utf-8", newline="\n")
+    index = runs / "INDEX.md"
+    line = f"- [{name}]({name}/) -- (in progress)\n"
+    anchor = "<!-- newest first -->\n"
+    if index.exists():
+        text = index.read_text(encoding="utf-8")
+        pos = text.find(anchor)
+        if pos >= 0:
+            at = pos + len(anchor)
+            text = text[:at] + line + text[at:]
+        else:
+            text = text.rstrip("\n") + "\n" + line
+        index.write_text(text, encoding="utf-8", newline="\n")
+    else:
+        index.write_text("# runs\n\n" + anchor + line,
+                         encoding="utf-8", newline="\n")
+    print(f"run folder: {rd}")
+    print("next: write the driver in run.py, keep artifacts in out/, "
+          "finish notes.md, then replace the ledger's '(in progress)' "
+          "with a one-line summary + PASS/FAIL.")
+    return 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="klink", description="klink command-line tools.")
     ap.add_argument("--version", action="version",
@@ -274,6 +381,18 @@ def main(argv=None) -> int:
     p_ps.add_argument("--salt-dir", default=None,
                       help="KLayout salt directory (default: auto-detected)")
 
+    p_run = sub.add_parser(
+        "run", help="manage task runs inside a klink project")
+    run_sub = p_run.add_subparsers(dest="run_cmd")
+    p_rn = run_sub.add_parser(
+        "new", help="create runs/<today>_<slug>/ (run.py + out/ + "
+                    "notes.md) and register it in runs/INDEX.md")
+    p_rn.add_argument("slug", help="short kebab-case task name, e.g. "
+                                   "my-first-task")
+    p_rn.add_argument("--project", default=".",
+                      help="the klink project directory (default: "
+                           "current dir)")
+
     # `klink doctor` used to drop every flag on the floor (doctor_main([])),
     # so --scan/--report were reachable only as `python -m klink.doctor`.
     p_doc = sub.add_parser(
@@ -293,6 +412,11 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
     if args.cmd == "init":
         return init(args.directory)
+    if args.cmd == "run":
+        if args.run_cmd == "new":
+            return run_new(args.slug, project=args.project)
+        p_run.print_help()
+        return 2
     if args.cmd == "update":
         return update(args.directory, dry_run=args.dry_run)
     if args.cmd == "plugin":
