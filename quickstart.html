@@ -187,6 +187,7 @@ klink plugin install                     # 2. 同步插件，重启 KLayout(或�
         <pre><code>klink init my-chip
 cd my-chip
 python example_template/nanodevice/ebl_wraparound.py</code></pre>
+        <div class="note">项目建好后，每个新任务开始时跑一次 <code>klink run new &lt;slug&gt;</code>（通常 agent 自己会跑——项目的 agent 规则要求每个任务以它开始）：它生成带日期的 <code>custom_devices/runs/&lt;日期&gt;_&lt;slug&gt;/</code>（driver 骨架 + 本次产物的 <code>out/</code> + <code>notes.md</code> 记录模板同居一处），并在创建那一刻就把自己登记进 <code>runs/INDEX.md</code> 台账（"(in progress)"，任务结束改成一句话摘要 + PASS/FAIL）。跑通的可复用代码毕业进 <code>custom_devices/toolbox/</code>——项目自己的工具包。</div>
         <p>如果你是在公开源码/release checkout 里，也可以运行可跑 demo 的模块路径：</p>
         <pre><code>python -m examples_klink.public.demos.nanodevice.ebl_wraparound</code></pre>
         <p>release 文档记录的实测摘要：<code>"ok": true</code>，40 electrodes，12 patches，writefield 16 fields / 11 windows / 20 crossings，0 violations，0 overlaps。</p>

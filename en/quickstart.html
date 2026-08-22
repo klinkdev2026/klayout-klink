@@ -182,6 +182,7 @@ klink plugin install                     # 2. sync the plugin, restart KLayout (
         <pre><code>klink init my-chip
 cd my-chip
 python example_template/nanodevice/ebl_wraparound.py</code></pre>
+        <div class="note">Once the project exists, start every new task with <code>klink run new &lt;slug&gt;</code> (usually the agent runs it itself — the project's agent rules call for it at the start of every task): it creates a dated <code>custom_devices/runs/&lt;date&gt;_&lt;slug&gt;/</code> folder (driver stub + this task's <code>out/</code> + a <code>notes.md</code> record template, together in one place) and registers itself in the <code>runs/INDEX.md</code> ledger at creation ("(in progress)", collapsing into a one-line summary + PASS/FAIL when the task finishes). Code that proves out graduates into <code>custom_devices/toolbox/</code>, the project's own reusable-tool package.</div>
         <p>In a public source or release checkout, the gallery module path also works:</p>
         <pre><code>python -m examples_klink.public.demos.nanodevice.ebl_wraparound</code></pre>
         <p>Recorded public output summary: <code>"ok": true</code>, 40 electrodes, 12 patches, writefield 16 fields / 11 windows / 20 crossings, 0 violations, 0 overlaps.</p>

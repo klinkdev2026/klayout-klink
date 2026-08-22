@@ -333,10 +333,11 @@ klink.transfer_commit package_id="pkg_0001"</code></pre>
         <table class="data-table reftable">
           <thead><tr><th>工具</th><th>类型</th><th>参数</th><th>功能</th></tr></thead>
           <tbody>
-            <tr><td><code>layout.show_file</code></td><td><span class="badge kind-rpc">rpc</span></td><td>keep_position, mode, path*, technology</td><td>载入 GDS/OAS（已开则 reload）。mode=replace 当前视图 / new 新 tab。录制时合并为一行。</td></tr>
+            <tr><td><code>layout.file_info</code></td><td><span class="badge kind-rpc">rpc</span></td><td>detail, path*</td><td>回答"这个版图<strong>文件</strong>里有什么"：文件读进一次性 layout 后即弃，全程不碰会话——打开的 tab 不可能污染答案。返回 dbu、顶层 cell、cell 总数、文件自己的层表、每个顶层 cell 的 bbox(dbu)；detail=counts 再按类细分每层形状数(boxes/polygons/paths/texts/others+total)。</td></tr>
+            <tr><td><code>layout.show_file</code></td><td><span class="badge kind-rpc">rpc</span></td><td>keep_position, mode, path*, technology</td><td>载入 GDS/OAS（已开则 reload）。mode=replace 当前视图 / new 新 tab。返回附 file_info 块(文件本身的内容清单)。录制时合并为一行。</td></tr>
             <tr><td><code>layout.save_file</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cellview_index, path*</td><td>存盘。扩展名决定格式：.gds/.gds2 GDSII，.oas/.oasis OASIS。</td></tr>
             <tr><td><code>layout.export_clean</code></td><td><span class="badge kind-rpc">rpc</span></td><td>allowlist_layers*, cells, cellview_index, path*</td><td>fail-closed 的交付导出：只把显式声明的 allowlist_layers 写进一份新 GDS/OASIS 文件，移除每一个 klink 标记（Port/Anchor/Region PCell 实例）并剥离 PCell 上下文。在一份草稿副本上操作——live 版图从不被改动。输出会被重新读回校验（无保留层、无标记 cell）才原子提升到位；校验失败则删掉临时文件并报错。allowlist 里含保留标记层会被拒绝。传 cells 只导出这些 top cell（+ 层级）——不传的话整幅版图的所有 top cell 都会进文件，包括共享 session 里不相关的那些。完整工作存档用 layout.save_file；mask 和交付用这个。</td></tr>
-            <tr><td><code>layout.import_file</code></td><td><span class="badge kind-rpc">rpc</span></td><td>create_other_layers, layer_map, on_conflict, path*</td><td>把一个版图文件合并进当前 layout，带图层重映射与同名 cell 冲突策略（rename/add/overwrite/skip）。</td></tr>
+            <tr><td><code>layout.import_file</code></td><td><span class="badge kind-rpc">rpc</span></td><td>create_other_layers, layer_map, on_conflict, path*</td><td>把一个版图文件合并进当前 layout，带图层重映射与同名 cell 冲突策略（rename/add/overwrite/skip）。返回附 file_info 块——合并后查会话描述的是混合版图，看文件请用 layout.file_info。</td></tr>
             <tr><td><code>layout.clear</code></td><td><span class="badge kind-rpc">rpc</span></td><td>cellview_index</td><td>破坏性：清空整幅 layout（所有 cell/形状/层级）。</td></tr>
             <tr><td><code>edit.undo</code></td><td><span class="badge kind-rpc">rpc</span></td><td>—</td><td>撤销最近一次可撤销操作（klink RPC、Macro IDE 编辑或 GUI 编辑）。返回前后栈快照。</td></tr>
             <tr><td><code>edit.redo</code></td><td><span class="badge kind-rpc">rpc</span></td><td>—</td><td>重做，与 edit.undo 配对。</td></tr>
