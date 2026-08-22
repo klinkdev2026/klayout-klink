@@ -47,6 +47,205 @@
       }
     },
     {
+      "name": "layout.info",
+      "description": "Snapshot of the currently active layout view: number of open views, active cellview index, top cell name, source file path, database unit, the full top-cell list and the registered layer/datatype pairs. Safe to call often - this is the method an LLM agent should use to refresh its world view.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "verbosity": {
+            "type": "string",
+            "enum": [
+              "summary",
+              "normal",
+              "full"
+            ],
+            "default": "normal",
+            "description": "'summary' omits layer list; 'full' adds hierarchy counts"
+          }
+        }
+      }
+    },
+    {
+      "name": "layout.file_info",
+      "description": "Answer \"what is inside this layout FILE?\" without touching the session: the file is read into a throwaway layout and discarded, so open tabs cannot contaminate the answer (a measured agent failure mode: importing merged the file into a dirty layout, then session queries reported leftover cells/layers as the file's). Returns dbu, top cells, total cell count, the file's own layer list, and each top cell's bbox in dbu; detail='counts' adds per-layer stored-shape counts split by kind (boxes/polygons/paths/texts/others + total; slower on big files) -- a question about 'boxes' means the 'boxes' entry, not 'total'. Use THIS to inspect a file; use layout.show_file to open one in a tab; layout.import_file MERGES into the active layout.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "path"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Absolute path to the layout file"
+          },
+          "detail": {
+            "type": "string",
+            "enum": [
+              "summary",
+              "counts"
+            ],
+            "default": "summary",
+            "description": "'counts' adds per-layer stored-shape counts (walks every cell; slower on very large files)"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "layout.show_file",
+      "description": "Load a GDS/OAS file into KLayout. If the file is already open in a tab, reload it. Otherwise open it in the current view (mode='replace') or a new tab (mode='new'). The return's `file_info` block reports what the FILE itself contains (read separately from the file, immune to session state) -- answer file-content questions from it, not from session queries. When recording is active, all shape/cell events triggered by the file load are merged into a single `layout_show_file()` line.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Absolute path to the GDS/OAS file to load"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "replace",
+              "new"
+            ],
+            "default": "replace",
+            "description": "'replace' loads into the current view; 'new' opens a new tab"
+          },
+          "keep_position": {
+            "type": "boolean",
+            "default": true,
+            "description": "Restore viewport after loading"
+          },
+          "technology": {
+            "type": "string",
+            "description": "KLayout technology name to apply to the loaded layout"
+          }
+        },
+        "required": [
+          "path"
+        ]
+      }
+    },
+    {
+      "name": "layout.save_file",
+      "description": "Save the active layout to a GDS or OASIS file on disk. Extension determines format: .gds/.gds2 for GDSII, .oas/.oasis for OASIS.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Absolute file path to write. Extension determines format."
+          },
+          "cellview_index": {
+            "type": "integer",
+            "default": 0,
+            "description": "Which cellview to save (0 = active)."
+          }
+        },
+        "required": [
+          "path"
+        ]
+      }
+    },
+    {
+      "name": "layout.clear",
+      "description": "Clear the entire layout: removes all cells, shapes, and hierarchy in one operation. Leaves an empty layout ready for new content. Useful before restoring a version-control snapshot.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cellview_index": {
+            "type": "integer",
+            "default": 0,
+            "description": "Which cellview to clear (0 = active)."
+          }
+        }
+      }
+    },
+    {
+      "name": "layout.import_file",
+      "description": "MERGE a layout file (GDS/OASIS/...) into the ACTIVE layout -- the load-time mapping workflow (official LoadLayoutOptions), unlike layout.show_file which opens a file in its own tab. `layer_map` remaps layers while reading ([{from: 'L/D', to: 'L/D'}, ...]); `create_other_layers` (default true) controls whether unlisted layers are read too; `on_conflict` decides same-name cells: 'rename' (default, new cells get a $1-style suffix), 'add' (content merged into the existing cell), 'overwrite' (old cell replaced), 'skip' (new cell dropped). One undo step. Returns cells/layers added, the new top cells, and a `file_info` block describing what the FILE itself contained -- after a merge, session queries (cell.list/layer.list) describe the MIXED layout, never the file; answer file-content questions from file_info or layout.file_info instead. To merely INSPECT a file, do not import it: use layout.file_info (session untouched) or layout.show_file (own tab).",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "path"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "layer_map": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "from",
+                "to"
+              ],
+              "properties": {
+                "from": {
+                  "type": "string"
+                },
+                "to": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "[{from: 'L/D', to: 'L/D'}, ...]"
+          },
+          "create_other_layers": {
+            "type": "boolean",
+            "default": true
+          },
+          "on_conflict": {
+            "type": "string",
+            "enum": [
+              "rename",
+              "add",
+              "overwrite",
+              "skip"
+            ],
+            "default": "rename"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "layout.export_clean",
+      "description": "Fail-closed delivery export: write ONLY an explicit process-layer allowlist to a new GDS/OASIS file, with every klink marker (Port/Anchor/Region PCell instance) removed and PCell context stripped. Works on a scratch copy -- the live layout is never modified. The output is re-read and verified (no reserved layers, no marker cells) before being atomically promoted; on any verification failure the temp file is deleted and the call errors. Refuses allowlists that include a reserved marker layer. Pass `cells` to export ONLY those top cells (+ their hierarchy) -- without it the WHOLE layout's top cells go into the file, including unrelated ones from a shared session. Use layout.save_file for full working archives; use THIS for masks and hand-offs.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "path",
+          "allowlist_layers"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Output file (.gds/.oas)."
+          },
+          "allowlist_layers": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            },
+            "description": "EXACT process layers 'L/D' to export -- your project decides; klink ships no default."
+          },
+          "cells": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Top cell name(s) to export (each with its full hierarchy). Omit = every top cell in the layout."
+          },
+          "cellview_index": {
+            "type": "integer",
+            "default": 0
+          }
+        }
+      }
+    },
+    {
       "name": "cell.list",
       "description": "Flat, paginated list of cells in the active layout. Use this to discover what cells exist. For hierarchy use cell.tree instead. Filtering: 'name_prefix' is a case-sensitive prefix match; 'top_only' restricts to top cells. Pagination: 'offset' + 'limit'.",
       "inputSchema": {
@@ -3159,115 +3358,6 @@
       }
     },
     {
-      "name": "transfer.pending_set",
-      "description": "Store an already-reviewed flat-selection transfer package in this KLayout window.",
-      "inputSchema": {
-        "type": "object",
-        "required": [
-          "package"
-        ],
-        "properties": {
-          "package": {
-            "type": "object"
-          }
-        }
-      }
-    },
-    {
-      "name": "transfer.pending_status",
-      "description": "Return the pending transfer package status for this KLayout window.",
-      "inputSchema": {
-        "type": "object"
-      }
-    },
-    {
-      "name": "transfer.pending_clear",
-      "description": "Clear this KLayout window's pending transfer package without writing layout geometry.",
-      "inputSchema": {
-        "type": "object"
-      }
-    },
-    {
-      "name": "transfer.paste_pending",
-      "description": "Paste the currently pending flat-selection transfer package into this KLayout window. The package must already contain final target layers and coordinates.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "dry_run": {
-            "type": "boolean",
-            "default": false
-          },
-          "clear_after": {
-            "type": "boolean",
-            "default": true
-          }
-        },
-        "additionalProperties": false
-      }
-    },
-    {
-      "name": "transfer.import_cell_tree_package",
-      "description": "Import one cell tree from a GDS/OAS package into this KLayout window using KLayout's native Cell.copy_tree behavior. Name conflicts are resolved by KLayout with '$N' suffixes.",
-      "inputSchema": {
-        "type": "object",
-        "required": [
-          "path",
-          "source_cell"
-        ],
-        "properties": {
-          "path": {
-            "type": "string"
-          },
-          "source_cell": {
-            "type": "string"
-          },
-          "dry_run": {
-            "type": "boolean",
-            "default": false
-          }
-        },
-        "additionalProperties": false
-      }
-    },
-    {
-      "name": "session.mark_klive_target",
-      "description": "Mark this KLayout window as the klive/gdsfactory-compatible 8082 target.",
-      "inputSchema": {
-        "type": "object",
-        "additionalProperties": false
-      }
-    },
-    {
-      "name": "session.label_set",
-      "description": "Set a human label and aliases for a registered KLayout session in the shared registry.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "session_id": {
-            "type": "string"
-          },
-          "label": {
-            "type": "string"
-          },
-          "aliases": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "default": []
-          },
-          "description": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "session_id",
-          "label"
-        ],
-        "additionalProperties": false
-      }
-    },
-    {
       "name": "region.claim",
       "description": "Convert box/ellipse rulers into ONE klink_Region PCell (reserved layer, default 999/10) and consume the rulers. Roles: include (union), clip (intersect), exclude (subtract; holes are never writable). The result must be a single connected component; disconnected islands are rejected with per-island bboxes -- claim them separately. Ellipses are discretized safely: include/clip inscribed, exclude circumscribed.",
       "inputSchema": {
@@ -3587,176 +3677,112 @@
       }
     },
     {
-      "name": "layout.info",
-      "description": "Snapshot of the currently active layout view: number of open views, active cellview index, top cell name, source file path, database unit, the full top-cell list and the registered layer/datatype pairs. Safe to call often - this is the method an LLM agent should use to refresh its world view.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "verbosity": {
-            "type": "string",
-            "enum": [
-              "summary",
-              "normal",
-              "full"
-            ],
-            "default": "normal",
-            "description": "'summary' omits layer list; 'full' adds hierarchy counts"
-          }
-        }
-      }
-    },
-    {
-      "name": "layout.show_file",
-      "description": "Load a GDS/OAS file into KLayout. If the file is already open in a tab, reload it. Otherwise open it in the current view (mode='replace') or a new tab (mode='new'). When recording is active, all shape/cell events triggered by the file load are merged into a single `layout_show_file()` line.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "path": {
-            "type": "string",
-            "description": "Absolute path to the GDS/OAS file to load"
-          },
-          "mode": {
-            "type": "string",
-            "enum": [
-              "replace",
-              "new"
-            ],
-            "default": "replace",
-            "description": "'replace' loads into the current view; 'new' opens a new tab"
-          },
-          "keep_position": {
-            "type": "boolean",
-            "default": true,
-            "description": "Restore viewport after loading"
-          },
-          "technology": {
-            "type": "string",
-            "description": "KLayout technology name to apply to the loaded layout"
-          }
-        },
-        "required": [
-          "path"
-        ]
-      }
-    },
-    {
-      "name": "layout.save_file",
-      "description": "Save the active layout to a GDS or OASIS file on disk. Extension determines format: .gds/.gds2 for GDSII, .oas/.oasis for OASIS.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "path": {
-            "type": "string",
-            "description": "Absolute file path to write. Extension determines format."
-          },
-          "cellview_index": {
-            "type": "integer",
-            "default": 0,
-            "description": "Which cellview to save (0 = active)."
-          }
-        },
-        "required": [
-          "path"
-        ]
-      }
-    },
-    {
-      "name": "layout.clear",
-      "description": "Clear the entire layout: removes all cells, shapes, and hierarchy in one operation. Leaves an empty layout ready for new content. Useful before restoring a version-control snapshot.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "cellview_index": {
-            "type": "integer",
-            "default": 0,
-            "description": "Which cellview to clear (0 = active)."
-          }
-        }
-      }
-    },
-    {
-      "name": "layout.import_file",
-      "description": "MERGE a layout file (GDS/OASIS/...) into the ACTIVE layout -- the load-time mapping workflow (official LoadLayoutOptions), unlike layout.show_file which opens a file in its own tab. `layer_map` remaps layers while reading ([{from: 'L/D', to: 'L/D'}, ...]); `create_other_layers` (default true) controls whether unlisted layers are read too; `on_conflict` decides same-name cells: 'rename' (default, new cells get a $1-style suffix), 'add' (content merged into the existing cell), 'overwrite' (old cell replaced), 'skip' (new cell dropped). One undo step. Returns cells/layers added and the new top cells.",
+      "name": "transfer.pending_set",
+      "description": "Store an already-reviewed flat-selection transfer package in this KLayout window.",
       "inputSchema": {
         "type": "object",
         "required": [
-          "path"
+          "package"
         ],
         "properties": {
-          "path": {
-            "type": "string"
+          "package": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    {
+      "name": "transfer.pending_status",
+      "description": "Return the pending transfer package status for this KLayout window.",
+      "inputSchema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "transfer.pending_clear",
+      "description": "Clear this KLayout window's pending transfer package without writing layout geometry.",
+      "inputSchema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "transfer.paste_pending",
+      "description": "Paste the currently pending flat-selection transfer package into this KLayout window. The package must already contain final target layers and coordinates.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "dry_run": {
+            "type": "boolean",
+            "default": false
           },
-          "layer_map": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "required": [
-                "from",
-                "to"
-              ],
-              "properties": {
-                "from": {
-                  "type": "string"
-                },
-                "to": {
-                  "type": "string"
-                }
-              }
-            },
-            "description": "[{from: 'L/D', to: 'L/D'}, ...]"
-          },
-          "create_other_layers": {
+          "clear_after": {
             "type": "boolean",
             "default": true
-          },
-          "on_conflict": {
-            "type": "string",
-            "enum": [
-              "rename",
-              "add",
-              "overwrite",
-              "skip"
-            ],
-            "default": "rename"
           }
         },
         "additionalProperties": false
       }
     },
     {
-      "name": "layout.export_clean",
-      "description": "Fail-closed delivery export: write ONLY an explicit process-layer allowlist to a new GDS/OASIS file, with every klink marker (Port/Anchor/Region PCell instance) removed and PCell context stripped. Works on a scratch copy -- the live layout is never modified. The output is re-read and verified (no reserved layers, no marker cells) before being atomically promoted; on any verification failure the temp file is deleted and the call errors. Refuses allowlists that include a reserved marker layer. Pass `cells` to export ONLY those top cells (+ their hierarchy) -- without it the WHOLE layout's top cells go into the file, including unrelated ones from a shared session. Use layout.save_file for full working archives; use THIS for masks and hand-offs.",
+      "name": "transfer.import_cell_tree_package",
+      "description": "Import one cell tree from a GDS/OAS package into this KLayout window using KLayout's native Cell.copy_tree behavior. Name conflicts are resolved by KLayout with '$N' suffixes.",
       "inputSchema": {
         "type": "object",
         "required": [
           "path",
-          "allowlist_layers"
+          "source_cell"
         ],
         "properties": {
           "path": {
-            "type": "string",
-            "description": "Output file (.gds/.oas)."
+            "type": "string"
           },
-          "allowlist_layers": {
-            "type": "array",
-            "minItems": 1,
-            "items": {
-              "type": "string"
-            },
-            "description": "EXACT process layers 'L/D' to export -- your project decides; klink ships no default."
+          "source_cell": {
+            "type": "string"
           },
-          "cells": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Top cell name(s) to export (each with its full hierarchy). Omit = every top cell in the layout."
-          },
-          "cellview_index": {
-            "type": "integer",
-            "default": 0
+          "dry_run": {
+            "type": "boolean",
+            "default": false
           }
-        }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "session.mark_klive_target",
+      "description": "Mark this KLayout window as the klive/gdsfactory-compatible 8082 target.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "session.label_set",
+      "description": "Set a human label and aliases for a registered KLayout session in the shared registry.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "session_id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "label"
+        ],
+        "additionalProperties": false
       }
     },
     {

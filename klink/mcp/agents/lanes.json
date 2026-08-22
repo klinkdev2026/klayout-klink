@@ -7,6 +7,7 @@
    "meta.ping",
    "meta.methods",
    "layout.info",
+   "layout.file_info",
    "cell.list",
    "cell.tree",
    "layer.list",
