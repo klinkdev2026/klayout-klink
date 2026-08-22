@@ -55,16 +55,24 @@ klink 是一个面向 [KLayout](https://www.klayout.de/) 的 AI-native 控制面
 
 ## 更新亮点
 
-### 0.3.4 — 成像:starter 换成真工艺,出图能见人
+### 0.5.0 —— 布局意图：圈个区域，得到受管的编号阵列
 
-`klink init` 现在铺的是四晶体管 CMOS 单元行(`demo_layout.py`)加十一步
-平面 CMOS 配方(n 阱、LOCOS、栅氧、多晶硅栅+硅化物、LDD、侧墙、源漏、
-ILD、接触孔刻蚀+钨塞+CMP、金属1 双大马士革)——第一次跑出来就是真实的
-器件结构,而不是示意图形。剖面新增 z 标尺与比例尺(`axis=True`)、纵向
-取景窗(`z_window_um=`)、几何抗锯齿与逐材质渐变;Blender 相机改为按真实
-包围盒取景(以前扁平的 die 会渲成一条空白细线);`klink update` 不再删除
-starter 自己产出的 `_generated/` 目录。详见
-[CHANGELOG](./CHANGELOG.md)。
+用 KLayout 自己的标尺圈出一块区域，claim 成 klink Region；然后用
+`intent.prepare` / `intent.apply` / `intent.regenerate` 在里面规划并提交
+编号阵列——确认前不写入任何东西，每个副本都按你自己的网格记法
+（`R{row}C{col}`、`{row:A}{col}` 等）打上物理标签，重新生成时发现你手改过
+输出会拒绝覆盖。`layout.export_clean` 是 fail-closed 的交付出口
+（剥离 klink 标记、显式图层白名单、回读验证）。fabrication 域
+（site 网格、编号记法、对准标记、掩膜合成）加入公开发行。
+详见 [CHANGELOG](./CHANGELOG.md)。
+
+### 0.4.0 —— 成像只发机制，不带外观
+
+BREAKING（成像）：成像出口不再自带任何外观——硬编码的阳光能量或相机
+镜头和硬编码图层号是同一类 bug，klink 两者都不持有。每个出口从你自己
+的声明读样式（`klink init` 铺好 starter 样式供拷贝修改）；缺声明时报
+指引式错误点名该拷哪个文件，绝不默默给默认值。
+详见 [CHANGELOG](./CHANGELOG.md)。
 
 ### 0.3.0 —— 成像域：一份声明出剖面、3D 与 SEM 视图
 
@@ -75,26 +83,6 @@ starter 自己产出的 `_generated/` 目录。详见
 呈现为原子晶格（石墨烯/MoS₂），全部与版图坐标 1:1。输出确定性契约 +
 机读 sidecar；配方与栈声明归示例/项目所有；重依赖全部可选并附精确
 安装指引。详见 [CHANGELOG](./CHANGELOG.md)。
-
-### 0.2.2 —— PCell 拟合器：要么学对，要么明说
-
-样本拟合器现在能处理**数量随参数变化**的几何（接触孔阵列、叉指重复），
-新表格式 `klink_fitted_device_pcell_v3`：数量、间距、位置全部拟合为精确
-整数律，在每个样本上逐一验证；模型表达不了或钉不死的结构一律 REFUSE，
-错误信息点名具体箱族并给出出路——绝不产出静默错误的 PCell。拟合表记录
-采样包络；逐字节差分 harness 移至
-`klink.domains.structdevice.pcell_diff`；两条一键路线随包发布：
-`tcell_workflows.py fit`（L-Edit T-Cell → 逐字节验证的 KLayout PCell）
-与 KLayout 本地 demo `fit_repeat_device.py`（画出的样本族 → 验证过的
-PCell）。详见 [CHANGELOG](./CHANGELOG.md)。
-
-### 0.2.1 —— L-Edit 桥加固
-
-盲测抓出的设计归属安全修复：`new_design`/`open_design` 现在会激活新建/
-打开的设计，激活失败即报错拒绝（此前后续写入可能静默落进当时活动的
-设计）；所有文件绑定命令回显 `result.file`，可选 `expect_file` 参数
-拒写其他设计。模板新增 `tcell_template.cpp`——写回 T-Cell 生成器代码
-的逐字节验证过的起稿模板。详见 [CHANGELOG](./CHANGELOG.md)。
 
 ### 0.2.0 —— L-Edit 桥
 
