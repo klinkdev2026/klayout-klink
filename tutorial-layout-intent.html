@@ -26,6 +26,27 @@
       font-size: 13px;
       margin-right: 10px;
     }
+    /* Figure styling, same convention as tutorial-hallbar.html -- kept
+       page-scoped since assets/styles.css has no <img> usage yet. */
+    .tut-figure {
+      margin: 16px 0 26px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .tut-figure img {
+      width: 100%;
+      display: block;
+      background: #fff;
+    }
+    .tut-figure figcaption {
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      background: #f7fafb;
+    }
   </style>
 </head>
 <body data-page="tutorials" class="has-sidebar">
@@ -140,6 +161,7 @@
   -&gt; intent.apply         一次事务，一次 Ctrl+Z
   -&gt; intent.regenerate    改编号 / 间距，原子替换输出</code></pre>
         <p>这篇教程走两个可跑 demo：<code>region_claim_fill.py</code>（认领区域 + 铺 fill，不涉及编号）和 <code>region_array_labeled.py</code>（完整的 hero 流程：认领 → 规划预览 → 应用 → 重新生成）。两份脚本的层号、尺寸、间距都是脚本自己声明的示例数据——<strong>klink 本身不带任何一个数字</strong>。</p>
+        <p>随 wheel 打包进模板的可跑 starter 是 <code>example_template/layout_intent/region_numbered_array.py</code>（模板新增）：它把上面这条完整流程——建场景、圈编号槽、圈目标区域、<code>intent.prepare</code>、<code>intent.apply</code>、<code>intent.regenerate</code>——合并进一个脚本，<code>python example_template/layout_intent/region_numbered_array.py --port &lt;端口&gt;</code> 就能重跑；本篇下面的截图正是重放这个 starter 拿到的。</p>
 
         <h2 id="prereqs" class="anchor-h">前置条件</h2>
         <ul>
@@ -256,6 +278,22 @@ result = orchestrator.apply(
     c, store, plan_id=preview["plan_id"],
     plan_hash=preview["plan_hash"], confirm=preview["plan_id"])
 # result["container_cell"]，result["instances"] == 31，result["label_shapes"] == 167</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/layout-intent/step-01-rulers.png" alt="版图场景中同时画着两把标尺：一把小框圈住单元 sensor cell 内部的编号文字槽位置，一把大框圈住 140x100 微米的目标区域，区域内还留着一块示例障碍物">
+          <figcaption>Step 1 · 两把标尺同时画好，还没有认领：小框标出单元 sensor cell 内部的编号文字槽（<code>SLOT_BOX_UM</code>），大框圈出 140×100 µm 的目标区域，区域内留着一块示例障碍物 <code>OBSTACLE_BOX_UM</code>。</figcaption>
+        </figure>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/layout-intent/step-02-claimed-region.png" alt="目标区域的标尺已经消失，取而代之的是一圈 Region 标记轮廓和它的名字文字标签">
+          <figcaption>Step 2 · 目标区域完成 <code>region.claim</code>：标尺被消耗掉，换成 Region 标记轮廓和它的 R-name 文字。</figcaption>
+        </figure>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/layout-intent/step-03-slot-in-unit-cell.png" alt="8x8 微米的单元 sensor cell 内部，之前那把小标尺也被换成了一个 Region 标记，紧贴 cell 下边缘">
+          <figcaption>Step 3 · 单元 sensor cell（8×8 µm）内部的编号槽同样完成认领：这个 slot Region 之后会跟着每一份阵列副本一起移动，自动嵌入对应的编号。</figcaption>
+        </figure>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/layout-intent/step-04-applied-array.png" alt="intent.apply 写入后的成品：31 份 sensor 实例铺满目标区域，中间空出一块没有放置实例的障碍物洞，每个实例自己的编号从 S001 到 S031 精确嵌进它自己的文字槽">
+          <figcaption>Step 4 · <code>intent.apply</code> 写入后的成品：31 份 sensor 实例铺满区域，中间那块障碍物周围留出了没有放置的空洞，每个实例自己的编号（<code>S001</code>..<code>S031</code>）都精确嵌进了它自己的文字槽里；区域轮廓和名字依旧留在版图上。</figcaption>
+        </figure>
         <p>实测输出：区域面积 14000 µm²，预览放置 31 个（4 个因为撞上示例里那块 <code>OBSTACLE_BOX_UM</code> 障碍物被拒绝），编号 <code>S001</code>..<code>S031</code>，字号按 slot 尺寸自动适配到 1.59 µm；应用后 → 31 个实例、167 个标签多边形（每个数字标签由若干多边形字形拼成）。</p>
 
         <h2 id="regenerate" class="anchor-h"><span class="stage-kicker">3</span>重新生成的语义</h2>
@@ -275,6 +313,10 @@ result2 = orchestrator.apply(
     plan_hash=preview2["plan_hash"], confirm=preview2["plan_id"])
 # preview2["label_range"] == ("S201", "S231")
 # result2["container_cell"] 替换了 result2["replaced_container"]</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/layout-intent/step-05-regenerated.png" alt="同一个 31 份阵列，外观位置完全没变，但每个实例的编号整体从 S0xx 换成了 S2xx">
+          <figcaption>Step 5 · <code>intent.regenerate</code> 用新的编号起点重新生成后：同一批 31 个位置的阵列外观完全不变，但编号整体换成了 <code>S201</code>..<code>S231</code>——容器被原子整体替换，不是逐个改标签。</figcaption>
+        </figure>
         <p>实测输出：重新生成后编号变成 <code>S201</code>..<code>S231</code>，一个容器整体替换了另一个（<code>replaced_container</code> 报告被换下的那个），整次应用仍然只算一次 undo 步骤。</p>
 
         <h2 id="export" class="anchor-h">交付：clean export</h2>

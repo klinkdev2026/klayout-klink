@@ -304,6 +304,26 @@
       </div>
     </section>
 
+    <section class="section alt">
+      <div class="container">
+        <div class="section-head">
+          <h2 id="routing" class="anchor-h">Routing <code>routing</code></h2>
+          <p>Port + Anchor intent handed to one taper backend for five real scenarios -- never a different router per situation -- needs a live KLayout session.</p>
+        </div>
+        <div class="grid two">
+          <a class="card" href="tutorial-routing.html">
+            <span class="feature-kicker">routing · taper backend</span>
+            <span class="tier live">Needs a live KLayout session</span>
+            <h3>Five routing scenarios, one taper backend</h3>
+            <p>Straight baseline, forced waypoint, edge-sliding port, keepout obstacle detour, demand-port fanout -- all through the same <code>route_tapered</code> / <code>commit_tapered_routes</code> call, only the Anchors/obstacles/widths fed to it differ; every scenario carries Phase 3's honest per-route verdict.</p>
+            <p class="card-run"><code>python example_template/routing/five_routers.py --port &lt;session-port&gt;</code></p>
+            <p class="card-metric">5/5 scenarios ok=True &middot; obstacle_hit_count=0 &middot; sibling_overlap_count=0</p>
+            <span class="card-more">Read the tutorial →</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
     <section class="section">
       <div class="container">
         <div class="section-head">

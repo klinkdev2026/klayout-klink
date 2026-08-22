@@ -26,6 +26,27 @@
       font-size: 13px;
       margin-right: 10px;
     }
+    /* Figure styling, same convention as tutorial-hallbar.html -- kept
+       page-scoped since assets/styles.css has no <img> usage yet. */
+    .tut-figure {
+      margin: 16px 0 26px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .tut-figure img {
+      width: 100%;
+      display: block;
+      background: #fff;
+    }
+    .tut-figure figcaption {
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      background: #f7fafb;
+    }
   </style>
 </head>
 <body data-page="tutorials" class="has-sidebar">
@@ -140,6 +161,7 @@
   -&gt; intent.apply                  one transaction, one Ctrl+Z
   -&gt; intent.regenerate             change numbering / pitch, swap the output atomically</code></pre>
         <p>This tutorial walks two runnable demos: <code>region_claim_fill.py</code> (claim an area + fill it, no numbering involved) and <code>region_array_labeled.py</code> (the full hero flow: claim &rarr; plan/preview &rarr; apply &rarr; regenerate). The layers, sizes, and pitches in both scripts are example-owned demo data -- <strong>klink itself ships not one of those numbers</strong>.</p>
+        <p>The runnable starter shipped in the template is <code>example_template/layout_intent/region_numbered_array.py</code> (new in the template): it folds the whole flow above -- build the scene, circle the numbering slot, circle the target area, <code>intent.prepare</code>, <code>intent.apply</code>, <code>intent.regenerate</code> -- into one script, rerunnable with <code>python example_template/layout_intent/region_numbered_array.py --port &lt;session-port&gt;</code>. The screenshots below are a replay of that starter.</p>
 
         <h2 id="prereqs" class="anchor-h">Prerequisites</h2>
         <ul>
@@ -256,6 +278,22 @@ result = orchestrator.apply(
     c, store, plan_id=preview["plan_id"],
     plan_hash=preview["plan_hash"], confirm=preview["plan_id"])
 # result["container_cell"], result["instances"] == 31, result["label_shapes"] == 167</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/layout-intent/step-01-rulers.png" alt="The layout scene with two box rulers drawn at once: a small one circling the numbering text slot inside the unit sensor cell, a big one circling the 140x100 micron target area with an example obstacle inside it">
+          <figcaption>Step 1 &middot; Both rulers drawn, nothing claimed yet: the small box marks the numbering text slot (<code>SLOT_BOX_UM</code>) inside the unit sensor cell, the big box circles the 140&times;100 &micro;m target area with the example obstacle <code>OBSTACLE_BOX_UM</code> inside it.</figcaption>
+        </figure>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/layout-intent/step-02-claimed-region.png" alt="The target-area ruler is gone, replaced by a Region marker outline and its name text label">
+          <figcaption>Step 2 &middot; The target area after <code>region.claim</code>: the ruler is consumed and replaced by the Region marker outline plus its R-name text.</figcaption>
+        </figure>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/layout-intent/step-03-slot-in-unit-cell.png" alt="Inside the 8x8 micron unit sensor cell, the earlier small ruler has also turned into a Region marker hugging the cell's lower edge">
+          <figcaption>Step 3 &middot; The numbering slot inside the unit sensor cell (8&times;8 &micro;m) is claimed too: this slot Region will travel with every array copy and auto-fit that copy's number into it.</figcaption>
+        </figure>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/layout-intent/step-04-applied-array.png" alt="The finished result after intent.apply: 31 sensor instances tile the target area, with an unfilled hole where the obstacle sits, and each instance's own number from S001 to S031 fitted exactly into its own text slot">
+          <figcaption>Step 4 &middot; The result right after <code>intent.apply</code>: 31 sensor instances tile the region, with an unplaced gap around the obstacle; each instance's own number (<code>S001</code>..<code>S031</code>) is fitted exactly into its own text slot, and the region outline and name are still visible.</figcaption>
+        </figure>
         <p>Measured output: region area 14000 &micro;m&sup2;, preview placed 31 (4 rejected for hitting the example's <code>OBSTACLE_BOX_UM</code> obstacle), labels <code>S001</code>..<code>S031</code>, font auto-fit to the slot at 1.59 &micro;m; applied &rarr; 31 instances, 167 label polygons (each digit label is built from several glyph polygons).</p>
 
         <h2 id="regenerate" class="anchor-h"><span class="stage-kicker">3</span>Regenerate semantics</h2>
@@ -275,6 +313,10 @@ result2 = orchestrator.apply(
     plan_hash=preview2["plan_hash"], confirm=preview2["plan_id"])
 # preview2["label_range"] == ("S201", "S231")
 # result2["container_cell"] replaced result2["replaced_container"]</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/layout-intent/step-05-regenerated.png" alt="The same 31-instance array in the same positions, but every instance's number has changed from the S0xx range to the S2xx range">
+          <figcaption>Step 5 &middot; After <code>intent.regenerate</code> with a new numbering start: the same 31 positions look identical, but the numbers now read <code>S201</code>..<code>S231</code> -- the container was atomically swapped as a whole, not edited label by label.</figcaption>
+        </figure>
         <p>Measured output: after regenerating, labels read <code>S201</code>..<code>S231</code>; one container wholly replaced the other (<code>replaced_container</code> reports which one was swapped out), and the whole apply still counts as one undo step.</p>
 
         <h2 id="export" class="anchor-h">Delivery: clean export</h2>

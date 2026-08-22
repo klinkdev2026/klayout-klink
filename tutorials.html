@@ -304,6 +304,26 @@
       </div>
     </section>
 
+    <section class="section alt">
+      <div class="container">
+        <div class="section-head">
+          <h2 id="routing" class="anchor-h">路由 <code>routing</code></h2>
+          <p>Port + Anchor 标记的意图交给同一个 taper 后端处理五种真实场景——不为每种情况切换路由器，需要 live KLayout 会话。</p>
+        </div>
+        <div class="grid two">
+          <a class="card" href="tutorial-routing.html">
+            <span class="feature-kicker">routing · taper 后端</span>
+            <span class="tier live">需 live KLayout 会话</span>
+            <h3>五个路由场景，同一个 taper 后端</h3>
+            <p>直连基线、强制途经点、边缘滑动端口、绕开 keepout 障碍物、需求端口扇出——全部走同一个 <code>route_tapered</code> / <code>commit_tapered_routes</code> 调用，差异只在喂给它的 Anchor / 障碍物 / 线宽；每个场景都配 Phase 3 的诚实逐路由验证。</p>
+            <p class="card-run"><code>python example_template/routing/five_routers.py --port &lt;端口&gt;</code></p>
+            <p class="card-metric">5 场景全部 ok=True · obstacle_hit_count=0 · sibling_overlap_count=0</p>
+            <span class="card-more">看分步教程 →</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
     <section class="section">
       <div class="container">
         <div class="section-head">

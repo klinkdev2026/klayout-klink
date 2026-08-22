@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Step-by-step tutorial: five routing scenarios, one taper backend - klink</title>
+  <meta name="description" content="Five real routing situations through klink's tapered backend -- a straight baseline, a forced waypoint, an edge-sliding port, an obstacle detour, and a demand-port fanout -- all through the same route_tapered / commit_tapered_routes call. Each stage has a screenshot, the Port/Anchor marking code, and Phase 3's honest verdict: ok, route_count, obstacle_hit_count==0, sibling_overlap_count==0.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../assets/styles.css">
+  <style>
+    /* Minimal figure/stage styling, following the site's existing card/note
+       language (border var(--line), radius 8px) -- same convention as
+       tutorial-hallbar.html; assets/styles.css has no <img> usage yet, so
+       this stays scoped to this page until it lands there. */
+    .tut-figure {
+      margin: 16px 0 26px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .tut-figure img {
+      width: 100%;
+      display: block;
+      background: #fff;
+    }
+    .tut-figure figcaption {
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      background: #f7fafb;
+    }
+    .stage-kicker {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 26px;
+      height: 26px;
+      padding: 0 8px;
+      border-radius: 6px;
+      background: #dff1ee;
+      color: #12654b;
+      font-weight: 800;
+      font-size: 13px;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body data-page="tutorials" class="has-sidebar">
+  <aside class="site-sidebar">
+    <a class="sb-brand" href="index.html"><span class="brand-mark">k</span>klink</a>
+    <nav class="sb-nav" aria-label="Site structure">
+      <div class="sb-group">
+        <div class="sb-title">Get started</div>
+        <a href="index.html">Home · what klink is</a>
+        <a href="quickstart.html">Quickstart</a>
+        <a href="concepts.html">Core concepts</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Workflows · human+agent</div>
+        <a href="workflows.html">Workflows in depth (illustrated)</a>
+        <a href="tutorial-multiwindow.html">Multi-window collaboration</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Chat walkthroughs</div>
+        <a href="case-hallbar-chat.html">Hall bar from one sentence</a>
+        <a href="case-drc-chat.html">DRC catch &amp; fix</a>
+        <a href="case-fit-lvs-chat.html">Fit a device to LVS</a>
+        <a href="case-gf-reroute-chat.html">Photonics: ports &amp; drag-reroute</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Step-by-step tutorials</div>
+        <a href="tutorials.html">Tutorials overview</a>
+        <a href="tutorial-hallbar.html">Hall bar device</a>
+        <a href="tutorial-ebl-wraparound.html">EBL wraparound</a>
+        <a href="tutorial-neural-electrode.html">Neural electrode array</a>
+        <a href="tutorial-gf-ports.html">Photonics · three ways to ports</a>
+        <a href="tutorial-gf-mzi.html">Photonics · gf MZI takeover</a>
+        <a href="tutorial-passives.html">Passive templates</a>
+        <a href="tutorial-fit-device.html">Fit device &rarr; PnR &rarr; LVS</a>
+        <a href="tutorial-padframe.html">Probe-card-first padframe</a>
+        <a href="tutorial-imaging.html">Imaging: cross-section · 3D · SEM · Blender</a>
+        <a href="tutorial-layout-intent.html">Regions &amp; executable layout intent</a>
+        <a href="tutorial-routing.html">Five routing scenarios, one backend</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Guides</div>
+        <a href="drc-lvs.html">DRC · LVS</a>
+        <a href="25d-view.html">2.5D View</a>
+        <a href="ledit-bridge.html">L-Edit Bridge</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Reference</div>
+        <a href="mcp-reference.html">MCP tool catalog</a>
+        <a href="plugin-packages.html">Writing extension packages</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">Architecture</div>
+        <a href="architecture.html">Architecture &amp; boundaries</a>
+      </div>
+    </nav>
+    <div class="sb-foot">
+      <a href="https://github.com/klinkdev2026/klayout-klink">GitHub ↗</a>
+      <a href="../tutorial-routing.html">中文</a>
+    </div>
+  </aside>
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="index.html" data-nav="home">Home</a>
+        <a href="quickstart.html" data-nav="quickstart">Quickstart</a>
+        <a href="tutorials.html" data-nav="tutorials" class="active">Tutorials</a>
+        <a href="workflows.html" data-nav="workflows">Workflows</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP Reference</a>
+        <a href="architecture.html" data-nav="architecture">Architecture</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="Language switch">
+          <a href="../tutorial-routing.html">CN</a>
+          <a class="active" href="tutorial-routing.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Step-by-step tutorial · routing</div>
+        <h1>Step-by-step: five routing scenarios, one taper backend</h1>
+        <p>This walks through <code>example_template/routing/five_routers.py</code> from the public gallery. klink's routing backend doesn't need "five situations, five routers" -- a plain two-port straight connection, a net forced through a waypoint, a port that can slide along a device edge, a route that must detour around a keepout obstacle, and four demand ports fanning out to whichever candidate pad each picks all go through <strong>the same continuous-polygon taper backend</strong> (<code>route_tapered</code> / <code>commit_tapered_routes</code>). What actually differs between the five scenarios is the input fed into it -- Anchors, obstacle bboxes, per-net widths -- never which routing function gets called. This tutorial draws each scenario, routes it, screenshots the result, and shows Phase 3's honest per-route verdict: <code>ok=false</code> is never reported as "routed."</p>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#what">What this is</a>
+          <a href="#prereqs">Prerequisites</a>
+          <a href="#layers">Layers involved</a>
+          <a href="#stage-1">① Straight baseline</a>
+          <a href="#stage-2">② Forced waypoint</a>
+          <a href="#stage-3">③ Edge-sliding port</a>
+          <a href="#stage-4">④ Obstacle detour</a>
+          <a href="#stage-5">⑤ Demand-port fanout</a>
+          <a href="#verify">Verify, don't just look</a>
+          <a href="#next">Next steps</a>
+        </nav>
+      </aside>
+
+      <article class="content">
+        <h2 id="what" class="anchor-h">What this is</h2>
+        <p><code>five_routers.py</code> builds five small scenarios (each with its own device/pad geometry, Ports, Anchors, and one with a keepout), routes each, then verifies each. The honest part: the routing call is <strong>identical</strong> across all five -- first <code>route_with_port_launch_stubs</code> draws a reference centerline guide (for people to check, not part of verification), then <code>route_tapered</code> plans the actual tapered polygon route and <code>commit_tapered_routes</code> writes it in one batched call. What differs between scenarios is only what Phase 1 feeds the router when it builds the scene: whether there's an Anchor, what kind it is, whether a port can slide, what the obstacle bbox is. No scenario ever switches to "a different router."</p>
+
+        <h2 id="prereqs" class="anchor-h">Prerequisites</h2>
+        <ul>
+          <li>Install klink: <code>pip install klayout-klink</code>.</li>
+          <li>KLayout running with the klink plugin loaded (RPC port defaults to <code>8765</code>).</li>
+          <li>You need a <strong>live KLayout session</strong> -- all five scenarios are RPC calls that write directly into the live layout, not an offline synthesis: <code>python example_template/routing/five_routers.py</code> (<code>--port &lt;session-port&gt;</code> picks the session, default 8765).</li>
+        </ul>
+        <div class="note">The script opens its own new tab (<code>FIVE_ROUTERS_SCRATCH</code> is only a placeholder scaffold cell); the five real scenario cells are rebuilt inside it. When it's done it closes that tab and restores whatever tab was current before -- it never touches your hand-built working tab.</div>
+
+        <h2 id="layers" class="anchor-h">Layers involved</h2>
+        <table class="data-table">
+          <thead><tr><th>Layer</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td><code>999/99</code></td><td>klink's reserved Port marker layer</td></tr>
+            <tr><td><code>999/1</code></td><td>klink's reserved Anchor marker layer</td></tr>
+            <tr><td><code>1/0</code></td><td><code>M1_DEVICE_OR_PAD</code>: each scenario's own device/pad geometry</td></tr>
+            <tr><td><code>900/0</code></td><td><code>KLINK_ROUTE_KEEPOUT</code>: the keepout obstacle scenario ④ must avoid</td></tr>
+            <tr><td><code>996/99</code></td><td><code>KLINK_EXPECTED_ROUTE_GUIDE</code>: the reference centerline <code>route_with_port_launch_stubs</code> draws, for people to check, not part of verification</td></tr>
+            <tr><td><code>11/0</code></td><td><code>KLINK_TAPERED_RESULT</code>: the tapered route polygons <code>route_tapered</code> &rarr; <code>commit_tapered_routes</code> actually writes</td></tr>
+            <tr><td><code>997/99</code></td><td><code>KLINK_EXAMPLE_LABELS</code>: the scenario caption at the top of each cell</td></tr>
+          </tbody>
+        </table>
+        <p>Every scenario's routing call is the same two-step pattern:</p>
+        <pre><code>g = route_with_port_launch_stubs(p0, p1, inner_points or None)
+guide(c, cell, g["points_um"], width=g["width_um"])          # 996/99 reference line, for people only
+
+t = route_tapered(p0, p1, inner_points or None, strategy="uniform", corner_style="miter")
+write = commit_tapered_routes(c, cell, [t], route_layer="11/0", clear=False)  # the real tapered route</code></pre>
+
+        <h2 id="stage-1" class="anchor-h"><span class="stage-kicker">1</span>Straight baseline</h2>
+        <p>The simplest scenario: two same-net ports, no Anchors at all. Port <code>A</code> sits at <code>[20, 5]</code>, orientation 0&deg;, 5 &micro;m wide; port <code>B</code> sits at <code>[100, 5]</code>, orientation 180&deg;, 2 &micro;m wide -- the route tapers smoothly from 5 &micro;m down to 2 &micro;m with not a single bend along the way.</p>
+        <pre><code>p0 = port(c, cell, "A", [20, 5], 0, net="net_straight", width=5.0)
+p1 = port(c, cell, "B", [100, 5], 180, net="net_straight", width=2.0)
+# inner_points is empty -> route_tapered(p0, p1, None, ...)</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/routing/step-01-straight-routed.png" alt="A single tapered trace connecting two ports, narrowing from wide to narrow, running perfectly straight with no bends">
+          <figcaption>Step 1 &middot; Straight-baseline routing done: one tapered trace narrowing smoothly from 5 &micro;m to 2 &micro;m with no bend along the way -- no Anchor is forcing a detour between the two ports.</figcaption>
+        </figure>
+
+        <h2 id="stage-2" class="anchor-h"><span class="stage-kicker">2</span>Forced waypoint</h2>
+        <p>Port positions are unchanged (at 18 &micro;m and 100 &micro;m), but this time a <code>waypoint_region</code> Anchor called <code>WP1</code> sits in the middle, centered at <code>[60, 40]</code>, 12&times;10 &micro;m -- the route must pass through that box instead of taking the shortest straight line between the two ports. klink turns it into a waypoint fed to <code>route_tapered</code>'s <code>inner_points</code>.</p>
+        <pre><code>anchor(c, cell, "WP1", [60, 40], "waypoint_region", net="net_waypoint",
+       label="must_pass", width=12, height=10)
+# requests: inner_points=[[60, 40]]</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/routing/step-02-waypoint-routed.png" alt="A routed trace bends upward from one port, passes through a rectangular waypoint marker, then bends again toward the other port">
+          <figcaption>Step 2 &middot; Forced-waypoint routing done: the trace bends toward the <code>WP1</code> <code>waypoint_region</code> Anchor (the rectangle marker in the picture), passes through it, then bends again toward the far port -- not the shortest line between the two ports.</figcaption>
+        </figure>
+
+        <h2 id="stage-3" class="anchor-h"><span class="stage-kicker">3</span>Edge-sliding port</h2>
+        <p>Port <code>A_EDGE</code> has <code>access_mode="edge"</code> and <code>slide_allowed=True</code>, plus a <code>slide_edge</code> parameter -- an edge segment in database units (the current default is 1 nm), <code>"20000,40000,140000,40000"</code>, telling the router this port isn't pinned to one point: it can slide anywhere along the device's top edge (the 20&ndash;140 &micro;m span) and the router picks whichever launch point works best for the route. The other end, <code>B</code>, is an ordinary port; an <code>EXIT</code> <code>waypoint_region</code> Anchor in between forces the trace to clear the top of the device before bending toward <code>B</code>.</p>
+        <pre><code># Stored in DBU because the current default database unit is 1 nm; this
+# example intentionally documents the router-facing slide edge, so it's
+# safe to copy verbatim.
+slide_edge = "20000,40000,140000,40000"
+p0 = port(c, cell, "A_EDGE", [80, 40], 90, net="net_slide", width=6.0,
+          access_mode="edge", slide_allowed=True, slide_edge=slide_edge)
+p1 = port(c, cell, "B", [150, 72], 180, net="net_slide", width=3.0)</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/routing/step-03-edge-slide-routed.png" alt="A port that can slide along the top edge of a rectangular device; the routed trace launches from somewhere along that top edge, bends up through a waypoint, then bends toward the port on the right">
+          <figcaption>Step 3 &middot; Edge-sliding-port routing done: <code>A_EDGE</code> is not pinned to a fixed coordinate -- the router picked a launch point along the device's top edge, passed through the <code>EXIT</code> waypoint_region, then bent toward <code>B</code>.</figcaption>
+        </figure>
+
+        <h2 id="stage-4" class="anchor-h"><span class="stage-kicker">4</span>Obstacle detour</h2>
+        <p>A keepout box <code>[52, -18, 86, 28]</code> sits on layer <code>900/0</code> (labeled <code>KEEP_OUT</code>). The route must clear it entirely -- not just graze past it. Anchor <code>BEND_ABOVE</code> is a <code>bend_region</code>, <code>priority=10</code>, centered right above the obstacle at <code>[69, 42]</code> -- but passing only through that one waypoint isn't enough: a single point only guarantees the route passes through it, not that the whole route stays clear of the obstacle everywhere else. So the script gives <code>route_tapered</code> <strong>two</strong> <code>inner_points</code> (<code>[48, 42]</code> and <code>[90, 42]</code>), so the route stays above the obstacle for its entire span instead of clearing only at the anchor and cutting back into the obstacle elsewhere.</p>
+        <pre><code>keepout_bbox = [52.0, -18.0, 86.0, 28.0]
+box(c, cell, keepout_bbox, layer=KEEPOUT)
+anchor(c, cell, "BEND_ABOVE", [69, 42], "bend_region", net="net_obstacle",
+       label="above", radius=6, priority=10)
+# two waypoints so the route clears the obstacle everywhere, not just at
+# the anchor's center
+requests = [{"source": p0, "target": p1, "inner_points": [[48, 42], [90, 42]]}]</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/routing/step-04a-obstacle-inputs.png" alt="The obstacle scenario's inputs before routing: two ports, a rectangular obstacle labeled KEEP_OUT, and a bend_region Anchor marker above the obstacle, with no routed trace yet">
+          <figcaption>Step 4a &middot; The inputs before routing: two ports, the <code>KEEP_OUT</code> obstacle on layer <code>900/0</code>, and the <code>BEND_ABOVE</code> bend_region Anchor sitting right above it -- everything the router has to work around, before any trace exists.</figcaption>
+        </figure>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/routing/step-04-obstacle-routed.png" alt="A routed trace leaving the left port, clearly bulging upward to clear the KEEP_OUT obstacle in the middle, then bending back down into the right port, with visible clearance around the obstacle">
+          <figcaption>Step 4 &middot; Obstacle-detour routing done: the trace rises entirely above the obstacle and clears <code>KEEP_OUT</code> for its whole span -- exactly what Phase 3's <code>obstacle_hit_count</code> verifies as zero.</figcaption>
+        </figure>
+
+        <h2 id="stage-5" class="anchor-h"><span class="stage-kicker">5</span>Demand-port fanout</h2>
+        <p>Four demand ports <code>IN0</code>..<code>IN3</code> (3 &micro;m wide, <code>net=sig0</code>..<code>sig3</code>) each need to connect to one of six candidate pads <code>PAD0</code>..<code>PAD5</code> (8 &micro;m wide, <code>port_type="candidate_sink"</code>, <code>net=""</code>) -- every trace widens from 3 &micro;m all the way to 8 &micro;m. The two signal groups each follow a <strong>named corridor Anchor</strong> (<code>LOWER_CORRIDOR</code> carries <code>net="sig0,sig1"</code>, <code>UPPER_CORRIDOR</code> carries <code>net="sig2,sig3"</code>), so the two routes in a group travel the same corridor instead of going their separate ways. The two routes sharing one corridor still need an explicit <strong>lane offset</strong> to avoid touching each other: a comment in the script records a real lesson learned -- a &plusmn;3 &micro;m lane split wasn't enough, because <code>route_tapered</code>'s mid-corridor width already exceeds 6 &micro;m, so &plusmn;3 &micro;m lanes overlapped; &plusmn;5 &micro;m is the smallest split this geometry clears with zero <code>sibling_overlap_count</code>.</p>
+        <pre><code>anchor(c, cell, "LOWER_CORRIDOR", [45, 17], "corridor", net="sig0,sig1",
+       label="follow_lower", width=8.0, path_points="-15,-1;10,0;15,1")
+anchor(c, cell, "UPPER_CORRIDOR", [75, 49.5], "corridor", net="sig2,sig3",
+       label="follow_upper", width=8.0, path_points="-9,-0.5;6,0.5;9,-1")
+
+# +-3um lanes weren't enough (route_tapered's mid-corridor width already
+# exceeds 6um, so they overlapped); +-5um is the smallest split this
+# geometry clears with zero sibling_overlap_count
+assignments = [
+    (10, 0, lower_corridor, -5.0),
+    (24, 14, lower_corridor, 5.0),
+    (38, 42, upper_corridor, -5.0),
+    (52, 56, upper_corridor, 5.0),
+]</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/routing/step-05-fanout-routed.png" alt="Four tapered traces, each widening from a narrow port on the left to a wide pad on the right; the two traces sharing a corridor run parallel in separate lanes without touching">
+          <figcaption>Step 5 &middot; All four fanout traces routed: each widens from a 3 &micro;m port to an 8 &micro;m pad; the two traces in a group share one corridor but each keeps its own lane and never touches the other -- keeping all four clear of each other is exactly what this scenario verifies.</figcaption>
+        </figure>
+
+        <h2 id="verify" class="anchor-h">Verify, don't just look</h2>
+        <p>As <a href="concepts.html#verify">core concepts</a> says: screenshots are for people, not proof of done. Phase 3 of <code>five_routers.py</code> does the same three checks for every scenario: does the polygon count <code>commit_tapered_routes</code> actually wrote match the number of requests this scenario expected (<code>route_count</code>); check every trace against the obstacle bboxes (<code>obstacle_hit_count</code>); check every trace against every other trace in the same scenario (<code>sibling_overlap_count</code>) -- only when all three check out does <code>ok</code> become <code>True</code>. The script prints one line per scenario, in a fixed format:</p>
+        <pre><code>  %-22s ok=%-5s route_count=%d/%d obstacle_hit_count=%d sibling_overlap_count=%d</code></pre>
+        <p>When all five scenarios are clean, it looks like this:</p>
+        <pre><code>  ROUTE_01_STRAIGHT      ok=True  route_count=1/1 obstacle_hit_count=0 sibling_overlap_count=0
+  ROUTE_02_WAYPOINT      ok=True  route_count=1/1 obstacle_hit_count=0 sibling_overlap_count=0
+  ROUTE_03_EDGE_SLIDE    ok=True  route_count=1/1 obstacle_hit_count=0 sibling_overlap_count=0
+  ROUTE_04_OBSTACLE      ok=True  route_count=1/1 obstacle_hit_count=0 sibling_overlap_count=0
+  ROUTE_05_FANOUT        ok=True  route_count=4/4 obstacle_hit_count=0 sibling_overlap_count=0
+
+all five scenarios routed cleanly</code></pre>
+        <p>If any scenario's <code>obstacle_hit_count</code> or <code>sibling_overlap_count</code> is nonzero, or the written polygon count doesn't match the expected request count, that scenario's <code>ok</code> is <code>False</code> -- the script lists which scenarios failed and why, and exits nonzero. It is never reported as "routed" on a false verdict.</p>
+
+        <h2 id="next" class="anchor-h">Next steps</h2>
+        <p>Swap the scenario data in <code>example_template/routing/five_routers.py</code> for your own port coordinates, widths, and obstacle declarations, and rerun until all five lines read <code>ok=True</code>. To work against the MCP tools directly, the full 9-tool routing parameter list is in <a href="mcp-reference.html#d-routing">MCP reference &middot; Routing backends</a>, and the complete Port/Anchor field reference is in <a href="mcp-reference.html#d-ports">MCP reference &middot; Port, Anchor &amp; Region</a>. The "mark Port/Anchor intent, then let a routing algorithm complete the wiring" idea here is the same geometry-first loop as stages ⑤&ndash;⑥ of the <a href="tutorial-hallbar.html">Hall bar device tutorial</a>, just with five different input combinations; the corridor + lane idea behind the fanout scenario shows up at larger scale in the <a href="tutorial-neural-electrode.html">neural electrode array harness tutorial</a>.</p>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>geometry-first: mark intent on geometry, let algorithms complete the wiring, verify with structured evidence.</p></div>
+      <div><h3>Keep reading</h3><p><a href="tutorials.html">Core concepts &amp; tutorials</a></p><p><a href="mcp-reference.html">MCP tool reference</a></p></div>
+      <div><h3>Install</h3><p><a href="quickstart.html">Quickstart</a></p></div>
+    </div>
+  </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

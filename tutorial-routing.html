@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>分步教程：五个路由场景，一个 taper 后端 - klink</title>
+  <meta name="description" content="用 klink 的 tapered 路由后端处理五种真实场景——直连基线、强制途经点、边缘滑动端口、绕开障碍物、需求端口扇出——全部走同一个 route_tapered / commit_tapered_routes 调用；每一步配截图、Port/Anchor 标记代码，以及 Phase 3 的诚实验证：ok、route_count、obstacle_hit_count==0、sibling_overlap_count==0。">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="assets/styles.css">
+  <style>
+    /* Minimal figure/stage styling, following the site's existing card/note
+       language (border var(--line), radius 8px) -- same convention as
+       tutorial-hallbar.html; assets/styles.css has no <img> usage yet, so
+       this stays scoped to this page until it lands there. */
+    .tut-figure {
+      margin: 16px 0 26px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .tut-figure img {
+      width: 100%;
+      display: block;
+      background: #fff;
+    }
+    .tut-figure figcaption {
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      background: #f7fafb;
+    }
+    .stage-kicker {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 26px;
+      height: 26px;
+      padding: 0 8px;
+      border-radius: 6px;
+      background: #dff1ee;
+      color: #12654b;
+      font-weight: 800;
+      font-size: 13px;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body data-page="tutorials" class="has-sidebar">
+  <aside class="site-sidebar">
+    <a class="sb-brand" href="index.html"><span class="brand-mark">k</span>klink</a>
+    <nav class="sb-nav" aria-label="站点结构">
+      <div class="sb-group">
+        <div class="sb-title">开始</div>
+        <a href="index.html">首页 · klink 是什么</a>
+        <a href="quickstart.html">快速上手</a>
+        <a href="concepts.html">核心思路</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">工作流 · 人机协作</div>
+        <a href="workflows.html">工作流详解（图文）</a>
+        <a href="tutorial-multiwindow.html">跨窗口协作实战</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">对话案例</div>
+        <a href="case-hallbar-chat.html">一句话画 Hall bar</a>
+        <a href="case-drc-chat.html">DRC 查违例并修好</a>
+        <a href="case-fit-lvs-chat.html">拟合器件跑到 LVS</a>
+        <a href="case-gf-reroute-chat.html">硅光：标端口 · 拖动重连</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">分步教程</div>
+        <a href="tutorials.html">教程总览</a>
+        <a href="tutorial-hallbar.html">Hall bar 器件</a>
+        <a href="tutorial-ebl-wraparound.html">EBL wraparound</a>
+        <a href="tutorial-neural-electrode.html">神经电极阵列</a>
+        <a href="tutorial-gf-ports.html">硅光 · 三种拿端口</a>
+        <a href="tutorial-gf-mzi.html">硅光 · gf MZI 接管</a>
+        <a href="tutorial-passives.html">无源器件模板</a>
+        <a href="tutorial-fit-device.html">拟合器件 → PnR → LVS</a>
+        <a href="tutorial-padframe.html">针卡优先 padframe</a>
+        <a href="tutorial-imaging.html">成像：剖面 · 3D · SEM · Blender</a>
+        <a href="tutorial-layout-intent.html">Region 与可执行版图意图</a>
+        <a href="tutorial-routing.html">五个路由场景，一个后端</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">指南</div>
+        <a href="drc-lvs.html">DRC · LVS</a>
+        <a href="25d-view.html">2.5D 视图</a>
+        <a href="ledit-bridge.html">L-Edit 桥</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">参考</div>
+        <a href="mcp-reference.html">MCP 工具全表</a>
+        <a href="plugin-packages.html">编写扩展包</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-title">架构</div>
+        <a href="architecture.html">架构与边界</a>
+      </div>
+    </nav>
+    <div class="sb-foot">
+      <a href="https://github.com/klinkdev2026/klayout-klink">GitHub ↗</a>
+      <a href="en/tutorial-routing.html">English</a>
+    </div>
+  </aside>
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark">k</span><span>klink</span></a>
+      <nav class="main-nav" aria-label="主导航">
+        <a href="index.html" data-nav="home">首页</a>
+        <a href="quickstart.html" data-nav="quickstart">快速上手</a>
+        <a href="tutorials.html" data-nav="tutorials" class="active">教程</a>
+        <a href="workflows.html" data-nav="workflows">工作流</a>
+        <a href="mcp-reference.html" data-nav="mcp-reference">MCP 参考</a>
+        <a href="architecture.html" data-nav="architecture">架构</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="language-switch" aria-label="语言切换">
+          <a class="active" href="tutorial-routing.html">CN</a>
+          <a href="en/tutorial-routing.html">EN</a>
+        </div>
+        <a class="button-secondary" href="https://github.com/klinkdev2026/klayout-klink">GitHub</a>
+        <button class="menu-button" type="button" aria-label="打开导航" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Step-by-step tutorial · routing</div>
+        <h1>分步教程：五个路由场景，同一个 taper 后端</h1>
+        <p>对应仓库里的 <code>example_template/routing/five_routers.py</code>。klink 的路由后端不需要"五种情况五个路由器"——一条普通两端口直连、一条被强制途经某个 waypoint 的连线、一个可以沿设备边缘滑动的端口、一条要绕开 keepout 障碍物的连线、以及四条需求端口各自挑候选 pad 的扇出，<strong>全部走同一个连续多边形 taper 后端</strong>（<code>route_tapered</code> / <code>commit_tapered_routes</code>）。五个场景真正不同的是喂给它的输入——Anchor、障碍物 bbox、每条网络的线宽——不是调用了哪个不同的路由函数。这篇教程把这五个场景逐个画出来、路由、截图，并展示 Phase 3 那条诚实的逐路由验证结果：<code>ok=false</code> 从不会被当作"路由完成"。</p>
+      </div>
+    </section>
+
+    <div class="docs-layout">
+      <aside class="sidebar">
+        <nav>
+          <a href="#what">这是什么</a>
+          <a href="#prereqs">前置条件</a>
+          <a href="#layers">涉及的层</a>
+          <a href="#stage-1">① 直连基线</a>
+          <a href="#stage-2">② 强制途经点</a>
+          <a href="#stage-3">③ 边缘滑动端口</a>
+          <a href="#stage-4">④ 绕开障碍物</a>
+          <a href="#stage-5">⑤ 需求端口扇出</a>
+          <a href="#verify">验证，不是截图</a>
+          <a href="#next">下一步</a>
+        </nav>
+      </aside>
+
+      <article class="content">
+        <h2 id="what" class="anchor-h">这是什么</h2>
+        <p><code>five_routers.py</code> 建五个小场景（各自的设备/pad 几何、Port、Anchor、一个 keepout），逐个路由，再逐个验证。诚实之处在于：五个场景的路由调用<strong>完全一样</strong>——都是先用 <code>route_with_port_launch_stubs</code> 画一条参考中心线 guide（只给人看，不参与验证），再用 <code>route_tapered</code> 规划出真正的锥形多边形路由、<code>commit_tapered_routes</code> 一次批量写入。场景之间的差异只在 Phase 1 建场景时喂给路由器的输入：要不要 Anchor、Anchor 是什么 kind、端口能不能滑动、障碍物 bbox 是什么。没有为任何一个场景切换到"另一个路由器"。</p>
+
+        <h2 id="prereqs" class="anchor-h">前置条件</h2>
+        <ul>
+          <li>安装 klink：<code>pip install klayout-klink</code>。</li>
+          <li>KLayout 正在运行，并已加载 klink 插件（RPC 端口默认 <code>8765</code>）。</li>
+          <li>需要一个 <strong>live 的 KLayout 会话</strong>——五个场景都是直接写入 live 版图的 RPC 调用，不是纯离线合成：<code>python example_template/routing/five_routers.py</code>（<code>--port &lt;端口&gt;</code> 指定 session，默认 8765）。</li>
+        </ul>
+        <div class="note">脚本会自己开一个新 tab（<code>FIVE_ROUTERS_SCRATCH</code> 只是占位脚手架 cell），五个真实场景 cell 在里面各自重建；跑完脚本会自己关掉这个 tab、把你原来的 tab 切回来——不会碰你手工的工作 tab。</div>
+
+        <h2 id="layers" class="anchor-h">涉及的层</h2>
+        <table class="data-table">
+          <thead><tr><th>层</th><th>用途</th></tr></thead>
+          <tbody>
+            <tr><td><code>999/99</code></td><td>klink 保留的 Port 标记层</td></tr>
+            <tr><td><code>999/1</code></td><td>klink 保留的 Anchor 标记层</td></tr>
+            <tr><td><code>1/0</code></td><td><code>M1_DEVICE_OR_PAD</code>：每个场景自己的设备/pad 几何</td></tr>
+            <tr><td><code>900/0</code></td><td><code>KLINK_ROUTE_KEEPOUT</code>：场景 ④ 里要绕开的 keepout 障碍物</td></tr>
+            <tr><td><code>996/99</code></td><td><code>KLINK_EXPECTED_ROUTE_GUIDE</code>：<code>route_with_port_launch_stubs</code> 画的参考中心线，只给人核对，不参与验证</td></tr>
+            <tr><td><code>11/0</code></td><td><code>KLINK_TAPERED_RESULT</code>：<code>route_tapered</code> → <code>commit_tapered_routes</code> 真正写入的锥形路由多边形</td></tr>
+            <tr><td><code>997/99</code></td><td><code>KLINK_EXAMPLE_LABELS</code>：每个场景顶部的说明文字</td></tr>
+          </tbody>
+        </table>
+        <p>每个场景的路由调用都是同一个两步模式：</p>
+        <pre><code>g = route_with_port_launch_stubs(p0, p1, inner_points or None)
+guide(c, cell, g["points_um"], width=g["width_um"])          # 996/99 参考线，仅供人眼核对
+
+t = route_tapered(p0, p1, inner_points or None, strategy="uniform", corner_style="miter")
+write = commit_tapered_routes(c, cell, [t], route_layer="11/0", clear=False)  # 真正的锥形路由</code></pre>
+
+        <h2 id="stage-1" class="anchor-h"><span class="stage-kicker">1</span>直连基线</h2>
+        <p>最简单的场景：两个同网络的端口，中间没有任何 Anchor。端口 <code>A</code> 在 <code>[20, 5]</code>、朝向 0°、线宽 5 µm；端口 <code>B</code> 在 <code>[100, 5]</code>、朝向 180°、线宽 2 µm——路由从 5 µm 平滑收窄到 2 µm，中间没有一次拐弯。</p>
+        <pre><code>p0 = port(c, cell, "A", [20, 5], 0, net="net_straight", width=5.0)
+p1 = port(c, cell, "B", [100, 5], 180, net="net_straight", width=2.0)
+# inner_points 为空 -> route_tapered(p0, p1, None, ...)</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/routing/step-01-straight-routed.png" alt="两个端口之间一条从宽变窄的锥形走线,笔直连接,没有任何拐弯">
+          <figcaption>Step 1 · 直连基线路由完成：一条从 5 µm 平滑收窄到 2 µm 的锥形走线，中间没有一次拐弯——两个端口之间没有任何 Anchor 强制它绕路。</figcaption>
+        </figure>
+
+        <h2 id="stage-2" class="anchor-h"><span class="stage-kicker">2</span>强制途经点</h2>
+        <p>端口位置不变（分别在 18 µm 和 100 µm 处），但这次中间放了一个 <code>waypoint_region</code> 类型的 Anchor <code>WP1</code>，中心在 <code>[60, 40]</code>、12×10 µm——路由必须穿过这个框，而不是走两个端口之间最短的直线。klink 把它变成一个途经点，塞进 <code>route_tapered</code> 的 <code>inner_points</code>。</p>
+        <pre><code>anchor(c, cell, "WP1", [60, 40], "waypoint_region", net="net_waypoint",
+       label="must_pass", width=12, height=10)
+# requests: inner_points=[[60, 40]]</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/routing/step-02-waypoint-routed.png" alt="路由走线先从端口出发向上拐,穿过一个矩形 waypoint 标记区域,再拐向另一个端口">
+          <figcaption>Step 2 · 强制途经点路由完成：走线先拐向 <code>WP1</code> 那个 <code>waypoint_region</code> Anchor（图中矩形标记），穿过它之后再拐向对面的端口——不是两端口之间最短的直线。</figcaption>
+        </figure>
+
+        <h2 id="stage-3" class="anchor-h"><span class="stage-kicker">3</span>边缘滑动端口</h2>
+        <p><code>A_EDGE</code> 端口的 <code>access_mode="edge"</code>、<code>slide_allowed=True</code>，还带一个 <code>slide_edge</code> 参数——一段用数据库单位（当前默认 1 nm）表示的边缘坐标 <code>"20000,40000,140000,40000"</code>，告诉路由器这个端口不是钉死在一个点上，而是可以沿设备顶边（20~140 µm 那一段）滑动，由路由器自己挑一个对布线最有利的出发位置。另一端 <code>B</code> 是普通端口；中间还有一个 <code>EXIT</code> <code>waypoint_region</code> Anchor，强制走线先冲出设备正上方再拐向 <code>B</code>。</p>
+        <pre><code># 存成 DBU 是因为当前默认数据库单位是 1 nm；这个示例是刻意把
+# 面向路由器的 slide edge 写清楚，方便照抄。
+slide_edge = "20000,40000,140000,40000"
+p0 = port(c, cell, "A_EDGE", [80, 40], 90, net="net_slide", width=6.0,
+          access_mode="edge", slide_allowed=True, slide_edge=slide_edge)
+p1 = port(c, cell, "B", [150, 72], 180, net="net_slide", width=3.0)</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/routing/step-03-edge-slide-routed.png" alt="一个端口沿长方形设备的顶边可以滑动出发,走线从设备上边缘某处出发,先向上穿过一个 waypoint 再拐向右边的端口">
+          <figcaption>Step 3 · 边缘滑动端口路由完成：<code>A_EDGE</code> 没有钉死在一个固定坐标，路由器沿设备顶边选了一个出发点，先穿过 <code>EXIT</code> waypoint_region 再拐向 <code>B</code>。</figcaption>
+        </figure>
+
+        <h2 id="stage-4" class="anchor-h"><span class="stage-kicker">4</span>绕开障碍物</h2>
+        <p><code>900/0</code> 层上画着一个 keepout box <code>[52, -18, 86, 28]</code>（标着 <code>KEEP_OUT</code> 文字）。路由必须完全绕开它，不能只是擦边而过。Anchor <code>BEND_ABOVE</code> 是 <code>bend_region</code> 类型、<code>priority=10</code>，中心在障碍物正上方 <code>[69, 42]</code>——但只传这一个途经点还不够：单点只保证走线经过那个点，不保证整条走线全程都在障碍物外面。所以脚本给 <code>route_tapered</code> 传了<strong>两个</strong> <code>inner_points</code>（<code>[48, 42]</code> 和 <code>[90, 42]</code>），让走线整体贴着障碍物上方绕过去，而不是只在锚点处避开、别处又切回障碍物内部。</p>
+        <pre><code>keepout_bbox = [52.0, -18.0, 86.0, 28.0]
+box(c, cell, keepout_bbox, layer=KEEPOUT)
+anchor(c, cell, "BEND_ABOVE", [69, 42], "bend_region", net="net_obstacle",
+       label="above", radius=6, priority=10)
+# 两个途经点，让走线整体绕过去，只经过锚点中心是不够的
+requests = [{"source": p0, "target": p1, "inner_points": [[48, 42], [90, 42]]}]</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/routing/step-04a-obstacle-inputs.png" alt="绕障碍物场景在路由之前的输入:两个端口、一个标着 KEEP_OUT 的矩形障碍物、以及障碍物上方的一个 bend_region Anchor 标记,中间还没有任何走线">
+          <figcaption>Step 4a · 路由之前的输入：两个端口、<code>900/0</code> 层上的 <code>KEEP_OUT</code> 障碍物、以及障碍物正上方的 <code>BEND_ABOVE</code> bend_region Anchor——这是路由器要处理的全部约束，此时还没有任何走线。</figcaption>
+        </figure>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/routing/step-04-obstacle-routed.png" alt="走线从左侧端口出发,明显向上绕开中间的 KEEP_OUT 障碍物,再拐回右侧端口,与障碍物之间留有清晰间隙">
+          <figcaption>Step 4 · 绕障碍物路由完成：走线整体抬升到障碍物上方绕过去，全程和 <code>KEEP_OUT</code> 保持间隙——这正是 Phase 3 里 <code>obstacle_hit_count</code> 要验证为 0 的地方。</figcaption>
+        </figure>
+
+        <h2 id="stage-5" class="anchor-h"><span class="stage-kicker">5</span>需求端口扇出</h2>
+        <p>四个需求端口 <code>IN0</code>..<code>IN3</code>（3 µm 宽，<code>net=sig0</code>..<code>sig3</code>）要连到六个候选 pad <code>PAD0</code>..<code>PAD5</code> 中的四个（8 µm 宽，<code>port_type="candidate_sink"</code>，<code>net=""</code>）——每条走线都从 3 µm 一路放宽到 8 µm。两组信号各自走一条<strong>命名 corridor Anchor</strong>（<code>LOWER_CORRIDOR</code> 带 <code>net="sig0,sig1"</code>、<code>UPPER_CORRIDOR</code> 带 <code>net="sig2,sig3"</code>），保证同组两条线沿同一条走廊前进，而不是各走各的。同一条走廊里的两条线还需要一个显式的<strong>车道偏移</strong>（<code>lane_offset</code>）才能互不接触：脚本注释里记录了一个真实教训——最初 ±3 µm 的车道间距不够，因为 <code>route_tapered</code> 中段的宽度已经超过 6 µm，±3 µm 的车道会重叠；改成 ±5 µm 才是这个几何下第一个能让 <code>sibling_overlap_count</code> 归零的间距。</p>
+        <pre><code>anchor(c, cell, "LOWER_CORRIDOR", [45, 17], "corridor", net="sig0,sig1",
+       label="follow_lower", width=8.0, path_points="-15,-1;10,0;15,1")
+anchor(c, cell, "UPPER_CORRIDOR", [75, 49.5], "corridor", net="sig2,sig3",
+       label="follow_upper", width=8.0, path_points="-9,-0.5;6,0.5;9,-1")
+
+# +-3um 车道不够(route_tapered 中段宽度已超 6um，会重叠)；
+# +-5um 是这个几何下第一个能让 sibling_overlap_count 归零的车道间距
+assignments = [
+    (10, 0, lower_corridor, -5.0),
+    (24, 14, lower_corridor, 5.0),
+    (38, 42, upper_corridor, -5.0),
+    (52, 56, upper_corridor, 5.0),
+]</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/routing/step-05-fanout-routed.png" alt="四条锥形走线各自从左侧一个窄端口放宽到右侧一个宽 pad,同组两条线共享同一条走廊但彼此保持独立车道,不触碰">
+          <figcaption>Step 5 · 四条扇出走线全部路由完成：每条都从 3 µm 端口放宽到 8 µm pad，同组两条共用一条走廊但各自占一条独立车道，互不接触——四条互不干扰正是这个场景验证的重点。</figcaption>
+        </figure>
+
+        <h2 id="verify" class="anchor-h">验证，不是截图</h2>
+        <p>和<a href="concepts.html#verify">核心思路</a>说的一样，截图只是给人看的，不是完成依据。<code>five_routers.py</code> 的 Phase 3 对每个场景做同样三件事：统计 <code>commit_tapered_routes</code> 真正写入的多边形数量是否等于这个场景的预期请求数（<code>route_count</code>）、拿每条走线去和障碍物 bbox 做碰撞检测（<code>obstacle_hit_count</code>）、拿每条走线去和同一场景里其它走线做重叠检测（<code>sibling_overlap_count</code>）——三项全部达标才把 <code>ok</code> 记为 <code>True</code>。脚本给每个场景打印一行，格式固定：</p>
+        <pre><code>  %-22s ok=%-5s route_count=%d/%d obstacle_hit_count=%d sibling_overlap_count=%d</code></pre>
+        <p>五个场景全部干净时是这样的：</p>
+        <pre><code>  ROUTE_01_STRAIGHT      ok=True  route_count=1/1 obstacle_hit_count=0 sibling_overlap_count=0
+  ROUTE_02_WAYPOINT      ok=True  route_count=1/1 obstacle_hit_count=0 sibling_overlap_count=0
+  ROUTE_03_EDGE_SLIDE    ok=True  route_count=1/1 obstacle_hit_count=0 sibling_overlap_count=0
+  ROUTE_04_OBSTACLE      ok=True  route_count=1/1 obstacle_hit_count=0 sibling_overlap_count=0
+  ROUTE_05_FANOUT        ok=True  route_count=4/4 obstacle_hit_count=0 sibling_overlap_count=0
+
+all five scenarios routed cleanly</code></pre>
+        <p>只要有一个场景 <code>obstacle_hit_count</code> 或 <code>sibling_overlap_count</code> 不是 0，或者写入的多边形数量对不上预期请求数，那个场景的 <code>ok</code> 就是 <code>False</code>——脚本会把不达标的场景连同数字列出来，退出码非 0，绝不会把它报告成"路由完成"。</p>
+
+        <h2 id="next" class="anchor-h">下一步</h2>
+        <p>把 <code>example_template/routing/five_routers.py</code> 里的场景数据换成你自己的端口坐标、线宽和障碍物声明，重跑确认五行全部 <code>ok=True</code>。想直接对着 MCP 工具写，完整的 9 个路由工具参数在 <a href="mcp-reference.html#d-routing">MCP 参考 · 路由后端</a>，Port/Anchor 的完整字段说明在 <a href="mcp-reference.html#d-ports">MCP 参考 · Port、Anchor 与 Region</a>。这篇教程里"先标 Port/Anchor 意图、再让路由算法补全布线"的思路和 <a href="tutorial-hallbar.html">Hall bar 器件教程</a>的第 ⑤~⑥ 步是同一套 geometry-first 流程，只是这里换成了五种不同的输入组合；扇出场景里走廊 + 车道的批量路由思路，在更大规模上还能看 <a href="tutorial-neural-electrode.html">神经电极阵列 harness 教程</a>。</p>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h2>klink</h2><p>geometry-first：在几何上标意图，让算法补全布线，用结构化证据验证。</p></div>
+      <div><h3>继续阅读</h3><p><a href="tutorials.html">核心思路与教程</a></p><p><a href="mcp-reference.html">MCP 工具参考</a></p></div>
+      <div><h3>安装</h3><p><a href="quickstart.html">快速上手</a></p></div>
+    </div>
+  </footer>
+  <script src="assets/app.js"></script>
+</body>
+</html>
