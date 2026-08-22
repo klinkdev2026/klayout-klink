@@ -215,6 +215,20 @@ Codex)打开这个文件夹、描述你要做什么——它会从对应 recipe 
 `python example_template/<类>/<名>.py`。`digital/` 家族做 live P&R + LVS,
 所以需要一个运行中的 KLayout 会话(`--port`)。
 
+项目建好之后,每个新任务开始时先跑一次 `klink run new <slug>`——通常这一步由
+agent 自己执行,项目自己的 agent 规则要求每个任务一开始就这么做:
+
+```powershell
+klink run new pad-ring-v2
+```
+
+这会生成一个带日期的 `custom_devices/runs/<日期>_<slug>/` 文件夹,里面放着
+`run.py` driver stub(已经 import 了 `pdk` 和 `toolbox`)、装这个任务产物的
+`out/` 目录,以及一份 `notes.md` 模板(需求 / 做了什么 / 验证证据)——driver、
+产物、笔记放在一起。文件夹创建的一刻就在 `runs/INDEX.md` 台账里登记一行
+"(in progress)",任务结束时这行会收敛成一句话摘要加 PASS/FAIL。跑通过的代码
+会毕业进 `custom_devices/toolbox/`——项目自己的可复用工具包。
+
 以后升级 klink 时,刷新这些自带 starter 而**不动你自己的东西**(`pdk.py`、
 `custom_devices/`、`.klink/`、`out/`、`specs/` 绝不改动):
 

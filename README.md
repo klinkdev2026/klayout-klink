@@ -247,6 +247,23 @@ scaffolded `example_template/` holds copy-and-adapt starter demos, grouped into
 `python example_template/<category>/<name>.py`. The `digital/` family does live
 P&R + LVS, so it needs a running KLayout session (`--port`).
 
+Once the project exists, start every new task with `klink run new <slug>` —
+usually your agent runs this itself, since the project's own agent rules call
+for it at the start of every task:
+
+```powershell
+klink run new pad-ring-v2
+```
+
+This creates a dated `custom_devices/runs/<date>_<slug>/` folder holding a
+`run.py` driver stub (already importing `pdk` and `toolbox`), an `out/` folder
+for that task's artifacts, and a `notes.md` template (request / what was done /
+verification evidence) — driver, output, and notes travel together. The folder
+registers itself in the `runs/INDEX.md` ledger as "(in progress)" the moment
+it is created, and that line collapses into a one-line summary plus PASS/FAIL
+once the task finishes. Code that proves out in a run graduates into
+`custom_devices/toolbox/`, the project's own reusable-tool package.
+
 When you upgrade klink later, refresh those bundled starters **without touching
 your own work** (`pdk.py`, `custom_devices/`, `.klink/`, `out/`, `specs/` are
 never changed):
