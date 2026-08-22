@@ -66,18 +66,28 @@ artifacts are intentionally not part of a clean release.
 
 ## What's New
 
-### 0.3.4 — Imaging: a real process in the starter, and figures worth showing
+### 0.5.0 — Layout intent: circle a region, get a managed numbered array
 
-`klink init` now scaffolds a four-transistor CMOS row (`demo_layout.py`)
-and an eleven-step planar CMOS recipe (n-well, LOCOS, gate oxide, poly +
-silicide, LDD, spacer, S/D, ILD, contact etch + W plug + CMP, metal-1
-damascene), so the very first run shows real device structure instead of
-a demo shape. Sections gain a z ruler and scale bar (`axis=True`), a
-vertical framing window (`z_window_um=`), antialiased geometry and
-per-material shading; the Blender camera now fits the actual bounding
-box (flat dies used to render as a blank sliver); `klink update` no
-longer deletes a starter's own `_generated/` output. Details in the
-[CHANGELOG](./CHANGELOG.md).
+Circle an area with KLayout's own rulers and claim it as a klink
+Region; `intent.prepare` / `intent.apply` / `intent.regenerate` then
+plan and commit numbered arrays into it — nothing is written until
+confirmed, every copy carries a physical label from your own grid
+notation (`R{row}C{col}`, `{row:A}{col}`, …), and regeneration refuses
+to overwrite output you have hand-edited. `layout.export_clean` is the
+fail-closed delivery exit (klink markers stripped, explicit layer
+allowlist, re-read verification). The fabrication domain (site grids,
+numbering schemes, marks, mask composition) joins the public release.
+Details in the [CHANGELOG](./CHANGELOG.md).
+
+### 0.4.0 — Imaging ships mechanism, never a look
+
+BREAKING (imaging): the imaging exits no longer carry any built-in
+appearance — a hardcoded sun energy or camera lens is the same category
+of bug as a hardcoded layer number, and klink holds neither. Each exit
+reads its style from a declaration you own (`klink init` scaffolds
+starter styles to copy and edit); a missing declaration is an
+instructive error naming the file to copy, never a silent default.
+Details in the [CHANGELOG](./CHANGELOG.md).
 
 ### 0.3.0 — Imaging: cross-sections, 3D and SEM views from one declaration
 
@@ -91,31 +101,6 @@ renders where 2D-material layers appear as their atomic lattice
 output contracts and machine-readable sidecars. Recipes and stacks stay
 example-owned; heavy dependencies are optional with instructive install
 errors. Details in the [CHANGELOG](./CHANGELOG.md).
-
-### 0.2.2 — PCell fitter: learn it exactly or refuse
-
-The exemplar fitter now handles COUNT-VARYING geometry (contact arrays,
-finger repeats) as a new `klink_fitted_device_pcell_v3` table: counts,
-pitch and positions are fitted as exact integer laws, verified at every
-exemplar, and anything the model cannot express exactly and uniquely is
-REFUSED with an instructive message naming the box family — never a
-silently-wrong PCell. Fit tables record their sampled envelope, the
-byte-exact differential harness lives in
-`klink.domains.structdevice.pcell_diff`, and two one-call routes ship:
-`tcell_workflows.py fit` (L-Edit T-Cell → verified KLayout PCell) and
-the KLayout-native demo `fit_repeat_device.py` (drawn exemplars →
-verified PCell). Details in the [CHANGELOG](./CHANGELOG.md).
-
-### 0.2.1 — L-Edit bridge hardening
-
-Design-targeting safety from blind-test findings: `new_design`/`open_design`
-now activate the created design and fail loudly if they cannot (previously
-later writes could silently land in whatever design was active), every
-file-bound command echoes `result.file`, and an optional `expect_file`
-parameter refuses writes to any other design. The template gains
-`tcell_template.cpp`, a byte-exact-verified starting point for T-Cell
-generator code written back through the bridge. Details in the
-[CHANGELOG](./CHANGELOG.md).
 
 ### 0.2.0 — L-Edit bridge
 
