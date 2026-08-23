@@ -14,7 +14,8 @@ from klink.bridges.ledit import client as client_mod
 from klink.bridges.ledit import (
     LEditBridgeClient, LEditBridgeError, build_layer_map, convert_object,
     selection_to_items, harvest_boxes, merge_layer_name, parse_tcell_params,
-    VariantFactory, verify_differential)
+    VariantFactory, verify_differential, require_capability)
+from klink.bridges.ledit.client import bundled_macro_path
 
 
 # --------------------------------------------------------------------------
@@ -245,6 +246,323 @@ def test_status_captures_list_cells_error_without_raising(live_bridge):
     assert "cells" not in out
     assert "no visible cell" in out["cells_error"]
     assert out["designs"] == []
+
+
+def test_status_includes_windows_when_capability_present(live_bridge):
+    def handler(req):
+        if req["cmd"] == "ping":
+            return {"ok": True, "result": {
+                "file": "unit.tdb", "design_ready": True,
+                "capabilities": ["list_windows"]}}
+        if req["cmd"] == "list_windows":
+            return {"ok": True, "result": {"windows": [
+                {"index": 0, "type": "layout", "file": "unit.tdb",
+                 "cell": "TOP", "name": "TOP", "visible": True}],
+                "count": 1}}
+        raise AssertionError("unexpected cmd: %s" % req["cmd"])
+
+    c = live_bridge(handler)
+    out = c.status()
+    assert out["windows"] == [
+        {"index": 0, "type": "layout", "file": "unit.tdb",
+         "cell": "TOP", "name": "TOP", "visible": True}]
+    assert "windows_error" not in out
+
+
+def test_status_omits_windows_when_macro_lacks_the_capability(live_bridge):
+    c = live_bridge(lambda req: {
+        "ok": True, "result": {"file": "unit.tdb", "design_ready": True,
+                               "capabilities": []}})
+    out = c.status()
+    assert "windows" not in out
+    assert "windows_error" not in out
+
+
+def test_status_captures_list_windows_error_without_raising(live_bridge):
+    def handler(req):
+        if req["cmd"] == "ping":
+            return {"ok": True, "result": {
+                "file": "unit.tdb", "design_ready": True,
+                "capabilities": ["list_windows"]}}
+        if req["cmd"] == "list_windows":
+            return {"ok": False, "error": {
+                "code": "ERR_BRIDGE", "message": "boom",
+                "next_action": "retry"}}
+        raise AssertionError("unexpected cmd: %s" % req["cmd"])
+
+    c = live_bridge(handler)
+    out = c.status()  # must not raise even though list_windows failed
+    assert "windows" not in out
+    assert "boom" in out["windows_error"]
+
+
+def test_status_reports_windows_with_no_design_open(live_bridge):
+    # Windows work with no design open, unlike designs/cells.
+    def handler(req):
+        if req["cmd"] == "ping":
+            return {"ok": True, "result": {
+                "file": "", "design_ready": False,
+                "capabilities": ["list_windows"]}}
+        if req["cmd"] == "list_windows":
+            return {"ok": True, "result": {"windows": [], "count": 0}}
+        raise AssertionError("unexpected cmd: %s" % req["cmd"])
+
+    c = live_bridge(handler)
+    out = c.status()
+    assert out["design_ready"] is False
+    assert out["windows"] == []
+
+
+# --------------------------------------------------------------------------
+# navigation (macro >= 0.5.6)
+# --------------------------------------------------------------------------
+
+def test_layout_view_read_sends_no_rect_or_home(live_bridge):
+    seen = []
+
+    def handler(req):
+        seen.append(req["params"])
+        return {"ok": True, "result": {"cell": "TOP", "mode": "get",
+                                       "rect_um": [0, 0, 1, 1],
+                                       "has_window": True}}
+
+    c = live_bridge(handler)
+    c.layout_view()
+    assert "rect_um" not in seen[0]
+    assert "home" not in seen[0]
+
+
+def test_layout_view_set_sends_rect_um(live_bridge):
+    seen = []
+
+    def handler(req):
+        seen.append(req["params"])
+        return {"ok": True, "result": {"cell": "TOP", "mode": "set",
+                                       "rect_um": [0, 0, 1, 1],
+                                       "has_window": True}}
+
+    c = live_bridge(handler)
+    c.layout_view(rect_um=[0, 0, 10, 10])
+    assert seen[0]["rect_um"] == [0, 0, 10, 10]
+    assert "home" not in seen[0]
+
+
+def test_layout_view_home_sends_home_true(live_bridge):
+    seen = []
+
+    def handler(req):
+        seen.append(req["params"])
+        return {"ok": True, "result": {"cell": "TOP", "mode": "home",
+                                       "rect_um": [0, 0, 1, 1],
+                                       "has_window": True}}
+
+    c = live_bridge(handler)
+    c.layout_view(home=True)
+    assert seen[0]["home"] is True
+    assert "rect_um" not in seen[0]
+
+
+def test_close_window_requires_cell_or_index(live_bridge):
+    c = live_bridge(lambda req: {"ok": True, "result": {}})
+    with pytest.raises(LEditBridgeError) as e:
+        c.close_window()
+    assert e.value.next_action
+
+
+def test_close_window_by_index_sends_index(live_bridge):
+    seen = []
+
+    def handler(req):
+        seen.append(req["params"])
+        return {"ok": True, "result": {"matched": 1, "closed": 1}}
+
+    c = live_bridge(handler)
+    c.close_window(index=2)
+    assert seen[0] == {"index": 2}
+
+
+def test_close_window_by_cell_sends_cell(live_bridge):
+    seen = []
+
+    def handler(req):
+        seen.append(req["params"])
+        return {"ok": True, "result": {"matched": 1, "closed": 1}}
+
+    c = live_bridge(handler)
+    c.close_window(cell="TOP", file="unit.tdb")
+    assert seen[0] == {"cell": "TOP", "file": "unit.tdb"}
+
+
+def test_save_image_sends_absolute_path(live_bridge, tmp_path):
+    seen = []
+
+    def handler(req):
+        seen.append(req["params"])
+        return {"ok": True, "result": {"cell": "TOP", "path": "x.png",
+                                       "bytes": 100, "width_px": 1600,
+                                       "height_px": 1200, "dpi": 96,
+                                       "rect_um": [0, 0, 1, 1]}}
+
+    c = live_bridge(handler)
+    rel = "out.png"
+    c.save_image("TOP", rel)
+    assert os.path.isabs(seen[0]["path"])
+    assert seen[0]["path"] == os.path.abspath(rel)
+
+
+def test_delete_objects_requires_layer_or_rect(live_bridge):
+    c = live_bridge(lambda req: {"ok": True, "result": {}})
+    with pytest.raises(LEditBridgeError) as e:
+        c.delete_objects("TOP")
+    assert e.value.next_action
+
+
+def test_delete_objects_sends_only_given_keys(live_bridge):
+    seen = []
+
+    def handler(req):
+        seen.append(req["params"])
+        return {"ok": True, "result": {"cell": "TOP", "deleted": 1,
+                                       "by_layer": {"M1": 1}}}
+
+    c = live_bridge(handler)
+    c.delete_objects("TOP", layer="M1")
+    assert seen[0] == {"cell": "TOP", "layer": "M1"}
+
+    c.delete_objects("TOP", rect_um=[0, 0, 10, 10])
+    assert seen[1] == {"cell": "TOP", "rect_um": [0, 0, 10, 10]}
+
+    c.delete_objects("TOP", layer="M1", rect_um=[0, 0, 10, 10])
+    assert seen[2] == {"cell": "TOP", "layer": "M1", "rect_um": [0, 0, 10, 10]}
+
+
+def test_delete_cell_sends_force(live_bridge):
+    seen = []
+
+    def handler(req):
+        seen.append(req["params"])
+        return {"ok": True, "result": {"cell": "TOP", "deleted": True,
+                                       "instances_removed": 0,
+                                       "referenced_by": []}}
+
+    c = live_bridge(handler)
+    c.delete_cell("TOP")
+    assert seen[0] == {"cell": "TOP"}
+
+    c.delete_cell("TOP", force=True)
+    assert seen[1] == {"cell": "TOP", "force": True}
+
+
+def test_close_design_sends_discard_only_as_given(live_bridge):
+    seen = []
+
+    def handler(req):
+        seen.append(req["params"])
+        return {"ok": True, "result": {"file": "unit.tdb", "closed": True,
+                                       "discarded_changes": False,
+                                       "visible_now": ""}}
+
+    c = live_bridge(handler)
+    c.close_design("unit.tdb")
+    assert seen[0] == {"file": "unit.tdb"}
+
+    c.close_design("unit.tdb", discard=True)
+    assert seen[1] == {"file": "unit.tdb", "discard": True}
+
+
+# --------------------------------------------------------------------------
+# verification (macro >= 0.5.8)
+# --------------------------------------------------------------------------
+
+def test_run_drc_sends_only_given_keys(live_bridge):
+    seen = []
+
+    def handler(req):
+        seen.append(req["params"])
+        return {"ok": True, "result": {"cell": "TOP", "errors": 0,
+                                       "status": "passed", "rules": 3}}
+
+    c = live_bridge(handler)
+    c.run_drc()
+    assert seen[0] == {}
+
+    c.run_drc(cell="TOP")
+    assert seen[1] == {"cell": "TOP"}
+
+    c.run_drc(rect_um=[0, 0, 10, 10])
+    assert seen[2] == {"rect_um": [0, 0, 10, 10]}
+
+    c.run_drc(cell="TOP", rect_um=[0, 0, 10, 10])
+    assert seen[3] == {"cell": "TOP", "rect_um": [0, 0, 10, 10]}
+
+
+def test_drc_summary_sends_only_given_cell(live_bridge):
+    seen = []
+
+    def handler(req):
+        seen.append(req["params"])
+        return {"ok": True, "result": {"cell": "TOP", "errors": 0,
+                                       "status": "needed"}}
+
+    c = live_bridge(handler)
+    c.drc_summary()
+    assert seen[0] == {}
+
+    c.drc_summary(cell="TOP")
+    assert seen[1] == {"cell": "TOP"}
+
+
+def test_export_gds_sends_absolute_path_and_omits_defaults(live_bridge):
+    seen = []
+
+    def handler(req):
+        seen.append(req["params"])
+        return {"ok": True, "result": {"path": "x.gds", "bytes": 100,
+                                       "scope": "all_cells", "cell": "",
+                                       "log_path": "x.log"}}
+
+    c = live_bridge(handler)
+    rel = "out.gds"
+    c.export_gds(rel)
+    assert os.path.isabs(seen[0]["path"])
+    assert seen[0]["path"] == os.path.abspath(rel)
+    assert "include_hierarchy" not in seen[0]
+    assert "cell_name_length" not in seen[0]
+    assert "log_path" not in seen[0]
+    assert "cell" not in seen[0]
+
+
+def test_export_gds_sends_changed_keys(live_bridge):
+    seen = []
+
+    def handler(req):
+        seen.append(req["params"])
+        return {"ok": True, "result": {"path": "x.gds", "bytes": 100,
+                                       "scope": "specified_cell",
+                                       "cell": "TOP", "log_path": "x.log"}}
+
+    c = live_bridge(handler)
+    c.export_gds("out.gds", cell="TOP", include_hierarchy=False,
+                 cell_name_length=64, log_path="mylog.txt")
+    assert seen[0]["cell"] == "TOP"
+    assert seen[0]["include_hierarchy"] is False
+    assert seen[0]["cell_name_length"] == 64
+    assert seen[0]["log_path"] == "mylog.txt"
+
+
+def test_require_capability_raises_when_missing():
+    with pytest.raises(LEditBridgeError) as e:
+        require_capability({"macro_version": "0.5.5", "capabilities": []},
+                           "show_cell")
+    assert e.value.code == "ERR_MACRO_TOO_OLD"
+    assert "0.5.5" in str(e.value)
+    assert bundled_macro_path() in e.value.next_action
+
+
+def test_require_capability_passes_when_present():
+    require_capability(
+        {"macro_version": "0.5.6", "capabilities": ["show_cell"]},
+        "show_cell")   # must not raise
 
 
 def test_timeout_is_instructive(tmp_path):

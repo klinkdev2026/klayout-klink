@@ -425,6 +425,15 @@ REQUEST.** So the lever is fewer requests, never smaller payloads.
 | A whole DESIGN, or thousands of shapes | `import_gds` | keeps the hierarchy, no size cap, `overwrite:"all"` is idempotent |
 | Incremental edits, T-Cells | either RPC path | GDS flattens parametric content to static geometry |
 
+Two more measured facts (v16.3, 5000 boxes into the VISIBLE cell): the
+same 7 draw requests take 0.30 s pipelined but 0.54 s as one `batch`
+(the 50 KiB budget splits it into 7 SERIAL requests), so reserve `batch`
+for sequences that must be ordered; and suppressing display updates /
+quiet mode around a draw changes nothing (0.297 vs 0.298 s), so the
+macro does not do it.
+再两条实测：同样 7 个 draw 请求 pipeline 0.30 s、batch 0.54 s（按 50 KiB 切成 7 个串行请求），
+batch 只用于必须有序的序列；关闭显示刷新对画图速度零影响，宏不做。
+
 ## Hierarchy / 层级传输
 
 Both lanes keep the hierarchy; they differ in what else they keep.
@@ -461,6 +470,71 @@ tools — they report sub-instances rather than silently flattening them.
 coordinates in microns (doubles); errors carry `next_action` (read it; it
 names the fix). Full parameter shapes are in the header comment of
 `ledit_bridge.cpp`.
+
+**Navigation (macro >= 0.5.6)**:
+
+- `show_cell {cell}` — open/raise a layout window on that cell and make
+  it visible; reports `window_opened` and `via`.
+- `set_cell_hidden {cell, hidden}` — toggle the "Hide In Lists" flag
+  (`LCell_SetShowInLists`); reports the value read back, plus
+  `hidden_property` when the stored property disagrees.
+- `list_windows` — every open window (layout/text/log), with `index`,
+  `file`, `cell`, `visible`. Works with no design open.
+- `close_window {cell, file?}` or `{index}` — close matching window(s);
+  no last-window guard.
+- `layout_view {cell?, rect_um?, home?}` — one verb: no args reads the
+  current view, `rect_um` sets it, `home` resets it; always returns the
+  view AFTER the call plus `has_window`.
+- `save_image {cell, path, width_px?, height_px?, dpi?, rect_um?}` — a
+  PNG/BMP/JPG render via `LCell_SaveImageToFile`; the folder must
+  already exist.
+
+`list_cells` now always reports a `hidden` boolean per cell (previously
+only present when true), with `hidden_property` added when the stored
+property disagrees with the flag.
+
+**Destructive (macro >= 0.5.7)**: every one of these needs an EXPLICIT
+target — the visible cell/design is never the implicit one.
+
+- `delete_cell {cell, force?}` — REFUSED (unless `force`) when the cell
+  is the visible cell, is instanced by other cells (`referenced_by`
+  names them and their instance counts), or is a T-Cell generator;
+  reports `deleted`, `instances_removed`, `referenced_by`.
+- `rename_cell {cell, new_name}` — refuses when `new_name` already
+  exists; reports `old`, `new`.
+- `delete_objects {cell, layer?, rect_um?}` (at least one of `layer` /
+  `rect_um`) — deletes an object only when its bounding box lies
+  entirely INSIDE `rect_um` (a route merely crossing it stays);
+  instances are never touched here (`clear_cell` is the whole-cell
+  reset); reports `deleted`, `by_layer`.
+- `close_design {file, discard?}` — refuses a design with unsaved
+  changes unless `discard`; closing a design's last WINDOW does not
+  close the design, so this is the only way to drop a scratch design;
+  reports `closed`, `discarded_changes`, `visible_now`.
+
+**Verification (macro >= 0.5.8)**:
+
+- `run_drc {cell?, rect_um?}` — `LCell_RunDRC` on the whole cell or an
+  area, with the design's loaded rule set; refused when the design has
+  no DRC rules (export_gds + klink's KLayout-side drc tools are the
+  route then); reports `cell`, `errors`, `status`, `rules`, and
+  `rect_um` when an area was given. `errors` and `status` only --
+  L-Edit v16.3 does not expose the violation geometry through the UPI
+  (no ports/objects/error file written), so for violation geometry use
+  `export_gds` and klink's KLayout-side drc tools.
+- `drc_summary {cell?}` — the last DRC result without re-running:
+  `cell`, `errors`, `status` (`needed` = never run or stale, `passed`,
+  `failed`). `errors` is `null` while `status` is `"needed"` -- L-Edit
+  reports (unsigned)-1 before the first run.
+- `export_gds {path, cell?, include_hierarchy?:true, cell_name_length?:32, log_path?}`
+  — `LFile_ExportGDSII` of the whole design or one cell (+hierarchy);
+  the cheap L-Edit -> KLayout return path (KLayout reads it as-is, the
+  2048-byte block padding is only needed in the OTHER direction). GDS
+  limits cell names to `cell_name_length` (32 standard; KLayout accepts
+  longer, raise it for a round trip of long klink names); the folder
+  must already exist; the export log is written to `log_path` (default
+  next to the bridge inbox) and scanned for errors; reports `path`,
+  `bytes`, `scope`, `cell`, `log_path`.
 
 **Designs / 设计切换** (macro >= 0.5.2): every command targets the VISIBLE
 design, so start from `list_designs` (name, path, visible, changed, cell

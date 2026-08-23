@@ -56,6 +56,69 @@ def _chunk_items(items: List[dict], budget: int = _DRAW_CHUNK_BYTES
     return out
 
 
+def _is_num(v) -> bool:
+    return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+
+def _points_ok(pts, minimum: int) -> bool:
+    return (isinstance(pts, list) and len(pts) >= minimum and
+            all(isinstance(p, (list, tuple)) and len(p) == 2 and
+                _is_num(p[0]) and _is_num(p[1]) for p in pts))
+
+
+def validate_draw_items(cell: str, items: List[dict]) -> None:
+    """Apply the macro's own draw rules BEFORE anything is sent.
+
+    A batch is not atomic on the L-Edit side: the macro stops at the first
+    bad item and everything before it has already been written. Checking
+    the same rules here (layer present; box = 4 numbers with x0 < x1 and
+    y0 < y1; polygon >= 3 points; wire >= 2 points and width >= 0;
+    circle radius > 0) means a malformed tree costs nothing at all.
+    """
+    for i, it in enumerate(items):
+        where = "cell '%s' items[%d]" % (cell, i)
+        kind = it.get("kind")
+        if not it.get("layer"):
+            raise LEditBridgeError(
+                "%s: layer is required" % where,
+                "every draw item needs a layer name", "ERR_INVALID_ITEM")
+        if kind == "box":
+            bb = it.get("bbox_um")
+            if (not isinstance(bb, list) or len(bb) != 4 or
+                    not all(_is_num(v) for v in bb) or
+                    not (bb[0] < bb[2] and bb[1] < bb[3])):
+                raise LEditBridgeError(
+                    "%s: box needs bbox_um:[x0,y0,x1,y1] with x0<x1, y0<y1"
+                    % where, "fix the source shape (a zero-area box cannot "
+                    "be drawn in L-Edit)", "ERR_INVALID_ITEM")
+        elif kind == "polygon":
+            if not _points_ok(it.get("points_um"), 3):
+                raise LEditBridgeError(
+                    "%s: polygon needs >= 3 points" % where,
+                    "fix the source shape", "ERR_INVALID_ITEM")
+        elif kind == "wire":
+            if not _points_ok(it.get("points_um"), 2):
+                raise LEditBridgeError(
+                    "%s: wire needs >= 2 points" % where,
+                    "fix the source path", "ERR_INVALID_ITEM")
+            w = it.get("width_um", 0)
+            if not _is_num(w) or w < 0:
+                raise LEditBridgeError(
+                    "%s: wire needs width_um >= 0" % where,
+                    "fix the source path width", "ERR_INVALID_ITEM")
+        elif kind == "circle":
+            r = it.get("radius_um", 0)
+            if not _is_num(r) or r <= 0:
+                raise LEditBridgeError(
+                    "%s: circle needs radius_um > 0" % where,
+                    "fix the source shape", "ERR_INVALID_ITEM")
+        else:
+            raise LEditBridgeError(
+                "%s: unknown kind %r" % (where, kind),
+                "supported kinds: box, polygon, wire, circle",
+                "ERR_INVALID_ITEM")
+
+
 def _orientation(rotation_deg: float, mirror: bool) -> Optional[int]:
     """KLayout rotation -> the L-Edit orient value, or None if not expressible."""
     rot = int(round(rotation_deg)) % 360
@@ -209,6 +272,11 @@ def push_cell_tree(client, bridge: LEditBridgeClient, cell: str, *,
         per_cell[name] = {"items": items, "skipped": skipped,
                           "placements": placements}
 
+    # Validate EVERYTHING before the first byte goes over: a bad item in
+    # the last cell must not cost the user the cells before it.
+    for name in order:
+        validate_draw_items(name, per_cell[name]["items"])
+
     ops: List[tuple] = []
     for lname, (gl, gd) in sorted(layers_used.items()):
         ops.append(("ensure_layer", dict(guard, name=lname,
@@ -223,7 +291,25 @@ def push_cell_tree(client, bridge: LEditBridgeClient, cell: str, *,
         for place in info["placements"]:
             ops.append(("place_instance", place))
 
-    results = bridge.batch(ops, timeout=timeout)
+    # What exists BEFORE this call decides what a failure may roll back:
+    # cells this call creates are ours to delete; cells that were already
+    # there are the user's, and the honest thing to do with one that was
+    # cleared and only half redrawn is to SAY so, not to delete it.
+    caps = bridge.ping().get("capabilities") or []
+    existing = {e["name"] for e in bridge.list_cells()}
+    try:
+        results = bridge.batch(ops, timeout=timeout)
+    except LEditBridgeError as exc:
+        _rollback_failed_push(bridge, guard, caps, existing, order,
+                              per_cell, exc)
+        raise
+
+    # Width-0 KLayout paths (klink marker outlines) go over as zero-width
+    # L-Edit wires. The macro counts the ones L-Edit accepted per draw;
+    # surface the total so the report SAYS it instead of hiding a
+    # hairline-vs-outline difference inside the shape counts.
+    zero_width = sum(int((r or {}).get("zero_width_wires", 0) or 0)
+                     for r in results)
 
     return {
         "cells": order,
@@ -234,9 +320,61 @@ def push_cell_tree(client, bridge: LEditBridgeClient, cell: str, *,
         "skipped_shape_types": {n: per_cell[n]["skipped"] for n in order
                                 if per_cell[n]["skipped"]},
         "unsupported_instances": unsupported,
+        "zero_width_wires": zero_width,
         "requests": len(results) and 1 or 0,
         "ops": len(ops),
     }
+
+
+def _rollback_failed_push(bridge: LEditBridgeClient, guard: dict, caps,
+                          existing, order, per_cell,
+                          exc: LEditBridgeError) -> None:
+    """After a failed batch: delete the cells this push CREATED, report the
+    pre-existing ones whose content no longer matches what was meant to be
+    there, and fold both lists into ``exc`` (message + attributes)."""
+    now = {e["name"] for e in bridge.list_cells()}
+    created = [n for n in order if n not in existing and n in now]
+    rolled_back: List[str] = []
+    left_behind: List[str] = []
+    if "delete_cell" in caps:
+        # parents first: a child still instanced by a created parent would
+        # be refused (force bypasses that anyway, but the order keeps the
+        # instance count honest)
+        for name in reversed(created):
+            try:
+                bridge.call("delete_cell", dict(guard, cell=name, force=True))
+                rolled_back.append(name)
+            except LEditBridgeError:
+                left_behind.append(name)
+    else:
+        left_behind = list(created)
+
+    clobbered: List[str] = []
+    for name in order:
+        if name not in existing:
+            continue
+        expected = len(per_cell[name]["items"]) + \
+            len(per_cell[name]["placements"])
+        try:
+            count = int(bridge.get_cell(name).get("count", -1))
+        except LEditBridgeError:
+            count = -1
+        if count != expected:
+            clobbered.append(name)
+
+    exc.rolled_back = rolled_back          # type: ignore[attr-defined]
+    exc.clobbered = clobbered              # type: ignore[attr-defined]
+    exc.left_behind = left_behind          # type: ignore[attr-defined]
+    note = " | rolled_back (created by this call, now deleted): %s" % (
+        rolled_back or "none")
+    if left_behind:
+        note += " | LEFT BEHIND (no delete_cell in macro %s, or delete " \
+                "failed): %s" % ("< 0.5.7" if "delete_cell" not in caps
+                                 else "", left_behind)
+    if clobbered:
+        note += " | CLOBBERED (existed before, cleared and not fully " \
+                "redrawn -- their old content is gone): %s" % clobbered
+    exc.args = (exc.args[0] + note,) + tuple(exc.args[1:])
 
 
 # ---------------------------------------------------------------------------

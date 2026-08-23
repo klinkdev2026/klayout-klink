@@ -86,6 +86,26 @@ def bundled_macro_path() -> str:
         "ledit_bridge", "ledit_bridge.cpp"))
 
 
+def require_capability(ping: Dict[str, Any], cmd: str) -> None:
+    """Raise instructively when ``ping``'s capabilities don't list ``cmd``.
+
+    ``ping()`` already tells the caller which commands the loaded macro
+    supports; this turns that list into a fail-fast check for a new
+    command instead of a bare, unexplained bridge error from the macro
+    itself ("unknown command").
+    """
+    caps = ping.get("capabilities") or []
+    if cmd in caps:
+        return
+    raise LEditBridgeError(
+        f"the loaded bridge macro ({ping.get('macro_version', '?')}) has "
+        f"no '{cmd}' command",
+        "in L-Edit: Tools > klink: Bridge Stop, then Tools > Macro > Load "
+        f"Macro... -> {bundled_macro_path()} (macro >= 0.5.6), then "
+        "ledit.status must list it under capabilities",
+        "ERR_MACRO_TOO_OLD")
+
+
 def default_root() -> str:
     env = os.environ.get("KLINK_LEDIT_BRIDGE_ROOT")
     if env:
@@ -347,8 +367,10 @@ class LEditBridgeClient:
         the one that just hit a problem. ``macro_alive`` (the poll loop is
         ticking) and ``design_ready`` (a .tdb is open, so commands can act)
         fail differently and are reported separately. When the macro
-        supports it, this also reports the open designs and the active
-        design's cells, so one call answers "what is in L-Edit right now".
+        supports it, this also reports the open designs, the active
+        design's cells, and the open windows (windows -- works even with
+        no design open), so one call answers "what is in L-Edit right
+        now".
         """
         out: Dict[str, Any] = {
             "root": default_root(),
@@ -404,6 +426,13 @@ class LEditBridgeClient:
                 out["cells"] = self.list_cells()
             except LEditBridgeError as exc:
                 out["cells_error"] = str(exc)
+        if "list_windows" in caps:
+            # Windows work with no design open, so this is not gated on
+            # design_ready the way cells/designs are.
+            try:
+                out["windows"] = self.list_windows()
+            except LEditBridgeError as exc:
+                out["windows_error"] = str(exc)
         return out
 
     def ping(self) -> Dict[str, Any]:
@@ -613,3 +642,171 @@ class LEditBridgeClient:
         if path:
             p["path"] = path
         return self.call("save_design", p)
+
+    # -- navigation (macro >= 0.5.6) ----------------------------------------
+
+    def show_cell(self, cell: str) -> Dict[str, Any]:
+        """Open/raise a layout window on ``cell`` and make it visible."""
+        return self.call("show_cell", {"cell": cell})
+
+    def set_cell_hidden(self, cell: str, hidden: bool) -> Dict[str, Any]:
+        """Toggle the "Hide In Lists" flag on ``cell``."""
+        return self.call("set_cell_hidden", {"cell": cell, "hidden": hidden})
+
+    def list_windows(self):
+        """Every open L-Edit window (layout, text, log, ...)."""
+        return self.call("list_windows")["windows"]
+
+    def close_window(self, cell: Optional[str] = None,
+                     index: Optional[int] = None,
+                     file: str = "") -> Dict[str, Any]:
+        """Close window(s) by ``cell`` (optionally scoped by ``file``) or
+        by ``index`` from :meth:`list_windows`."""
+        if cell is None and index is None:
+            raise LEditBridgeError(
+                "close_window needs cell or index",
+                "call list_windows() and pass the window's cell (plus "
+                "file when two open designs share the name) or its index")
+        p: Dict[str, Any] = {}
+        if cell is not None:
+            p["cell"] = cell
+            if file:
+                p["file"] = file
+        if index is not None:
+            p["index"] = index
+        return self.call("close_window", p)
+
+    def layout_view(self, cell: Optional[str] = None,
+                    rect_um: Optional[Any] = None,
+                    home: bool = False) -> Dict[str, Any]:
+        """One verb for a cell's view: no args reads, ``rect_um`` sets,
+        ``home=True`` resets to the cell's home view."""
+        p: Dict[str, Any] = {}
+        if cell is not None:
+            p["cell"] = cell
+        if rect_um is not None:
+            p["rect_um"] = list(rect_um)
+        if home:
+            p["home"] = True
+        return self.call("layout_view", p)
+
+    def save_image(self, cell: str, path: str, width_px: int = 1600,
+                   height_px: int = 1200, dpi: int = 96,
+                   rect_um: Optional[Any] = None) -> Dict[str, Any]:
+        """Render ``cell`` to an image file via LCell_SaveImageToFile.
+
+        ``path`` is resolved to an absolute path before sending -- the
+        macro resolves a relative one against L-Edit's own working
+        directory, not the caller's.
+        """
+        p: Dict[str, Any] = {
+            "cell": cell, "path": os.path.abspath(path),
+            "width_px": width_px, "height_px": height_px, "dpi": dpi}
+        if rect_um is not None:
+            p["rect_um"] = list(rect_um)
+        return self.call("save_image", p)
+
+    # -- destructive (macro >= 0.5.7) ---------------------------------------
+
+    def delete_cell(self, cell: str, force: bool = False) -> Dict[str, Any]:
+        """Delete an L-Edit cell by explicit name.
+
+        Refused (unless ``force``) when the cell is the visible cell, is
+        instanced by other cells, or is a T-Cell generator -- the macro
+        names the parents in ``referenced_by``.
+        """
+        p: Dict[str, Any] = {"cell": cell}
+        if force:
+            p["force"] = force
+        return self.call("delete_cell", p)
+
+    def rename_cell(self, cell: str, new_name: str) -> Dict[str, Any]:
+        """Rename an L-Edit cell; refuses when ``new_name`` is already taken."""
+        return self.call("rename_cell", {"cell": cell, "new_name": new_name})
+
+    def delete_objects(self, cell: str, layer: Optional[str] = None,
+                       rect_um: Optional[Any] = None) -> Dict[str, Any]:
+        """Delete shapes in ``cell`` by layer and/or area.
+
+        ``rect_um=[left, bottom, right, top]`` (microns) keeps only objects
+        whose bounding box lies entirely INSIDE the rect. Instances are
+        never touched here -- ``clear_cell`` is the whole-cell reset.
+        """
+        if layer is None and rect_um is None:
+            raise LEditBridgeError(
+                "delete_objects needs layer and/or rect_um",
+                "pass layer='Metal1' and/or rect_um=[left, bottom, right, "
+                "top]; clear_cell is the whole-cell reset")
+        p: Dict[str, Any] = {"cell": cell}
+        if layer is not None:
+            p["layer"] = layer
+        if rect_um is not None:
+            p["rect_um"] = list(rect_um)
+        return self.call("delete_objects", p)
+
+    def close_design(self, file: str, discard: bool = False) -> Dict[str, Any]:
+        """Close an OPEN L-Edit design by name.
+
+        Refused when it has unsaved changes unless ``discard``. Closing a
+        design's last WINDOW does not close it -- this does.
+        """
+        p: Dict[str, Any] = {"file": file}
+        if discard:
+            p["discard"] = discard
+        return self.call("close_design", p)
+
+    # -- verification (macro >= 0.5.8) ---------------------------------------
+
+    def run_drc(self, cell: Optional[str] = None,
+               rect_um: Optional[Any] = None,
+               timeout: float = 120.0) -> Dict[str, Any]:
+        """Run L-Edit's own DRC via LCell_RunDRC (whole cell, or ``rect_um``
+        for an area) with the design's loaded rule set.
+
+        Refused when the design has no DRC rules loaded -- export_gds +
+        klink's KLayout-side drc tools are the route then. Reports the
+        error COUNT and status only -- L-Edit v16.3 does not expose the
+        violation geometry through the UPI; for violation geometry use
+        export_gds and klink's KLayout-side drc tools.
+        """
+        p: Dict[str, Any] = {}
+        if cell is not None:
+            p["cell"] = cell
+        if rect_um is not None:
+            p["rect_um"] = list(rect_um)
+        return self.call("run_drc", p, timeout=timeout)
+
+    def drc_summary(self, cell: Optional[str] = None) -> Dict[str, Any]:
+        """Read the last DRC result of ``cell`` without re-running it.
+
+        ``errors`` is ``None`` while ``status`` is ``"needed"`` (never run
+        or stale) -- L-Edit reports (unsigned)-1 before the first run.
+        """
+        p: Dict[str, Any] = {}
+        if cell is not None:
+            p["cell"] = cell
+        return self.call("drc_summary", p)
+
+    def export_gds(self, path: str, cell: Optional[str] = None,
+                   include_hierarchy: bool = True,
+                   cell_name_length: int = 32, log_path: str = "",
+                   timeout: float = 300.0) -> Dict[str, Any]:
+        """Write the design (or one ``cell`` with its hierarchy) to a GDS
+        file via LFile_ExportGDSII -- the cheap L-Edit -> KLayout return
+        path (KLayout reads it as-is; the 2048-byte block padding is only
+        needed in the OTHER direction, see :meth:`import_gds`).
+
+        ``path`` is resolved to an absolute path before sending -- the
+        macro resolves a relative one against L-Edit's own working
+        directory, not the caller's.
+        """
+        p: Dict[str, Any] = {"path": os.path.abspath(path)}
+        if cell is not None:
+            p["cell"] = cell
+        if not include_hierarchy:
+            p["include_hierarchy"] = include_hierarchy
+        if cell_name_length != 32:
+            p["cell_name_length"] = cell_name_length
+        if log_path:
+            p["log_path"] = log_path
+        return self.call("export_gds", p, timeout=timeout)

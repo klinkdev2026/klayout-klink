@@ -17,7 +17,7 @@ from ..results import _error_result, _json_result
 from ...bridges.ledit import (LEditBridgeClient, LEditBridgeError,
                               build_layer_map, import_cell_tree,
                               merge_layer_name, push_cell_tree,
-                              selection_to_items)
+                              require_capability, selection_to_items)
 
 _REQ_BYTES_BUDGET = 50 * 1024   # stay under the macro's 64 KiB request cap
 
@@ -33,8 +33,9 @@ def _bridge(arguments: dict) -> LEditBridgeClient:
     "for one: hello heartbeat age, macro version/capabilities, current "
     ".tdb file and cell. When the macro supports it, also lists every "
     "open design (designs, with the visible/changed flags) and the "
-    "active design's cells (with T-Cell flags) -- one call answers "
-    "\"what is in L-Edit right now\". Start here when any ledit.* call "
+    "active design's cells (with T-Cell flags) and, with macro >= 0.5.6, "
+    "the open windows (windows[]) -- one call answers \"what is in "
+    "L-Edit right now\". Start here when any ledit.* call "
     "misbehaves; errors name the exact fix (load/reload the macro, "
     "close a modal dialog, ...).",
     {
@@ -352,6 +353,472 @@ def _tool_ledit_push_cell(ctx, arguments: dict) -> dict:
             "note": "L-Edit draw is append-only; rerun into a fresh "
                     "ledit_cell to regenerate",
         })
+    except LEditBridgeError as exc:
+        return _error_result(str(exc))
+    except Exception as exc:
+        return _error_result(str(exc))
+
+
+@local_tool(
+    "ledit.show_cell",
+    "Open (or raise) a layout window on an L-Edit cell and make it the "
+    "visible cell -- the answer to 'show me X in L-Edit' / 'open cell X'. "
+    "Reports window_opened (a new window was created) and via. Cell "
+    "names come from ledit.status cells[]. Read-only on the design: no "
+    "geometry is touched.",
+    {
+        "type": "object",
+        "required": ["cell"],
+        "properties": {
+            "cell": {"type": "string",
+                     "description": "L-Edit cell to show (from ledit.status cells[])."},
+            "namespace": {"type": "string", "default": "default"},
+        },
+        "additionalProperties": False,
+    },
+)
+def _tool_ledit_show_cell(ctx, arguments: dict) -> dict:
+    try:
+        bridge = _bridge(arguments)
+        ping = bridge.ping()
+        require_capability(ping, "show_cell")
+        return _json_result(bridge.show_cell(str(arguments["cell"])))
+    except LEditBridgeError as exc:
+        return _error_result(str(exc))
+    except Exception as exc:
+        return _error_result(str(exc))
+
+
+@local_tool(
+    "ledit.set_cell_hidden",
+    "Hide an L-Edit cell from the cell lists (the 'Hide In Lists' flag "
+    "that auto-generated T-Cell variants carry) or show it again -- "
+    "'hide cell X' / 'unhide X'. Round-trips through L-Edit's own flag "
+    "(LCell_SetShowInLists) and reports the value read back; if the "
+    "stored property disagrees with the flag both are reported (hidden, "
+    "hidden_property), never one picked silently. ledit.status cells[] "
+    "reads the same flag.",
+    {
+        "type": "object",
+        "required": ["cell", "hidden"],
+        "properties": {
+            "cell": {"type": "string",
+                     "description": "L-Edit cell to hide/show."},
+            "hidden": {"type": "boolean",
+                       "description": "True to hide from cell lists, false to show again."},
+            "namespace": {"type": "string", "default": "default"},
+        },
+        "additionalProperties": False,
+    },
+)
+def _tool_ledit_set_cell_hidden(ctx, arguments: dict) -> dict:
+    try:
+        bridge = _bridge(arguments)
+        ping = bridge.ping()
+        require_capability(ping, "set_cell_hidden")
+        return _json_result(bridge.set_cell_hidden(
+            str(arguments["cell"]), bool(arguments["hidden"])))
+    except LEditBridgeError as exc:
+        return _error_result(str(exc))
+    except Exception as exc:
+        return _error_result(str(exc))
+
+
+@local_tool(
+    "ledit.list_windows",
+    "List every open L-Edit window (layout, text, log, ...) with its "
+    "index, file, cell and whether it is the visible one. Works with no "
+    "design open. The index is the handle ledit.close_window takes.",
+    {
+        "type": "object",
+        "properties": {
+            "namespace": {"type": "string", "default": "default"},
+        },
+        "additionalProperties": False,
+    },
+)
+def _tool_ledit_list_windows(ctx, arguments: dict) -> dict:
+    try:
+        bridge = _bridge(arguments)
+        ping = bridge.ping()
+        require_capability(ping, "list_windows")
+        windows = bridge.list_windows()
+        return _json_result({"windows": windows, "count": len(windows)})
+    except LEditBridgeError as exc:
+        return _error_result(str(exc))
+    except Exception as exc:
+        return _error_result(str(exc))
+
+
+@local_tool(
+    "ledit.close_window",
+    "Close L-Edit window(s): by cell name (all layout windows on that "
+    "cell; pass file when two open designs share the name) or by index "
+    "from ledit.list_windows. Reports matched/closed. No last-window "
+    "guard: closing a design's last window may close that design, so "
+    "confirm with the user before closing windows you did not open.",
+    {
+        "type": "object",
+        "properties": {
+            "cell": {"type": "string",
+                     "description": "Close layout window(s) on this cell."},
+            "index": {"type": "integer",
+                      "description": "Close the window at this index (from ledit.list_windows)."},
+            "file": {"type": "string",
+                     "description": "Disambiguate cell by design file when two designs share the cell name."},
+            "namespace": {"type": "string", "default": "default"},
+        },
+        "additionalProperties": False,
+    },
+)
+def _tool_ledit_close_window(ctx, arguments: dict) -> dict:
+    try:
+        bridge = _bridge(arguments)
+        ping = bridge.ping()
+        require_capability(ping, "close_window")
+        cell = arguments.get("cell")
+        index = arguments.get("index")
+        return _json_result(bridge.close_window(
+            cell=str(cell) if cell is not None else None,
+            index=int(index) if index is not None else None,
+            file=str(arguments.get("file") or "")))
+    except LEditBridgeError as exc:
+        return _error_result(str(exc))
+    except Exception as exc:
+        return _error_result(str(exc))
+
+
+@local_tool(
+    "ledit.layout_view",
+    "One verb for an L-Edit cell's view: with neither rect_um nor home "
+    "it READS the current view; rect_um=[left,bottom,right,top] "
+    "(microns) SETS it (zoom to that area -- 'zoom to the device' / "
+    "'look at this region'); home=true resets to the cell's home view. "
+    "Always returns the view AFTER the call plus has_window (without an "
+    "open window the rect is not meaningful -- ledit.show_cell first). "
+    "Default cell = the visible cell.",
+    {
+        "type": "object",
+        "properties": {
+            "cell": {"type": "string",
+                     "description": "L-Edit cell (default: the visible cell)."},
+            "rect_um": {"type": "array", "items": {"type": "number"},
+                        "minItems": 4, "maxItems": 4,
+                        "description": "[left, bottom, right, top] in microns; sets the view."},
+            "home": {"type": "boolean",
+                     "description": "Reset to the cell's home view."},
+            "namespace": {"type": "string", "default": "default"},
+        },
+        "additionalProperties": False,
+    },
+)
+def _tool_ledit_layout_view(ctx, arguments: dict) -> dict:
+    try:
+        bridge = _bridge(arguments)
+        ping = bridge.ping()
+        require_capability(ping, "layout_view")
+        cell = arguments.get("cell")
+        return _json_result(bridge.layout_view(
+            cell=str(cell) if cell is not None else None,
+            rect_um=arguments.get("rect_um"),
+            home=bool(arguments.get("home", False))))
+    except LEditBridgeError as exc:
+        return _error_result(str(exc))
+    except Exception as exc:
+        return _error_result(str(exc))
+
+
+@local_tool(
+    "ledit.save_image",
+    "Render an L-Edit cell to an image file (PNG/BMP/JPG by extension) "
+    "via LCell_SaveImageToFile -- whole cell by default, or rect_um for "
+    "an area. USER-REQUESTED ARTIFACT ONLY: call it when the user asks "
+    "for a picture/screenshot of the L-Edit cell, never as verification "
+    "evidence (verify with ledit.status / get_cell geometry, same rule "
+    "as KLayout view.screenshot). The folder must already exist. "
+    "Reports path and bytes.",
+    {
+        "type": "object",
+        "required": ["cell", "path"],
+        "properties": {
+            "cell": {"type": "string",
+                     "description": "L-Edit cell to render."},
+            "path": {"type": "string",
+                     "description": "Output image path (.png/.bmp/.jpg); folder must already exist."},
+            "width_px": {"type": "integer", "default": 1600},
+            "height_px": {"type": "integer", "default": 1200},
+            "dpi": {"type": "integer", "default": 96},
+            "rect_um": {"type": "array", "items": {"type": "number"},
+                        "minItems": 4, "maxItems": 4,
+                        "description": "[left, bottom, right, top] in microns; default the whole cell."},
+            "namespace": {"type": "string", "default": "default"},
+        },
+        "additionalProperties": False,
+    },
+)
+def _tool_ledit_save_image(ctx, arguments: dict) -> dict:
+    try:
+        bridge = _bridge(arguments)
+        ping = bridge.ping()
+        require_capability(ping, "save_image")
+        return _json_result(bridge.save_image(
+            str(arguments["cell"]), str(arguments["path"]),
+            width_px=int(arguments.get("width_px", 1600)),
+            height_px=int(arguments.get("height_px", 1200)),
+            dpi=int(arguments.get("dpi", 96)),
+            rect_um=arguments.get("rect_um")))
+    except LEditBridgeError as exc:
+        return _error_result(str(exc))
+    except Exception as exc:
+        return _error_result(str(exc))
+
+
+@local_tool(
+    "ledit.delete_cell",
+    "DESTRUCTIVE: delete an L-Edit cell by explicit name. Refused (unless "
+    "force=true) when the cell is the visible cell, is instanced by other "
+    "cells (referenced_by names them -- deleting it deletes those "
+    "instances too), or is a T-Cell generator. Confirm with the user "
+    "before deleting anything they drew; klink's own scratch cells (push "
+    "targets, probes) are fair game.",
+    {
+        "type": "object",
+        "required": ["cell"],
+        "properties": {
+            "cell": {"type": "string",
+                     "description": "L-Edit cell to delete."},
+            "force": {"type": "boolean", "default": False,
+                      "description": "Delete even if visible / instanced / a T-Cell generator."},
+            "namespace": {"type": "string", "default": "default"},
+        },
+        "additionalProperties": False,
+    },
+)
+def _tool_ledit_delete_cell(ctx, arguments: dict) -> dict:
+    try:
+        bridge = _bridge(arguments)
+        ping = bridge.ping()
+        require_capability(ping, "delete_cell")
+        return _json_result(bridge.delete_cell(
+            str(arguments["cell"]), force=bool(arguments.get("force", False))))
+    except LEditBridgeError as exc:
+        return _error_result(str(exc))
+    except Exception as exc:
+        return _error_result(str(exc))
+
+
+@local_tool(
+    "ledit.rename_cell",
+    "Rename an L-Edit cell; refuses when new_name is already taken "
+    "(ledit.status cells[] shows what exists).",
+    {
+        "type": "object",
+        "required": ["cell", "new_name"],
+        "properties": {
+            "cell": {"type": "string",
+                     "description": "L-Edit cell to rename."},
+            "new_name": {"type": "string",
+                        "description": "New name; must not already exist."},
+            "namespace": {"type": "string", "default": "default"},
+        },
+        "additionalProperties": False,
+    },
+)
+def _tool_ledit_rename_cell(ctx, arguments: dict) -> dict:
+    try:
+        bridge = _bridge(arguments)
+        ping = bridge.ping()
+        require_capability(ping, "rename_cell")
+        return _json_result(bridge.rename_cell(
+            str(arguments["cell"]), str(arguments["new_name"])))
+    except LEditBridgeError as exc:
+        return _error_result(str(exc))
+    except Exception as exc:
+        return _error_result(str(exc))
+
+
+@local_tool(
+    "ledit.delete_objects",
+    "DESTRUCTIVE: delete shapes inside an L-Edit cell by layer and/or "
+    "area. rect_um=[left,bottom,right,top] (microns) deletes only objects "
+    "whose bounding box lies entirely INSIDE the rect (a route merely "
+    "crossing it stays); layer restricts to one layer; give at least one. "
+    "Instances are never deleted here (clear_cell resets a whole cell). "
+    "Reports deleted and by_layer. Confirm with the user first unless the "
+    "cell is klink's own.",
+    {
+        "type": "object",
+        "required": ["cell"],
+        "properties": {
+            "cell": {"type": "string",
+                     "description": "L-Edit cell to delete shapes from."},
+            "layer": {"type": "string",
+                     "description": "Restrict to this layer (name)."},
+            "rect_um": {"type": "array", "items": {"type": "number"},
+                        "minItems": 4, "maxItems": 4,
+                        "description": "[left, bottom, right, top] in microns; object MBB must lie entirely inside."},
+            "namespace": {"type": "string", "default": "default"},
+        },
+        "additionalProperties": False,
+    },
+)
+def _tool_ledit_delete_objects(ctx, arguments: dict) -> dict:
+    try:
+        bridge = _bridge(arguments)
+        ping = bridge.ping()
+        require_capability(ping, "delete_objects")
+        layer = arguments.get("layer")
+        return _json_result(bridge.delete_objects(
+            str(arguments["cell"]),
+            layer=str(layer) if layer is not None else None,
+            rect_um=arguments.get("rect_um")))
+    except LEditBridgeError as exc:
+        return _error_result(str(exc))
+    except Exception as exc:
+        return _error_result(str(exc))
+
+
+@local_tool(
+    "ledit.close_design",
+    "Close an OPEN L-Edit design by name (from ledit.status designs[]). A "
+    "design with unsaved changes is refused unless discard=true. Closing "
+    "a design's last WINDOW does not close it -- this does. Use it to "
+    "drop scratch designs klink created (new_design); confirm with the "
+    "user before closing theirs.",
+    {
+        "type": "object",
+        "required": ["file"],
+        "properties": {
+            "file": {"type": "string",
+                     "description": "Open design name (from ledit.status designs[])."},
+            "discard": {"type": "boolean", "default": False,
+                       "description": "Discard unsaved changes and close anyway."},
+            "namespace": {"type": "string", "default": "default"},
+        },
+        "additionalProperties": False,
+    },
+)
+def _tool_ledit_close_design(ctx, arguments: dict) -> dict:
+    try:
+        bridge = _bridge(arguments)
+        ping = bridge.ping()
+        require_capability(ping, "close_design")
+        return _json_result(bridge.close_design(
+            str(arguments["file"]),
+            discard=bool(arguments.get("discard", False))))
+    except LEditBridgeError as exc:
+        return _error_result(str(exc))
+    except Exception as exc:
+        return _error_result(str(exc))
+
+
+@local_tool(
+    "ledit.run_drc",
+    "Run L-Edit's own DRC on a cell (whole cell, or "
+    "rect_um=[left,bottom,right,top] microns for an area) with the "
+    "design's loaded rule set; reports the error COUNT and status only "
+    "-- L-Edit v16.3 does not expose the violation geometry through the "
+    "UPI; for violation geometry use export_gds and klink's KLayout-side "
+    "drc tools. Also reports the rule count. Refused when the design "
+    "has no DRC rules.",
+    {
+        "type": "object",
+        "properties": {
+            "cell": {"type": "string",
+                     "description": "L-Edit cell to run DRC on (default: the visible cell)."},
+            "rect_um": {"type": "array", "items": {"type": "number"},
+                        "minItems": 4, "maxItems": 4,
+                        "description": "[left, bottom, right, top] in microns; default the whole cell."},
+            "namespace": {"type": "string", "default": "default"},
+        },
+        "additionalProperties": False,
+    },
+)
+def _tool_ledit_run_drc(ctx, arguments: dict) -> dict:
+    try:
+        bridge = _bridge(arguments)
+        ping = bridge.ping()
+        require_capability(ping, "run_drc")
+        cell = arguments.get("cell")
+        return _json_result(bridge.run_drc(
+            cell=str(cell) if cell is not None else None,
+            rect_um=arguments.get("rect_um")))
+    except LEditBridgeError as exc:
+        return _error_result(str(exc))
+    except Exception as exc:
+        return _error_result(str(exc))
+
+
+@local_tool(
+    "ledit.drc_summary",
+    "Read the last DRC result of an L-Edit cell without re-running: "
+    "errors and status (needed = never run or stale, passed, failed). "
+    "errors is null until a run has happened.",
+    {
+        "type": "object",
+        "properties": {
+            "cell": {"type": "string",
+                     "description": "L-Edit cell to read (default: the visible cell)."},
+            "namespace": {"type": "string", "default": "default"},
+        },
+        "additionalProperties": False,
+    },
+)
+def _tool_ledit_drc_summary(ctx, arguments: dict) -> dict:
+    try:
+        bridge = _bridge(arguments)
+        ping = bridge.ping()
+        require_capability(ping, "drc_summary")
+        cell = arguments.get("cell")
+        return _json_result(bridge.drc_summary(
+            cell=str(cell) if cell is not None else None))
+    except LEditBridgeError as exc:
+        return _error_result(str(exc))
+    except Exception as exc:
+        return _error_result(str(exc))
+
+
+@local_tool(
+    "ledit.export_gds",
+    "Write an L-Edit design (or one cell with its hierarchy) to a GDS "
+    "file with LFile_ExportGDSII -- the cheap L-Edit -> KLayout return "
+    "path: then layout.file_info / layout.import_file in KLayout read it "
+    "as-is (no padding needed in this direction). GDS limits cell names "
+    "to cell_name_length (32 standard; KLayout accepts longer, raise it "
+    "for a round trip of long klink names). The folder must already "
+    "exist; the export log is written to log_path (default next to the "
+    "bridge inbox) and scanned for errors.",
+    {
+        "type": "object",
+        "required": ["path"],
+        "properties": {
+            "path": {"type": "string",
+                     "description": "Output .gds path; the containing folder must already exist."},
+            "cell": {"type": "string",
+                     "description": "Export only this cell + its hierarchy (default: the whole design)."},
+            "include_hierarchy": {"type": "boolean", "default": True,
+                                  "description": "Include cell's sub-instances (only meaningful with cell set)."},
+            "cell_name_length": {"type": "integer", "default": 32,
+                                 "description": "GDSII cell-name length limit; raise for long klink names."},
+            "log_path": {"type": "string",
+                        "description": "Export log path (default: next to the bridge inbox)."},
+            "namespace": {"type": "string", "default": "default"},
+        },
+        "additionalProperties": False,
+    },
+)
+def _tool_ledit_export_gds(ctx, arguments: dict) -> dict:
+    try:
+        bridge = _bridge(arguments)
+        ping = bridge.ping()
+        require_capability(ping, "export_gds")
+        cell = arguments.get("cell")
+        return _json_result(bridge.export_gds(
+            str(arguments["path"]),
+            cell=str(cell) if cell is not None else None,
+            include_hierarchy=bool(arguments.get("include_hierarchy", True)),
+            cell_name_length=int(arguments.get("cell_name_length", 32)),
+            log_path=str(arguments.get("log_path") or "")))
     except LEditBridgeError as exc:
         return _error_result(str(exc))
     except Exception as exc:

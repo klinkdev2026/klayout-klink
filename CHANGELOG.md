@@ -4,6 +4,57 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project does not use dated entries (versions only).
 
+## 0.5.7
+
+The L-Edit bridge grows from a drawing transport into a full editor
+control surface: navigation (show/hide cells, windows, view, image),
+destructive commands with explicit targets and refusals, a validated
+and rolled-back hierarchy push, L-Edit's own DRC, and GDS export as the
+cheap way back to KLayout -- 13 new `ledit.*` tools, macro 0.5.6 -> 0.5.8
+(reload the macro in L-Edit after upgrading; every tool says so when it
+is missing).
+
+- L-Edit bridge navigation (macro 0.5.6): six new one-call tools --
+  `ledit.show_cell` (open/raise a layout window on a cell and make it
+  visible), `ledit.set_cell_hidden` (toggle the "Hide In Lists" flag),
+  `ledit.list_windows` / `ledit.close_window` (enumerate and close
+  layout/text/log windows, no last-window guard), `ledit.layout_view`
+  (one verb: no args reads the view, `rect_um` sets it, `home` resets
+  it, always answers with the view after the call), and
+  `ledit.save_image` (render a cell/area to PNG/BMP/JPG -- a
+  user-requested artifact only, never verification evidence).
+  `ledit.status` now also reports `windows[]` when the macro supports
+  it, and `list_cells` now always carries a `hidden` boolean per cell
+  (plus `hidden_property` when the stored property disagrees), not
+  only when true.
+- `draw` no longer refuses `width_um == 0` wires itself; a refusal now
+  comes from L-Edit (`LWire_New`) and the error says so, and accepted
+  zero-width wires are counted in `zero_width_wires`. Verified on
+  L-Edit v16.3: zero-width wires ARE accepted and render as 1-px
+  outlines, so klink's width-0 Port/Anchor/Region markers now transfer —
+  `ledit.push_cell_tree` succeeds on cells full of them and reports the
+  total in `zero_width_wires`.
+- L-Edit bridge destructive commands (macro 0.5.7): `ledit.delete_cell`
+  (refuses to delete the visible cell, a cell instanced by others, or a
+  T-Cell generator unless `force=true`; names the referencing cells),
+  `ledit.rename_cell`, `ledit.delete_objects` (delete shapes by layer
+  and/or `rect_um`, keeping only objects whose bounding box lies
+  entirely inside the rect), `ledit.close_design` (refuses a design with
+  unsaved changes unless `discard=true`; the only way to drop a scratch
+  design, since closing its last window does not close it);
+  `ledit.push_cell_tree` now validates every draw item before sending
+  and, when a batch fails, deletes the cells it created in that call
+  (`rolled_back`) and reports cleared existing cells as `clobbered`.
+- L-Edit bridge verification (macro 0.5.8): `ledit.run_drc` /
+  `ledit.drc_summary` (L-Edit's own DRC with the design's rule set;
+  refused when there are no rules; reports the error COUNT and status
+  only -- L-Edit v16.3 does not expose the violation geometry through
+  the UPI, so for violation geometry use `ledit.export_gds` + klink's
+  KLayout-side drc tools; `errors` is `null` from `drc_summary` before
+  the first run) and `ledit.export_gds` (LFile_ExportGDSII of the
+  design or one cell with hierarchy; the cheap L-Edit -> KLayout return
+  path, read directly by `layout.file_info` / `layout.import_file`).
+
 ## 0.5.6
 
 Rulers become the complete region vocabulary, and every klink marker
