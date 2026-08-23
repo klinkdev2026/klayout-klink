@@ -4,7 +4,11 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project does not use dated entries (versions only).
 
-## Unreleased
+## 0.5.6
+
+Rulers become the complete region vocabulary, and every klink marker
+becomes a pure mark (zero area, never occluding). Also the routing and
+layout_intent starters join the project template.
 
 - Marker doctrine, one visual language for every klink marker: pure
   marks, zero area, never occluding, invisible to booleans and metrics.
@@ -53,6 +57,12 @@ this project does not use dated entries (versions only).
 - Fixed the SEND toolbar button showing "Fail" when the SEND was
   successfully journaled with no live MCP listener (status
   `journaled_no_listener`); it now shows "Sent".
+- Two starters promoted into the project template (`klink init` /
+  `klink update`): `routing/five_routers.py` (five routing situations
+  through the tapered backend, with ports, anchors and a keepout) and
+  `layout_intent/region_numbered_array.py` (claim a region, plan and
+  apply a numbered array, regenerate), each with its tutorial capture
+  script.
 
 ## 0.5.5
 
