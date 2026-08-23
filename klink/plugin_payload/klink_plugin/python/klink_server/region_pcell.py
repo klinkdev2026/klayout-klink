@@ -20,10 +20,16 @@ import pya
 from .region_geom import decode_contours
 
 
-def _outline_width_dbu(bbox: pya.Box) -> int:
-    """Deterministic outline width: thin relative to the region, never 0."""
-    dim = min(bbox.width(), bbox.height())
-    return max(10, dim // 200)
+# Marker doctrine (shared with Port/Anchor): a marker is a pure mark --
+# zero area, never occluding user geometry, invisible to booleans and
+# metrics. A width-0 path renders as a constant 1-px line at every zoom,
+# has a bbox equal to its vertices' bbox, and is legal GDS/OASIS.
+OUTLINE_WIDTH_DBU = 0
+
+
+def _closed_outline(ring) -> pya.Path:
+    pts = list(ring)
+    return pya.Path(pts + [pts[0]], OUTLINE_WIDTH_DBU)
 
 
 class KlinkRegionPcell(pya.PCellDeclarationHelper):
@@ -62,8 +68,10 @@ class KlinkRegionPcell(pya.PCellDeclarationHelper):
             poly = decode_contours(self.contours)
         except Exception:
             # Never hard-fail a layout load on a corrupt parameter: draw an
-            # explicit INVALID marker instead so the problem is visible.
-            self.cell.shapes(layer_idx).insert(pya.Box(0, 0, 1000, 1000))
+            # explicit INVALID marker (still a zero-area outline) so the
+            # problem is visible without occluding anything.
+            self.cell.shapes(layer_idx).insert(_closed_outline(
+                pya.Polygon(pya.Box(0, 0, 1000, 1000)).each_point_hull()))
             text = pya.Text("REGION %s INVALID" % (self.region_name or "?"),
                             pya.Trans(0, 0))
             text.size = 500
@@ -71,7 +79,6 @@ class KlinkRegionPcell(pya.PCellDeclarationHelper):
             return
 
         bbox = poly.bbox()
-        width = _outline_width_dbu(bbox)
 
         rings = [list(poly.each_point_hull())]
         for h in range(poly.holes()):
@@ -79,13 +86,14 @@ class KlinkRegionPcell(pya.PCellDeclarationHelper):
         for ring in rings:
             if len(ring) < 3:
                 continue
-            closed = ring + [ring[0]]
-            self.cell.shapes(layer_idx).insert(pya.Path(closed, width))
+            self.cell.shapes(layer_idx).insert(_closed_outline(ring))
 
-        # Name text just inside the anchor corner (local origin area).
+        # Name text just inside the anchor corner (local origin area). The
+        # offset derives from the text size, not the (zero) outline width.
         text_size = max(100, min(bbox.width(), bbox.height()) // 8)
+        inset = text_size // 4
         text = pya.Text(self.region_name or "?",
-                        pya.Trans(bbox.left + width * 2, bbox.bottom + width * 2))
+                        pya.Trans(bbox.left + inset, bbox.bottom + inset))
         text.size = text_size
         self.cell.shapes(layer_idx).insert(text)
 

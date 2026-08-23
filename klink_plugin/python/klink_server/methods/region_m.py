@@ -1,7 +1,9 @@
 """Thin Region PCell RPC methods (Intent Region marker family).
 
-KLayout-side Region CRUD only: claim (rulers -> Region PCell), list, get,
-unclaim, set_layer. Boolean composition and safe ellipse discretization are
+KLayout-side Region CRUD only: claim (rulers -> Region PCell), claim_preview
+(no-mutation candidate listing + dry-run), list, get, unclaim, set_layer.
+Rulers are read as box / ellipse (2 points) or exact polygon (3+ points).
+Boolean composition, polygon validation and safe ellipse discretization are
 pure functions in ``klink_server.region_geom`` (offline-testable); all
 higher-level interpretation (Intent, executors, analyzers) lives in the
 external ``klink`` package. Design: docs/REGION_INTENT_DESIGN.md.
@@ -37,6 +39,7 @@ from ..region_geom import (
     decode_contours,
     ellipse_polygon,
     encode_contours,
+    polygon_from_points,
     to_local,
 )
 from .annotation_m import _active_view, _points_of, _OUTLINE_NAMES
@@ -270,60 +273,343 @@ def _require_single_region(ly: pya.Layout, name: str):
     return hits[0]
 
 
-def _ruler_polygon(view, ruler_id: int, role: str, npoints: int,
-                   dbu: float) -> pya.Polygon:
+KIND_BOX = "box"
+KIND_ELLIPSE = "ellipse"
+KIND_POLYGON = "polygon"
+KIND_LINE = "line"  # 2-point non-box/ellipse ruler: not claimable
+_LABEL_TOKEN_RE = re.compile(r"^\s*region(?:\s*[:=]\s*(include|clip|exclude))?\s*$",
+                             re.IGNORECASE)
+
+
+def _ruler_label(ann) -> str:
+    """The ruler's literal label (its format string, what the GUI shows as
+    'text'); KLayout's default measurement formats ($D etc.) are reported
+    as-is and simply never match the region token."""
+    try:
+        return str(ann.fmt or "")
+    except Exception:
+        return ""
+
+
+def _labeled_role(label: str):
+    """'region' / 'region:exclude' label token -> role (express lane)."""
+    m = _LABEL_TOKEN_RE.match(label or "")
+    if not m:
+        return None
+    return (m.group(1) or ROLE_INCLUDE).lower()
+
+
+def _ruler_info(ann, dbu: float) -> dict:
+    """How claim would read one ruler: kind by point count + outline."""
+    try:
+        outline = _OUTLINE_NAMES.get(int(ann.outline))
+    except Exception:
+        outline = None
+    points = _points_of(ann)
+    pts_dbu = [(int(round(p.x / dbu)), int(round(p.y / dbu))) for p in points]
+    if len(points) >= 3:
+        kind = KIND_POLYGON
+    elif outline in (KIND_BOX, KIND_ELLIPSE):
+        kind = outline
+    else:
+        kind = KIND_LINE
+    info = {
+        "id": int(ann.id()),
+        "kind": kind,
+        "outline": outline,
+        "point_count": len(points),
+        "points_um": [[float(p.x), float(p.y)] for p in points],
+        "points_dbu": pts_dbu,
+        "label": _ruler_label(ann),
+    }
+    try:
+        info["category"] = str(ann.category or "")
+    except Exception:
+        info["category"] = ""
+    try:
+        bb = ann.box()
+        if not bb.empty():
+            info["bbox_um"] = [bb.left, bb.bottom, bb.right, bb.top]
+    except Exception:
+        pass
+    info["labeled_role"] = _labeled_role(info["label"])
+    return info
+
+
+def _ruler_polygon_from_info(info: dict, role: str, npoints: int,
+                             dbu: float) -> pya.Polygon:
+    rid = int(info["id"])
+    kind = info["kind"]
+    pts = info["points_dbu"]
+    if kind == KIND_LINE:
+        raise RpcError(
+            ErrorCode.BAD_PARAMS,
+            "ruler %d is a 2-point %s ruler (a line); region.claim reads "
+            "2-point rulers only as box/ellipse, and 3+ point rulers as "
+            "closed polygons" % (rid, info.get("outline")),
+            hint="drag with the ruler tool's Box or Ellipse template, or "
+                 "click 3+ points to outline the region (auto-closed "
+                 "first..last..first)",
+        )
+    try:
+        if kind == KIND_POLYGON:
+            # exact vertices, auto-closed; same contribution for every role
+            return polygon_from_points(pts, dbu)
+        if kind == KIND_BOX:
+            return box_polygon(pts[0], pts[1])
+        # sect.4.2 / red line 9: discretization error always shrinks the
+        # writable area -- include/clip inscribed, exclude circumscribed.
+        return ellipse_polygon(
+            pts[0], pts[1], npoints, circumscribed=(role == ROLE_EXCLUDE))
+    except RegionGeomError as exc:
+        raise RpcError(ErrorCode.BAD_PARAMS,
+                       "ruler %d: %s" % (rid, exc),
+                       hint=exc.hint)
+
+
+def _live_ruler(view, ruler_id: int):
     ann = view.annotation(int(ruler_id))
     if ann is None or not ann.is_valid():
         raise RpcError(
             ErrorCode.NOT_FOUND,
             "no ruler with id %d" % int(ruler_id),
-            hint="call annotation.list for the live ruler ids",
+            hint="call region.claim_preview (or annotation.list) for the "
+                 "live ruler ids",
         )
-    try:
-        outline = _OUTLINE_NAMES.get(int(ann.outline))
-    except Exception:
-        outline = None
-    if outline not in ("box", "ellipse"):
+    return ann
+
+
+def _ruler_polygon(view, ruler_id: int, role: str, npoints: int,
+                   dbu: float) -> tuple[pya.Polygon, dict]:
+    info = _ruler_info(_live_ruler(view, ruler_id), dbu)
+    poly = _ruler_polygon_from_info(info, role, npoints, dbu)
+    return poly, info
+
+
+def _consumed_summary(info: dict, role: str) -> dict:
+    out = {
+        "id": info["id"],
+        "role": role,
+        "kind": info["kind"],
+        "point_count": info["point_count"],
+        "points_um": info["points_um"],
+    }
+    if "bbox_um" in info:
+        out["bbox_um"] = info["bbox_um"]
+    if info.get("label"):
+        out["label"] = info["label"]
+    return out
+
+
+def _parse_ruler_items(rulers) -> list[tuple[int, str]]:
+    if len(rulers) > _MAX_CLAIM_RULERS:
         raise RpcError(
             ErrorCode.BAD_PARAMS,
-            "ruler %d has outline %r; region.claim accepts only box and "
-            "ellipse rulers" % (int(ruler_id), outline),
-            hint="draw the region with the ruler tool's Box or Ellipse "
-                 "template, or annotation.insert with outline='box'",
+            "%d rulers exceeds the claim limit of %d"
+            % (len(rulers), _MAX_CLAIM_RULERS),
+            hint="claim in smaller groups",
         )
-    points = _points_of(ann)
-    if len(points) != 2:
-        raise RpcError(
-            ErrorCode.BAD_PARAMS,
-            "ruler %d has %d points; region.claim needs plain two-point "
-            "box/ellipse rulers" % (int(ruler_id), len(points)),
-            hint="redraw as a simple drag (two definition points)",
-        )
-    p1 = (int(round(points[0].x / dbu)), int(round(points[0].y / dbu)))
-    p2 = (int(round(points[1].x / dbu)), int(round(points[1].y / dbu)))
+    seen: set[int] = set()
+    out: list[tuple[int, str]] = []
+    for item in rulers:
+        if not isinstance(item, dict) or "id" not in item:
+            raise RpcError(
+                ErrorCode.BAD_PARAMS,
+                "each ruler item needs {id, role?}",
+                hint="rulers: [{id: 3, role: 'include'}]",
+            )
+        role = str(item.get("role", ROLE_INCLUDE))
+        if role not in ROLES:
+            raise RpcError(
+                ErrorCode.BAD_PARAMS,
+                "unknown role %r" % role,
+                hint="role is one of: %s" % ", ".join(ROLES),
+            )
+        rid = int(item["id"])
+        if rid in seen:
+            raise RpcError(
+                ErrorCode.BAD_PARAMS,
+                "ruler id %d listed twice" % rid,
+                hint="each ruler appears once, with one role",
+            )
+        seen.add(rid)
+        out.append((rid, role))
+    return out
+
+
+def _compose_rulers(view, items: list[tuple[int, str]], npoints: int,
+                    dbu: float):
+    """Validate + compose without touching anything. Returns
+    (merged_polygon, consumed_summaries)."""
+    by_role: dict[str, list[pya.Polygon]] = {r: [] for r in ROLES}
+    consumed = []
+    for rid, role in items:
+        poly, info = _ruler_polygon(view, rid, role, npoints, dbu)
+        by_role[role].append(poly)
+        consumed.append(_consumed_summary(info, role))
     try:
-        if outline == "box":
-            return box_polygon(p1, p2)
-        # sect.4.2 / red line 9: discretization error always shrinks the
-        # writable area -- include/clip inscribed, exclude circumscribed.
-        return ellipse_polygon(
-            p1, p2, npoints, circumscribed=(role == ROLE_EXCLUDE))
+        merged = compose(by_role[ROLE_INCLUDE], by_role[ROLE_CLIP],
+                         by_role[ROLE_EXCLUDE])
     except RegionGeomError as exc:
-        raise RpcError(ErrorCode.BAD_PARAMS,
-                       "ruler %d: %s" % (int(ruler_id), exc),
-                       hint=exc.hint)
+        raise RpcError(ErrorCode.BAD_PARAMS, str(exc), hint=exc.hint)
+    return merged, consumed
+
+
+_CANDIDATE_ORDER_NOTE = (
+    "newest first: KLayout allocates ruler ids as max(live id)+1, so among "
+    "LIVE rulers a higher id was drawn later (verified empirically); an id "
+    "can be reused after the newest ruler is deleted, so confirm by "
+    "points/bbox, not by id alone"
+)
+
+
+@method(
+    "region.claim_preview",
+    description=(
+        "Dry-run for region.claim, NO mutation: lists EVERY ruler in the "
+        "current view as a claim candidate, newest first (recency_rank 1 = "
+        "drawn last), each with how claim would read it (kind: box | "
+        "ellipse | polygon for 3+ point rulers | line = not claimable), "
+        "point count, bbox_um, label, selected, and labeled_role when the "
+        "ruler's label is the express-lane token 'region' / "
+        "'region:exclude'. Pass rulers:[{id, role}] to also compose that "
+        "exact set and get the would-be result (bbox/area/holes) or the "
+        "same errors claim would raise. Use it to NARRATE the candidates to "
+        "the user and get a confirmation before claiming -- the view mixes "
+        "this-moment intent with old measurement leftovers."
+    ),
+    params_schema={
+        "type": "object",
+        "properties": {
+            "rulers": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "required": ["id"],
+                    "properties": {
+                        "id": {"type": "integer"},
+                        "role": {"type": "string", "enum": list(ROLES),
+                                 "default": ROLE_INCLUDE},
+                    },
+                },
+                "description": "Optional exact set to dry-run compose.",
+            },
+            "npoints": {"type": "integer", "default": DEFAULT_NPOINTS},
+            "limit": {"type": "integer", "minimum": 1, "maximum": 5000,
+                      "default": 500},
+        },
+    },
+    returns_schema={"type": "object"},
+    tags=["region", "read"],
+)
+def region_claim_preview(params, ctx):
+    _, _, ly = _active_layout()
+    dbu = ly.dbu
+    view = _active_view()
+    limit = int(params.get("limit", 500))
+    if limit < 1 or limit > 5000:
+        raise RpcError(ErrorCode.BAD_PARAMS, "limit must be 1..5000")
+    npoints = int(params.get("npoints", DEFAULT_NPOINTS))
+
+    selected = set()
+    try:
+        for a in view.each_annotation_selected():
+            selected.add(int(a.id()))
+    except Exception:
+        pass
+    infos = []
+    for a in view.each_annotation():
+        try:
+            infos.append(_ruler_info(a, dbu))
+        except Exception:
+            continue
+    infos.sort(key=lambda d: -int(d["id"]))
+    truncated = len(infos) > limit
+    infos = infos[:limit]
+    candidates = []
+    for rank, info in enumerate(infos, start=1):
+        kind = info["kind"]
+        cand = {
+            "id": info["id"],
+            "recency_rank": rank,
+            "kind": kind,
+            "outline": info["outline"],
+            "point_count": info["point_count"],
+            "label": info["label"],
+            "category": info["category"],
+            "selected": info["id"] in selected,
+            "labeled_role": info["labeled_role"],
+            "claimable": kind != KIND_LINE,
+        }
+        if "bbox_um" in info:
+            cand["bbox_um"] = info["bbox_um"]
+        if kind == KIND_LINE:
+            cand["reason"] = ("2-point %s ruler is a line (measurement?); "
+                              "only box/ellipse 2-point rulers and 3+ point "
+                              "outlines are regions" % info["outline"])
+        elif kind == KIND_POLYGON:
+            try:
+                polygon_from_points(info["points_dbu"], dbu)
+            except RegionGeomError as exc:
+                cand["claimable"] = False
+                cand["reason"] = str(exc)
+        candidates.append(cand)
+
+    out = {
+        "count": len(candidates),
+        "truncated": truncated,
+        "order": _CANDIDATE_ORDER_NOTE,
+        "candidates": candidates,
+        "labeled": [c["id"] for c in candidates if c["labeled_role"]],
+        "sent_hint": (
+            "if the user SENT rulers, prefer interaction.selection.latest "
+            "-> rulers[].id (that gesture IS the intent window); otherwise "
+            "narrate these candidates and claim only the set the user "
+            "confirms"
+        ),
+    }
+    rulers = params.get("rulers")
+    if rulers:
+        items = _parse_ruler_items(rulers)
+        try:
+            merged, consumed = _compose_rulers(view, items, npoints, dbu)
+        except RpcError as exc:
+            out["composed"] = None
+            out["errors"] = [{"message": str(exc), "hint": exc.hint}]
+        else:
+            bbox = merged.bbox()
+            region = pya.Region()
+            region.insert(merged)
+            out["composed"] = {
+                "bbox_um": [bbox.left * dbu, bbox.bottom * dbu,
+                            bbox.right * dbu, bbox.top * dbu],
+                "area_um2": float(region.area()) * dbu * dbu,
+                "holes": int(merged.holes()),
+                "vertices": int(merged.num_points()),
+                "would_consume": consumed,
+            }
+            out["errors"] = []
+    return out
 
 
 @method(
     "region.claim",
     description=(
-        "Convert box/ellipse rulers into ONE klink_Region PCell (reserved "
-        "layer, default 999/10) and consume the rulers. Roles: include "
-        "(union), clip (intersect), exclude (subtract; holes are never "
-        "writable). The result must be a single connected component; "
-        "disconnected islands are rejected with per-island bboxes -- claim "
-        "them separately. Ellipses are discretized safely: include/clip "
-        "inscribed, exclude circumscribed."
+        "Convert rulers into ONE klink_Region PCell (reserved layer, default "
+        "999/10) and consume the rulers. Ruler kinds: 2-point box/ellipse "
+        "rulers, and 3+ point rulers read as EXACT closed polygons "
+        "(auto-closed first..last..first; self-intersecting outlines are "
+        "refused naming the crossing segments). Roles: include (union), "
+        "clip (intersect), exclude (subtract; holes are never writable). "
+        "The result must be a single connected component; disconnected "
+        "islands are rejected with per-island bboxes -- claim them "
+        "separately. Ellipses are discretized safely: include/clip "
+        "inscribed, exclude circumscribed. PICKING rulers is the hazard "
+        "(the view mixes intent with old measurement lines): take ids from "
+        "interaction.selection.latest.rulers when the user SENT them, else "
+        "region.claim_preview + narrate + user confirmation; rulers labeled "
+        "'region' may be taken without asking. The result echoes each "
+        "consumed ruler (consumed[])."
     ),
     params_schema={
         "type": "object",
@@ -344,7 +630,9 @@ def _ruler_polygon(view, ruler_id: int, role: str, npoints: int,
                         },
                     },
                 },
-                "description": "Ruler ids from annotation.list with roles.",
+                "description": "Ruler ids (region.claim_preview / "
+                               "interaction.selection.latest.rulers) with "
+                               "roles.",
             },
             "cell": {"description": "Target cell name or cell_index "
                                     "(default: active cell)"},
@@ -380,48 +668,20 @@ def region_claim(params, ctx):
             )
 
     rulers = params.get("rulers") or []
-    if len(rulers) > _MAX_CLAIM_RULERS:
+    if not rulers:
         raise RpcError(
             ErrorCode.BAD_PARAMS,
-            "%d rulers exceeds the claim limit of %d"
-            % (len(rulers), _MAX_CLAIM_RULERS),
-            hint="claim in smaller groups",
+            "rulers is empty",
+            hint="region.claim_preview lists the candidate rulers newest "
+                 "first; pass the confirmed set as rulers:[{id, role}]",
         )
     npoints = int(params.get("npoints", DEFAULT_NPOINTS))
-
-    seen_ids: set[int] = set()
-    by_role: dict[str, list[pya.Polygon]] = {r: [] for r in ROLES}
+    items = _parse_ruler_items(rulers)
+    seen_ids = {rid for rid, _ in items}
     ruler_view = _active_view()  # rulers live on the view, not the layout
-    for item in rulers:
-        if not isinstance(item, dict) or "id" not in item:
-            raise RpcError(
-                ErrorCode.BAD_PARAMS,
-                "each ruler item needs {id, role?}",
-                hint="rulers: [{id: 3, role: 'include'}]",
-            )
-        role = str(item.get("role", ROLE_INCLUDE))
-        if role not in ROLES:
-            raise RpcError(
-                ErrorCode.BAD_PARAMS,
-                "unknown role %r" % role,
-                hint="role is one of: %s" % ", ".join(ROLES),
-            )
-        rid = int(item["id"])
-        if rid in seen_ids:
-            raise RpcError(
-                ErrorCode.BAD_PARAMS,
-                "ruler id %d listed twice" % rid,
-                hint="each ruler appears once, with one role",
-            )
-        seen_ids.add(rid)
-        by_role[role].append(
-            _ruler_polygon(ruler_view, rid, role, npoints, dbu))
-
-    try:
-        merged = compose(by_role[ROLE_INCLUDE], by_role[ROLE_CLIP],
-                         by_role[ROLE_EXCLUDE])
-    except RegionGeomError as exc:
-        raise RpcError(ErrorCode.BAD_PARAMS, str(exc), hint=exc.hint)
+    # validate-before-mutate: every ruler is read and composed before any
+    # PCell is created or any ruler consumed
+    merged, consumed = _compose_rulers(ruler_view, items, npoints, dbu)
 
     existing = _collect_region_names(ly)
     name = params.get("name")
@@ -502,6 +762,10 @@ def region_claim(params, ctx):
         "holes": int(merged.holes()),
         "vertices": int(merged.num_points()),
         "consumed_rulers": [] if keep_rulers else sorted(seen_ids),
+        # echo: what each ruler was read as (kind/points/bbox/label), so
+        # the agent can show the user exactly what got claimed
+        "consumed": consumed,
+        "rulers_kept": keep_rulers,
         "next_action": (
             "region.get {name: '%s'} returns the composed polygon; feed "
             "hull_um to cell.fill_region to fill it, or bbox_um to "

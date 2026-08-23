@@ -196,15 +196,24 @@ class KLinkMCPBridge:
         self._ensure_interaction_subscription()
         include_current = bool(arguments.get("include_current_selection", True))
         current = None
+        current_rulers = None
         if include_current and self.ensure_connected() and self._client is not None:
             try:
                 current = self._client.selection_get()
             except Exception as exc:
                 current = {"error": str(exc)}
+            # Rulers are view objects: selection.get never sees them, so the
+            # current-state half mirrors what SEND captures (rulers too).
+            try:
+                current_rulers = self._client.call(
+                    "annotation.list", {"selected_only": True})
+            except Exception as exc:
+                current_rulers = {"error": str(exc)}
         latest = self._context.latest()
         return {
             "session": self._context.status(),
             "current_selection": current,
+            "current_rulers": current_rulers,
             "recent_selection": _with_age(latest),
             "recent_selections": [_with_age(r) for r in self._context.recent()],
         }

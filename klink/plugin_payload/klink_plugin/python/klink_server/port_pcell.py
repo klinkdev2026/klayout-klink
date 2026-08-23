@@ -1,10 +1,12 @@
 """
-klink_Port PCell — triangle marker + text label for port visualisation.
+klink_Port PCell — triangle outline marker + text label for port visualisation.
 
 Each port is a PCell instance on the port marker layer. The PCell
-auto-generates a directional triangle and optional text label from its
-parameters, so the triangle orientation and label text can never drift out
-of sync with the stored parameters.
+auto-generates a directional triangle (a closed width-0 path: zero area,
+never occluding, a constant 1-px line at every zoom) and optional text
+label from its parameters, so the triangle orientation and label text can
+never drift out of sync with the stored parameters. Consumers read the
+PARAMETERS (port.list, routing); the drawn outline is display only.
 
 Registered as library "klink_port", PCell name "Port".
 """
@@ -13,6 +15,9 @@ from __future__ import annotations
 
 import math
 import pya
+
+# Shared marker doctrine (Port / Anchor / Region): width-0 path outlines.
+OUTLINE_WIDTH_DBU = 0
 
 
 def _string_param_with_choices(owner, name: str, description: str,
@@ -146,11 +151,15 @@ class KlinkPortPcell(pya.PCellDeclarationHelper):
                 rotated.append(pya.Point(int(round(rx)), int(round(ry))))
             pts = rotated
 
-        poly = pya.Polygon(pts)
+        # Marker doctrine: a pure mark, zero area, never occluding -- the
+        # triangle is a CLOSED width-0 path (constant 1-px line at every
+        # zoom, bbox == the polygon's bbox, invisible to booleans/metrics).
+        # The tip still points the orientation; params stay the truth.
+        outline = pya.Path(pts + [pts[0]], OUTLINE_WIDTH_DBU)
 
         # self.layer_layer is the auto-generated layer index for TypeLayer
         layer_idx = self.layer_layer
-        self.cell.shapes(layer_idx).insert(poly)
+        self.cell.shapes(layer_idx).insert(outline)
 
         if not show_label:
             return

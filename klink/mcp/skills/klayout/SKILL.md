@@ -61,6 +61,13 @@ selection move:
 | exact current selection | `selection.get` |
 | explicit id such as `sel_0006` | `interaction.selection.get` |
 | important reusable region | `interaction.selection.label` |
+| the ruler(s) I sent / claim what I sent | `interaction.selection.latest` -> `rulers[].id` -> `region.claim` |
+
+SEND captures selected RULERS as well as layout objects: a record carries
+`count` (objects) plus `ruler_count` and `rulers[]` (ascending id =
+creation order; each with `outline`, `points_um`, `bbox_um`). KLayout can
+reuse a ruler id after deletions, so before consuming a remembered ruler
+re-read it with `annotation.get` and check `points_um` still matches.
 
 Use only the canonical `interaction.selection.*` names plus the combined
 `interaction.context` tool. The old `interaction.context.latest/recent/get/
@@ -147,7 +154,8 @@ When the user points at a problem in KLayout:
 
 A ruler is a `pya.Annotation` in the VIEW, not in the layout. It is not
 saved with the GDS, and neither `selection.get` nor `shape.query` can see
-it. `annotation.*` is the only way to reach one.
+it. `annotation.*` is the only way to reach one — plus SEND: a selected
+ruler is captured into interaction memory (`rulers[]`, see above).
 
 When the user says "the line I drew", "this ruler", "measure this", or
 "section along the ruler", call `annotation.list`.
@@ -170,6 +178,41 @@ the user never drew, and the section taken along it fails silently. Feed a
 cut line with `imaging.xsection_run cut_from_ruler=true` (plus `ruler_id`
 when several exist, `ruler_segment` for a bent one) — it applies that rule
 for you.
+
+## Regions (claiming an area from rulers)
+
+A Region is a claimed AREA (klink_Region PCell, default layer 999/10) that
+`intent.*` and `cell.fill_region` work inside. The user draws rulers;
+`region.claim` composes them and consumes them:
+
+```text
+2-point box / ellipse ruler   -> box / safely discretized ellipse
+3+ point ruler (any outline)  -> EXACT closed polygon (auto-closed
+                                 first..last..first; self-intersecting
+                                 outlines are refused, never "fixed")
+2-point line ruler            -> not a region (a measurement)
+roles: include = union, clip = intersect, exclude = subtract (hole)
+```
+
+The hazard is PICKING: the view mixes this-moment intent with old
+measurement leftovers. Resolve in this order:
+
+1. The user SENT the rulers -> `interaction.selection.latest` ->
+   `rulers[].id` straight into `region.claim` (re-check `points_um` with
+   `annotation.get`; ids can be reused after deletions).
+2. Otherwise `region.claim_preview` (no mutation): every ruler newest
+   first with kind / points / bbox / label / claimable, and a dry-run
+   compose of any set you pass. NARRATE the candidates to the user
+   ("5 rulers: the newest 3 are a box @…, a 4-point outline @…; 2 older
+   ones look like measurement lines"), propose a set, and claim only
+   after the user confirms. Resolve by order/count; when ambiguous, ask —
+   never silently guess.
+3. A ruler labeled `region` / `region:exclude` (`labeled_role`) is an
+   express lane: it may be taken without asking.
+
+Never auto-clear the user's rulers; claim's consume-on-use keeps the
+canvas tidy over time. Read `consumed[]` in the claim result and tell the
+user exactly what was taken.
 
 ## Creating Layouts
 

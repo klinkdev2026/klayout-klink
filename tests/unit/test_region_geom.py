@@ -265,3 +265,84 @@ def test_to_local_anchor():
 
     bbox = local.bbox()
     assert (bbox.left, bbox.bottom, bbox.right, bbox.top) == (0, 0, 2000, 2000)
+
+
+# ---------------------------------------------------------------------------
+# polygon rulers (multi-point, auto-closed, exact)
+# ---------------------------------------------------------------------------
+
+from klink_server.region_geom import polygon_from_points  # noqa: E402
+
+
+def _area(poly):
+    r = pya.Region()
+    r.insert(poly)
+    return r.area()
+
+
+def test_polygon_triangle_exact():
+    poly = polygon_from_points([(0, 0), (100, 0), (0, 80)])
+    assert poly.num_points() == 3
+    assert _area(poly) == 100 * 80 // 2
+    assert poly.holes() == 0
+
+
+def test_polygon_concave_and_both_orientations():
+    ccw = [(0, 0), (100, 0), (100, 100), (50, 20), (0, 100)]
+    a = polygon_from_points(ccw)
+    b = polygon_from_points(list(reversed(ccw)))
+    assert _area(a) == _area(b) > 0
+    assert a.num_points() == 5
+
+
+def test_polygon_duplicate_consecutive_and_explicit_close_tolerated():
+    pts = [(0, 0), (0, 0), (100, 0), (100, 0), (0, 80), (0, 0)]
+    poly = polygon_from_points(pts)
+    assert poly.num_points() == 3
+
+
+def test_polygon_fewer_than_three_points_refused():
+    with pytest.raises(RegionGeomError) as exc:
+        polygon_from_points([(0, 0), (10, 10)])
+    assert "at least 3" in str(exc.value)
+    with pytest.raises(RegionGeomError):
+        polygon_from_points([(0, 0), (0, 0), (5, 5)])  # 2 distinct
+
+
+def test_polygon_collinear_refused():
+    with pytest.raises(RegionGeomError) as exc:
+        polygon_from_points([(0, 0), (10, 10), (20, 20), (30, 30)])
+    assert "zero area" in str(exc.value)
+
+
+def test_polygon_bowtie_self_intersection_refused_names_segments():
+    with pytest.raises(RegionGeomError) as exc:
+        polygon_from_points([(0, 0), (100, 100), (100, 0), (0, 100)], dbu=0.001)
+    msg = str(exc.value)
+    assert "self-intersecting" in msg
+    assert "segment 0" in msg and "segment 2" in msg
+    assert "(0, 0)" in msg and "(0.1, 0.1)" in msg  # microns via dbu
+
+
+def test_polygon_vertex_touching_nonadjacent_edge_refused():
+    # a spike whose tip lands exactly on the opposite edge
+    with pytest.raises(RegionGeomError) as exc:
+        polygon_from_points([(0, 0), (100, 0), (100, 100), (50, 0), (0, 100)])
+    assert "self-intersecting" in msg if (msg := str(exc.value)) else False
+
+
+def test_polygon_exclude_makes_hole():
+    outer = polygon_from_points([(0, 0), (200, 0), (200, 200), (0, 200)])
+    inner = polygon_from_points([(50, 50), (150, 60), (140, 150), (60, 140)])
+    merged = compose([outer], [], [inner])
+    assert merged.holes() == 1
+    assert _area(merged) == _area(outer) - _area(inner)
+
+
+def test_polygon_mixes_with_box_and_ellipse():
+    tri = polygon_from_points([(0, 0), (100, 0), (50, 100)])
+    box = box_polygon((40, -20), (60, 10))
+    ell = ellipse_polygon((40, 20), (60, 40), 32, circumscribed=True)
+    merged = compose([tri, box], [], [ell])
+    assert merged.holes() == 1
+    assert _area(merged) < _area(tri) + _area(box)

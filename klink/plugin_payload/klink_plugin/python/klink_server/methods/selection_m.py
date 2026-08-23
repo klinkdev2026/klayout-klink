@@ -283,8 +283,10 @@ def selection_set_box(params, ctx):
     "selection.send_context",
     description=(
         "Explicitly send the current non-empty KLayout selection as a "
-        "selection_sent event for external AI interaction context. This does "
-        "not store memory in the plugin."
+        "selection_sent event for external AI interaction context. Selected "
+        "RULERS are captured too (event keys ruler_count/rulers, ascending "
+        "id), so 'the ruler I sent' resolves via interaction.selection.*. "
+        "This does not store memory in the plugin."
     ),
     params_schema={
         "type": "object",
@@ -299,7 +301,10 @@ def selection_set_box(params, ctx):
             "ok": {"type": "boolean"},
             "status": {"type": "string"},
             "message": {"type": "string"},
-            "count": {"type": "integer"},
+            "count": {"type": "integer",
+                      "description": "selected layout objects"},
+            "ruler_count": {"type": "integer",
+                            "description": "selected rulers (annotations)"},
             "truncated": {"type": "boolean"},
         },
     },

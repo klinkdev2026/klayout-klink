@@ -10,6 +10,10 @@ nanodevice/   hallbar, ebl_wraparound, neural_electrode
 photonics/    gf_mzi_module, gf_ports      (need gdsfactory + live KLayout)
 passives/     idc_capacitor, spiral_inductor, saw_idt_filter, baw_fbar_planview
 layout/       fill_region_demo             (needs a live KLayout session)
+layout_intent/ region_numbered_array       (circle an area -> numbered array,
+                                            regenerable; needs a live KLayout)
+routing/      five_routers                 (5 Port/Anchor routing scenarios
+                                            through the tapered backend; live)
 digital/      fit_device_pnr_lvs, padframe_pnr_lvs, chat_to_netlist_pnr,
               multilayer_pnr_lvs           (custom device -> P&R -> live LVS)
 imaging/      xsection_demo, render3d_demo, sem_demo, blender_demo

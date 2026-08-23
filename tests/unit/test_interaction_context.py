@@ -107,3 +107,77 @@ def test_selection_record_preserves_klayout_session_metadata(tmp_path):
     assert record["active_cell"] == "TOP"
     reloaded = InteractionContextStore(session_id="window-meta", root=tmp_path)
     assert reloaded.latest()["klayout_session_id"] == "klayout-8766"
+
+
+def _ruler(rid, npts=2):
+    pts = [[float(rid * 10 + i), float(i)] for i in range(npts)]
+    return {
+        "id": rid,
+        "outline": "box" if npts == 2 else "diag",
+        "segments": npts - 1,
+        "points_um": pts,
+        "bbox_um": [pts[0][0], 0.0, pts[-1][0], float(npts - 1)],
+        "category": "",
+        "selected": True,
+    }
+
+
+def test_rulers_only_send_allocates_id_and_keeps_rulers(tmp_path):
+    store = InteractionContextStore(session_id="rulers", root=tmp_path)
+    event = {"cell": "TOP", "count": 0, "items": [],
+             "ruler_count": 2, "rulers": [_ruler(3), _ruler(7, npts=4)]}
+
+    record = store.record_selection_sent(event)
+
+    assert record["type"] == "selection"
+    assert record["id"] == "sel_0001"
+    assert record["count"] == 0
+    assert record["ruler_count"] == 2
+    assert [r["id"] for r in record["rulers"]] == [3, 7]
+    assert record["rulers"][1]["points_um"][3] == [73.0, 3.0]
+    assert record["rulers_truncated"] is False
+    # objects-only facts stay object facts: no bbox from rulers
+    assert record["bbox_dbu"] is None
+    reloaded = InteractionContextStore(session_id="rulers", root=tmp_path)
+    assert reloaded.latest()["ruler_count"] == 2
+    assert reloaded.latest()["rulers"][0]["outline"] == "box"
+
+
+def test_mixed_send_counts_objects_and_rulers_separately(tmp_path):
+    store = InteractionContextStore(session_id="mixed", root=tmp_path)
+    event = _event(3)
+    event.update({"ruler_count": 1, "rulers": [_ruler(0)]})
+
+    record = store.record_selection_sent(event)
+
+    assert record["count"] == 3
+    assert len(record["items"]) == 3
+    assert record["ruler_count"] == 1
+    assert record["bbox_dbu"] == [0, 0, 3, 1]
+
+
+def test_send_without_objects_or_rulers_is_ignored(tmp_path):
+    store = InteractionContextStore(session_id="none", root=tmp_path)
+    ignored = store.record_selection_sent(
+        {"cell": "TOP", "count": 0, "items": [], "ruler_count": 0, "rulers": []})
+    assert ignored["type"] == "selection_ignored"
+    assert ignored["reason"] == "empty_selection"
+    assert store.recent() == []
+
+
+def test_event_without_ruler_keys_is_backward_compatible(tmp_path):
+    store = InteractionContextStore(session_id="compat", root=tmp_path)
+    record = store.record_selection_sent(_event(1))
+    assert record["ruler_count"] == 0
+    assert record["rulers"] == []
+
+
+def test_rulers_truncated_at_full_item_limit(tmp_path):
+    store = InteractionContextStore(session_id="trunc", root=tmp_path,
+                                    full_item_limit=2)
+    event = {"cell": "TOP", "count": 0, "items": [],
+             "ruler_count": 3, "rulers": [_ruler(i) for i in range(3)]}
+    record = store.record_selection_sent(event)
+    assert record["ruler_count"] == 3
+    assert len(record["rulers"]) == 2
+    assert record["rulers_truncated"] is True
