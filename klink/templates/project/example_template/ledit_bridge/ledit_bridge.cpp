@@ -74,6 +74,70 @@
 //   get_drc_rules   -> the design's full DRC rule table (type, layers,
 //                   distance) - the tdb's process knowledge
 //
+// v0.5.6 navigation (the agent can now SHOW things, not only draw them):
+//   show_cell       {cell} -> open/raise a layout window on that cell and
+//                   make it the visible cell. {cell, window_opened, via}
+//   set_cell_hidden {cell, hidden:bool} -> LCell_SetShowInLists; hides the
+//                   cell from L-Edit's cell lists (the "Hide In Lists"
+//                   flag auto-generated T-Cell variants carry). list_cells
+//                   reads the same flag back via LCell_GetShowInLists and
+//                   reports hidden_property too when the stored property
+//                   disagrees with the API -- never picks one silently.
+//   list_windows    -> {windows:[{index, type, file, cell, name, visible}]}
+//                   every L-Edit window (layout, text, log, ...).
+//   close_window    {cell, file?} | {index} -> {closed, matched}. No
+//                   last-window guard (owner ruling): closing a design's
+//                   last window may close the design.
+//   layout_view     {cell?, rect_um?:[l,b,r,t], home?} -> ONE verb: no
+//                   rect/home = read the view; rect_um = set it; home =
+//                   LCell_HomeView. Always returns the view AFTER the
+//                   call (rect_um) + has_window.
+//   save_image      {cell, path, width_px?, height_px?, dpi?, rect_um?}
+//                   -> LCell_SaveImageToFile; rect_um defaults to the
+//                   cell's MBB (whole cell). A user-requested artifact
+//                   only -- agents verify with get_cell, not pixels.
+//   draw            wire width_um == 0 is now passed through to LWire_New
+//                   (zero-width probe: the refusal, if any, is L-Edit's,
+//                   and the error says so); width_um < 0 is still ours.
+//
+// v0.5.7 destructive commands (every one needs an EXPLICIT name; the
+// visible cell/design is never the implicit target):
+//   delete_cell     {cell, force?:false} -> {cell, deleted, instances_removed,
+//                   referenced_by}. REFUSED without force when the cell is
+//                   the visible cell, is instanced by other cells
+//                   (referenced_by names them), or is a T-Cell generator.
+//   rename_cell     {cell, new_name} -> {old, new}; refuses an existing name.
+//   delete_objects  {cell, layer?, rect_um?} (at least one) -> {cell,
+//                   deleted, by_layer}. rect_um keeps an object only when
+//                   its MBB lies INSIDE the rect; instances are never
+//                   touched here (clear_cell is the whole-cell reset).
+//   close_design    {file, discard?:false} -> {file, closed, visible_now}.
+//                   A CHANGED design is refused unless discard. Closing a
+//                   design's last WINDOW keeps the design open, so this is
+//                   the only way to drop a scratch design.
+//
+// v0.5.8 verification:
+//   run_drc         {cell?, rect_um?} -> {cell, errors, status, rules}.
+//                   DRC on the whole cell or an area. errors is a COUNT
+//                   only: on v16.3 the violation geometry stays in L-Edit's
+//                   DRC store -- LCell_RunDRCEx830 with
+//                   LDrcFlagWriteErrors|WriteErrorPorts|WriteErrorObjects
+//                   and an error file wrote no ports, no objects and no
+//                   file (tested), and LCell_OpenDRCSummary switched the
+//                   visible design (design-targeting drift), so neither is
+//                   offered. For violation geometry: export_gds -> KLayout
+//                   drc tools.
+//   drc_summary     {cell?} -> {cell, errors, status} without re-running
+//                   (status: needed | passed | failed; errors is null
+//                   while status is "needed" -- L-Edit reports (unsigned)-1
+//                   before the first run).
+//   export_gds      {path, cell?, include_hierarchy?:true,
+//                   cell_name_length?:32, log_path?} -> {path, bytes,
+//                   scope, cell, log_path}. LFile_ExportGDSII of the whole
+//                   design or one cell (+hierarchy); the cheap L-Edit ->
+//                   KLayout return path (KLayout reads it as-is; the
+//                   2048-byte padding is only needed in the OTHER direction).
+//
 // v0.5 readout depth: every converted object carries its property tree
 // (dotted names = nesting); wires report cap/join; torus/pie report exact
 // params; get_cell adds ports[] + labels[]; get_layers adds fill_rgb/fill
@@ -118,7 +182,7 @@
 #include <ldata.h>   // L-Edit UPI (user-supplied SDK include path)
 
 #define BRIDGE_PROTO         1
-#define BRIDGE_MACRO_VERSION "0.5.5"
+#define BRIDGE_MACRO_VERSION "0.5.8"
 // Adaptive poll: measured cost of one round trip was ~0.20 s, essentially
 // all of it poll latency (payload is nearly free -- 400 boxes drew in
 // 0.16 s). Poll fast for a burst window after any activity, idle slowly.
@@ -848,6 +912,19 @@ static bool cmd_ping(Ctx& ctx, const JVal&, JVal& result,
     caps.arr.push_back(JVal::S("list_designs"));
     caps.arr.push_back(JVal::S("activate_design"));
     caps.arr.push_back(JVal::S("import_gds"));
+    caps.arr.push_back(JVal::S("show_cell"));
+    caps.arr.push_back(JVal::S("set_cell_hidden"));
+    caps.arr.push_back(JVal::S("list_windows"));
+    caps.arr.push_back(JVal::S("close_window"));
+    caps.arr.push_back(JVal::S("layout_view"));
+    caps.arr.push_back(JVal::S("save_image"));
+    caps.arr.push_back(JVal::S("delete_cell"));
+    caps.arr.push_back(JVal::S("rename_cell"));
+    caps.arr.push_back(JVal::S("delete_objects"));
+    caps.arr.push_back(JVal::S("close_design"));
+    caps.arr.push_back(JVal::S("run_drc"));
+    caps.arr.push_back(JVal::S("drc_summary"));
+    caps.arr.push_back(JVal::S("export_gds"));
     result.set("capabilities", caps);
     return true;
 }
@@ -984,6 +1061,7 @@ static bool cmd_draw(Ctx& ctx, const JVal& params, JVal& result,
         return false;
     }
     int drawn = 0;
+    int zeroWidthWires = 0;
     LayerCache lc(ctx.file);
     for (size_t i = 0; i < items->arr.size(); ++i) {
         const JVal& it = items->arr[i];
@@ -1041,8 +1119,12 @@ static bool cmd_draw(Ctx& ctx, const JVal& params, JVal& result,
                 return false;
             }
             double widthUm = it.num_or("width_um", 0.0);
-            if (widthUm <= 0.0) {
-                err  = std::string(where) + ": wire needs width_um > 0";
+            // A negative width is nonsense and ours to refuse. Zero is NOT
+            // refused here any more: klink marker outlines are width-0
+            // paths, and whether L-Edit accepts a zero-width wire is
+            // L-Edit's call (LWire_New), reported as such below.
+            if (widthUm < 0.0) {
+                err  = std::string(where) + ": wire needs width_um >= 0";
                 next = "fix the item and resend the draw request";
                 return false;
             }
@@ -1055,10 +1137,21 @@ static bool cmd_draw(Ctx& ctx, const JVal& params, JVal& result,
             if (!LWire_New(ctx.cell, layer, &cfg,
                            LSetWireWidth | LSetWireCap,
                            &pts[0], (int)pts.size())) {
+                if (cfg.width == 0) {
+                    err  = std::string(where) + ": L-Edit refused a "
+                           "zero-width wire (LWire_New returned NULL); "
+                           "use width_um >= 0.001";
+                    next = "klink marker outlines are width-0 paths: send "
+                           "them as 1-intu hairlines (width_um = "
+                           "microns_per_intu from ping) and say so in the "
+                           "report, or leave marker layers out of the push";
+                    return false;
+                }
                 err  = std::string(where) + ": LWire_New failed";
                 next = "check points/width and layer lock state";
                 return false;
             }
+            if (cfg.width == 0) ++zeroWidthWires;
         } else if (kind == "circle") {
             const JVal* c = it.get("center_um");
             double r = it.num_or("radius_um", 0.0);
@@ -1084,6 +1177,10 @@ static bool cmd_draw(Ctx& ctx, const JVal& params, JVal& result,
     }
     result.set("drawn", JVal::N(drawn));
     result.set("layers_created", JVal::N(lc.created));
+    // Zero-width wires that L-Edit ACCEPTED: reported so a push can say
+    // "N marker outlines went over at width 0" instead of hiding it.
+    if (zeroWidthWires)
+        result.set("zero_width_wires", JVal::N(zeroWidthWires));
     result.set("cell", JVal::S(cell_name_of(ctx.cell)));
     return true;
 }
@@ -1325,6 +1422,20 @@ static bool cmd_get_cell(Ctx& ctx, const JVal&, JVal& result,
     return true;
 }
 
+// The stored "System.Hide In Lists" property (auto-generated T-Cell
+// variants carry it). The API flag (LCell_GetShowInLists) is the truth the
+// GUI acts on; the property is reported only when the two disagree.
+static bool hide_in_lists_property(LCell cell, bool* hidden) {
+    long v = 0;
+    if (LEntity_PropertyExists((LEntity)cell, "System.Hide In Lists")
+            != LStatusOK ||
+        LEntity_GetPropertyValue((LEntity)cell, "System.Hide In Lists",
+                                 &v, sizeof(v)) != LStatusOK)
+        return false;
+    *hidden = (v != 0);
+    return true;
+}
+
 static bool cmd_list_cells(Ctx& ctx, const JVal&, JVal& result,
                            std::string&, std::string&) {
     JVal cells = JVal::A();
@@ -1333,14 +1444,11 @@ static bool cmd_list_cells(Ctx& ctx, const JVal&, JVal& result,
         JVal e = JVal::O();
         e.set("name", JVal::S(cell_name_of(cell)));
         e.set("is_tcell", JVal::B(LCell_IsTCell(cell) ? true : false));
-        // auto-generated T-Cell variants carry System.Hide In Lists
-        long hidden = 0;
-        if (LEntity_PropertyExists((LEntity)cell, "System.Hide In Lists")
-                == LStatusOK &&
-            LEntity_GetPropertyValue((LEntity)cell, "System.Hide In Lists",
-                                     &hidden, sizeof(hidden)) == LStatusOK &&
-            hidden)
-            e.set("hidden", JVal::B(true));
+        bool hidden = (LCell_GetShowInLists(cell) == LFALSE);
+        e.set("hidden", JVal::B(hidden));
+        bool prop = false;
+        if (hide_in_lists_property(cell, &prop) && prop != hidden)
+            e.set("hidden_property", JVal::B(prop));
         cells.arr.push_back(e);
     }
     result.set("cells", cells);
@@ -2042,6 +2150,695 @@ static bool cmd_set_layer_style(Ctx& ctx, const JVal& params, JVal& result,
     return true;
 }
 
+// ----------------------------------------------------------------------------
+// Navigation (v0.5.6): show / hide cells, windows, view, image.
+// Until now the bridge could only DRAW; the user had to find the result by
+// hand. These let the agent say "look here".
+// ----------------------------------------------------------------------------
+
+static const char* window_type_name(LWindowType t) {
+    switch (t) {
+        case CELL_BROWSER:  return "cell_browser";
+        case TEXT:          return "text";
+        case LAYOUT:        return "layout";
+        case CROSS_SECTION: return "cross_section";
+        case CODE:          return "code";
+        case LW_SPICE:      return "spice";
+        case LW_LOG:        return "log";
+        case LW_COMMAND:    return "command";
+        case LW_HTML:       return "html";
+        default:            return "unknown";
+    }
+}
+
+static bool cell_has_window(LCell cell) {
+    for (LWindow w = LWindow_GetList(); w; w = LWindow_GetNext(w))
+        if (LWindow_GetCell(w) == cell) return true;
+    return false;
+}
+
+// [l,b,r,t] microns -> LRect. NOTE: LRect's struct layout is {y0,x0,y1,x1}
+// (same trap as LPoint) -- always build it via LRect_Set(x0,y0,x1,y1).
+static bool read_rect(Ctx& ctx, const JVal* v, LRect& out, std::string& why) {
+    if (!v || v->t != JVal::JARR || v->arr.size() != 4) {
+        why = "rect_um must be [left, bottom, right, top] in microns";
+        return false;
+    }
+    for (size_t i = 0; i < 4; ++i)
+        if (v->arr[i].t != JVal::JNUM) {
+            why = "rect_um must hold four numbers";
+            return false;
+        }
+    double l = v->arr[0].num, b = v->arr[1].num,
+           r = v->arr[2].num, t = v->arr[3].num;
+    if (r <= l || t <= b) {
+        why = "rect_um is empty (needs right > left and top > bottom)";
+        return false;
+    }
+    out = LRect_Set(um2i(ctx.file, l), um2i(ctx.file, b),
+                    um2i(ctx.file, r), um2i(ctx.file, t));
+    return true;
+}
+
+static bool cmd_show_cell(Ctx& ctx, const JVal& params, JVal& result,
+                          std::string& err, std::string& next) {
+    std::string name = params.str_or("cell", "");
+    if (name.empty()) {
+        err  = "params.cell is required";
+        next = "call list_cells and pass one of its names";
+        return false;
+    }
+    bool had = cell_has_window(ctx.cell);
+    // LCell_MakeVisible raises an existing window; when none exists the
+    // activate_design path has shown that LFile_OpenCell is what creates
+    // one -- try the cheap raise first and fall back, reporting which.
+    std::string via = "window";
+    LCell_MakeVisible(ctx.cell);
+    if (LCell_GetVisible() != ctx.cell) {
+        LFile_OpenCell(ctx.file, name.c_str());
+        LCell_MakeVisible(ctx.cell);
+        via = "open_cell";
+    }
+    LDisplay_Refresh();
+    if (LCell_GetVisible() != ctx.cell) {
+        err  = "could not make '" + name + "' the visible cell";
+        next = "open it by hand in L-Edit (Cell > Open), then ping to "
+               "confirm 'cell'";
+        return false;
+    }
+    result.set("cell", JVal::S(cell_name_of(ctx.cell)));
+    result.set("window_opened", JVal::B(!had));
+    result.set("via", JVal::S(via));
+    return true;
+}
+
+static bool cmd_set_cell_hidden(Ctx& ctx, const JVal& params, JVal& result,
+                                std::string& err, std::string& next) {
+    const JVal* h = params.get("hidden");
+    if (params.str_or("cell", "").empty() || !h || h->t != JVal::JBOOL) {
+        err  = "params.cell and params.hidden (true|false) are required";
+        next = "pass {\"cell\":\"X\",\"hidden\":true} to drop X from "
+               "L-Edit's cell lists, false to show it again";
+        return false;
+    }
+    bool hidden = h->b;
+    LStatus st = LCell_SetShowInLists(ctx.cell, hidden ? LFALSE : LTRUE);
+    if (st != LStatusOK) {
+        char buf[96];
+        _snprintf(buf, sizeof(buf) - 1,
+                  "LCell_SetShowInLists failed (status %d)", (int)st);
+        buf[sizeof(buf) - 1] = 0;
+        err  = buf;
+        next = "the cell may be locked or part of a read-only library";
+        return false;
+    }
+    bool now = (LCell_GetShowInLists(ctx.cell) == LFALSE);
+    if (now != hidden) {
+        err  = std::string("LCell_SetShowInLists returned OK but "
+                           "LCell_GetShowInLists still reports hidden=") +
+               (now ? "true" : "false");
+        next = "this L-Edit version may not honour the flag through the "
+               "UPI; toggle 'Hide In Lists' in the cell's properties by hand";
+        return false;
+    }
+    LDisplay_Refresh();
+    result.set("cell", JVal::S(cell_name_of(ctx.cell)));
+    result.set("hidden", JVal::B(now));
+    bool prop = false;
+    if (hide_in_lists_property(ctx.cell, &prop) && prop != now)
+        result.set("hidden_property", JVal::B(prop));
+    return true;
+}
+
+static bool cmd_list_windows(Ctx&, const JVal&, JVal& result,
+                             std::string&, std::string&) {
+    LWindow visible = LWindow_GetVisible();
+    JVal arr = JVal::A();
+    int i = 0;
+    for (LWindow w = LWindow_GetList(); w; w = LWindow_GetNext(w), ++i) {
+        JVal e = JVal::O();
+        e.set("index", JVal::N(i));
+        e.set("type", JVal::S(window_type_name(LWindow_GetType(w))));
+        LFile f = LWindow_GetFile(w);
+        e.set("file", JVal::S(f ? file_name_of(f) : std::string("")));
+        LCell c = LWindow_GetCell(w);
+        e.set("cell", JVal::S(c ? cell_name_of(c) : std::string("")));
+        char name[512] = {0};
+        LWindow_GetName(w, name, sizeof(name) - 1);
+        e.set("name", JVal::S(name));
+        e.set("visible", JVal::B(w == visible));
+        arr.arr.push_back(e);
+    }
+    result.set("windows", arr);
+    result.set("count", JVal::N(i));
+    return true;
+}
+
+static bool cmd_close_window(Ctx&, const JVal& params, JVal& result,
+                             std::string& err, std::string& next) {
+    std::string cellName = params.str_or("cell", "");
+    std::string fileName = params.str_or("file", "");
+    const JVal* idx = params.get("index");
+    bool byIndex = idx && idx->t == JVal::JNUM;
+    if (cellName.empty() && !byIndex) {
+        err  = "close_window needs params.cell or params.index";
+        next = "call list_windows; pass the window's cell (plus file when "
+               "two designs share the name) or its index";
+        return false;
+    }
+    // Collect first: closing a window mutates the list being walked.
+    std::vector<LWindow> targets;
+    int i = 0;
+    for (LWindow w = LWindow_GetList(); w; w = LWindow_GetNext(w), ++i) {
+        if (byIndex) {
+            if (i == (int)idx->num) targets.push_back(w);
+            continue;
+        }
+        LFile f = LWindow_GetFile(w);
+        LCell c = LWindow_GetCell(w);
+        if (!f || !c) continue;
+        if (!fileName.empty() && !file_matches(file_name_of(f), fileName))
+            continue;
+        // L-Edit's own name matching, not ours
+        if (LCell_Find(f, cellName.c_str()) != c) continue;
+        targets.push_back(w);
+    }
+    if (targets.empty()) {
+        err  = byIndex ? "no window has that index"
+                       : "no layout window is open on cell '" + cellName + "'";
+        next = "call list_windows for the current windows";
+        return false;
+    }
+    int closed = 0;
+    for (size_t k = 0; k < targets.size(); ++k)
+        if (LWindow_Close(targets[k]) == LStatusOK) ++closed;
+    LDisplay_Refresh();
+    result.set("matched", JVal::N((double)targets.size()));
+    result.set("closed", JVal::N(closed));
+    return true;
+}
+
+// One verb for the view: read it, set it, or reset it (home). Whatever was
+// asked, the answer is the view AFTER the call, so a caller never has to
+// follow a set with a get.
+static bool cmd_layout_view(Ctx& ctx, const JVal& params, JVal& result,
+                            std::string& err, std::string& next) {
+    const JVal* rect = params.get("rect_um");
+    bool home = params.bool_or("home", false);
+    if (home && rect) {
+        err  = "pass either rect_um or home, not both";
+        next = "home:true resets to the cell's home view; rect_um sets an "
+               "explicit window";
+        return false;
+    }
+    std::string mode = "get";
+    if (home) {
+        if (LCell_HomeView(ctx.cell) != LStatusOK) {
+            err  = "LCell_HomeView failed";
+            next = "the cell needs an open layout window: call show_cell "
+                   "first";
+            return false;
+        }
+        mode = "home";
+    } else if (rect) {
+        LRect v;
+        std::string why;
+        if (!read_rect(ctx, rect, v, why)) {
+            err  = why;
+            next = "pass rect_um:[left, bottom, right, top] in microns";
+            return false;
+        }
+        if (LCell_SetView(ctx.cell, v) != LStatusOK) {
+            err  = "LCell_SetView failed";
+            next = "the cell needs an open layout window: call show_cell "
+                   "first";
+            return false;
+        }
+        mode = "set";
+    }
+    if (mode != "get") LDisplay_Refresh();
+    result.set("cell", JVal::S(cell_name_of(ctx.cell)));
+    result.set("mode", JVal::S(mode));
+    result.set("rect_um", rect_to_json(ctx, LCell_GetView(ctx.cell)));
+    // Without a window the view rect is not meaningful; say so rather
+    // than let the caller trust four numbers.
+    result.set("has_window", JVal::B(cell_has_window(ctx.cell)));
+    return true;
+}
+
+static bool cmd_save_image(Ctx& ctx, const JVal& params, JVal& result,
+                           std::string& err, std::string& next) {
+    std::string path = params.str_or("path", "");
+    if (params.str_or("cell", "").empty() || path.empty()) {
+        err  = "params.cell and params.path are required";
+        next = "pass {\"cell\":\"X\",\"path\":\"C:\\\\out\\\\x.png\"}; "
+               "width_px/height_px/dpi default to 1600/1200/96";
+        return false;
+    }
+    // A save into a missing folder may pop a modal dialog, and a modal
+    // dialog freezes the bridge. Check the folder ourselves.
+    size_t sl = path.find_last_of("\\/");
+    if (sl != std::string::npos && sl > 0) {
+        std::string dir = path.substr(0, sl);
+        DWORD a = GetFileAttributesA(dir.c_str());
+        if (a == INVALID_FILE_ATTRIBUTES || !(a & FILE_ATTRIBUTE_DIRECTORY)) {
+            err  = "folder does not exist: " + dir;
+            next = "create it first, or pass a path inside an existing folder";
+            return false;
+        }
+    }
+    int w   = (int)params.num_or("width_px", 1600);
+    int h   = (int)params.num_or("height_px", 1200);
+    int dpi = (int)params.num_or("dpi", 96);
+    if (w <= 0 || h <= 0 || dpi <= 0) {
+        err  = "width_px, height_px and dpi must be positive";
+        next = "defaults are 1600 x 1200 at 96 dpi";
+        return false;
+    }
+    LRect area;
+    if (params.get("rect_um")) {
+        std::string why;
+        if (!read_rect(ctx, params.get("rect_um"), area, why)) {
+            err  = why;
+            next = "pass rect_um:[left, bottom, right, top] in microns, or "
+                   "omit it for the whole cell";
+            return false;
+        }
+    } else {
+        area = LCell_GetMbb(ctx.cell);       // whole cell, deterministic
+    }
+    LStatus st = LCell_SaveImageToFile(ctx.cell, &area, path.c_str(),
+                                       w, h, dpi);
+    long bytes = file_size(path);
+    if (st != LStatusOK || bytes <= 0) {
+        char buf[128];
+        _snprintf(buf, sizeof(buf) - 1,
+                  "LCell_SaveImageToFile failed (status %d, file bytes %ld)",
+                  (int)st, bytes);
+        buf[sizeof(buf) - 1] = 0;
+        err  = buf;
+        next = "use a .png/.bmp/.jpg extension and a writable path; the "
+               "cell needs geometry (or pass rect_um) to have an area";
+        return false;
+    }
+    result.set("cell", JVal::S(cell_name_of(ctx.cell)));
+    result.set("path", JVal::S(path));
+    result.set("bytes", JVal::N((double)bytes));
+    result.set("width_px", JVal::N(w));
+    result.set("height_px", JVal::N(h));
+    result.set("dpi", JVal::N(dpi));
+    result.set("rect_um", rect_to_json(ctx, area));
+    return true;
+}
+
+// ----------------------------------------------------------------------------
+// Destructive commands (v0.5.7). Each needs an explicit target; each
+// refuses the cases where a silent loss is likely, unless told `force`.
+// ----------------------------------------------------------------------------
+
+// Which cells of `file` instance `target`, and how many instances in all.
+static int referencing_cells(LFile file, LCell target, JVal& parents) {
+    int total = 0;
+    for (LCell c = LCell_GetList(file); c; c = LCell_GetNext(c)) {
+        if (c == target) continue;
+        int n = 0;
+        for (LInstance inst = LInstance_GetList(c); inst;
+             inst = LInstance_GetNext(inst))
+            if (LInstance_GetCell(inst) == target) ++n;
+        if (n) {
+            JVal e = JVal::O();
+            e.set("cell", JVal::S(cell_name_of(c)));
+            e.set("instances", JVal::N(n));
+            parents.arr.push_back(e);
+            total += n;
+        }
+    }
+    return total;
+}
+
+static bool cmd_delete_cell(Ctx& ctx, const JVal& params, JVal& result,
+                            std::string& err, std::string& next) {
+    std::string name = params.str_or("cell", "");
+    if (name.empty()) {
+        err  = "delete_cell requires an explicit params.cell (destructive op)";
+        next = "pass {\"cell\":\"<name>\"}; the visible cell is never deleted implicitly";
+        return false;
+    }
+    bool force = params.bool_or("force", false);
+    JVal parents = JVal::A();
+    int refs = referencing_cells(ctx.file, ctx.cell, parents);
+    bool visible = (LCell_GetVisible() == ctx.cell);
+    bool tcell = LCell_IsTCell(ctx.cell) ? true : false;
+    if (!force && (refs || visible || tcell)) {
+        std::string why;
+        if (refs) {
+            char buf[64];
+            sprintf(buf, "it is instanced %d time(s) by ", refs);
+            why = buf;
+            for (size_t i = 0; i < parents.arr.size(); ++i) {
+                if (i) why += ", ";
+                why += parents.arr[i].get("cell")->str;
+            }
+        }
+        if (visible) why += (why.empty() ? "" : "; ") +
+                            std::string("it is the VISIBLE cell");
+        if (tcell) why += (why.empty() ? "" : "; ") +
+                          std::string("it is a T-Cell generator");
+        err  = "refusing to delete '" + name + "': " + why;
+        next = "pass force:true to delete anyway (instances of it are "
+               "deleted with it), or show_cell another cell first";
+        result.set("referenced_by", parents);
+        return false;
+    }
+    LStatus st = LCell_Delete(ctx.cell);
+    if (st != LStatusOK) {
+        char buf[96];
+        _snprintf(buf, sizeof(buf) - 1, "LCell_Delete failed (status %d)",
+                  (int)st);
+        buf[sizeof(buf) - 1] = 0;
+        err  = buf;
+        next = "the cell may be locked or in a read-only library";
+        return false;
+    }
+    LDisplay_Refresh();
+    result.set("cell", JVal::S(name));
+    result.set("deleted", JVal::B(LCell_Find(ctx.file, name.c_str()) == 0));
+    result.set("instances_removed", JVal::N(refs));
+    result.set("referenced_by", parents);
+    return true;
+}
+
+static bool cmd_rename_cell(Ctx& ctx, const JVal& params, JVal& result,
+                            std::string& err, std::string& next) {
+    std::string name = params.str_or("cell", "");
+    std::string newName = params.str_or("new_name", "");
+    if (name.empty() || newName.empty()) {
+        err  = "params.cell and params.new_name are required";
+        next = "pass {\"cell\":\"old\",\"new_name\":\"new\"}";
+        return false;
+    }
+    if (LCell_Find(ctx.file, newName.c_str())) {
+        err  = "a cell named '" + newName + "' already exists";
+        next = "pick another name (list_cells shows what is taken), or "
+               "delete_cell the other one first";
+        return false;
+    }
+    LStatus st = LCell_SetName(ctx.file, ctx.cell, newName.c_str());
+    std::string now = cell_name_of(ctx.cell);
+    if (st != LStatusOK || now != newName) {
+        err  = "LCell_SetName did not take (cell is still '" + now + "')";
+        next = "check the name for characters L-Edit rejects in cell names";
+        return false;
+    }
+    LDisplay_Refresh();
+    result.set("old", JVal::S(name));
+    result.set("new", JVal::S(now));
+    return true;
+}
+
+static bool rect_inside(const LRect& inner, const LRect& outer) {
+    return inner.x0 >= outer.x0 && inner.x1 <= outer.x1 &&
+           inner.y0 >= outer.y0 && inner.y1 <= outer.y1;
+}
+
+static bool cmd_delete_objects(Ctx& ctx, const JVal& params, JVal& result,
+                               std::string& err, std::string& next) {
+    if (params.str_or("cell", "").empty()) {
+        err  = "delete_objects requires an explicit params.cell (destructive op)";
+        next = "pass {\"cell\":\"<name>\", \"layer\":\"Metal1\"} and/or rect_um";
+        return false;
+    }
+    std::string layerName = params.str_or("layer", "");
+    const JVal* rectV = params.get("rect_um");
+    if (layerName.empty() && !rectV) {
+        err  = "delete_objects needs params.layer and/or params.rect_um";
+        next = "give a layer name, a rect_um:[l,b,r,t], or both; clear_cell "
+               "is the whole-cell reset";
+        return false;
+    }
+    LLayer only = 0;
+    if (!layerName.empty()) {
+        only = LLayer_Find(ctx.file, layerName.c_str());
+        if (!only) {
+            err  = "layer not found: " + layerName;
+            next = "see get_layers for the current table";
+            return false;
+        }
+    }
+    LRect rect;
+    if (rectV) {
+        std::string why;
+        if (!read_rect(ctx, rectV, rect, why)) {
+            err  = why;
+            next = "pass rect_um:[left, bottom, right, top] in microns";
+            return false;
+        }
+    }
+    int deleted = 0;
+    JVal byLayer = JVal::O();
+    for (LLayer layer = LLayer_GetList(ctx.file); layer;
+         layer = LLayer_GetNext(layer)) {
+        if (only && layer != only) continue;
+        std::string lname = layer_name_of(layer);
+        for (LObject obj = LObject_GetList(ctx.cell, layer); obj; ) {
+            LObject nextObj = LObject_GetNext(obj);
+            // an object is deleted only when its MBB lies INSIDE the rect
+            // (touching is not enough -- a big route crossing the rect
+            // stays), per the owner ruling
+            if (!rectV || rect_inside(LObject_GetMbb(obj), rect)) {
+                if (LObject_Delete(ctx.cell, obj) == LStatusOK) {
+                    ++deleted;
+                    bump(byLayer, lname);
+                }
+            }
+            obj = nextObj;
+        }
+    }
+    LDisplay_Refresh();
+    result.set("cell", JVal::S(cell_name_of(ctx.cell)));
+    result.set("deleted", JVal::N(deleted));
+    result.set("by_layer", byLayer);
+    return true;
+}
+
+static bool cmd_close_design(Ctx&, const JVal& params, JVal& result,
+                             std::string& err, std::string& next) {
+    std::string name = params.str_or("file", "");
+    if (name.empty()) {
+        err  = "close_design requires an explicit params.file (destructive op)";
+        next = "call list_designs and pass one of the 'file' values";
+        return false;
+    }
+    LFile target = 0;
+    for (LFile f = LFile_GetList(); f; f = LFile_GetNext(f))
+        if (file_matches(file_name_of(f), name)) { target = f; break; }
+    if (!target) {
+        err  = "no OPEN design matches: " + name;
+        next = "call list_designs to see what is open";
+        return false;
+    }
+    std::string full = file_name_of(target);
+    bool changed = LFile_IsChanged(target) != 0;
+    if (changed && !params.bool_or("discard", false)) {
+        err  = "design '" + full + "' has unsaved changes";
+        next = "call save_design first, or pass discard:true to drop them";
+        return false;
+    }
+    LStatus st = LFile_Close(target);
+    if (st != LStatusOK) {
+        char buf[96];
+        _snprintf(buf, sizeof(buf) - 1, "LFile_Close failed (status %d)",
+                  (int)st);
+        buf[sizeof(buf) - 1] = 0;
+        err  = buf;
+        next = "close it by hand in L-Edit (File > Close) and check for a "
+               "modal dialog";
+        return false;
+    }
+    LDisplay_Refresh();
+    bool gone = true;
+    for (LFile f = LFile_GetList(); f; f = LFile_GetNext(f))
+        if (f == target) gone = false;
+    LFile vis = LFile_GetVisible();
+    result.set("file", JVal::S(full));
+    result.set("closed", JVal::B(gone));
+    result.set("discarded_changes", JVal::B(changed));
+    result.set("visible_now", JVal::S(vis ? file_name_of(vis)
+                                           : std::string("")));
+    return true;
+}
+
+// ----------------------------------------------------------------------------
+// Verification (v0.5.8): DRC run/summary and GDS export.
+// ----------------------------------------------------------------------------
+
+static const char* drc_status_name(LDrcStatus s) {
+    switch (s) {
+        case LDrcStatus_Needed: return "needed";
+        case LDrcStatus_Passed: return "passed";
+        case LDrcStatus_Failed: return "failed";
+        default:                return "unknown";
+    }
+}
+
+static bool folder_exists_for(const std::string& path, std::string& dir) {
+    size_t sl = path.find_last_of("\\/");
+    if (sl == std::string::npos || sl == 0) return true;
+    dir = path.substr(0, sl);
+    DWORD a = GetFileAttributesA(dir.c_str());
+    return a != INVALID_FILE_ATTRIBUTES && (a & FILE_ATTRIBUTE_DIRECTORY);
+}
+
+static bool cmd_run_drc(Ctx& ctx, const JVal& params, JVal& result,
+                        std::string& err, std::string& next) {
+    int rules = 0;
+    for (LDrcRule r = LDrcRule_GetList(ctx.file); r; r = LDrcRule_GetNext(r))
+        ++rules;
+    if (!rules) {
+        err  = "this design has no DRC rules";
+        next = "load a rule set in L-Edit (Tools > DRC Setup) or run DRC in "
+               "KLayout on an exported GDS (export_gds + klink drc tools)";
+        return false;
+    }
+    LRect area;
+    const LRect* pArea = 0;
+    if (params.get("rect_um")) {
+        std::string why;
+        if (!read_rect(ctx, params.get("rect_um"), area, why)) {
+            err  = why;
+            next = "pass rect_um:[left, bottom, right, top] in microns, or "
+                   "omit it for the whole cell";
+            return false;
+        }
+        pArea = &area;
+    }
+    unsigned int n = 0;
+    LStatus st = LCell_RunDRC(ctx.cell, pArea, &n);
+    if (st != LStatusOK) {
+        char buf[96];
+        _snprintf(buf, sizeof(buf) - 1, "LCell_RunDRC failed (status %d)",
+                  (int)st);
+        buf[sizeof(buf) - 1] = 0;
+        err  = buf;
+        next = "check L-Edit for a DRC setup/error dialog (a modal dialog "
+               "also stalls the bridge) and get_drc_rules for the rule table";
+        return false;
+    }
+    LDisplay_Refresh();
+    result.set("cell", JVal::S(cell_name_of(ctx.cell)));
+    result.set("errors", JVal::N((double)n));
+    result.set("status", JVal::S(drc_status_name(LCell_GetDRCStatus(ctx.cell))));
+    result.set("rules", JVal::N(rules));
+    if (pArea) result.set("rect_um", rect_to_json(ctx, area));
+    return true;
+}
+
+static bool cmd_drc_summary(Ctx& ctx, const JVal&, JVal& result,
+                            std::string&, std::string&) {
+    LDrcStatus st = LCell_GetDRCStatus(ctx.cell);
+    result.set("cell", JVal::S(cell_name_of(ctx.cell)));
+    // Before any run L-Edit answers (unsigned)-1 (4294967295, observed);
+    // that is "unknown", not a count.
+    if (st == LDrcStatus_Needed)
+        result.set("errors", JVal());
+    else
+        result.set("errors", JVal::N((double)LCell_GetDRCNumErrors(ctx.cell)));
+    result.set("status", JVal::S(drc_status_name(st)));
+    return true;
+}
+
+static bool cmd_export_gds(Ctx& ctx, const JVal& params, JVal& result,
+                           std::string& err, std::string& next) {
+    std::string path = params.str_or("path", "");
+    if (path.empty()) {
+        err  = "params.path is required";
+        next = "pass the absolute path of the .gds file to write";
+        return false;
+    }
+    std::string dir;
+    if (!folder_exists_for(path, dir)) {
+        err  = "folder does not exist: " + dir;
+        next = "create it first, or pass a path inside an existing folder";
+        return false;
+    }
+    std::string cellName = params.str_or("cell", "");
+    LGDSParamEx gp;
+    memset(&gp, 0, sizeof(gp));
+    gp.cszDestFileName = path.c_str();
+    gp.bZipOutputFile = LFALSE;
+    if (cellName.empty()) {
+        gp.ExportScope = gdsExportAllCells;
+    } else {
+        if (!LCell_Find(ctx.file, cellName.c_str())) {
+            err  = "cell not found: " + cellName;
+            next = "call list_cells for exact names, or omit cell to export "
+                   "the whole design";
+            return false;
+        }
+        gp.ExportScope = gdsExportSpecifiedCell;
+        gp.cszSpecifiedCell = cellName.c_str();
+        gp.bIncludeHierarchy = params.bool_or("include_hierarchy", true)
+                               ? LTRUE : LFALSE;
+    }
+    gp.cpszIncludeLibraries = 0;
+    gp.cpszExcludeLibraries = 0;
+    gp.bUseDefaultUnits = LTRUE;           // the design's own units
+    gp.nUpcaseCellName = 0;                // preserve case
+    // GDSII's classic limit is 32 characters; KLayout reads longer names,
+    // so the caller may raise it for a KLayout round trip.
+    gp.nCellNameLength = (int)params.num_or("cell_name_length", 32);
+    gp.cszMapFileName = 0;
+    gp.bDoNotExportHiddenObjects = LFALSE;
+    gp.bOverwriteGDSIIDataType = LFALSE;
+    gp.bCalcChecksum = LFALSE;
+    gp.bCheckSelfIntersections = LFALSE;
+    gp.bFracture = LFALSE;
+    gp.nFractureLimit = 0;
+
+    std::string logPath = params.str_or("log_path", "");
+    if (logPath.empty()) logPath = g_root + "\\export_gds.log";
+    LGDSExportLogParams lp;
+    memset(&lp, 0, sizeof(lp));
+    lp.szLogFileName = logPath.c_str();
+    lp.bOpenLogInWindow = LFALSE;
+
+    LStatus st = LFile_ExportGDSII(ctx.file, &gp, &lp);
+    long bytes = file_size(path);
+    if (st != LStatusOK || bytes <= 0) {
+        char buf[128];
+        _snprintf(buf, sizeof(buf) - 1,
+                  "LFile_ExportGDSII failed (status %d, file bytes %ld)",
+                  (int)st, bytes);
+        buf[sizeof(buf) - 1] = 0;
+        err  = buf;
+        next = "read the export log at " + logPath + "; check the path is "
+               "writable and the cell name length limit";
+        return false;
+    }
+    // Like import, the status is not the verdict: scan the log for errors.
+    std::string log;
+    if (read_file(logPath, log)) {
+        bool errors = log.find("error(s)") != std::string::npos &&
+                      log.find("0 error(s)") == std::string::npos;
+        if (errors) {
+            size_t at = log.find("Error");
+            std::string cut = (at != std::string::npos) ? log.substr(at)
+                              : log;
+            if (cut.size() > 400) cut.erase(400);
+            err  = "GDS export reported errors: " + cut;
+            next = "full log: " + logPath;
+            return false;
+        }
+    }
+    result.set("path", JVal::S(path));
+    result.set("bytes", JVal::N((double)bytes));
+    result.set("scope", JVal::S(cellName.empty() ? "all_cells"
+                                                  : "specified_cell"));
+    result.set("cell", JVal::S(cellName));
+    result.set("log_path", JVal::S(logPath));
+    return true;
+}
+
 struct Command {
     const char* name;
     CmdHandler  handler;
@@ -2142,6 +2939,23 @@ static const Command g_commands[] = {
     { "import_gds",      cmd_import_gds,      true,  false },
     { "get_tcell_params", cmd_get_tcell_params, true, true  },
     { "get_drc_rules",   cmd_get_drc_rules,   true,  false },
+    // v0.5.6 navigation. Window commands are design-independent (a window
+    // list spans every open design), so they need no file.
+    { "show_cell",       cmd_show_cell,       true,  true  },
+    { "set_cell_hidden", cmd_set_cell_hidden, true,  true  },
+    { "list_windows",    cmd_list_windows,    false, false },
+    { "close_window",    cmd_close_window,    false, false },
+    { "layout_view",     cmd_layout_view,     true,  true  },
+    { "save_image",      cmd_save_image,      true,  true  },
+    // v0.5.7 destructive (explicit targets enforced inside each handler)
+    { "delete_cell",     cmd_delete_cell,     true,  true  },
+    { "rename_cell",     cmd_rename_cell,     true,  true  },
+    { "delete_objects",  cmd_delete_objects,  true,  true  },
+    { "close_design",    cmd_close_design,    false, false },
+    // v0.5.8 verification
+    { "run_drc",         cmd_run_drc,         true,  true  },
+    { "drc_summary",     cmd_drc_summary,     true,  true  },
+    { "export_gds",      cmd_export_gds,      true,  false },
 };
 
 // Resolve + run one command. Shared by the top-level request handler and by
@@ -2155,6 +2969,10 @@ static bool dispatch_one(const std::string& cmd, const JVal& params,
         if (cmd != g_commands[i].name) continue;
         if (known) *known = true;
         Ctx ctx;
+        // Deliberately NOT wrapped in LUpi_SetUpdateDisplayMode(0) /
+        // LUpi_SetQuietMode(1): measured on v16.3, 5000 boxes into the
+        // visible cell take the same 0.30 s either way (display updates
+        // are not on the draw path; the cost is transport + JSON).
         bool ok = resolve_ctx(params, ctx, g_commands[i].needs_file,
                               g_commands[i].needs_cell, err, next) &&
                   g_commands[i].handler(ctx, params, result, err, next);

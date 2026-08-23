@@ -478,6 +478,30 @@ One-call tools:
   pushed (counted in `skipped.instance`): flatten first if needed.
   L-Edit draw is APPEND-ONLY — push into a fresh `ledit_cell` to
   regenerate.
+- Navigation (macro >= 0.5.6): 'open / show cell X in L-Edit' ->
+  `ledit.show_cell`; 'hide / unhide X' -> `ledit.set_cell_hidden`; 'zoom
+  to this area' / 'what is on screen' -> `ledit.layout_view` (no args
+  reads, `rect_um` sets, `home` resets); windows -> `ledit.list_windows`
+  / `ledit.close_window` (confirm before closing windows you did not
+  open). `ledit.save_image` is a user-requested artifact only, never
+  verification evidence.
+- Destructive (macro >= 0.5.7): `ledit.delete_cell` (refuses visible /
+  instanced / T-Cell cells without `force`), `ledit.rename_cell`,
+  `ledit.delete_objects` (layer and/or `rect_um`, objects fully inside),
+  `ledit.close_design` (refuses unsaved changes without `discard`; the
+  way to drop a scratch design). Confirm with the user before deleting
+  anything they drew; `ledit.push_cell_tree` validates before sending
+  and rolls back the cells it created on failure.
+- Verification (macro >= 0.5.8): `ledit.run_drc` / `ledit.drc_summary`
+  run and read L-Edit's own DRC (needs the design's rule set); both
+  report the error COUNT and status only -- L-Edit v16.3 does not
+  expose the violation geometry through the UPI, so for violation
+  geometry use `ledit.export_gds` + klink's KLayout-side drc tools;
+  `errors` is `null` from `drc_summary` until a run has happened.
+  `ledit.export_gds` is the cheap way back to KLayout
+  (`layout.file_info` / `layout.import_file` read it directly) --
+  prefer it over re-reading geometry through get_cell when klink's
+  KLayout-side tools (drc, LVS, geometry) are the goal.
 
 Deeper work (whole-cell readout, DRC-rule export, T-Cell read/instance/
 write-back) uses the Python API `klink.bridges.ledit` and the template's
