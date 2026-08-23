@@ -115,7 +115,7 @@
       <div class="container">
         <div class="eyebrow">Guide · L-Edit Bridge</div>
         <h1>Drive Tanner L-Edit both ways with an agent</h1>
-        <p class="lede">A <strong>load-as-source</strong> UPI macro plus a JSON file-exchange transport: no sockets, no firewall prompts, nothing to compile; written against the old-version API subset (older versions compatible by design — tested on v16.x). Agents get white-box read/write access — all the way down to T-Cell generator code.</p>
+        <p class="lede">A <strong>load-as-source</strong> UPI macro plus a JSON file-exchange transport: no sockets, no firewall prompts, nothing to compile; written against the old-version API subset (older versions compatible by design — tested on v16.x). Agents get white-box read/write access — all the way down to T-Cell generator code. 0.5.7 turns the bridge from a drawing transport into a full editor control surface: navigation (windows, view, cell show/hide), destructive commands with explicit targets, a validated and rollback-capable hierarchy push, L-Edit's own DRC, and GDS export back to KLayout (macro 0.5.6 &rarr; 0.5.8 — reload the macro in L-Edit after upgrading).</p>
       </div>
     </section>
 
@@ -137,14 +137,17 @@
             <tr><td>Design files</td><td><code>new_design</code> (bootstraps a .tdb even with nothing open) · <code>open_design</code> · <code>save_design</code></td></tr>
             <tr><td>Layers</td><td><code>ensure_layer</code> (GDS numbers stamped; new layers auto-colored: solid fill, no outline) · <code>set_layer_style</code> · <code>get_layers</code> (fill color, special-layer flags)</td></tr>
             <tr><td>Drawing</td><td><code>create_cell</code> · <code>draw</code> (box/polygon/wire/circle, batch) · <code>place_instance</code> (incl. nx×ny arrays) · <code>clear_cell</code></td></tr>
-            <tr><td>Full readout</td><td><code>get_selection</code> · <code>get_cell</code> (shapes + per-object property trees + instances + ports + labels; wires carry cap/join, torus/pie carry exact params) · <code>list_cells</code></td></tr>
+            <tr><td>Full readout</td><td><code>get_selection</code> · <code>get_cell</code> (shapes + per-object property trees + instances + ports + labels; wires carry cap/join, torus/pie carry exact params) · <code>list_cells</code> (now always carries a <code>hidden</code> boolean, plus <code>hidden_property</code> when it disagrees with the flag)</td></tr>
+            <tr><td>Navigation</td><td><code>show_cell</code> · <code>set_cell_hidden</code> · <code>list_windows</code> · <code>close_window</code> · <code>layout_view</code> · <code>save_image</code></td></tr>
+            <tr><td>Destructive</td><td><code>delete_cell</code> · <code>rename_cell</code> · <code>delete_objects</code> · <code>close_design</code></td></tr>
+            <tr><td>Verification</td><td><code>run_drc</code> · <code>drc_summary</code> · <code>export_gds</code></td></tr>
             <tr><td>Process knowledge</td><td><code>get_drc_rules</code> — the design's whole rule table, machine-readable</td></tr>
             <tr><td>T-Cells</td><td><code>get_tcell_params</code> · <code>instance_tcell</code> (programmatic, parameterized) · <code>set_tcell_code</code> (write generator code back as a native T-Cell)</td></tr>
           </tbody>
         </table>
 
         <h2>Exchanging with KLayout (one-call MCP tools)</h2>
-        <p>Once klink MCP is configured, an agent gets five intent-level tools in the <code>bridge_ledit</code> domain:</p>
+        <p>Once klink MCP is configured, an agent gets <strong>eighteen</strong> intent-level tools in the <code>bridge_ledit</code> domain: the five below cover exchange with KLayout; the other thirteen — navigation and view, markers over the bridge, destructive commands, DRC and the GDS return path — are grouped into the sections that follow.</p>
         <ul>
           <li><code>ledit.status</code> — discovery and triage: macro liveness, whether a design is open, heartbeat age. Call it first when anything misbehaves; errors name the fix. <strong>New in 0.5.3:</strong> when the macro supports list_designs/list_cells, it also reports the open designs and the active design's cell list (with T-Cell flags) — "what's in L-Edit right now" is one call; older macros behave exactly as before (capability-gated).</li>
           <li><code>ledit.import_selection</code> — you select in L-Edit, the agent imports into a fresh KLayout cell: circles stay parametric (CIRCLE PCells), layers migrate <strong>by name and GDS number</strong> (conflicts append, never overwrite), non-convertibles are listed, never dropped.</li>
@@ -152,6 +155,61 @@
           <li><code>ledit.import_cell_tree</code> — import an L-Edit cell AND its whole hierarchy into KLayout: children-first rebuild, instances stay instances (never flattened to shapes), layer identity migrates by name and GDS number the same way; every target cell is recreated, so re-importing is idempotent; shapes with no convertible outline are listed in <code>not_convertible</code>, never silently dropped.</li>
           <li><code>ledit.push_cell_tree</code> — the other direction: push a KLayout cell and every cell below it into L-Edit, same children-first order, instances rebuilt as real instances; <code>clear=True</code> by default keeps re-pushing idempotent (L-Edit's draw only appends); the whole tree goes over as one batched request; placements L-Edit can't express exactly (magnification, non-orthogonal rotation, skewed arrays) are reported in <code>unsupported_instances</code>, never approximated.</li>
         </ul>
+
+        <h3>Navigation and view</h3>
+        <p><code>ledit.show_cell</code> opens/raises a layout window on a cell and makes it the visible one ("open X in L-Edit"); <code>ledit.set_cell_hidden</code> toggles the "Hide In Lists" flag that auto-generated T-Cell variants carry; <code>ledit.list_windows</code> / <code>ledit.close_window</code> enumerate/close layout, text, and log windows (by cell name, or by the index from <code>ledit.list_windows</code>); <code>ledit.layout_view</code> is one verb for the view — no args reads the current view, <code>rect_um</code> sets it, <code>home</code> resets to the cell's home view, and every call answers with the view AFTER the call plus <code>has_window</code>; <code>ledit.save_image</code> renders a cell/area to PNG/BMP/JPG — a user-requested artifact only, never verification evidence, same rule as KLayout's <code>view.screenshot</code>: verify with <code>get_cell</code> / status instead.</p>
+        <p>The real return from <code>ledit.show_cell</code> after pushing a five-way fan-out klink tapered-router cell, <code>ROUTE_05_FANOUT</code>, into L-Edit:</p>
+        <pre><code>{"cell": "ROUTE_05_FANOUT", "window_opened": false, "via": "window", "file": "klink_site_demo"}</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/ledit/ledit-window-show-cell.png" alt="The pushed ROUTE_05_FANOUT cell open in an L-Edit v16.3 window; the layer palette lists klink's named layers (M1_DEVICE_OR_PAD, KLINK_ROUTES, KLINK_PORTS, ...) with their GDS numbers, and the cell window shows the pushed fan-out routes">
+          <figcaption>The real L-Edit v16.3 window <code>ledit.show_cell</code> opens after <code>ledit.push_cell_tree</code> pushes <code>ROUTE_05_FANOUT</code> and the cells below it: the layer palette shows klink's layers created by name (with GDS numbers), and the cell window shows the pushed fan-out routes.</figcaption>
+        </figure>
+        <pre><code>{"cell": "ROUTE_05_FANOUT", "mode": "get", "rect_um": [-51.139, -4.598, 114.139, 52.598], "has_window": true, "file": "klink_site_demo"}</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/ledit/push-fanout-ledit-render.png" alt="ledit.save_image render of the whole ROUTE_05_FANOUT cell (L-Edit's own renderer, 1600x1000): five routes from klink's tapered router, pads, and the width-0 Port triangles as hairlines">
+          <figcaption><code>ledit.save_image</code> render of the whole cell (L-Edit's own renderer, 1600&times;1000): five klink tapered routes, pads, and the zero-width Port triangles — rendered as hairlines, not filled triangles.</figcaption>
+        </figure>
+
+        <h3>Markers cross the bridge as zero-width wires</h3>
+        <p>klink's Port / Anchor / Region markers have been zero-area pure marks (<code>width_um=0</code> path outlines) since 0.5.6. Before 0.5.7, <code>draw</code> refused <code>width_um == 0</code> wires itself; that refusal now comes from L-Edit (<code>LWire_New</code>), and the error names the reason when it fires. Verified on real L-Edit v16.3: zero-width wires ARE accepted and render as 1-px outlines — so klink's zero-width markers can now transfer whole. <code>ledit.push_cell_tree</code>'s report counts the total in <code>zero_width_wires</code>.</p>
+        <p>The real report from pushing <code>ROUTE_05_FANOUT</code> and its whole subtree (including Port and CorridorAnchor marker cells) into L-Edit:</p>
+        <pre><code>{"cell_count": 13, "ops": 57, "zero_width_wires": 10, "requests": 1, "unsupported_instances": []}</code></pre>
+        <p>13 cells, 57 draw operations, in one batched request — 10 of those are zero-width wires, exactly the Port markers' triangle outlines. Set the view near one Port with <code>ledit.layout_view</code>, then capture that area with <code>ledit.save_image</code>:</p>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/ledit/port-marker-closeup.png" alt="ledit.layout_view then ledit.save_image render of the area around a Port marker: two pads, one route, and the Port marker triangle rendered as a hairline (zero-width wire, read back with width_um 0, 4 points)">
+          <figcaption>Zoomed with <code>layout_view(rect_um=...)</code> to the area around a Port marker, then <code>save_image</code>: two pads, one route, and the Port triangle — which crossed the bridge as a zero-width wire, reads back as <code>width_um: 0</code> with 4 points, and L-Edit renders it as a hairline rather than a filled triangle.</figcaption>
+        </figure>
+
+        <h3>Destructive commands: explicit targets, and they refuse</h3>
+        <p><code>ledit.delete_cell</code> deletes a cell by explicit name; unless <code>force=true</code>, it refuses when the cell is the visible cell, is instanced by other cells, or is a T-Cell generator, naming the referencing cells. The real refusal:</p>
+        <pre><code>delete_cell failed: refusing to delete 'Port$17': it is instanced 1 time(s) by ROUTE_05_FANOUT</code></pre>
+        <p><code>ledit.rename_cell</code> renames, refusing when the new name already exists. <code>ledit.delete_objects</code> deletes shapes by layer and/or <code>rect_um</code> — only objects whose bounding box lies <strong>entirely inside</strong> the rect are removed, so a route merely crossing it stays; instances are never touched (use <code>clear_cell</code> to reset a whole cell). The real return (rename, then delete_objects):</p>
+        <pre><code>{"old": "DRC_DEMO", "new": "DRC_DEMO_RENAMED"}
+{"cell": "DRC_DEMO_RENAMED", "deleted": 1, "by_layer": {"Poly": 1}}</code></pre>
+        <p><code>ledit.close_design</code> closes an open design by name; a design with unsaved changes is refused unless <code>discard=true</code> — this is the only way to drop a klink-created scratch design (<code>new_design</code>), because closing a design's last window does <strong>not</strong> close the design itself:</p>
+        <pre><code>{"file": "klink_site_demo", "closed": true, "discarded_changes": true}</code></pre>
+        <p><code>ledit.push_cell_tree</code> itself got safer too: every draw item is validated before it is sent, and when a batch fails partway, the cells it created in that call are deleted (<code>rolled_back</code>) and any existing cells it had already cleared are reported as <code>clobbered</code> — never a half-done result.</p>
+
+        <h3>DRC and the GDS return path</h3>
+        <p><code>ledit.run_drc</code> runs L-Edit's own DRC with the design's loaded rule set (whole cell, or <code>rect_um</code> for an area), reporting only the error <strong>count</strong> and <code>status</code> — L-Edit v16.3's UPI does not expose violation geometry, so for geometry use <code>ledit.export_gds</code> and klink's KLayout-side DRC tools. <code>ledit.drc_summary</code> reads the last result without re-running; <code>errors</code> is <code>null</code> and <code>status</code> is <code>"needed"</code> before the first run.</p>
+        <p>A DRC demo: two Poly boxes 0.4 &micro;m apart, with the design's 82 loaded rules:</p>
+        <pre><code>drc_summary (before a run):  {"cell": "DRC_DEMO", "errors": null, "status": "needed"}
+run_drc (whole cell):        {"cell": "DRC_DEMO", "errors": 1, "status": "failed", "rules": 82}
+run_drc (area over left box): {"cell": "DRC_DEMO", "errors": 0, "status": "failed", "rules": 82, "rect_um": [-1, -1, 4, 6]}</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/ledit/drc-demo-render.png" alt="Two Poly boxes 0.4 micron apart; ledit.run_drc with the design's 82 rules reports error count 1 and status failed, while the area run covering only the left box reports error count 0">
+          <figcaption>Two Poly boxes deliberately spaced 0.4 &micro;m apart, tripping a spacing rule: <code>run_drc</code> on the whole cell reports <code>errors: 1</code> / <code>status: failed</code> (82 rules); the area run covering only the left box reports <code>errors: 0</code> — the count is right, but there is no violation shape or coordinate.</figcaption>
+        </figure>
+        <p><code>ledit.export_gds</code> writes the whole design, or one cell with its hierarchy, to a GDS file via <code>LFile_ExportGDSII</code> — the cheap L-Edit &rarr; KLayout return path: <code>layout.file_info</code> / <code>layout.import_file</code> on the KLayout side read it as-is, no padding needed in this direction. The real export plus the KLayout-side readback:</p>
+        <pre><code>export_gds:         {"bytes": 4096, "scope": "specified_cell", "cell": "ROUTE_05_FANOUT"}
+klayout_file_info:  {"top_cells": ["ROUTE_05_FANOUT"], "dbu": 0.001,
+                      "layers": [{"layer":1,"datatype":0}, {"layer":11,"datatype":0},
+                                 {"layer":996,"datatype":99}, {"layer":999,"datatype":1},
+                                 {"layer":999,"datatype":99}]}</code></pre>
+        <figure class="tut-figure">
+          <img src="../assets/tutorials/ledit/export-gds-klayout.png" alt="The GDS written by ledit.export_gds opened in KLayout (layout.show_file), top cell ROUTE_05_FANOUT, 5 layers, with KLayout's scale bar">
+          <figcaption>The GDS written by <code>export_gds</code>, opened in KLayout with <code>layout.show_file</code>: top cell <code>ROUTE_05_FANOUT</code>, 5 layers — matching the <code>klayout_file_info</code> readout above.</figcaption>
+        </figure>
 
         <h2 id="tcell">T-Cells: parametric in both directions</h2>
         <p>A T-Cell's generator source lives in a cell property the bridge can read whole; parameter names parse deterministically from the generated DO-NOT-EDIT section. That opens both directions, with a single acceptance bar: <strong>byte-exact</strong> (sorted integer-nanometer boxes, element for element, with L-Edit's own generated geometry as ground truth).</p>
@@ -197,6 +255,10 @@ SUCCESS</code></pre>
             <tr><td>Drawing into an existing cell doubles content</td><td>draw is append-only — regenerate via <code>clear_cell</code> or a fresh cell</td></tr>
             <tr><td>Two L-Edit instances with the macro</td><td>single namespace for now; keep one instance</td></tr>
             <tr><td>A layer shows GDS <code>-1</code></td><td>it will not export correctly — bridge-created layers stamp numbers; written-back code should follow the <code>need_layer</code> pattern</td></tr>
+            <tr><td>A tool reports the macro is too old / <code>ERR_MACRO_TOO_OLD</code></td><td>reload the macro: Tools &rarr; klink: Bridge Stop, then Tools &rarr; Macro &rarr; Load Macro&hellip; (the error itself names the macro's path)</td></tr>
+            <tr><td><code>run_drc</code> has no violation geometry</td><td>by design — L-Edit v16.3's UPI gives only a count and <code>status</code>; for geometry, <code>export_gds</code> then use KLayout-side DRC tools</td></tr>
+            <tr><td>Closed the last window but the design is still there</td><td>by design — closing a window is not closing a design; use <code>ledit.close_design</code> to actually close it</td></tr>
+            <tr><td><code>save_image</code> is for people, not verification</td><td>verify with <code>get_cell</code> / status, same rule as KLayout screenshots — never use the picture as evidence</td></tr>
           </tbody>
         </table>
         <p>Scope: parametric intelligence (fitting, porting, verification) runs on the klink/KLayout side; L-Edit receives native results (static cells or real T-Cells). The bridge is an external adapter shipped with klink, not an L-Edit plugin.</p>

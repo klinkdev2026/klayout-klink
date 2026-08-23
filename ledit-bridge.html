@@ -115,7 +115,7 @@
       <div class="container">
         <div class="eyebrow">指南 · L-Edit 桥</div>
         <h1>让 agent 双向驱动 Tanner L-Edit</h1>
-        <p class="lede">一个<strong>源码即装载</strong>的 UPI 宏 + JSON 文件交换传输：无套接字、无防火墙弹窗、无需编译；按老版本 API 子集编写（理论兼容旧版，实测环境 v16.x）。agent 由此获得对 L-Edit 的白盒读写——直到 T-Cell 的生成器代码本身。</p>
+        <p class="lede">一个<strong>源码即装载</strong>的 UPI 宏 + JSON 文件交换传输：无套接字、无防火墙弹窗、无需编译；按老版本 API 子集编写（理论兼容旧版，实测环境 v16.x）。agent 由此获得对 L-Edit 的白盒读写——直到 T-Cell 的生成器代码本身。0.5.7 把这座桥从单纯的画图传输升级成完整的编辑器控制面：导航（窗口、视图、cell 显隐）、显式目标的破坏性命令、经校验且可回滚的层级推送、L-Edit 自带的 DRC、以及回 KLayout 的 GDS 导出（宏 0.5.6 → 0.5.8，升级后需要在 L-Edit 里重新装载宏）。</p>
       </div>
     </section>
 
@@ -137,14 +137,17 @@
             <tr><td>设计文件</td><td><code>new_design</code>（没开 tdb 也能自举建库）· <code>open_design</code> · <code>save_design</code></td></tr>
             <tr><td>图层</td><td><code>ensure_layer</code>（盖 GDS 号；新层自动配色：实心无边框）· <code>set_layer_style</code> · <code>get_layers</code>（含填充色与特殊层标记）</td></tr>
             <tr><td>绘制</td><td><code>create_cell</code> · <code>draw</code>（box/polygon/wire/circle 批量）· <code>place_instance</code>（含 nx×ny 阵列）· <code>clear_cell</code></td></tr>
-            <tr><td>全量读取</td><td><code>get_selection</code> · <code>get_cell</code>（图形+对象级属性树+实例+端口+标签；wire 带端帽/拐角，torus/pie 带精确参数）· <code>list_cells</code></td></tr>
+            <tr><td>全量读取</td><td><code>get_selection</code> · <code>get_cell</code>（图形+对象级属性树+实例+端口+标签；wire 带端帽/拐角，torus/pie 带精确参数）· <code>list_cells</code>（现在总是带 <code>hidden</code> 布尔字段，与之不一致时再加 <code>hidden_property</code>）</td></tr>
+            <tr><td>导航</td><td><code>show_cell</code> · <code>set_cell_hidden</code> · <code>list_windows</code> · <code>close_window</code> · <code>layout_view</code> · <code>save_image</code></td></tr>
+            <tr><td>破坏性</td><td><code>delete_cell</code> · <code>rename_cell</code> · <code>delete_objects</code> · <code>close_design</code></td></tr>
+            <tr><td>验证</td><td><code>run_drc</code> · <code>drc_summary</code> · <code>export_gds</code></td></tr>
             <tr><td>工艺知识</td><td><code>get_drc_rules</code> —— 整套设计规则表机读导出</td></tr>
             <tr><td>T-Cell</td><td><code>get_tcell_params</code> · <code>instance_tcell</code>（程序化传参实例化）· <code>set_tcell_code</code>（把生成器代码写回成原生 T-Cell）</td></tr>
           </tbody>
         </table>
 
         <h2>与 KLayout 互导（MCP 一调用）</h2>
-        <p>配好 klink MCP 后，agent 直接获得 <code>bridge_ledit</code> 域的五个意图级工具：</p>
+        <p>配好 klink MCP 后，agent 直接获得 <code>bridge_ledit</code> 域的<strong>十八个</strong>意图级工具：下面五个覆盖与 KLayout 的双向交换，其余十三个（导航与视图、标记过桥、破坏性命令、DRC 与 GDS 回程）按主题分节说明在后面。</p>
         <ul>
           <li><code>ledit.status</code> —— 发现与分诊：宏活性、设计是否打开、心跳年龄。任何异常先叫它，错误信息会直接写明下一步。<strong>0.5.3 新增：</strong>宏支持 list_designs/list_cells 时，还会一并报出当前打开的设计和活动设计的 cell 列表（含 T-Cell 标记）——“L-Edit 里现在有什么”一次调用问完；旧版本宏行为不变（能力探测式降级）。</li>
           <li><code>ledit.import_selection</code> —— 你在 L-Edit 里选中，agent 导入 KLayout 新 cell：圆保持参数化（CIRCLE PCell）、层<strong>连名带号</strong>迁移（重名追加不覆盖）、不可转换对象如实列出。</li>
@@ -152,6 +155,61 @@
           <li><code>ledit.import_cell_tree</code> —— 把 L-Edit 里一个 cell 连同它<strong>整棵层级</strong>导入 KLayout：children-first 重建，实例照旧建成实例（不是拍平成形状），层身份同样连名带号迁移；每个目标 cell 都会被重新建出，所以重复导入是幂等的；没有可转换轮廓的形状列进 <code>not_convertible</code>，绝不悄悄丢弃。</li>
           <li><code>ledit.push_cell_tree</code> —— 反方向：把 KLayout 一个 cell 连同它下面<strong>整棵</strong>子树推回 L-Edit，同样 children-first、实例重建成实例；默认 <code>clear=True</code>，让重复推送保持幂等（L-Edit 的 draw 只会追加）；整棵树作为<strong>一次</strong>批量请求发过去；L-Edit 摆放表达不了的实例（缩放、非正交旋转、错切阵列）会如实列进 <code>unsupported_instances</code>，绝不近似凑合。</li>
         </ul>
+
+        <h3>导航与视图</h3>
+        <p><code>ledit.show_cell</code> 打开/前置某个 cell 的版图窗口并把它设为当前可见（“在 L-Edit 里打开 X”）；<code>ledit.set_cell_hidden</code> 切换 T-Cell 变体常带的 “Hide In Lists” 标记；<code>ledit.list_windows</code> / <code>ledit.close_window</code> 枚举/关闭版图、文本、日志窗口（按 cell 名，或 <code>ledit.list_windows</code> 给出的 index）；<code>ledit.layout_view</code> 是视图的单一动词——不带参数读当前视图，<code>rect_um</code> 设视图，<code>home</code> 复位到 cell 的 home view，调用后总是回读实际视图（加 <code>has_window</code>）；<code>ledit.save_image</code> 把 cell/区域渲染成 PNG/BMP/JPG——只在用户明确要图片时调用，从不当验证证据，规矩和 KLayout 的 <code>view.screenshot</code> 一样：验证请用 <code>get_cell</code> / status。</p>
+        <p>把一个五路扇出的 klink tapered 路由 cell <code>ROUTE_05_FANOUT</code> 推入 L-Edit 之后，<code>ledit.show_cell</code> 的真实返回：</p>
+        <pre><code>{"cell": "ROUTE_05_FANOUT", "window_opened": false, "via": "window", "file": "klink_site_demo"}</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/ledit/ledit-window-show-cell.png" alt="推入的 ROUTE_05_FANOUT cell 在 L-Edit v16.3 窗口中打开，图层调色板按名字列出 klink 创建的层（M1_DEVICE_OR_PAD、KLINK_ROUTES、KLINK_PORTS 等）及其 GDS 号，cell 窗口里可见推入的扇出路由">
+          <figcaption><code>ledit.push_cell_tree</code> 把 <code>ROUTE_05_FANOUT</code> 连同它下面的 cell 推入后，<code>ledit.show_cell</code> 打开的真实 L-Edit v16.3 窗口：图层调色板里是按名字建出的 klink 层（含 GDS 号），cell 窗口里是推入的扇出路由。</figcaption>
+        </figure>
+        <pre><code>{"cell": "ROUTE_05_FANOUT", "mode": "get", "rect_um": [-51.139, -4.598, 114.139, 52.598], "has_window": true, "file": "klink_site_demo"}</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/ledit/push-fanout-ledit-render.png" alt="ledit.save_image 渲染的整个 ROUTE_05_FANOUT cell（L-Edit 自己的渲染器，1600x1000）：五条来自 klink tapered 路由器的路由、焊盘，以及零宽 Port 三角形显示为细线">
+          <figcaption><code>ledit.save_image</code> 对整个 cell 的渲染（L-Edit 自身渲染器，1600&times;1000）：五条 klink tapered 路由、焊盘，以及零宽 Port 三角形——它们显示为细线，而不是填色三角形。</figcaption>
+        </figure>
+
+        <h3>标记以零宽线过桥</h3>
+        <p>klink 的 Port / Anchor / Region 标记从 0.5.6 起统一是零面积的纯标记（<code>width_um=0</code> 的路径轮廓）。0.5.7 之前，<code>draw</code> 会自己拒绝 <code>width_um == 0</code> 的 wire；现在这层拒绝交给了 L-Edit 自己（<code>LWire_New</code>），拒绝时错误信息会说明原因。在真实的 L-Edit v16.3 上验证过：零宽线是被接受的，并渲染成 1 像素的轮廓线——klink 的零宽标记由此第一次能完整过桥。<code>ledit.push_cell_tree</code> 的返回里用 <code>zero_width_wires</code> 报出零宽线的总数。</p>
+        <p>把 <code>ROUTE_05_FANOUT</code> 连同它下面整棵子树（含 Port、CorridorAnchor 等标记 cell）推入 L-Edit 的真实报告：</p>
+        <pre><code>{"cell_count": 13, "ops": 57, "zero_width_wires": 10, "requests": 1, "unsupported_instances": []}</code></pre>
+        <p>13 个 cell、57 条绘制操作装进 1 次批量请求，其中 10 条是零宽线——正是 Port 标记的三角轮廓。用 <code>ledit.layout_view</code> 设视图到某个 Port 附近，再 <code>ledit.save_image</code> 截这块区域：</p>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/ledit/port-marker-closeup.png" alt="ledit.layout_view 设置矩形后 ledit.save_image 渲染的局部区域：两个焊盘、一条路由，以及 Port 标记三角形显示为一条细线（零宽 wire，读回 width_um 为 0，4 个点）">
+          <figcaption>用 <code>layout_view(rect_um=...)</code> 缩到一个 Port 标记附近再 <code>save_image</code>：两个焊盘、一条路由、以及 Port 三角形——它作为零宽 wire 过桥，读回 <code>width_um: 0</code>、4 个点，L-Edit 把它渲染成一条细线，而不是填色三角形。</figcaption>
+        </figure>
+
+        <h3>破坏性命令：显式目标、会拒绝</h3>
+        <p><code>ledit.delete_cell</code> 按显式名字删除 cell；除非 <code>force=true</code>，否则遇到“是当前可见 cell”“被其他 cell 实例化”“是 T-Cell 生成器”都会拒绝，并点名引用者。真实的拒绝：</p>
+        <pre><code>delete_cell failed: refusing to delete 'Port$17': it is instanced 1 time(s) by ROUTE_05_FANOUT</code></pre>
+        <p><code>ledit.rename_cell</code> 改名，新名已存在则拒绝。<code>ledit.delete_objects</code> 按图层和/或 <code>rect_um</code> 删形状——只删边界框<strong>完全落在矩形内</strong>的对象，一条只是穿过矩形的路由留着不动；实例不受影响（清整个 cell 用 <code>clear_cell</code>）。真实返回（先 rename 再 delete_objects）：</p>
+        <pre><code>{"old": "DRC_DEMO", "new": "DRC_DEMO_RENAMED"}
+{"cell": "DRC_DEMO_RENAMED", "deleted": 1, "by_layer": {"Poly": 1}}</code></pre>
+        <p><code>ledit.close_design</code> 按名字关闭一个已打开的设计；有未保存改动时会拒绝，除非 <code>discard=true</code>——这是清理 klink 自建 scratch 设计（<code>new_design</code>）的唯一办法，因为关掉设计的最后一扇窗口<strong>不会</strong>关闭设计本身：</p>
+        <pre><code>{"file": "klink_site_demo", "closed": true, "discarded_changes": true}</code></pre>
+        <p><code>ledit.push_cell_tree</code> 本身也变得更安全：发送前先逐条校验每个绘制项；一批请求里任何一步失败，会把这次调用里新建的 cell 删掉（<code>rolled_back</code>），并把清空过的既有 cell 报成 <code>clobbered</code>——不留半成品。</p>
+
+        <h3>DRC 与 GDS 回程</h3>
+        <p><code>ledit.run_drc</code> 用设计里已加载的规则集跑 L-Edit 自己的 DRC（整个 cell，或 <code>rect_um</code> 限定一块区域），只报错误<strong>数量</strong>和 <code>status</code>——L-Edit v16.3 的 UPI 不暴露违例几何，要看几何请走 <code>ledit.export_gds</code> 导出后交给 klink 的 KLayout 侧 DRC 工具。<code>ledit.drc_summary</code> 不重新跑，只读上一次结果；首次跑之前 <code>errors</code> 是 <code>null</code>，<code>status</code> 是 <code>"needed"</code>。</p>
+        <p>一个 DRC 演示：两个相距 0.4 微米的 Poly 方块，设计加载了 82 条规则：</p>
+        <pre><code>drc_summary（跑之前）：  {"cell": "DRC_DEMO", "errors": null, "status": "needed"}
+run_drc（整个 cell）：    {"cell": "DRC_DEMO", "errors": 1, "status": "failed", "rules": 82}
+run_drc（只框左边方块）： {"cell": "DRC_DEMO", "errors": 0, "status": "failed", "rules": 82, "rect_um": [-1, -1, 4, 6]}</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/ledit/drc-demo-render.png" alt="两个相距 0.4 微米的 Poly 方块；ledit.run_drc 用设计的 82 条规则报错误数 1、status failed，只框住左边方块的区域跑报错误数 0">
+          <figcaption>两个刻意留了 0.4 微米间距的 Poly 方块，触发一条间距规则：<code>run_drc</code> 在整个 cell 上报 <code>errors: 1</code> / <code>status: failed</code>（82 条规则）；只框住左边方块的区域跑报 <code>errors: 0</code>——数量对得上，但没有违例的具体形状或坐标。</figcaption>
+        </figure>
+        <p><code>ledit.export_gds</code> 把整个设计或一个 cell（连同层级）用 <code>LFile_ExportGDSII</code> 写成 GDS 文件——这是 L-Edit 到 KLayout 最便宜的回程：KLayout 那边 <code>layout.file_info</code> / <code>layout.import_file</code> 原样读取，这个方向不需要任何补齐字节。真实导出 + KLayout 侧读回：</p>
+        <pre><code>export_gds：         {"bytes": 4096, "scope": "specified_cell", "cell": "ROUTE_05_FANOUT"}
+klayout_file_info：  {"top_cells": ["ROUTE_05_FANOUT"], "dbu": 0.001,
+                      "layers": [{"layer":1,"datatype":0}, {"layer":11,"datatype":0},
+                                 {"layer":996,"datatype":99}, {"layer":999,"datatype":1},
+                                 {"layer":999,"datatype":99}]}</code></pre>
+        <figure class="tut-figure">
+          <img src="assets/tutorials/ledit/export-gds-klayout.png" alt="ledit.export_gds 写出的 GDS 文件在 KLayout 里打开（layout.show_file），顶层 cell 为 ROUTE_05_FANOUT，5 个图层，带 KLayout 的比例尺">
+          <figcaption><code>export_gds</code> 写出的 GDS 用 <code>layout.show_file</code> 在 KLayout 里打开：顶层 cell <code>ROUTE_05_FANOUT</code>，5 个图层，和上面 <code>klayout_file_info</code> 的读数一致。</figcaption>
+        </figure>
 
         <h2 id="tcell">T-Cell：双向参数化</h2>
         <p>T-Cell 的生成器代码存在 cell 属性里，桥可以整段读出——参数名从代码的 DO-NOT-EDIT 段稳定解析。由此打通两个方向，验收标准只有一个：<strong>逐字节一致</strong>（整数纳米坐标逐箱相等，以 L-Edit 实际生成的几何为真值）。</p>
@@ -197,6 +255,10 @@ SUCCESS</code></pre>
             <tr><td>画进已有 cell 内容翻倍</td><td>draw 是追加式——重新生成请用 <code>clear_cell</code> 或新 cell</td></tr>
             <tr><td>两个 L-Edit 同时开桥</td><td>当前单命名空间，只保留一个装宏的实例</td></tr>
             <tr><td>层的 GDS 号是 -1</td><td>导出 GDS 会错——桥建层会盖号；写回代码请沿用模板的 <code>need_layer</code> 范式</td></tr>
+            <tr><td>工具报 macro 太旧 / <code>ERR_MACRO_TOO_OLD</code></td><td>重新装载宏：Tools → klink: Bridge Stop，然后 Tools → Macro → Load Macro…（错误信息本身会打出宏文件的路径）</td></tr>
+            <tr><td><code>run_drc</code> 拿不到违例几何</td><td>设计如此——L-Edit v16.3 的 UPI 只给数量和 <code>status</code>；要几何就 <code>export_gds</code> 后走 KLayout 侧 DRC 工具</td></tr>
+            <tr><td>关掉最后一扇窗口，设计还在</td><td>符合设计——关窗口不等于关设计，用 <code>ledit.close_design</code> 才真正关闭</td></tr>
+            <tr><td><code>save_image</code> 只是给人看的</td><td>验证请用 <code>get_cell</code> / status，同 KLayout 截图的规矩——不要拿图片当验证证据</td></tr>
           </tbody>
         </table>
         <p>范围说明：参数化的智能（拟合、移植、验证）在 klink/KLayout 侧完成，L-Edit 收到的是原生结果（静态 cell 或真 T-Cell）。桥不是 L-Edit 插件，是随 klink 发行的外部适配层。</p>
