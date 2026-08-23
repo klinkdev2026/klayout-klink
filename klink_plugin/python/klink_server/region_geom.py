@@ -15,6 +15,9 @@ Contracts implemented here (docs/REGION_INTENT_DESIGN.md):
   are circumscribed (polygon >= ellipse). Integer rounding follows the same
   direction: inscribed vertices round toward the ellipse center,
   circumscribed vertices round away from it.
+* Multi-point rulers are EXACT polygons (polygon_from_points): auto-closed,
+  integer-DBU vertices as drawn, no discretization for any role; fewer than 3
+  distinct points, collinear, and self-touching outlines are refused.
 * Canonical contour string encoding (integer DBU) with explicit limits;
   over-limit input is an instructive error, never a silent truncation.
 """
@@ -139,6 +142,111 @@ def ellipse_polygon(
         raise RegionGeomError(
             "ellipse ruler is too small to discretize at this dbu",
             hint="draw a larger ellipse or reduce npoints",
+        )
+    return poly
+
+
+def _dedupe_consecutive(points: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    out: list[tuple[int, int]] = []
+    for p in points:
+        q = (int(p[0]), int(p[1]))
+        if not out or out[-1] != q:
+            out.append(q)
+    if len(out) > 1 and out[0] == out[-1]:
+        out.pop()  # an explicitly closed ring: the closing edge is implicit
+    return out
+
+
+def _orient(a, b, c) -> int:
+    v = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+    return (v > 0) - (v < 0)
+
+
+def _on_segment(a, b, p) -> bool:
+    return (min(a[0], b[0]) <= p[0] <= max(a[0], b[0])
+            and min(a[1], b[1]) <= p[1] <= max(a[1], b[1]))
+
+
+def _segments_touch(a, b, c, d) -> bool:
+    """Closed-segment intersection test (proper crossing OR touching)."""
+    o1, o2 = _orient(a, b, c), _orient(a, b, d)
+    o3, o4 = _orient(c, d, a), _orient(c, d, b)
+    if o1 != o2 and o3 != o4:
+        return True
+    if o1 == 0 and _on_segment(a, b, c):
+        return True
+    if o2 == 0 and _on_segment(a, b, d):
+        return True
+    if o3 == 0 and _on_segment(c, d, a):
+        return True
+    if o4 == 0 and _on_segment(c, d, b):
+        return True
+    return False
+
+
+def polygon_from_points(points_dbu, dbu: float = 1.0) -> pya.Polygon:
+    """Exact polygon from a multi-point ruler: auto-closed first..last..first.
+
+    Vertices are integer DBU as drawn -- no discretization, no
+    inscribed/circumscribed asymmetry (that is ellipse-only), so the
+    contribution is exact for include AND exclude. Refuses, instructively:
+    fewer than 3 distinct points, zero area (collinear), and any
+    self-touching outline (a proper crossing or a vertex landing on a
+    non-adjacent edge) naming the offending segment pair. `dbu` is only
+    used to print coordinates in microns in those messages.
+    """
+    pts = _dedupe_consecutive([(p[0], p[1]) for p in points_dbu])
+    n = len(pts)
+    if n < 3:
+        raise RegionGeomError(
+            "ruler has %d distinct point(s); a polygon outline needs at "
+            "least 3" % n,
+            hint="click a third point (multi-point ruler), or use the Box / "
+                 "Ellipse ruler template for a 2-point region",
+        )
+    if all(_orient(pts[0], pts[1], q) == 0 for q in pts[2:]):
+        raise RegionGeomError(
+            "polygon ruler is degenerate (zero area: all points collinear)",
+            hint="move a point off the line so the outline encloses an area, "
+                 "then claim again",
+        )
+
+    def um(p):
+        return "(%g, %g)" % (p[0] * dbu, p[1] * dbu)
+
+    for i in range(n):
+        a, b = pts[i], pts[(i + 1) % n]
+        for j in range(i + 1, n):
+            if j == i + 1 or (i == 0 and j == n - 1):
+                continue  # adjacent segments share a vertex by design
+            c, d = pts[j], pts[(j + 1) % n]
+            if _segments_touch(a, b, c, d):
+                raise RegionGeomError(
+                    "polygon ruler is self-intersecting: segment %d %s->%s "
+                    "meets segment %d %s->%s" % (i, um(a), um(b), j, um(c), um(d)),
+                    hint="redraw the outline without crossings (a simple "
+                         "ring; use several rulers with roles for complex "
+                         "shapes) -- klink refuses to guess an even-odd fill",
+                )
+    # Guard only: a simple non-collinear ring always has nonzero area (a
+    # bowtie also has zero signed area, but it was refused just above).
+    area2 = 0
+    for i in range(n):
+        x0, y0 = pts[i]
+        x1, y1 = pts[(i + 1) % n]
+        area2 += x0 * y1 - x1 * y0
+    if area2 == 0:
+        raise RegionGeomError(
+            "polygon ruler is degenerate (zero area: all points collinear)",
+            hint="move a point off the line so the outline encloses an area, "
+                 "then claim again",
+        )
+
+    poly = pya.Polygon([pya.Point(x, y) for x, y in pts])
+    if poly.num_points() < 3:
+        raise RegionGeomError(
+            "polygon ruler collapsed to fewer than 3 points",
+            hint="draw a larger outline",
         )
     return poly
 

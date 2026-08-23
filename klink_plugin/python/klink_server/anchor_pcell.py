@@ -33,7 +33,19 @@ def _draw_label(cell, layer_idx: int, text: str, mode: str, net: str,
     cell.shapes(layer_idx).insert(text_obj)
 
 
-def _circle_outline(radius_dbu: int, width_dbu: int) -> pya.Path:
+# Marker doctrine (shared with Port/Region): bend and waypoint anchors are
+# pure marks -- CLOSED width-0 path outlines, zero area, never occluding,
+# a constant 1-px line at every zoom. The corridor anchor keeps its real
+# width path on purpose: its width IS the corridor the router must honor.
+OUTLINE_WIDTH_DBU = 0
+
+
+def _closed_outline(points) -> pya.Path:
+    pts = list(points)
+    return pya.Path(pts + [pts[0]], OUTLINE_WIDTH_DBU)
+
+
+def _circle_outline(radius_dbu: int) -> pya.Path:
     points = []
     segments = 64
     for i in range(segments + 1):
@@ -42,7 +54,7 @@ def _circle_outline(radius_dbu: int, width_dbu: int) -> pya.Path:
             int(round(radius_dbu * math.cos(angle))),
             int(round(radius_dbu * math.sin(angle))),
         ))
-    return pya.Path(points, max(1, int(width_dbu)))
+    return pya.Path(points, OUTLINE_WIDTH_DBU)
 
 
 def _string_param_with_choices(owner, name: str, description: str,
@@ -146,9 +158,8 @@ class KlinkBendAnchorPcell(_AnchorBase):
                 for pt in pts
             ]
 
-        self.cell.shapes(layer_idx).insert(pya.Polygon(pts))
-        outline_width = max(1, int(round(radius_dbu * 0.035)))
-        self.cell.shapes(layer_idx).insert(_circle_outline(radius_dbu, outline_width))
+        self.cell.shapes(layer_idx).insert(_closed_outline(pts))
+        self.cell.shapes(layer_idx).insert(_circle_outline(radius_dbu))
         _draw_label(
             self.cell, layer_idx, self.label or self.anchor_id, self.mode,
             self.net, self.show_label, radius_dbu, dbu,
@@ -182,7 +193,10 @@ class KlinkWaypointAnchorPcell(_AnchorBase):
         layer_idx = self.layer_layer
         hw = max(5, int(round(float(self.width_um) / dbu / 2.0)))
         hh = max(5, int(round(float(self.height_um) / dbu / 2.0)))
-        self.cell.shapes(layer_idx).insert(pya.Box(-hw, -hh, hw, hh))
+        self.cell.shapes(layer_idx).insert(_closed_outline([
+            pya.Point(-hw, -hh), pya.Point(hw, -hh),
+            pya.Point(hw, hh), pya.Point(-hw, hh),
+        ]))
         _draw_label(
             self.cell, layer_idx, self.label or self.anchor_id, self.mode,
             self.net, self.show_label, max(hw, hh), dbu,

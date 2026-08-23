@@ -3169,7 +3169,7 @@
   },
   {
     "name": "selection.send_context",
-    "description": "Explicitly send the current non-empty KLayout selection as a selection_sent event for external AI interaction context. This does not store memory in the plugin.",
+    "description": "Explicitly send the current non-empty KLayout selection as a selection_sent event for external AI interaction context. Selected RULERS are captured too (event keys ruler_count/rulers, ascending id), so 'the ruler I sent' resolves via interaction.selection.*. This does not store memory in the plugin.",
     "params": {
       "type": "object",
       "properties": {
@@ -3198,7 +3198,12 @@
           "type": "string"
         },
         "count": {
-          "type": "integer"
+          "type": "integer",
+          "description": "selected layout objects"
+        },
+        "ruler_count": {
+          "type": "integer",
+          "description": "selected rulers (annotations)"
         },
         "truncated": {
           "type": "boolean"
@@ -5717,8 +5722,58 @@
     ]
   },
   {
+    "name": "region.claim_preview",
+    "description": "Dry-run for region.claim, NO mutation: lists EVERY ruler in the current view as a claim candidate, newest first (recency_rank 1 = drawn last), each with how claim would read it (kind: box | ellipse | polygon for 3+ point rulers | line = not claimable), point count, bbox_um, label, selected, and labeled_role when the ruler's label is the express-lane token 'region' / 'region:exclude'. Pass rulers:[{id, role}] to also compose that exact set and get the would-be result (bbox/area/holes) or the same errors claim would raise. Use it to NARRATE the candidates to the user and get a confirmation before claiming -- the view mixes this-moment intent with old measurement leftovers.",
+    "params": {
+      "type": "object",
+      "properties": {
+        "rulers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "role": {
+                "type": "string",
+                "enum": [
+                  "include",
+                  "clip",
+                  "exclude"
+                ],
+                "default": "include"
+              }
+            }
+          },
+          "description": "Optional exact set to dry-run compose."
+        },
+        "npoints": {
+          "type": "integer",
+          "default": 64
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5000,
+          "default": 500
+        }
+      }
+    },
+    "returns": {
+      "type": "object"
+    },
+    "tags": [
+      "region",
+      "read"
+    ]
+  },
+  {
     "name": "region.claim",
-    "description": "Convert box/ellipse rulers into ONE klink_Region PCell (reserved layer, default 999/10) and consume the rulers. Roles: include (union), clip (intersect), exclude (subtract; holes are never writable). The result must be a single connected component; disconnected islands are rejected with per-island bboxes -- claim them separately. Ellipses are discretized safely: include/clip inscribed, exclude circumscribed.",
+    "description": "Convert rulers into ONE klink_Region PCell (reserved layer, default 999/10) and consume the rulers. Ruler kinds: 2-point box/ellipse rulers, and 3+ point rulers read as EXACT closed polygons (auto-closed first..last..first; self-intersecting outlines are refused naming the crossing segments). Roles: include (union), clip (intersect), exclude (subtract; holes are never writable). The result must be a single connected component; disconnected islands are rejected with per-island bboxes -- claim them separately. Ellipses are discretized safely: include/clip inscribed, exclude circumscribed. PICKING rulers is the hazard (the view mixes intent with old measurement lines): take ids from interaction.selection.latest.rulers when the user SENT them, else region.claim_preview + narrate + user confirmation; rulers labeled 'region' may be taken without asking. The result echoes each consumed ruler (consumed[]).",
     "params": {
       "type": "object",
       "required": [
@@ -5748,7 +5803,7 @@
               }
             }
           },
-          "description": "Ruler ids from annotation.list with roles."
+          "description": "Ruler ids (region.claim_preview / interaction.selection.latest.rulers) with roles."
         },
         "cell": {
           "description": "Target cell name or cell_index (default: active cell)"

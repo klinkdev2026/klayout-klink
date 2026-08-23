@@ -90,9 +90,11 @@ def _on_send_selection(action):
         elif status == "empty":
             _set_action_feedback(action, "NoSel", "No Selection", 1000)
             print("[klink] Send Selection: no selection")
-        elif status == "no_listener":
-            _set_action_feedback(action, "NoMCP", result.get("message", "No MCP listener"), 2000)
-            print("[klink] Send Selection: no MCP listener:", result)
+        elif status == "journaled_no_listener":
+            # ok=True: the SEND is durably journaled and the MCP store
+            # catches up on its next connect -- not a failure.
+            _set_action_feedback(action, "Sent", result.get("message", "Journaled; no MCP listener yet"), 2000)
+            print("[klink] selection journaled (no live MCP listener):", result)
         else:
             _set_action_feedback(action, "Fail", result.get("message", "Send Selection failed"), 2000)
             print("[klink] Send Selection failed:", result)

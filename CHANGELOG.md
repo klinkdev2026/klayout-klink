@@ -4,6 +4,56 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project does not use dated entries (versions only).
 
+## Unreleased
+
+- Marker doctrine, one visual language for every klink marker: pure
+  marks, zero area, never occluding, invisible to booleans and metrics.
+  The Region PCell outline is now a width-0 path (constant 1-px line at
+  every zoom; the old adaptive width got fat on large regions) and its
+  name text inset derives from the text size instead of the outline
+  width. The INVALID fallback marker is an outline too. Contours, claim,
+  digest and occupancy are untouched; existing Regions re-produce thin
+  automatically.
+- Port and Anchor marker PCells follow the same doctrine: the Port
+  triangle and the bend/waypoint anchor shapes are closed width-0 path
+  outlines (same bbox as the filled shapes they replace; the triangle
+  tip still shows orientation). The corridor anchor deliberately keeps
+  its real-width path -- that width IS the corridor. Everything that
+  consumes markers reads PCell parameters (port.list, anchor.list,
+  routing, harvest), so behavior is unchanged; an offline test pins the
+  zero-area contract.
+- `region.claim` accepts multi-point (3+ point) rulers as EXACT closed
+  polygons — auto-closed first..last..first, integer-DBU vertices, same
+  contribution for include/clip/exclude (no discretization). Fewer than
+  3 distinct points, collinear outlines, and self-intersecting outlines
+  (a crossing or a vertex touching a non-adjacent edge) are refused with
+  the offending segment pair named; klink never guesses an even-odd fill.
+  2-point rulers keep meaning box/ellipse by outline; a 2-point line
+  ruler is refused with a hint naming both options. The result now
+  echoes each consumed ruler (`consumed[]`: kind, role, points, bbox,
+  label).
+- New read RPC `region.claim_preview`: a no-mutation dry-run that lists
+  EVERY ruler in the view as a candidate, newest first (KLayout ruler
+  ids are allocated max(live id)+1 — verified — so id order is creation
+  order among live rulers), each with how claim would read it (box /
+  ellipse / polygon / line=not claimable), point count, bbox, label,
+  selected, and `labeled_role` for the optional express-lane label
+  `region` / `region:exclude`; pass `rulers` to also compose that set
+  and get the would-be result or claim's exact errors. The skill rule:
+  SENT rulers first, else preview + narrate + user confirmation; never
+  auto-clear rulers.
+- SEND now captures selected RULERS: the `selection_sent` event and the
+  stored `sel_*` record carry `ruler_count` + `rulers[]` (ascending id =
+  creation order; outline, points_um, bbox_um each) next to the layout
+  objects, so "the ruler I just sent" resolves through
+  `interaction.selection.*` and feeds `region.claim` directly. A SEND
+  with only rulers selected is no longer reported as "NoSel".
+  `interaction.context` adds `current_rulers` (the currently selected
+  rulers) beside `current_selection`.
+- Fixed the SEND toolbar button showing "Fail" when the SEND was
+  successfully journaled with no live MCP listener (status
+  `journaled_no_listener`); it now shows "Sent".
+
 ## 0.5.5
 
 Session-isolation fix for file inspection (a benchmarked agent

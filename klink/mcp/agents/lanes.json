@@ -18,6 +18,7 @@
    "anchor.list",
    "region.list",
    "region.get",
+   "region.claim_preview",
    "pcell.libraries",
    "pcell.list",
    "pcell.info",

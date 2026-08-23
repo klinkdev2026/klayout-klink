@@ -15,6 +15,8 @@ a flat pile:
       photonics/   gf_mzi_module, gf_ports
       passives/    idc_capacitor, spiral_inductor, saw_idt_filter, baw_fbar_planview
       layout/      fill_region_demo
+      layout_intent/ region_numbered_array (Executable Layout Intent; LIVE)
+      routing/     five_routers (Port/Anchor + tapered backend; LIVE)
       digital/     fit_device_pnr_lvs, padframe_pnr_lvs, chat_to_netlist_pnr,
                    multilayer_pnr_lvs (+ engine/netlists; LIVE, see below)
 
@@ -61,6 +63,16 @@ STARTERS: dict[str, list[tuple[str, str]]] = {
     # generic layout tooling (LIVE: needs a running KLayout with klink loaded)
     "layout": [
         ("demos/layout", "fill_region_demo.py"),
+    ],
+    # Executable Layout Intent hero flow (LIVE: needs a running KLayout with
+    # klink loaded).
+    "layout_intent": [
+        ("demos/layout_intent", "region_numbered_array.py"),
+    ],
+    # Port/Anchor routing backends showcase (LIVE: needs a running KLayout
+    # with klink loaded).
+    "routing": [
+        ("demos/routing", "five_routers.py"),
     ],
     # L-Edit bridge: single-file UPI macro source + standalone test driver.
     # Not a klink example — the user compiles the .cpp against their OWN

@@ -175,7 +175,8 @@ class InteractionContextStore:
 
     def _record_selection(self, event: dict[str, Any], *, capture_reason: str) -> dict[str, Any]:
         count = int(event.get("count") or len(event.get("items") or []))
-        if count <= 0:
+        ruler_count = int(event.get("ruler_count") or len(event.get("rulers") or []))
+        if count <= 0 and ruler_count <= 0:
             return {
                 "type": "selection_ignored",
                 "reason": "empty_selection",
@@ -260,6 +261,14 @@ class InteractionContextStore:
             too_large = True
             items_available = False
 
+        # Selected rulers ride along under their own keys. `count` /
+        # `bbox_dbu` / `layers` stay layout-object facts (the event carries
+        # ruler bboxes in um and no dbu, so they are not folded in); rulers
+        # are small, so they are stored in full up to the same item limit.
+        rulers = list(event.get("rulers") or [])
+        ruler_count = int(event.get("ruler_count") or len(rulers))
+        stored_rulers = rulers[: self.full_item_limit]
+
         record = {
             "type": "selection",
             "id": f"sel_{sequence:04d}",
@@ -275,6 +284,10 @@ class InteractionContextStore:
             "items_available": items_available,
             "too_large": too_large,
             "items": stored_items,
+            "ruler_count": ruler_count,
+            "rulers": stored_rulers,
+            "rulers_truncated": bool(event.get("rulers_truncated"))
+            or len(stored_rulers) < len(rulers),
         }
         for key in (
             "klayout_session_id",

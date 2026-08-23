@@ -84,7 +84,11 @@ should bind user intent to selections, shapes, cells, layers, and coordinates.
 For the MVP, memory is explicit: the user clicks the KLayout `SEND` toolbar
 action, or an agent calls `selection.send_context`, and MCP records the emitted
 `selection_sent` event as a stable id such as `sel_0006` under
-`.klink/sessions/<session-id>/interaction_context.jsonl`.
+`.klink/sessions/<session-id>/interaction_context.jsonl`. Selected RULERS
+are captured too (`ruler_count` + `rulers[]`, ascending id = creation
+order) — "claim the rulers I sent" goes `interaction.selection.latest` ->
+`rulers[].id` -> `region.claim`, after re-checking `points_um` with
+`annotation.get` (ids can be reused after deletions).
 
 When the user refers to sent/pinned GUI context, for example "just sent",
 "this area", "here", "that one", or "the selected thing I sent", first use:
