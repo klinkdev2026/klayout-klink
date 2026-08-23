@@ -18,10 +18,17 @@ from pathlib import Path
 
 import pytest
 
-pya = pytest.importorskip("pya")
-
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "klink_plugin" / "python"))
+PLUGIN_PYTHON = ROOT / "klink_plugin" / "python"
+if str(PLUGIN_PYTHON) not in sys.path:
+    sys.path.insert(0, str(PLUGIN_PYTHON))
+
+# Gate on klayout.db, NOT on "pya": another test module plants a minimal
+# fake pya in sys.modules, which must not un-skip us on a klayout-less CI
+# job (it did once: Library without .layout()).
+pytest.importorskip("klayout.db", reason="klayout pip package not installed")
+
+import pya  # noqa: E402
 
 from klink_server import anchor_pcell, port_pcell, region_pcell  # noqa: E402
 from klink_server.region_geom import encode_contours  # noqa: E402
