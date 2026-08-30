@@ -34,7 +34,7 @@ from typing import Any, Dict, Mapping, Optional, Sequence
 from .blender_style import BlenderStyle, BlenderStyleError
 from .visual_stack import VisualStack
 
-from ._util import kdb as _kdb
+from ._util import DEFAULT_WELD_DBU, kdb as _kdb
 
 class BlenderSceneError(ValueError):
     """Bad input; the message says what to fix."""
@@ -430,6 +430,7 @@ def render_device_figure(
     samples: int = 80,
     transparent: bool = True,
     resolution: Sequence[int] = (1920, 1200),
+    weld_slits_dbu: int = DEFAULT_WELD_DBU,
 ) -> Dict[str, Any]:
     """GDS-driven device figure at 1:1 layout coordinates.
 
@@ -450,7 +451,8 @@ def render_device_figure(
     x0, y0 = bb.left - margin_um, bb.bottom - margin_um
     x1, y1 = bb.right + margin_um, bb.top + margin_um
 
-    counts: Dict[str, Any] = {"solids": 0, "atoms": 0, "bonds": 0}
+    counts: Dict[str, Any] = {"solids": 0, "atoms": 0, "bonds": 0,
+                              "warnings": []}
     z_min = 0.0
     z_max = max([float(v.z1_um) for v in stack.layers]
                 + [float(s.get("z1_um", 0.0)) for s in slabs] + [0.0])
@@ -474,12 +476,12 @@ def render_device_figure(
 
     def layer_polys(vl):
         """-> list of ring lists [hull, hole1, ...] (holes preserved)."""
-        l, d = (int(v) for v in vl.layer.split("/"))
-        li = ly.find_layer(kdb.LayerInfo(l, d))
-        if li is None:
+        from ._util import layer_region
+        region = layer_region(ly, top, vl.layer, BlenderSceneError,
+                              weld_dbu=weld_slits_dbu,
+                              warnings=counts["warnings"])
+        if region is None:
             return []
-        region = kdb.Region(top.begin_shapes_rec(li))
-        region.merge()
         out = []
         for poly in region.each():
             rings = [[(p.x * dbu, p.y * dbu)
@@ -624,7 +626,9 @@ def main(argv: Sequence[str]) -> int:
             camera=payload.get("camera", "default"),
             samples=int(payload.get("samples", 80)),
             transparent=bool(payload.get("transparent", True)),
-            resolution=payload.get("resolution", (1920, 1200)))
+            resolution=payload.get("resolution", (1920, 1200)),
+            weld_slits_dbu=int(payload.get(
+                "weld_slits_dbu", DEFAULT_WELD_DBU)))
     else:
         print(f"unknown mode {mode!r}", file=sys.stderr)
         return 2

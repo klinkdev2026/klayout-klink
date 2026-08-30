@@ -55,6 +55,7 @@ def _safe_basename(value, default: str) -> str:
             "slabs": {"type": "array", "items": {"type": "object"},
                       "description": "mode='figure': explicit carriers, each {name,z0_um,z1_um,color[,alpha][,metallic]}."},
             "lattice_a_um": {"type": "number", "description": "Override the style's figure-scale lattice constant (a DRAWING scale, not the physical one). Normally omit it and let blender_style.py declare it."},
+            "weld_slits_dbu": {"type": "integer", "default": 0, "description": "mode='figure' only: weld tolerance in DBU for REAL hairline slits (default 0 = weld nothing that was drawn). Zero-width GDS keyhole cut-lines — the storage artifact holes arrive as — are ALWAYS dissolved; a slit >= 1 dbu wide may be drawn intent (e.g. a nanogap), so it is KEPT and reported in the result's warnings, because a tapered process widens such a gap by 2*thickness*tan(taper). Pass e.g. 2 to weld sub-2-dbu artifacts shut."},
             "camera": {"type": "string", "enum": ["default", "face", "top"], "default": "default"},
             "samples": {"type": "integer", "default": 96},
             "transparent": {"type": "boolean", "default": True},
@@ -136,6 +137,8 @@ def _tool_imaging_blender(ctx, arguments: dict) -> dict:
                     if arguments.get("lattice_a_um") is not None
                     else None)
                 payload["cell"] = arguments.get("cell")
+                payload["weld_slits_dbu"] = int(
+                    arguments.get("weld_slits_dbu", 0))
                 gds = arguments.get("gds")
                 if not gds:
                     client, close_after = ctx._session_scoped_client(
@@ -194,7 +197,8 @@ def _tool_imaging_blender(ctx, arguments: dict) -> dict:
             "tool": "imaging.blender",
             "inputs": {k: arguments.get(k) for k in
                        ("mode", "glb", "gds", "cell", "stack", "style",
-                        "camera", "samples", "lattice_a_um")},
+                        "camera", "samples", "lattice_a_um",
+                        "weld_slits_dbu")},
             "outputs": {
                 "files": [
                     {"path": png.replace(os.sep, "/"),
@@ -357,14 +361,14 @@ def _tool_imaging_sem_top(ctx, arguments: dict) -> dict:
     "Build a 3D model (GLB) of the layout plus a SELF-CONTAINED "
     "interactive viewer page (html: embedded model + vendored viewer "
     "JS + manual color/metal/rough panel + PNG export; opens by "
-    "double-click, offline). mode='fast' extrudes each layer of a "
-    "klink_visual_stack_v1 declaration between its z0_um/z1_um; "
-    "mode='process' sweeps the xsection engine across the die so "
-    "curvature (LOCOS, conformal layers, CMP) comes from the recipe — "
-    "engine materials are styled by matching recipe_symbol in the "
-    "stack, unmatched ones render grey and are listed as 'unstyled'. "
-    "fraction<1 stops the sweep mid-die: the exposed face is a true "
-    "cross-section (cutaway). Deterministic outputs + "
+    "double-click, offline). Extrudes each layer of a "
+    "klink_visual_stack_v1 declaration between its z0_um/z1_um — the "
+    "model IS the layout (a circle stays a smooth prism). For process "
+    "TRUTH (etch profiles, bird's beaks, conformal films) use the 2D "
+    "cross-section tool imaging.xsection_run instead; klink does not "
+    "fake 3D process simulation. Layers may declare sidewall_deg in "
+    "the stack for smooth tilted walls; cutaway_um cuts the finished "
+    "model to a region. Deterministic outputs + "
     "klink_imaging_result_v1 sidecar; never overwrites unless "
     "overwrite=true.",
     {
@@ -374,11 +378,8 @@ def _tool_imaging_sem_top(ctx, arguments: dict) -> dict:
             "cell": {"type": "string", "description": "Cell to render (default: top/current cell)."},
             "stack": {"type": "string", "description": "Path to a klink_visual_stack_v1 JSON (example/project-owned; klink ships none)."},
             "style": {"type": "string", "description": "REQUIRED: klink_viewer_style_v1 JSON path \u2014 the GLB's surface finish, the colour for materials the stack never declared, and the viewer page's whole palette + starting exposure. klink ships NO default; copy example_template/imaging/viewer_style.py (klink init already put one in your project) and run `python viewer_style.py` to write its JSON."},
-            "mode": {"type": "string", "enum": ["fast", "process"], "default": "fast"},
-            "recipe": {"type": "string", "description": "Required for mode='process': the .pyxs recipe (trusted Python)."},
-            "slices": {"type": "integer", "default": 36, "description": "process mode: number of engine cuts."},
-            "fraction": {"type": "number", "default": 1.0, "description": "process mode: sweep this fraction of the die (<1 = cutaway)."},
-            "exclude": {"type": "array", "items": {"type": "string"}, "description": "process mode: recipe variables to skip (consumed intermediates)."},
+            "weld_slits_dbu": {"type": "integer", "default": 0, "description": "Weld tolerance in DBU for REAL hairline slits (default 0 = weld nothing that was drawn). Zero-width GDS keyhole cut-lines — the storage artifact holes arrive as — are ALWAYS dissolved; a slit >= 1 dbu wide may be drawn intent (e.g. a nanogap), so it is KEPT and reported in the result's warnings, because a tapered process widens such a gap by 2*thickness*tan(taper). Pass e.g. 2 to weld sub-2-dbu artifacts shut."},
+            "cutaway_um": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4, "description": "Cut the finished model to this REGION [x0,y0,x1,y1] (um, the part to KEEP): built whole first, then boolean-cut, so the section shows only on the cut faces. Needs pip install manifold3d (the error says so). Omit for the full model."},
             "output_dir": {"type": "string"},
             "basename": {"type": "string", "default": "render3d"},
             "overwrite": {"type": "boolean", "default": False},
@@ -393,8 +394,7 @@ def _tool_imaging_render3d(ctx, arguments: dict) -> dict:
         import hashlib
         import json as _json
 
-        from ...domains.imaging.mesh3d import (build_glb_fast,
-                                               build_glb_process)
+        from ...domains.imaging.mesh3d import build_glb_fast
         from ...domains.imaging.viewer import build_viewer_html
         from ...domains.imaging.visual_stack import VisualStack
 
@@ -443,24 +443,15 @@ def _tool_imaging_render3d(ctx, arguments: dict) -> dict:
                     save["cell"] = arguments["cell"]
                 client.call("layout.save_file", save)
                 gds = tmp_gds
-            mode = str(arguments.get("mode") or "fast")
             cell = None if tmp_gds else arguments.get("cell")
-            if mode == "process":
-                recipe = arguments.get("recipe")
-                if not recipe:
-                    raise ValueError(
-                        "mode='process' needs recipe=<path to .pyxs> "
-                        "(the engine sweep is recipe-driven); use "
-                        "mode='fast' for a plain stack extrusion")
-                report = build_glb_process(
-                    gds, stack, str(recipe), glb, viewer_style,
-                    cell=cell,
-                    slices=int(arguments.get("slices", 36)),
-                    fraction=float(arguments.get("fraction", 1.0)),
-                    exclude=tuple(arguments.get("exclude") or ()))
-            else:
-                report = build_glb_fast(gds, stack, glb, viewer_style,
-                                        cell=cell)
+            report = build_glb_fast(
+                gds, stack, glb, viewer_style, cell=cell,
+                weld_slits_dbu=int(
+                    arguments.get("weld_slits_dbu", 0)),
+                cutaway_um=(
+                    list(map(float, arguments["cutaway_um"]))
+                    if arguments.get("cutaway_um") is not None
+                    else None))
         finally:
             if tmp_gds:
                 try:
@@ -482,8 +473,8 @@ def _tool_imaging_render3d(ctx, arguments: dict) -> dict:
                 "gds": str(arguments.get("gds") or "<live session>"),
                 "stack": str(arguments["stack"]),
                 "stack_name": stack.name,
-                "mode": report["mode"],
-                "recipe": arguments.get("recipe"),
+                "weld_slits_dbu": arguments.get("weld_slits_dbu", 0),
+                "cutaway_um": arguments.get("cutaway_um"),
             },
             "outputs": {
                 "files": [
@@ -543,6 +534,7 @@ def _tool_imaging_render3d(ctx, arguments: dict) -> dict:
             "delta_dbu": {"type": "integer", "default": 10},
             "auto_layer_base": {"type": "integer", "default": 300, "description": "First layer number for auto-output materials (a klink convention, like the 999/99 port layer). Move it if your recipe already writes 300/0 and up."},
             "exclude": {"type": "array", "items": {"type": "string"}, "description": "Recipe material variable names to skip in auto-output (consumed intermediates)."},
+            "weld_slits_dbu": {"type": "integer", "default": 0, "description": "Weld tolerance in DBU for REAL hairline slits (default 0 = weld nothing that was drawn). Zero-width GDS keyhole cut-lines — the storage artifact holes arrive as — are ALWAYS dissolved; a slit >= 1 dbu wide may be drawn intent (e.g. a nanogap), so it is KEPT and reported in the result's warnings, because a tapered process widens such a gap by 2*thickness*tan(taper). Pass e.g. 2 to weld sub-2-dbu artifacts shut."},
             "style": {"type": "string", "description": "klink_section_style_v1 JSON path \u2014 REQUIRED when render=true (ignored otherwise, since a section GDS has no look). Page colour, material gradient, outline darkening, z-ruler, label bar, scale bar and the fallback colour for undeclared materials. klink ships NO default; copy example_template/imaging/section_style.py (klink init already put one in your project) and run `python section_style.py` to write its JSON."},
             "render": {"type": "boolean", "default": False, "description": "Also rasterize each section to PNG (+ film strip/GIF with steps=true). Needs numpy/scipy/pillow."},
             "z_window_um": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2, "description": "With render: frame the picture to [z_bottom, z_top] in microns. WITHOUT this the engine's multi-micron substrate fills most of the image and the films are a thin band at the top — pass e.g. [-1.0, 1.5]."},
@@ -632,6 +624,8 @@ def _tool_imaging_xsection_run(ctx, arguments: dict) -> dict:
                 z_window_um=arguments.get("z_window_um"),
                 axis=bool(arguments.get("axis", False)),
                 source_label=("<live session>" if tmp_gds else None),
+                weld_slits_dbu=int(
+                    arguments.get("weld_slits_dbu", 0)),
             )
             # the sidecar records the cut COORDINATES; this records where
             # they came from, so "which line is this picture" survives

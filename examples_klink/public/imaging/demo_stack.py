@@ -14,6 +14,15 @@ Two kinds of entry:
 Anything the recipe produces that is not declared here still renders —
 in a deterministic auto-color, and it is reported back as ``unstyled``
 so you know to declare it.
+
+``sidewall_deg`` (optional, per layer, default 0 = vertical): the 3D
+model lofts that layer's walls to a smooth tilt — the top face is the
+bottom face pulled inward by thickness*tan(angle). It is a PROCESS
+FACT you declare, in degrees from vertical; real etch profiles sit
+under ~10 (this demo uses 5, the same angle demo.pyxs etches with).
+A polygon narrower than 2*thickness*tan(angle) cannot survive the
+tilt; klink draws it vertical instead and says so in the report's
+``warnings`` — lower the angle or thin the layer to model it tapered.
 """
 from klink.domains.imaging.visual_stack import VisualLayer, VisualStack
 
@@ -29,12 +38,17 @@ STACK = VisualStack(
         VisualLayer(layer="3/0", z0_um=0.02, z1_um=0.18, name="poly",
                     color="#c94f4f", sem_grey=0.62, edge_glow=0.8,
                     recipe_symbol="poly"),
+        # the etched layers carry the recipe's 5-degree sidewall into
+        # the 3D model (demo.pyxs etches contacts and metal-1 with
+        # taper=5) — walls loft as one smooth tilted face, no slicing
         VisualLayer(layer="4/0", z0_um=0.18, z1_um=0.75, name="contact",
                     color="#6e6e78", metallic=0.8, sem_grey=0.88,
-                    edge_glow=1.0, recipe_symbol=""),
+                    edge_glow=1.0, recipe_symbol="",
+                    sidewall_deg=5.0),
         VisualLayer(layer="6/0", z0_um=0.75, z1_um=0.97, name="metal-1",
                     color="#aab8c4", metallic=0.95, sem_grey=0.78,
-                    edge_glow=0.9, recipe_symbol="metal1"),
+                    edge_glow=0.9, recipe_symbol="metal1",
+                    sidewall_deg=5.0),
     ),
     # engine-only materials, keyed by the recipe's variable names
     recipe_styles={

@@ -4,6 +4,55 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project does not use dated entries (versions only).
 
+## 0.5.8
+
+- imaging: the 3D exits now normalize layout rings to AREA semantics
+  before building geometry, the way the 2.5d view does (real-user
+  report: a rectangle with a hole grew a canyon in Blender/render3d
+  that the 2.5d view never showed). GDS cannot store holes — a drawn
+  hole arrives as a ring with a keyhole cut-line — and the xsection
+  engine's float crossing math split even zero-width cut-lines on
+  ~40% of cuts, a phantom 1-dbu mask gap that a process taper then
+  widened by 2*thickness*tan(angle) (measured: 1 nm slit -> 2.52 um
+  canyon at taper=40, t=1.5 um). The contract, on all layer reads
+  (`render3d`, `xsection_run`, `blender` figure): a
+  ZERO-WIDTH cut-line is storage, never intent — always dissolved
+  silently; a slit with real width (>= 1 dbu) may be DRAWN intent
+  (nanogaps are real devices), so it is KEPT and reported in the
+  result's `warnings` (the note quotes the taper amplification and
+  both ways out); welding real slits is the user's explicit choice
+  via the new `weld_slits_dbu` parameter (default 0) on the three
+  tools, recorded in every sidecar. New starter
+  `imaging/keyhole_3d_demo.py` walks all three cases.
+- imaging: the 3D model can now carry the two things an extrusion can
+  honestly carry, both declared, never guessed. A stack layer may
+  declare `sidewall_deg` (a process fact, per layer, default 0 =
+  vertical): the layer's walls loft to one smooth tilt — the top face
+  is the bottom face pulled inward by thickness*tan(angle), so a
+  circle stays a smooth prism, just tilted (an exact frustum,
+  volume-verified in test). A polygon narrower than
+  2*thickness*tan(angle) cannot survive the tilt; it is drawn
+  vertical and reported in `warnings` instead of becoming guessed
+  geometry. And `imaging.render3d` gains `cutaway_um=[x0,y0,x1,y1]`:
+  the model is built WHOLE first, then boolean-cut to the keep-region
+  (manifold3d; instructive error without it), so a section shows only
+  on the cut faces — never a sliced model. The demo stack declares
+  sidewall_deg=5 on contact and metal-1, the same angle its recipe
+  etches with.
+- imaging: REMOVED `render3d` mode='process' (the xsection-engine
+  sweep stacked into 3D slabs), with its `recipe`/`slices`/
+  `fraction`/`exclude` parameters. The engine computes exact 2D
+  sections along a line; stacking those into a 3D body produced a
+  stair-step of the slice pitch across everything it claimed to show
+  — slice lines on flat surfaces, staircased circles — and no amount
+  of seam welding made it look like the layout. The honest split
+  now: `imaging.render3d` is a 3D drawing of the masks (a circle
+  stays a smooth prism), and process TRUTH — etch profiles, bird's
+  beaks, conformal films — belongs to the 2D `imaging.xsection_run`
+  sections and step films, which are engine-exact. A real 3D process
+  simulator is out of klink's honest scope and klink no longer
+  pretends otherwise.
+
 ## 0.5.7
 
 The L-Edit bridge grows from a drawing transport into a full editor

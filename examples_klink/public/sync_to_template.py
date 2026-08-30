@@ -90,6 +90,7 @@ STARTERS: dict[str, list[tuple[str, str]]] = {
         ("imaging", "sem_style.py"),
         ("imaging", "blender_demo.py"),
         ("imaging", "blender_style.py"),
+        ("imaging", "keyhole_3d_demo.py"),
         ("imaging", "README.md"),
     ],
     "ledit_bridge": [

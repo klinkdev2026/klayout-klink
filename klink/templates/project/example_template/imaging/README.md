@@ -19,9 +19,13 @@ field oxide → gate oxide → poly gate + silicide → LDD implants → spacer
 
 ```bat
 python xsection_demo.py    # 剖面 + 分步工艺胶片(PNG 条 + GIF)
-python render3d_demo.py    # GLB + 自含网页查看器(双击离线打开,逐层调色)
+python render3d_demo.py    # GLB + 自含网页查看器(双击离线打开,逐层调色);
+                           # stack 里 sidewall_deg 声明光滑斜壁,
+                           # cutaway_um 把建好的模型切开看剖面
 python sem_demo.py         # SEM 风格顶视(灰度+假彩色+逐掩膜序列)
 python blender_demo.py     # 论文级渲染 + 可手改 .blend(可选,需 bpy)
+python keyhole_3d_demo.py  # 挖孔版图的3D真相:零宽钥匙孔切缝静默还原成孔,
+                           # ≥1 dbu 的真缝保留+报警(weld_slits_dbu=2 显式焊)
 ```
 
 依赖按需装,klink 的报错会给出精确 pip 命令 / errors name the exact

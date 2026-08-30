@@ -46,7 +46,7 @@ import json
 import os
 import re
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
-from ._util import kdb as _kdb
+from ._util import DEFAULT_WELD_DBU, kdb as _kdb
 
 PINNED_PYXS = "0.1.13"
 SIDECAR_FORMAT = "klink_imaging_result_v1"
@@ -166,6 +166,7 @@ def _make_driver(pyxs_lib, MaterialData):
             self._src_cell = cell_index
             self._params = dict(params)
             self._recorded_outputs: List[Tuple[str, int]] = []
+            self._slit_warnings: Dict[str, dict] = {}
 
         # -- engine state, from OUR inputs (upstream reads the GUI) --
         def _setup(self, p1, p2):
@@ -194,6 +195,37 @@ def _make_driver(pyxs_lib, MaterialData):
 
         def _finalize_view(self):
             pass
+
+        def layer(self, layer_spec):
+            """Upstream ``layer()`` hands the engine the RAW drawn
+            rings — including GDS keyhole cut-lines, since the file
+            format cannot store holes. The engine's crossing sums
+            cancel a zero-width cut-line only when both coincident
+            edges round to the same dbu, and its float intersection
+            math computes each direction separately, so ~half the cuts
+            grow a phantom 1-dbu mask gap — which an etch/grow taper
+            then widens by 2*thickness*tan(angle) into a canyon that
+            was never drawn (live-proven: 10/24 cuts split on a plain
+            GDS donut). Normalize to area semantics first, exactly
+            like the 2.5d view does. A REAL hairline slit (>= 1 dbu,
+            possibly drawn intent) is kept unless the caller welds it
+            explicitly — and reported via ``_slit_warnings``."""
+            from ._util import (hairline_slit_bbox, slit_warning,
+                                weld_region)
+            ld = super().layer(layer_spec)
+            region = kdb.Region()
+            for poly in ld.data:
+                region.insert(poly)
+            weld = int(self._params.get("weld_slits_dbu", 0))
+            weld_region(region, weld)
+            key = str(layer_spec)
+            if key not in self._slit_warnings:
+                bb = hairline_slit_bbox(region)
+                if bb is not None:
+                    self._slit_warnings[key] = slit_warning(
+                        key, bb, weld)
+            ld.data = [poly for poly in region.each()]
+            return ld
 
         def output(self, layer_spec=None, layer_data=None, *args):
             # resolve the material's variable name EAGERLY: after exec a
@@ -287,66 +319,6 @@ def _filename_slug(name: str) -> str:
     return safe.strip("_.-")
 
 
-def run_cut_polygons(
-    layout: Any,
-    cell_index: int,
-    recipe_text: str,
-    recipe_path: str,
-    cut_um: Sequence[Sequence[float]],
-    *,
-    name_to_layer: Dict[str, str],
-    exclude: Sequence[str] = (),
-    height_um: float = 2.0,
-    depth_um: float = 2.0,
-    below_um: float = 2.0,
-    extend_um: float = 2.0,
-    delta_dbu: int = 10,
-    auto_layer_base: int = _AUTO_LAYER_BASE,
-) -> Dict[str, List[List[Tuple[float, float]]]]:
-    """One engine cut -> ``{material name: [poly points (um), ...]}``.
-
-    The building block for sweep consumers (process-true 3D): explicit
-    ``output()`` lines are stripped and every material auto-output with
-    the caller's persistent ``name_to_layer`` map, so material identity
-    is stable across many cuts.  Section-plane coordinates: x = position
-    along the cut, y = height (um).
-    """
-    pyxs_lib, MaterialData = _engine()
-    params = {"height_um": height_um, "depth_um": depth_um,
-              "below_um": below_um, "extend_um": extend_um,
-              "delta_dbu": delta_dbu}
-    driver_cls = _make_driver(pyxs_lib, MaterialData)
-    drv = driver_cls(layout, cell_index, recipe_path, params)
-    text = _strip_outputs(recipe_text)
-    materials = drv.run_text(
-        tuple(map(float, cut_um[0])), tuple(map(float, cut_um[1])),
-        text, auto_output=True, name_to_layer=name_to_layer,
-        exclude=exclude, auto_layer_base=auto_layer_base)
-    # read back per-material polygons (ring lists [hull, hole...] —
-    # a fully enclosed void, e.g. a keyhole in a trench fill, is real)
-    tl = drv._target_layout
-    cell = tl.cell(drv._target_cell)
-    dbu = tl.dbu
-    out: Dict[str, List[List[List[Tuple[float, float]]]]] = {}
-    for li in tl.layer_indexes():
-        info = tl.get_info(li)
-        key = "%d/%d" % (info.layer, info.datatype)
-        name = materials.get(key, key)
-        polys = []
-        for sh in cell.shapes(li).each():
-            if not (sh.is_box() or sh.is_polygon() or sh.is_path()):
-                continue
-            dp = sh.dpolygon
-            rings = [[(p.x, p.y) for p in dp.each_point_hull()]]
-            for hi in range(dp.holes()):
-                rings.append([(p.x, p.y)
-                              for p in dp.each_point_hole(hi)])
-            polys.append(rings)
-        if polys:
-            out.setdefault(name, []).extend(polys)
-    return out
-
-
 def run_xsection(
     gds_path: str,
     recipe_path: str,
@@ -362,6 +334,7 @@ def run_xsection(
     below_um: float = 2.0,
     extend_um: float = 2.0,
     delta_dbu: int = 10,
+    weld_slits_dbu: int = DEFAULT_WELD_DBU,
     exclude: Sequence[str] = (),
     render: bool = False,
     stack: Optional[Any] = None,
@@ -415,7 +388,8 @@ def run_xsection(
         recipe_text = fh.read()
     params = {"height_um": height_um, "depth_um": depth_um,
               "below_um": below_um, "extend_um": extend_um,
-              "delta_dbu": delta_dbu}
+              "delta_dbu": delta_dbu,
+              "weld_slits_dbu": int(weld_slits_dbu)}
     driver_cls = _make_driver(pyxs_lib, MaterialData)
     p1, p2 = (tuple(map(float, cut_um[0])), tuple(map(float, cut_um[1])))
 
@@ -469,12 +443,15 @@ def run_xsection(
     files: List[Dict[str, Any]] = []
     stage_reports: List[Dict[str, Any]] = []
     name_to_layer: Dict[str, str] = {}
+    slit_warnings: Dict[str, dict] = {}
     for si, (stage_name, text) in enumerate(stages):
         drv = driver_cls(layout, top.cell_index(), recipe_path, params)
         materials = drv.run_text(
             p1, p2, text, auto_output=True,
             name_to_layer=name_to_layer, exclude=exclude,
             auto_layer_base=auto_layer_base)
+        for key, warning in drv._slit_warnings.items():
+            slit_warnings.setdefault(key, warning)
         if steps:
             safe = _filename_slug(stage_name)
             tail = f"_{safe}" if safe else ""
@@ -578,6 +555,8 @@ def run_xsection(
             "exclude": sorted(exclude),
         },
         "outputs": {"files": files, "stages": stage_reports,
+                    "warnings": sorted(slit_warnings.values(),
+                                       key=lambda w: w["layer"]),
                     **({"render": render_out} if render else {})},
         "versions": {
             "klayout": klayout.__version__,
