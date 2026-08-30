@@ -263,27 +263,36 @@ planarize(into=[metal1], less=0.22)</code></pre>
         <p>MCP 工具：<code>imaging.xsection_run</code>——<code>cut_um</code> 必须显式给（µm），<code>steps=true</code> 配合配方里的 <code># klink-step:</code> 标记出胶片；<code>z_window_um</code> 给每帧定一个统一的 z 窗口（这里是 <code>(-1.1, 1.5)</code>——engine 的衬底本身有好几微米深，不框一下画面大半都是衬底），<code>axis=true</code> 会在每帧左边画一条带刻度的 z / µm 标尺、右下角配一条水平比例尺（上面每张图左边的刻度和角落的 "1 µm" 线段就是它画的）。输出确定性（GDS 不带时间戳），<code>overwrite=false</code> 是默认值，每次运行都写一份 <code>klink_imaging_result_v1</code> 机读 sidecar。</p>
 
         <h2 id="stage-2" class="anchor-h"><span class="stage-kicker">2</span>3D + 自含网页查看器</h2>
-        <p><code>render3d_demo.py</code> 把同一份四晶体管 CMOS 版图出成两个 GLB + 两个自含网页查看器：</p>
+        <p><code>render3d_demo.py</code> 把同一份四晶体管 CMOS 版图出成三样东西：完整模型的查看器、同一模型切开一角的 cutaway 查看器，外加同一个 GLB 换一套配色的 light 页面。这个 3D 模型是版图掩膜的忠实绘图：把 <code>klink_visual_stack_v1</code> 里每一层的多边形在它自己的 <code>z0_um</code>/<code>z1_um</code> 之间拉伸出来，一个圆还是一个光滑的棱柱，不发明任何东西。一次拉伸永远不会包含工艺曲率——LOCOS 的 bird's beak、锥形接触孔、CMP 碟形，这些都不在 GDS 里，自然也不会出现在这个模型里；它们属于 <code>imaging.xsection_run</code> 的 2D 剖面，是引擎精确的。<strong>0.5.8 移除了曾经存在的"process 扫描"3D 模式</strong>（把 1D 引擎的切片堆成一个体，结果处处都是台阶），换成两个诚实声明、绝不瞎猜的能力：</p>
+        <ul>
+          <li><code>sidewall_deg</code>（层声明里的字段，默认 0 = 竖直）把一层的墙 loft 成一个平滑的倾角——顶面按 <code>thickness*tan(angle)</code> 向内收。这个 demo 在 contact 和 metal-1 上都声明了 5 度，跟 <code>demo.pyxs</code> 刻蚀这两层用的角度一致。窄到撑不住这个倾角的多边形会被画成竖直，并记进结果的 <code>warnings</code>。</li>
+          <li><code>cutaway_um=[x0,y0,x1,y1]</code> 把建好的整个模型布尔切开，只保留这个区域（µm）：先建完整模型，再切割，所以截面只出现在被切开的那两个面上（需要 <code>pip install manifold3d</code>）。</li>
+        </ul>
         <pre><code>python render3d_demo.py</code></pre>
-        <pre><code>fast_glb = OUT / "render3d_fast.glb"
-build_glb_fast(str(GDS), STACK, str(fast_glb), STYLE)                    # 拉伸 STACK 声明
-build_viewer_html(str(fast_glb), str(OUT / "render3d_fast.html"), STYLE)
+        <pre><code># ---- 1. the model: a 3D drawing of the masks ---------------------
+glb = OUT / "render3d_fast.glb"
+r = build_glb_fast(str(GDS), STACK, str(glb), STYLE)
+build_viewer_html(str(glb), str(OUT / "render3d_fast.html"),
+                  STYLE, title="demo fast", overwrite=True)
 
-proc_glb = OUT / "render3d_process.glb"
-build_glb_process(str(GDS), STACK, str(RECIPE), str(proc_glb),
-                  STYLE, slices=24, fraction=0.6)                        # 扫过真实配方，fraction<1 是切角
-build_viewer_html(str(proc_glb), str(OUT / "render3d_process.html"), STYLE)</code></pre>
-        <p><strong>fast 模式</strong>直接拉伸 <code>demo_stack.py</code> 里的 <code>z0_um</code>/<code>z1_um</code>，快但形状是理想化的层块；<strong>process 模式</strong>沿着真实的 <code>.pyxs</code> 配方做切片扫描，LOCOS/保形层/CMP 那种真实拓扑都会体现出来——本例还传了 <code>fraction=0.6</code>，做出一个切角（cutaway），暴露面就是一个真实的剖面。生成的 <code>.html</code>是<strong>完全自含、离线</strong>的（查看器 JS + 模型数据都编码进同一个文件），双击直接在浏览器打开，拖动旋转，右侧面板能调每层的颜色/金属度/粗糙度、导出 PNG。</p>
-        <p>0.5.2 版按两条真实用户反馈修了两处：GLB 导出现在遵循 glTF 规范的 +Y-up 朝向，查看器还放开了 model-viewer 默认 22.5°–157.5° 的俯仰钳制、变成完整的 0°–180°——旋转不再被墙挡住，die 的每一个面都能转到；查看器面板每种材质还新增一条透明度滑条（A，挨着金属度 M、粗糙度 R），把某一层调淡来突出或弱化它——低于 1 材质会自动切到 BLEND 混合模式，回到 1 恢复它声明的模式，Reset 还原成声明时的样子。下面嵌的就是用新版本构建出的查看器——拖满一整圈试试，也拉一下 A 滑条。</p>
+# ---- 2. the same model, cut open ---------------------------------
+cut_glb = OUT / "render3d_cutaway.glb"
+rc = build_glb_fast(str(GDS), STACK, str(cut_glb), STYLE,
+                    cutaway_um=[-0.8, 1.9, 11.2, 4.7])
+build_viewer_html(str(cut_glb), str(OUT / "render3d_cutaway.html"),
+                  STYLE, title="demo cutaway", overwrite=True)</code></pre>
+        <p>生成的三个 <code>.html</code> 都是<strong>完全自含、离线</strong>的（查看器 JS + 模型数据都编码进同一个文件），双击直接在浏览器打开，拖动旋转，右侧面板能调每层的颜色/金属度/粗糙度/透明度、导出 PNG。</p>
+        <p>0.5.2 版按两条真实用户反馈修了两处：GLB 导出现在遵循 glTF 规范的 +Y-up 朝向，查看器还放开了 model-viewer 默认 22.5°–157.5° 的俯仰钳制、变成完整的 0°–180°——旋转不再被墙挡住，模型的每一个面都能转到；查看器面板每种材质还新增一条透明度滑条（A，挨着金属度 M、粗糙度 R），把某一层调淡来突出或弱化它——低于 1 材质会自动切到 BLEND 混合模式，回到 1 恢复它声明的模式，Reset 还原成声明时的样子。下面嵌的就是这份 cutaway 查看器——拖满一整圈试试，也拉一下 A 滑条。</p>
         <figure class="tut-figure">
-          <iframe src="assets/tutorials/imaging/viewer-process.html" title="klink imaging：process 模式 cutaway 的交互式 3D 查看器" loading="lazy" style="width:100%;height:520px;border:1px solid var(--border,#d8d8d2);border-radius:6px;background:#14161a" allowfullscreen></iframe>
-          <figcaption><strong>这就是 <code>render3d_demo.py</code> 生成的那个文件本身</strong>，原样嵌在这里：拖动旋转、滚轮缩放，右侧面板调背景/曝光/色调映射/阴影、逐材质改颜色/金属度/透明度，还能导出 PNG。它是单文件、离线的——查看器 JS 和模型数据都编码在这一个 HTML 里，<a href="assets/tutorials/imaging/viewer-process.html" target="_blank" rel="noopener">单独打开</a>或拷给同事双击都一样能跑，不连网、不装东西。</figcaption>
+          <iframe src="assets/tutorials/imaging/viewer-cutaway.html" title="klink imaging：cutaway 交互式 3D 查看器" loading="lazy" style="width:100%;height:520px;border:1px solid var(--border,#d8d8d2);border-radius:6px;background:#14161a" allowfullscreen></iframe>
+          <figcaption><strong>这就是 <code>render3d_demo.py</code> 生成的 cutaway 查看器本身</strong>，原样嵌在这里：模型先整个建好，再做一次布尔切割，保留 y ≥ 1.9 µm 的一侧，暴露面正好穿过四个栅极；拖动旋转、滚轮缩放，右侧面板调背景/曝光/色调映射/阴影、逐材质改颜色/金属度/透明度，还能导出 PNG。它同样是单文件、离线的——<a href="assets/tutorials/imaging/viewer-cutaway.html" target="_blank" rel="noopener">单独打开</a>或拷给同事双击都一样能跑，不连网、不装东西。</figcaption>
         </figure>
         <figure class="tut-figure">
-          <img src="assets/tutorials/imaging/blender-die.png" alt="process-cutaway GLB 的渲染：一整条矩形 die，顶面沿长度方向有一道浅槽，均匀分布着四个深红色多晶硅栅极凸起，栅极之间是深灰色的竖直接触/金属列，透明背景带柔和阴影">
-          <figcaption>这不是自含网页查看器的截图（那是一个你要自己双击打开的离线 HTML 页面）——这是同一个 <code>render3d_process.glb</code> 模型被 <code>blender_demo.py</code> 的 <code>mode="die"</code> 重新摆到透明薄膜 + 阴影承接面上渲染出的静态图：能看到顶面沿长度方向的浅槽、四个深红色多晶硅栅极凸起，以及栅极之间深灰色的接触/金属列，用来在文档里表示这个模型长什么样。</figcaption>
+          <img src="assets/tutorials/imaging/blender-die.png" alt="render3d_fast GLB 的渲染：一整条矩形 die，顶面均匀分布着四个深红色多晶硅栅极，横跨浅色的有源区条带，栅极之间是接触塞和悬浮在其声明高度上的金属1梯子，全部立在 n-well/衬底板上，透明背景带柔和阴影">
+          <figcaption>这不是自含网页查看器的截图（那是一个你要自己双击打开的离线 HTML 页面）——这是同一个 <code>render3d_fast.glb</code> 模型被 <code>blender_demo.py</code> 的 <code>mode="die"</code> 重新摆到透明薄膜 + 阴影承接面上渲染出的静态图：悬浮在其声明高度上的金属1梯子，架在横跨浅色有源区条带的红色多晶硅栅极之上，栅极之间是接触塞，全部立在 n-well/衬底板上；contact 和 metal-1 都带着这份 stack 声明的 5 度侧壁倾角。</figcaption>
         </figure>
-        <p>MCP 工具：<code>imaging.render3d</code>——<code>mode="fast"</code> 拉伸 <code>klink_visual_stack_v1</code> 声明；<code>mode="process"</code> 扫过 xsection 引擎，配方材质（<code>pbulk</code>/<code>nwell</code>/<code>tungsten</code> 等）通过 <code>recipe_symbol</code> 映射上色，没映射上的材质标灰并报告 <code>unstyled</code>。</p>
+        <p>MCP 工具：<code>imaging.render3d</code>——把 <code>klink_visual_stack_v1</code> 声明的每一层拉伸成掩膜实体；旧的 process 扫描相关参数（<code>mode</code>/<code>recipe</code>/<code>exclude</code> 等）在 0.5.8 里已经不存在，换成层声明里的 <code>sidewall_deg</code>（平滑倾角）和调用参数 <code>cutaway_um</code>（先建整模型再布尔切开）。</p>
+        <p>0.5.8 起，每一次读取 3D 图层都遵守同一条 slit 契约：GDS 里那种<strong>0 宽的 keyhole 切割线</strong>（画出来的孔存进 GDS 后变成的存储产物）会被静默溶解；<strong>宽度 ≥ 1 dbu</strong> 的缝隙可能是故意画出来的意图（比如纳米间隙），会被保留并写进结果的 <code>warnings</code>；<code>weld_slits_dbu</code>（默认 0）是显式的焊接开关，用来把确认是假象的窄缝焊死。这条契约同样管着 <code>imaging.xsection_run</code> 和 <code>imaging.blender</code>（figure 模式）读到的每个 3D 图层。新 starter <code>example_template/imaging/keyhole_3d_demo.py</code> 完整走一遍这三条规则。</p>
 
         <h2 id="stage-3" class="anchor-h"><span class="stage-kicker">3</span>SEM 风格顶视</h2>
         <p><code>sem_demo.py</code> 把版图渲染成"看起来像"二次电子显微图的顶视图：按 <code>VisualStack</code> 里每层的 <code>sem_grey</code>/<code>edge_glow</code> 出灰阶发射强度和边缘亮边，加光刻圆角、束斑模糊、带种子的胶片颗粒、扫描线、暗角——同一个种子永远出同一张图。</p>
@@ -310,14 +319,14 @@ build_viewer_html(str(proc_glb), str(OUT / "render3d_process.html"), STYLE)</cod
         <pre><code>python blender_demo.py</code></pre>
         <ul>
           <li><code>mode="figure"</code>：一个二维材料器件，按版图坐标 1:1 摆放——<code>10/0</code> 层是 MoS2 flake，声明 <code>kind="lattice", motif="mos2"</code> 后直接长出<strong>真实原子晶格</strong>（也支持 <code>motif="graphene"</code>）；<code>20/0</code> 层是 Au 电极，画成精确的版图棱柱；外加显式的 Si/SiO2 衬底 slab。</li>
-          <li><code>mode="die"</code>：把 <code>render3d_process.glb</code>（第②节的产物）重新摆到透明薄膜 + 阴影承接面上，就是上面已经看过的那张切角芯片图。</li>
+          <li><code>mode="die"</code>：把 <code>render3d_fast.glb</code>（第②节的产物）重新摆到透明薄膜 + 阴影承接面上，就是上面已经看过的那张 die 渲染图。</li>
         </ul>
         <figure class="tut-figure">
           <img src="assets/tutorials/imaging/blender-figure.png" alt="MoS2 场效应器件的论文级渲染：中间是不规则六边形的原子晶格薄片，两端各连一个金色矩形电极，下方是灰蓝色的 SiO2/Si 衬底切块">
           <figcaption><code>blender_figure.png</code>：MoS2 flake 长成真实原子晶格（<code>kind="lattice", motif="mos2"</code>），Au 电极是精确的版图棱柱，衬底是显式的 SiO2/Si slab。</figcaption>
         </figure>
         <p>两种模式都<strong>额外写一份 <code>.blend</code></strong>（<code>blender_figure.blend</code> / <code>blender_die.blend</code>）——在桌面版 Blender 里打开就能手动调相机、灯光、材质再重新渲染，不是一次性黑盒输出。</p>
-        <p>MCP 工具：<code>imaging.blender</code>——子进程隔离跑 headless <code>bpy</code>；<code>mode="die"</code> 需要先跑过 <code>imaging.render3d</code>（或 <code>render3d_demo.py</code>）产出的 process GLB；<code>mode="figure"</code> 直接吃 gds + stack，需要 <code>bpy</code>（外加 <code>trimesh</code>/<code>klayout-pyxs==0.1.13</code>，如果要用 die 模式）。</p>
+        <p>MCP 工具：<code>imaging.blender</code>——子进程隔离跑 headless <code>bpy</code>；<code>mode="die"</code> 需要先跑过 <code>imaging.render3d</code>（或 <code>render3d_demo.py</code>）产出的 GLB；<code>mode="figure"</code> 直接吃 gds + stack，需要 <code>bpy</code>（外加 <code>trimesh</code>/<code>klayout-pyxs==0.1.13</code>，如果要用 die 模式）。</p>
 
         <h2 id="physics" class="anchor-h">物理对不对？</h2>
         <p>这不是营销话术，是一个可核对的结果：<strong>同一份版图</strong>，把 <code>.pyxs</code> 配方里接触工序的那几行代码换三种写法，钨塞是否真的出现在生成的 3D 模型里就完全不一样——因果关系在配方顺序里，不在版图坐标里。</p>
@@ -341,7 +350,7 @@ build_viewer_html(str(proc_glb), str(OUT / "render3d_process.html"), STYLE)</cod
             </tr>
           </tbody>
         </table>
-        <p>三种情况下版图<strong>逐字节相同</strong>，只是配方顺序不同：B 和 C 都是开路——每个晶体管都断在接触层，整个器件不导通。而且<strong>版图视图里什么都看不出来</strong>：普通的版图检查工具只看 GDS 里的多边形，这三个变体的 GDS 是同一份文件。只有剖面和 process 模式 3D 才能看见这个断路，因为它们真正跑了配方顺序，而不是把层当成理想化的盒子直接叠起来。</p>
+        <p>三种情况下版图<strong>逐字节相同</strong>，只是配方顺序不同：B 和 C 都是开路——每个晶体管都断在接触层，整个器件不导通。而且<strong>版图视图里什么都看不出来</strong>：普通的版图检查工具只看 GDS 里的多边形，这三个变体的 GDS 是同一份文件。只有剖面（<code>imaging.xsection_run</code>）能看见这个断路，因为它真正跑了配方顺序；render3d 的 3D 现在只拉伸 GDS 里的掩膜多边形，跟配方顺序无关，三种变体会拉伸出同一个模型——这正是 0.5.8 把 3D 和 2D 职责拆干净之后的效果。</p>
         <p>顺带说一句诚实话：三种情况下金属1都稳稳地待在 z = 0.45 – 0.93 µm——<strong>上面几层看起来完全正常</strong>，因为金属1的 damascene 工序根本不关心下面的钨塞在不在。失效只在接触层可见，光看版图或只看金属层视图都发现不了。</p>
 
         <h2 id="gotchas" class="anchor-h">常见坑：deposit ≠ patterned</h2>
@@ -358,7 +367,7 @@ build_viewer_html(str(proc_glb), str(OUT / "render3d_process.html"), STYLE)</cod
         <p>剖面由 <a href="https://github.com/dimapu/klayout_pyxs" rel="noopener">klayout-pyxs</a> 引擎驱动——klink 把它当依赖<strong>导入</strong>，固定版本 <code>==0.1.13</code>，从不 vendor 进仓库；3D 查看器里嵌的是 Google 的 <a href="https://modelviewer.dev/" rel="noopener"><code>&lt;model-viewer&gt;</code></a>（vendor 了一份打包好的 JS，这样导出的 <code>.html</code> 才能完全离线打开）。klink 自己写的是 GLB 网格生成、SEM 光栅渲染和 Blender 场景搭建这几层胶水，不是剖面引擎或查看器本身。</p>
 
         <h2 id="next" class="anchor-h">下一步</h2>
-        <p>把 <code>demo_layout.py</code>、<code>demo.pyxs</code> 和 <code>demo_stack.py</code> 拷到你自己的项目里，换成你真实的版图、层号/z 范围/颜色和真实的工艺步骤（沉积厚度、刻蚀深度、掩膜层），四个脚本原样重跑。想看物理对不对，就照着上面「物理对不对？」节的做法，在配方里挪一行代码的顺序（比如把某道刻蚀挪到它该在的沉积之前），对比 process 模式（<code>imaging.render3d mode="process"</code>）或剖面（<code>imaging.xsection_run</code>）跑出来的材质有没有整个消失——材质凭空消失说明配方在真实生效，不是装饰。四个出口共用同一套 <code>VisualStack</code> 声明，改一次层颜色，剖面/3D/SEM/Blender 四张图都会跟着换。</p>
+        <p>把 <code>demo_layout.py</code>、<code>demo.pyxs</code> 和 <code>demo_stack.py</code> 拷到你自己的项目里，换成你真实的版图、层号/z 范围/颜色和真实的工艺步骤（沉积厚度、刻蚀深度、掩膜层），四个脚本原样重跑。想看物理对不对，就照着上面「物理对不对？」节的做法，在配方里挪一行代码的顺序（比如把某道刻蚀挪到它该在的沉积之前），对比剖面（<code>imaging.xsection_run</code>）跑出来的材质有没有整个消失——材质凭空消失说明配方在真实生效，不是装饰；3D（<code>imaging.render3d</code>）现在只拉伸 GDS 掩膜多边形，看不出配方顺序的差别。四个出口共用同一套 <code>VisualStack</code> 声明，改一次层颜色，剖面/3D/SEM/Blender 四张图都会跟着换。</p>
       </article>
     </div>
   </main>
