@@ -152,29 +152,16 @@ def test_fast_mode_materials_and_determinism(device, viewer_style):
     assert ax[1] <= 1.0
 
 
-def test_process_mode_styles_by_recipe_symbol(device, viewer_style):
-    pytest.importorskip("klayout_pyxs")
-    from klink.domains.imaging.mesh3d import build_glb_process
-
-    gds, stack_path, recipe, tmp = device
-    stack = VisualStack.load(stack_path)
-    g = str(tmp / "p.glb")
-    r = build_glb_process(gds, stack, recipe, g, viewer_style,
-                          slices=5,
-                          fraction=0.8)
-    names = set(glb_material_names(g))
-    # styled via recipe_symbol (mask layers) AND recipe_styles
-    # (engine-only materials); nothing else in this recipe -> no grey
-    assert {"well", "metal", "substrate"} <= names
-    assert r["unstyled"] == []
-    assert r["fraction"] == 0.8 and r["slices"] == 5
-    g2 = str(tmp / "p2.glb")
-    build_glb_process(gds, stack, recipe, g2, viewer_style,
-                      slices=5, fraction=0.8)
-    assert sha(g) == sha(g2)
+def test_glb_scale_is_layout_microns(device, viewer_style):
     # geometry SCALE is layout-scale microns: a lost dbu factor (a real
     # shipped bug — sections came back 1000x too small and no test
     # noticed) would put the extent near 0.008
+    from klink.domains.imaging.mesh3d import build_glb_fast
+
+    gds, stack_path, _recipe, tmp = device
+    stack = VisualStack.load(stack_path)
+    g = str(tmp / "scale.glb")
+    build_glb_fast(gds, stack, g, viewer_style)
     assert 3.0 < glb_extent(g) < 50.0
 
 
@@ -285,26 +272,18 @@ def test_blender_tool_instructive_errors_offline(tmp_path):
 
 
 def test_render3d_tool_handler_offline(device, viewer_style):
-    pytest.importorskip("klayout_pyxs")
     from klink.mcp.local_tools import _LOCAL_TOOLS
 
-    gds, stack_path, recipe, tmp = device
+    gds, stack_path, _recipe, tmp = device
     tool = _LOCAL_TOOLS["imaging.render3d"]
     res = tool.handler(None, {
         "gds": gds, "stack": stack_path,
         "style": _style_json(tmp, viewer_style),
-        "mode": "process",
-        "recipe": recipe, "slices": 4, "fraction": 0.6,
         "output_dir": str(tmp / "out"), "basename": "r3d"})
     assert not res.get("isError"), res
     body = json.loads(res["content"][0]["text"])
     kinds = {f["kind"] for f in body["outputs"]["files"]}
     assert kinds == {"glb", "viewer_html"}
-    # process without recipe is an instructive error
-    res = tool.handler(None, {
-        "gds": gds, "stack": stack_path,
-        "style": _style_json(tmp, viewer_style),
-        "mode": "process",
-        "output_dir": str(tmp / "out2")})
-    assert res.get("isError")
-    assert "mode='fast'" in res["content"][0]["text"]
+    # the keep-drawn-slits contract is wired through and recorded
+    assert body["inputs"]["weld_slits_dbu"] == 0
+    assert body["outputs"]["report"]["warnings"] == []

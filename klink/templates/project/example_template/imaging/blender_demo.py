@@ -4,7 +4,7 @@ Two figures from the same declarations the other imaging demos use:
   1. mode='figure': a 2D-material device at 1:1 layout coordinates —
      MoS2 flake as its ATOMIC lattice, Au electrodes as exact layout
      prisms, explicit Si/SiO2 slabs;
-  2. mode='die': the render3d process-cutaway GLB restaged on a
+  2. mode='die': the render3d fast-extrusion GLB restaged on a
      transparent film with a shadow catcher.
 Both also save a .blend — open it in desktop Blender to adjust
 camera/lights/materials by hand and re-render.
@@ -14,7 +14,7 @@ all come from `blender_style.py` next to this file. Edit that, not
 klink.
 
 Needs: pip install klayout numpy scipy shapely bpy  (+ trimesh and
-klayout-pyxs==0.1.13 for the die figure, built by render3d_demo)
+mapbox-earcut for the die figure, built by render3d_demo)
 Run:   python -m examples_klink.public.imaging.blender_demo
 """
 import os
@@ -72,11 +72,12 @@ def main():
     print(f"figure: {r['atoms']} atoms, {r['bonds']} bonds, "
           f"{r['solids']} solids -> blender_figure.png/.blend")
 
-    glb = OUT / "render3d_process.glb"
+    glb = OUT / "render3d_fast.glb"
     if glb.exists():
-        # the engine's section carries microns of substrate, so this
-        # model needs no vertical exaggeration; pass z_scale=N (and say
-        # so in the caption) when YOUR stack renders as a hairline
+        # this is the fast-extrusion GLB (masks only, no process
+        # curvature); a real die is microns wide and sub-micron thick,
+        # so pass z_scale=N (and say so in the caption) if YOUR stack
+        # renders as a hairline
         r = render_die_glb(str(glb), str(OUT / "blender_die.png"),
                            str(OUT / "blender_die.blend"), STYLE,
                            camera="face")
