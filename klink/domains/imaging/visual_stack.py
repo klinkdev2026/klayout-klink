@@ -56,6 +56,11 @@ class VisualLayer:
     edge_glow: float = 0.0           # SEM topography rim 0..1
     motif: str = ""                  # lattice motif key (kind=lattice)
     recipe_symbol: str = ""          # .pyxs variable this layer matches
+    sidewall_deg: float = 0.0        # 3D sidewall tilt from vertical;
+    #                                  0 = straight walls. A process
+    #                                  fact YOU declare — the 3D exit
+    #                                  lofts the top face inward by
+    #                                  thickness*tan(angle).
 
     def __post_init__(self):
         self.validate(None)
@@ -86,6 +91,11 @@ class VisualLayer:
                 f"yours to declare, not klink's to guess.")
         if not 0.0 <= self.alpha <= 1.0:
             raise VisualStackError(f"{what}: alpha must be in [0, 1]")
+        if not 0.0 <= self.sidewall_deg < 90.0:
+            raise VisualStackError(
+                f"{what}: sidewall_deg must be in [0, 90) — it is the "
+                f"tilt from VERTICAL (0 = straight walls; real etch "
+                f"profiles sit under ~10)")
 
 
 @dataclass(frozen=True)
@@ -159,6 +169,7 @@ class VisualStack:
                     "sem_grey": vl.sem_grey, "edge_glow": vl.edge_glow,
                     "motif": vl.motif,
                     "recipe_symbol": vl.recipe_symbol,
+                    "sidewall_deg": vl.sidewall_deg,
                 }
                 for vl in self.layers
             ],
@@ -197,6 +208,7 @@ class VisualStack:
                 edge_glow=float(d.get("edge_glow", 0.0)),
                 motif=str(d.get("motif", "")),
                 recipe_symbol=str(d.get("recipe_symbol", "")),
+                sidewall_deg=float(d.get("sidewall_deg", 0.0)),
             ))
         return cls(layers=tuple(layers), name=str(data.get("name", "")),
                    recipe_styles=cls._freeze_styles(
@@ -254,7 +266,8 @@ class VisualStack:
                 role=role or str(m.get("role", "")), **{
                     k: m[k] for k in
                     ("name", "kind", "color", "alpha", "metallic",
-                     "sem_grey", "edge_glow", "motif", "recipe_symbol")
+                     "sem_grey", "edge_glow", "motif", "recipe_symbol",
+                     "sidewall_deg")
                     if k in m}))
         for i, d in enumerate(extra_layers):
             sub = dict(d)

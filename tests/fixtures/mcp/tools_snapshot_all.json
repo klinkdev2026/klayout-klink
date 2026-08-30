@@ -3906,6 +3906,11 @@
             "type": "number",
             "description": "Override the style's figure-scale lattice constant (a DRAWING scale, not the physical one). Normally omit it and let blender_style.py declare it."
           },
+          "weld_slits_dbu": {
+            "type": "integer",
+            "default": 0,
+            "description": "mode='figure' only: weld tolerance in DBU for REAL hairline slits (default 0 = weld nothing that was drawn). Zero-width GDS keyhole cut-lines — the storage artifact holes arrive as — are ALWAYS dissolved; a slit >= 1 dbu wide may be drawn intent (e.g. a nanogap), so it is KEPT and reported in the result's warnings, because a tapered process widens such a gap by 2*thickness*tan(taper). Pass e.g. 2 to weld sub-2-dbu artifacts shut."
+          },
           "camera": {
             "type": "string",
             "enum": [
@@ -4023,7 +4028,7 @@
     },
     {
       "name": "imaging.render3d",
-      "description": "Build a 3D model (GLB) of the layout plus a SELF-CONTAINED interactive viewer page (html: embedded model + vendored viewer JS + manual color/metal/rough panel + PNG export; opens by double-click, offline). mode='fast' extrudes each layer of a klink_visual_stack_v1 declaration between its z0_um/z1_um; mode='process' sweeps the xsection engine across the die so curvature (LOCOS, conformal layers, CMP) comes from the recipe — engine materials are styled by matching recipe_symbol in the stack, unmatched ones render grey and are listed as 'unstyled'. fraction<1 stops the sweep mid-die: the exposed face is a true cross-section (cutaway). Deterministic outputs + klink_imaging_result_v1 sidecar; never overwrites unless overwrite=true.",
+      "description": "Build a 3D model (GLB) of the layout plus a SELF-CONTAINED interactive viewer page (html: embedded model + vendored viewer JS + manual color/metal/rough panel + PNG export; opens by double-click, offline). Extrudes each layer of a klink_visual_stack_v1 declaration between its z0_um/z1_um — the model IS the layout (a circle stays a smooth prism). For process TRUTH (etch profiles, bird's beaks, conformal films) use the 2D cross-section tool imaging.xsection_run instead; klink does not fake 3D process simulation. Layers may declare sidewall_deg in the stack for smooth tilted walls; cutaway_um cuts the finished model to a region. Deterministic outputs + klink_imaging_result_v1 sidecar; never overwrites unless overwrite=true.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -4043,34 +4048,19 @@
             "type": "string",
             "description": "REQUIRED: klink_viewer_style_v1 JSON path — the GLB's surface finish, the colour for materials the stack never declared, and the viewer page's whole palette + starting exposure. klink ships NO default; copy example_template/imaging/viewer_style.py (klink init already put one in your project) and run `python viewer_style.py` to write its JSON."
           },
-          "mode": {
-            "type": "string",
-            "enum": [
-              "fast",
-              "process"
-            ],
-            "default": "fast"
-          },
-          "recipe": {
-            "type": "string",
-            "description": "Required for mode='process': the .pyxs recipe (trusted Python)."
-          },
-          "slices": {
+          "weld_slits_dbu": {
             "type": "integer",
-            "default": 36,
-            "description": "process mode: number of engine cuts."
+            "default": 0,
+            "description": "Weld tolerance in DBU for REAL hairline slits (default 0 = weld nothing that was drawn). Zero-width GDS keyhole cut-lines — the storage artifact holes arrive as — are ALWAYS dissolved; a slit >= 1 dbu wide may be drawn intent (e.g. a nanogap), so it is KEPT and reported in the result's warnings, because a tapered process widens such a gap by 2*thickness*tan(taper). Pass e.g. 2 to weld sub-2-dbu artifacts shut."
           },
-          "fraction": {
-            "type": "number",
-            "default": 1.0,
-            "description": "process mode: sweep this fraction of the die (<1 = cutaway)."
-          },
-          "exclude": {
+          "cutaway_um": {
             "type": "array",
             "items": {
-              "type": "string"
+              "type": "number"
             },
-            "description": "process mode: recipe variables to skip (consumed intermediates)."
+            "minItems": 4,
+            "maxItems": 4,
+            "description": "Cut the finished model to this REGION [x0,y0,x1,y1] (um, the part to KEEP): built whole first, then boolean-cut, so the section shows only on the cut faces. Needs pip install manifold3d (the error says so). Omit for the full model."
           },
           "output_dir": {
             "type": "string"
@@ -4195,6 +4185,11 @@
               "type": "string"
             },
             "description": "Recipe material variable names to skip in auto-output (consumed intermediates)."
+          },
+          "weld_slits_dbu": {
+            "type": "integer",
+            "default": 0,
+            "description": "Weld tolerance in DBU for REAL hairline slits (default 0 = weld nothing that was drawn). Zero-width GDS keyhole cut-lines — the storage artifact holes arrive as — are ALWAYS dissolved; a slit >= 1 dbu wide may be drawn intent (e.g. a nanogap), so it is KEPT and reported in the result's warnings, because a tapered process widens such a gap by 2*thickness*tan(taper). Pass e.g. 2 to weld sub-2-dbu artifacts shut."
           },
           "style": {
             "type": "string",

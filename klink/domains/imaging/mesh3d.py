@@ -1,32 +1,28 @@
-"""GLB (glTF-binary) builders — the 3D exit of the imaging family.
+"""GLB (glTF-binary) builder — the 3D exit of the imaging family.
 
-Two modes, one VisualStack declaration:
+One path, one VisualStack declaration: extrude each declared layer's
+plan polygons between its ``z0_um``/``z1_um``. The model IS the
+layout — a circle stays a smooth polygon prism — which is what a 3D
+drawing of the masks can honestly claim. Process TRUTH (etch
+profiles, bird's beaks, conformal films) belongs to the 2D
+cross-section exit (``xsection_run``): the engine computes sections
+along a line, and stacking those into a 3D body was tried and
+retired — the sweep's stair-step made the model ugly exactly where it
+claimed value (one release note tells the story; a real 3D process
+simulator is out of klink's honest scope).
 
-- ``fast``: extrude each declared layer's plan polygons between its
-  ``z0_um``/``z1_um`` — quick, box-profile geometry (what a stackup
-  extrusion can honestly claim).
-- ``process``: sweep the xsection ENGINE across N parallel cut lines
-  and stack each section's material polygons as thin slabs
-  (tomography).  Curvature (LOCOS, conformal layers, CMP) comes from
-  the engine, not hand-modeling.  Honesty limits, recorded in the
-  sidecar: geometry between cuts is a slab (stair-step of the slice
-  pitch) and profiles are exact only perpendicular to the cut
-  direction.  Engine materials are styled by matching their recipe
-  variable name to ``VisualStack.recipe_symbol``; unmatched materials
-  render neutral grey and are listed as ``unstyled``.
-
-Optional deps: trimesh + shapely (+ klayout_pyxs for ``process``);
-missing ones raise instructive errors naming the pip command.
-Determinism: identical inputs produce byte-identical GLB files
-(golden-test contract, verified by test).
+Optional deps: trimesh + shapely (+ a triangulation engine); missing
+ones raise instructive errors naming the pip command. Determinism:
+identical inputs produce byte-identical GLB files (golden-test
+contract, verified by test).
 """
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional
 
-from .visual_stack import VisualStack, VisualLayer
-from ._util import kdb as _kdb
+from .visual_stack import VisualStack
+from ._util import DEFAULT_WELD_DBU, kdb as _kdb
 
 #: Placeholder only — the real fallback colour is the caller's
 #: (viewer_style.material.undeclared_color). Nothing here picks a
@@ -104,14 +100,14 @@ def _add_geometry(scene, trimesh, name, meshes, color, alpha,
     return len(mesh.faces)
 
 
-def _layer_shapely(layout, top, layer: str, ShPoly):
-    kdb = _kdb(Mesh3DError)
-    l, d = (int(v) for v in layer.split("/"))
-    li = layout.find_layer(kdb.LayerInfo(l, d))
-    if li is None:
+def _layer_shapely(layout, top, layer: str, ShPoly,
+                   weld_dbu: int = DEFAULT_WELD_DBU,
+                   warnings: Optional[List[dict]] = None):
+    from ._util import layer_region
+    region = layer_region(layout, top, layer, Mesh3DError,
+                          weld_dbu=weld_dbu, warnings=warnings)
+    if region is None:
         return []
-    region = kdb.Region(top.begin_shapes_rec(li))
-    region.merge()
     dbu = layout.dbu
     out = []
     for poly in region.each():
@@ -125,6 +121,146 @@ def _layer_shapely(layout, top, layer: str, ShPoly):
     return out
 
 
+# --------------------------------------------------------------------- #
+# tapered extrusion (sidewall_deg): the top face is the bottom face
+# offset inward by thickness*tan(angle), lofted vertex-for-vertex —
+# a circle stays a smooth prism, only tilted. NO slicing anywhere.
+# --------------------------------------------------------------------- #
+
+def _shift_left(ring, d):
+    """Offset a closed ring's vertices by ``d`` to the LEFT of travel
+    (miter): every new vertex is the intersection of its two edges,
+    each shifted left by ``d``. 1:1 vertex correspondence by
+    construction — that is what makes the loft trivially watertight."""
+    import math
+    n = len(ring)
+    out = []
+    for i in range(n):
+        p0 = ring[i - 1]
+        p1 = ring[i]
+        p2 = ring[(i + 1) % n]
+        ax, ay = p1[0] - p0[0], p1[1] - p0[1]
+        bx, by = p2[0] - p1[0], p2[1] - p1[1]
+        la = math.hypot(ax, ay) or 1.0
+        lb = math.hypot(bx, by) or 1.0
+        # left normals of the two edges
+        n1 = (-ay / la, ax / la)
+        n2 = (-by / lb, bx / lb)
+        cross = ax * by - ay * bx
+        if abs(cross) < 1e-12 * la * lb:      # collinear: plain shift
+            out.append((p1[0] + n1[0] * d, p1[1] + n1[1] * d))
+            continue
+        # intersect line(p0+n1*d, dir a) with line(p1+n2*d, dir b)
+        qx, qy = p0[0] + n1[0] * d, p0[1] + n1[1] * d
+        rx, ry = p1[0] + n2[0] * d, p1[1] + n2[1] * d
+        t = ((rx - qx) * by - (ry - qy) * bx) / cross
+        out.append((qx + ax * t, qy + ay * t))
+    return out
+
+
+def _inset_polygon(ShPoly, sp, d):
+    """The polygon's top face under an inward miter offset of ``d``,
+    or ``None`` when the shape does not survive it 1:1 (something
+    narrower than 2*d collapses, splits, or loses a hole).
+
+    The manual offset keeps vertex correspondence; a GEOS erosion of
+    the same polygon is the truth oracle — if the two disagree in
+    validity, topology or area, the honest answer is "this shape does
+    not taper cleanly", not a guessed mesh."""
+    from shapely.geometry.polygon import orient
+    sp = orient(sp)                       # exterior CCW, holes CW
+    ext = _shift_left(list(sp.exterior.coords)[:-1], d)
+    holes = [_shift_left(list(h.coords)[:-1], d)
+             for h in sp.interiors]
+    top = ShPoly(ext, holes)
+    oracle = sp.buffer(-d, join_style=2, mitre_limit=8.0)
+    if (not top.is_valid or oracle.is_empty
+            or oracle.geom_type != "Polygon"
+            or len(oracle.interiors) != len(sp.interiors)
+            or abs(top.area - oracle.area)
+            > max(0.02 * oracle.area, 1e-9)):
+        return None
+    return orient(top)
+
+
+def _loft_mesh(trimesh, ShPoly, sp_bot, sp_top, z0, z1):
+    """Solid between two 1:1-corresponding faces (walls + both caps)."""
+    import numpy as np
+    from shapely.geometry.polygon import orient
+    sp_bot = orient(sp_bot)
+    sp_top = orient(sp_top)
+    rings_b = ([list(sp_bot.exterior.coords)[:-1]]
+               + [list(h.coords)[:-1] for h in sp_bot.interiors])
+    rings_t = ([list(sp_top.exterior.coords)[:-1]]
+               + [list(h.coords)[:-1] for h in sp_top.interiors])
+    verts = []
+    faces = []
+    for rb, rt in zip(rings_b, rings_t):
+        base = len(verts)
+        n = len(rb)
+        verts += [(x, y, z0) for x, y in rb]
+        verts += [(x, y, z1) for x, y in rt]
+        for i in range(n):
+            a, b = base + i, base + (i + 1) % n
+            faces.append((a, b, b + n))
+            faces.append((a, b + n, a + n))
+    wall = trimesh.Trimesh(vertices=verts, faces=faces, process=False)
+    vb, fb = trimesh.creation.triangulate_polygon(sp_bot)
+    bot = trimesh.Trimesh(
+        vertices=np.column_stack([vb, np.full(len(vb), z0)]),
+        faces=fb[:, ::-1], process=False)          # cap faces down
+    vt, ft = trimesh.creation.triangulate_polygon(sp_top)
+    topc = trimesh.Trimesh(
+        vertices=np.column_stack([vt, np.full(len(vt), z1)]),
+        faces=ft, process=False)                   # cap faces up
+    mesh = trimesh.util.concatenate([wall, bot, topc])
+    mesh.merge_vertices()
+    if mesh.volume < 0:
+        mesh.invert()
+    return mesh
+
+
+def _taper_warning(vl, d_um: float, count: int) -> dict:
+    return {
+        "kind": "taper_collapse",
+        "layer": vl.layer,
+        "note": (
+            f"layer {vl.layer} ({vl.name}): {count} polygon(s) do not "
+            f"survive the declared sidewall_deg={vl.sidewall_deg:g} — "
+            f"anything narrower than 2*thickness*tan(angle) "
+            f"(= {2 * d_um:.3f} um here) collapses or splits before "
+            f"the top face. Those polygons are drawn with VERTICAL "
+            f"walls instead so the layout shape stays visible; to "
+            f"model them tapered, lower sidewall_deg or thin the "
+            f"layer."),
+    }
+
+
+def _cut_meshes(trimesh, meshes, cutaway_um, z_lo, z_hi):
+    """Boolean-keep the region inside ``cutaway_um`` — the model is
+    built whole first, then cut, so the cut shows only on the cut
+    faces (a real cross-section look, not a sliced model)."""
+    try:
+        import manifold3d  # noqa: F401
+    except ImportError as exc:
+        raise Mesh3DError(
+            "cutaway needs the boolean engine in THIS interpreter. "
+            "Install with: pip install manifold3d") from exc
+    x0, y0, x1, y1 = (float(v) for v in cutaway_um)
+    if not (x1 > x0 and y1 > y0):
+        raise Mesh3DError(
+            f"cutaway_um must be [x0, y0, x1, y1] with x1>x0 and "
+            f"y1>y0 (the region to KEEP, in um), got {cutaway_um!r}")
+    box = trimesh.creation.box(
+        bounds=[[x0, y0, z_lo - 1.0], [x1, y1, z_hi + 1.0]])
+    out = []
+    for m in meshes:
+        cut = trimesh.boolean.intersection([m, box], engine="manifold")
+        if len(cut.faces):
+            out.append(cut)
+    return out
+
+
 def build_glb_fast(
     gds_path: str,
     stack: VisualStack,
@@ -132,8 +268,16 @@ def build_glb_fast(
     style,
     *,
     cell: Optional[str] = None,
+    weld_slits_dbu: int = DEFAULT_WELD_DBU,
+    cutaway_um: Optional[List[float]] = None,
 ) -> Dict[str, Any]:
-    """Extrude every VisualStack layer between its z0_um/z1_um."""
+    """Extrude every VisualStack layer between its z0_um/z1_um.
+
+    A layer with ``sidewall_deg > 0`` lofts to a top face inset by
+    thickness*tan(angle) — smooth tilted walls, no slicing. With
+    ``cutaway_um=[x0, y0, x1, y1]`` the finished model is boolean-cut
+    to that region, so only the cut faces show a section."""
+    import math
     trimesh, ShPoly = _deps()
     kdb = _kdb(Mesh3DError)
     layout = kdb.Layout()
@@ -143,15 +287,36 @@ def build_glb_fast(
 
     scene = trimesh.Scene()
     report: List[Dict[str, Any]] = []
+    warnings: List[dict] = []
     tris = 0
+    z_lo = min(vl.z0_um for vl in stack.layers)
+    z_hi = max(vl.z1_um for vl in stack.layers)
     for vl in stack.layers:
-        polys = _layer_shapely(layout, top, vl.layer, ShPoly)
+        polys = _layer_shapely(layout, top, vl.layer, ShPoly,
+                               weld_dbu=weld_slits_dbu,
+                               warnings=warnings)
+        thickness = vl.z1_um - vl.z0_um
+        d_um = thickness * math.tan(math.radians(vl.sidewall_deg))
         meshes = []
+        collapsed = 0
         for sp in polys:
-            m = trimesh.creation.extrude_polygon(
-                sp, height=vl.z1_um - vl.z0_um)
-            m.apply_translation([0, 0, vl.z0_um])
+            sp_top = (_inset_polygon(ShPoly, sp, d_um)
+                      if d_um > 0 else None)
+            if d_um > 0 and sp_top is not None:
+                m = _loft_mesh(trimesh, ShPoly, sp, sp_top,
+                               vl.z0_um, vl.z1_um)
+            else:
+                if d_um > 0:
+                    collapsed += 1
+                m = trimesh.creation.extrude_polygon(
+                    sp, height=thickness)
+                m.apply_translation([0, 0, vl.z0_um])
             meshes.append(m)
+        if collapsed:
+            warnings.append(_taper_warning(vl, d_um, collapsed))
+        if cutaway_um is not None and meshes:
+            meshes = _cut_meshes(trimesh, meshes, cutaway_um,
+                                 z_lo, z_hi)
         if not meshes:
             report.append({"name": vl.name, "layer": vl.layer,
                            "solids": 0, "triangles": 0})
@@ -161,101 +326,19 @@ def build_glb_fast(
         tris += n
         report.append({"name": vl.name, "layer": vl.layer,
                        "solids": len(meshes), "triangles": n})
+    if tris == 0:
+        bb = top.dbbox()
+        raise Mesh3DError(
+            f"nothing to export: no stack layer produced geometry"
+            + (f" inside cutaway_um={list(cutaway_um)!r} — the cell "
+               f"spans [{bb.left:.3f}, {bb.bottom:.3f}, {bb.right:.3f},"
+               f" {bb.top:.3f}] um, move the keep-region there"
+               if cutaway_um is not None else
+               f" — check the stack's 'L/D' layers against the "
+               f"layout (cell bbox [{bb.left:.3f}, {bb.bottom:.3f}, "
+               f"{bb.right:.3f}, {bb.top:.3f}] um)"))
     scene.export(out_glb)
     return {"mode": "fast", "materials": report, "triangles": tris,
-            "unstyled": []}
-
-
-def build_glb_process(
-    gds_path: str,
-    stack: VisualStack,
-    recipe_path: str,
-    out_glb: str,
-    style,
-    *,
-    cell: Optional[str] = None,
-    slices: int = 36,
-    fraction: float = 1.0,
-    exclude: Sequence[str] = (),
-    simplify_um: float = 0.004,
-    height_um: float = 2.0,
-    depth_um: float = 2.0,
-    below_um: float = 2.0,
-    extend_um: float = 2.0,
-    delta_dbu: int = 10,
-) -> Dict[str, Any]:
-    """Sweep the xsection engine across the die; stack sections as
-    slabs. ``fraction < 1`` stops the sweep mid-die — the exposed face
-    is a true cross-section (cutaway)."""
-    trimesh, ShPoly = _deps()
-    from .xsection_driver import run_cut_polygons
-    kdb = _kdb(Mesh3DError)
-    if slices < 2:
-        raise Mesh3DError("slices must be >= 2")
-    if not 0.0 < fraction <= 1.0:
-        raise Mesh3DError("fraction must be in (0, 1]")
-    with open(recipe_path, encoding="utf-8") as fh:
-        recipe_text = fh.read()
-    layout = kdb.Layout()
-    layout.read(gds_path)
-    from ._util import top_cell_of
-    top = top_cell_of(layout, cell, Mesh3DError, gds_path)
-    bb = top.dbbox()
-    y_hi = bb.bottom + (bb.top - bb.bottom) * fraction
-    margin = 0.05 * (y_hi - bb.bottom)
-    ys = [bb.bottom + margin
-          + i * (y_hi - bb.bottom - 2 * margin) / (slices - 1)
-          for i in range(slices)]
-    pitch = ys[1] - ys[0]
-
-    name_to_layer: Dict[str, str] = {}
-    slabs: Dict[str, List[Any]] = {}
-    for y in ys:
-        polys_by_name = run_cut_polygons(
-            layout, top.cell_index(), recipe_text, recipe_path,
-            [[bb.left - 1.0, y], [bb.right + 1.0, y]],
-            name_to_layer=name_to_layer, exclude=exclude,
-            height_um=height_um, depth_um=depth_um, below_um=below_um,
-            extend_um=extend_um, delta_dbu=delta_dbu)
-        for name, polys in polys_by_name.items():
-            for rings in polys:
-                sp = ShPoly(rings[0], rings[1:])
-                if sp.area <= 0:
-                    continue
-                sp = sp.simplify(simplify_um)
-                m = trimesh.creation.extrude_polygon(sp, height=pitch)
-                # section plane (x, z) extruded along the sweep axis y
-                m.vertices = m.vertices[:, [0, 2, 1]]
-                m.vertices[:, 1] += y - pitch / 2
-                m.invert()
-                slabs.setdefault(name, []).append(m)
-
-    scene = trimesh.Scene()
-    report: List[Dict[str, Any]] = []
-    unstyled: List[str] = []
-    undeclared_color = style.undeclared_color
-    tris = 0
-    for name in sorted(slabs):
-        vl = stack.by_recipe_symbol(name)
-        recipe_style = stack.recipe_style(name)
-        if vl is not None:
-            color, alpha, metallic = vl.color, vl.alpha, vl.metallic
-            display = vl.name
-        elif recipe_style is not None:
-            color = str(recipe_style.get("color") or undeclared_color)
-            alpha = float(recipe_style.get("alpha", 1.0))
-            metallic = float(recipe_style.get("metallic", 0.0))
-            display = str(recipe_style["name"])
-        else:
-            unstyled.append(name)
-            color, alpha, metallic = undeclared_color, 1.0, 0.0
-            display = name
-        n = _add_geometry(scene, trimesh, display, slabs[name], color,
-                          alpha, metallic, style.roughness)
-        tris += n
-        report.append({"name": display, "recipe_symbol": name,
-                       "solids": len(slabs[name]), "triangles": n})
-    scene.export(out_glb)
-    return {"mode": "process", "materials": report, "triangles": tris,
-            "unstyled": unstyled, "slices": slices, "fraction": fraction,
-            "slice_pitch_um": pitch}
+            "unstyled": [], "warnings": warnings,
+            "cutaway_um": (list(map(float, cutaway_um))
+                           if cutaway_um is not None else None)}

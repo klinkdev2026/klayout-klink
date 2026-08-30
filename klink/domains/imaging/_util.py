@@ -71,6 +71,116 @@ def _namespace_shim_path() -> Optional[str]:
     return paths[0]
 
 
+#: Default hairline-slit weld tolerance (DBU) for the 3D exits: weld
+#: NOTHING that has real width. ``merge()`` (always on) dissolves the
+#: zero-width keyhole cut-lines GDS storage forces — pure artifact,
+#: never intent. A slit that is >= 1 dbu wide, however, may be DRAWN
+#: intent (nanogap electrodes are real devices), so klink keeps it and
+#: reports a warning instead of deciding for the user; welding real
+#: slits is the user's explicit choice via ``weld_slits_dbu``.
+DEFAULT_WELD_DBU = 0
+
+#: Closing probe used to DETECT (not weld) hairline slits: 1 dbu
+#: catches the classic storage-artifact class (a keyhole cut-line left
+#: exactly 1 dbu wide) without flagging any drawable gap.
+SLIT_PROBE_DBU = 1
+
+
+def weld_region(region, weld_dbu: int):
+    """Normalize drawn polygons to AREA semantics, in place — what the
+    2.5d view does before extruding, and what every 3D exit must do
+    before treating layout rings as geometry.
+
+    ``merge()`` restores in-memory holes from zero-width keyhole
+    cut-lines (GDS storage artifacts — never drawn intent). With
+    ``weld_dbu > 0`` a closing (grow, shrink back) then also welds
+    real slits up to ~2*weld_dbu wide; that erases drawn geometry, so
+    it only runs when the caller asked for it explicitly."""
+    region.merge()
+    if weld_dbu > 0:
+        region.size(int(weld_dbu))
+        region.size(-int(weld_dbu))
+        region.merge()
+    return region
+
+
+def hairline_slit_bbox(region, probe_dbu: int = SLIT_PROBE_DBU):
+    """Bounding box (dbu) of any hairline slits in ``region``, or
+    ``None`` when there are none.
+
+    Probes with a closing of ``probe_dbu`` and compares TOPOLOGY: a
+    real slit welded by the closing either turns a slit-cut ring into
+    a ring with one more hole, or fuses two pieces into one — so the
+    hole count rises or the polygon count falls. An area diff alone
+    would false-alarm on the 1-dbu quantization crumbs a closing
+    leaves at non-orthogonal vertices (a 64-gon circle's rim), which
+    never change topology. Detection only — the region is not
+    modified. Used to WARN: a kept hairline slit renders as a real gap
+    in 3D, and a tapered process widens it by 2*thickness*tan(taper)
+    into a canyon (measured: a 1 nm slit became a 2.52 um canyon at
+    taper=40, t=1.5 um)."""
+    region.merge()
+    closed = region.dup()
+    closed.size(int(probe_dbu))
+    closed.size(-int(probe_dbu))
+    closed.merge()
+    n0, h0 = region.count(), sum(p.holes() for p in region.each())
+    n1, h1 = closed.count(), sum(p.holes() for p in closed.each())
+    if n1 >= n0 and h1 <= h0:
+        return None
+    gaps = closed - region
+    # locate the slit itself, not the vertex crumbs: a welded slit is
+    # a run of length x width >= a few dbu^2, a crumb is ~1 dbu^2
+    slit = [p for p in gaps.each() if p.area() >= 4]
+    if not slit:
+        slit = list(gaps.each())
+    bb = slit[0].bbox()
+    for p in slit[1:]:
+        bb += p.bbox()
+    return [bb.left, bb.bottom, bb.right, bb.top]
+
+
+def slit_warning(layer: str, bbox_dbu, weld_dbu: int) -> dict:
+    """The one warning record every 3D exit emits for a kept hairline
+    slit — same wording everywhere so agents learn it once."""
+    return {
+        "kind": "hairline_slit",
+        "layer": layer,
+        "bbox_dbu": list(bbox_dbu),
+        "note": (
+            f"layer {layer} has a hairline slit (<= ~2 dbu wide) that "
+            f"splits its area. It renders as a real gap in 3D, and a "
+            f"tapered process widens it by 2*thickness*tan(taper) "
+            f"into a canyon. If it is a storage/boolean artifact, "
+            f"pass weld_slits_dbu=2 to weld it shut (currently "
+            f"{weld_dbu}); if it is drawn intent (e.g. a nanogap), "
+            f"keep it and use vertical sidewalls (taper=0) where the "
+            f"gap matters."),
+    }
+
+
+def layer_region(layout, top, layer: str, err_cls,
+                 weld_dbu: int = DEFAULT_WELD_DBU,
+                 warnings: Optional[list] = None):
+    """The cell's merged (and, if asked, welded) Region for an 'L/D'
+    layer spec, or ``None`` when the layout has no such layer.
+
+    Pass a ``warnings`` list to collect a :func:`slit_warning` when a
+    hairline slit survives the weld."""
+    _kdb = kdb(err_cls)
+    l, d = (int(v) for v in layer.split("/"))
+    li = layout.find_layer(_kdb.LayerInfo(l, d))
+    if li is None:
+        return None
+    region = _kdb.Region(top.begin_shapes_rec(li))
+    weld_region(region, weld_dbu)
+    if warnings is not None:
+        bb = hairline_slit_bbox(region)
+        if bb is not None:
+            warnings.append(slit_warning(layer, bb, weld_dbu))
+    return region
+
+
 def top_cell_of(layout, cell: Optional[str], err_cls, source: str):
     """Resolve the target cell instructively.
 
