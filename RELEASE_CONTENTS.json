@@ -2476,10 +2476,6 @@
     "sha256": "33ee89b1603ec90a13a0834259a8d430e5a267f16006fbae5b9b963fdbf0613d"
   },
   {
-    "path": "tests/unit/test_release_sync.py",
-    "sha256": "1e401084ed930759a3c30f59e20fcd1a0646a874ad5e51ed74c5a33c9096c894"
-  },
-  {
     "path": "tests/unit/test_routing_backend_matrix.py",
     "sha256": "8e716086f690da4c4598cf0c21aaed78303e90bd5d1e58315c88b6b7e8684454"
   },
@@ -2598,10 +2594,6 @@
   {
     "path": "THIRD_PARTY_NOTICES.md",
     "sha256": "9c4d467e342947abbd49467581ba812d3e025c3e82f32af00d908a1264f6e147"
-  },
-  {
-    "path": "tools/release_sync.py",
-    "sha256": "01859bcca01161a3e48fc063ab6c8f8fce3c6ad1ddb385a60b2f5d2d1f03bb4e"
   },
   {
     "path": "tools/tutorial_capture/ebl_wraparound/annotate_detail.py",
