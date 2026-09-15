@@ -973,7 +973,7 @@
   },
   {
     "path": "klink/plugin_payload/klink_plugin/python/klink_server/companions.py",
-    "sha256": "c815b4591833ff56e0e4f31a59e4b887e18502427f6f4c02ce25745ceafbf371"
+    "sha256": "7b1b3d4ea368993a1d405630fb3aca915e7f559fc8971871f56f056e81a728ef"
   },
   {
     "path": "klink/plugin_payload/klink_plugin/python/klink_server/connection.py",
@@ -1733,7 +1733,7 @@
   },
   {
     "path": "klink_plugin/python/klink_server/companions.py",
-    "sha256": "c815b4591833ff56e0e4f31a59e4b887e18502427f6f4c02ce25745ceafbf371"
+    "sha256": "7b1b3d4ea368993a1d405630fb3aca915e7f559fc8971871f56f056e81a728ef"
   },
   {
     "path": "klink_plugin/python/klink_server/connection.py",
@@ -2177,7 +2177,7 @@
   },
   {
     "path": "tests/unit/test_companions.py",
-    "sha256": "980ec48b664d4b6bc8713c163a8ddb479c6555c64ea761e0f17b882963a23cfc"
+    "sha256": "3e0ff1067deb742771d1fce1a707b3de8a0a2a01bf13198f87dd8407501c1649"
   },
   {
     "path": "tests/unit/test_device_extractor.py",

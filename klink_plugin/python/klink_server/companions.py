@@ -338,7 +338,7 @@ def _poll() -> None:
                     _open_now(spec, port)
                 except Exception as exc:
                     _log.error("companion %s: cannot open panel: %s", name, exc)
-        elif time.monotonic() > entry["deadline"]:
+        elif time.monotonic() >= entry["deadline"]:
             del _pending[name]
             _log.error("%s", _not_ready_error(spec, port, HEALTH_TIMEOUT_S))
     if not _pending and _timer is not None:

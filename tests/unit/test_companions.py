@@ -561,10 +561,27 @@ def test_click_when_service_already_up_opens_immediately(tmp_path, monkeypatch):
     assert companions._pending == {} and _FakeTimer.instances == []
 
 
-def test_poll_gives_up_after_deadline(tmp_path, monkeypatch):
+def test_poll_gives_up_when_now_equals_deadline(tmp_path, monkeypatch):
     _gui_reset(monkeypatch)
     spec = _valid_spec(name="svc", control_file=str(tmp_path / "control.json"))
     monkeypatch.setattr(companions, "service_alive", lambda port, path="/healthz", timeout=1.5: False)
+    monkeypatch.setattr(companions.time, "monotonic", lambda: 100.0)
+
     companions._watch(spec, 8787, open_when_ready=True, wait_s=0)
     companions._poll()
+
     assert companions._pending == {} and _FakeQtPya.opened == []
+
+
+def test_poll_keeps_pending_before_deadline(tmp_path, monkeypatch):
+    _gui_reset(monkeypatch)
+    spec = _valid_spec(name="svc", control_file=str(tmp_path / "control.json"))
+    monkeypatch.setattr(companions, "service_alive", lambda port, path="/healthz", timeout=1.5: False)
+    now = {"value": 100.0}
+    monkeypatch.setattr(companions.time, "monotonic", lambda: now["value"])
+
+    companions._watch(spec, 8787, open_when_ready=True, wait_s=10)
+    now["value"] = 109.999
+    companions._poll()
+
+    assert "svc" in companions._pending and _FakeQtPya.opened == []
