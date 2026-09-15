@@ -55,9 +55,9 @@ klink 是一个面向 [KLayout](https://www.klayout.de/) 的 AI-native 控制面
 
 ## 更新亮点
 
-### 0.6.0 — Vestigraph 可选集成
+### 0.6.0 — Vestigraph 本地历史集成
 
-klink 0.6.0 在保持独立可用的同时支持 Vestigraph 可选集成：在同一个 Python 环境安装 Vestigraph 并重启 MCP 后，可使用 HIST/自动 KLayout 历史、通过 `klink.status` 和 `klink.find_tools` 自动发现的 MCP 技能工具；技能炼化仍需显式实验开关。Vestigraph 也可作为基础独立本地历史服务运行。详见 [Vestigraph 联合使用](docs/public/VESTIGRAPH.md)。
+klink 0.6.0 提供 Vestigraph 用于 KLayout 历史的扩展通路：在同一个 Python 环境安装 Vestigraph，运行 `klink plugin install`，重启 MCP 客户端让 `klink.status` 和 `klink.find_tools` 发现工具，然后重启 KLayout 并打开 HIST。技能炼化仍需显式实验开关。详见 [Vestigraph 联合使用](docs/public/VESTIGRAPH.md)。
 
 ### 0.5.0 —— 布局意图：圈个区域，得到受管的编号阵列
 
@@ -133,28 +133,28 @@ THIRD_PARTY_NOTICES.md  第三方声明
 - 可选: Claude Code 或其它 MCP 客户端。
 - 可选: gdsfactory、`klayout` Python 包、NumPy/OpenCV 或 detector 依赖，取决于具体工作流。
 
-## 推荐联合安装 Vestigraph 本地历史
+## 添加 Vestigraph 本地历史
 
-klink 可以独立使用。需要自动历史、HIST 面板和本地技能通路时，推荐在运行 klink MCP 的同一个 Python 环境安装 Vestigraph：
+需要 KLayout 历史、HIST 面板和本地技能工具时，把 Vestigraph 安装到运行 `klink-mcp` 的同一个 Python 环境。Vestigraph 会安装兼容 Klink 依赖；KLayout 插件仍使用 Klink 命令安装：
 
 ```console
-python -m pip install "klayout-klink>=0.6.0,<0.7" "vestigraph[klink]>=0.2,<0.3"
-python -m vestigraph setup
+python -m pip install "vestigraph>=0.2,<0.3"
+klink plugin install
+# 重启运行 klink-mcp 的 MCP 客户端
+# 重启 KLayout，打开已保存的 GDS/OASIS，然后点击 HIST
 python -m vestigraph doctor --integration
 ```
 
-重启 KLayout，打开已保存的 GDS/OASIS，点击 **HIST** 确认录制状态。重启 MCP 后，`klink.status` 列出扩展，`klink.find_tools` 的 `vestigraph` 领域提供本地工具。无需另配 MCP 服务，安装 Python 包不会自动配置任意聊天客户端。
+重启 MCP 后，Klink 扩展注册表会发现 Vestigraph，并为该 Python 环境登记本地 companion。`klink.status` 会列出已安装扩展；`klink.find_tools` 使用 `domain="vestigraph"` 可发现本地工具。不需要额外的 MCP server。安装 Python 包不会自动配置任意聊天客户端。
 
-在本地两个 wheel 所在目录，也可执行：
+PyPI 发布前使用本地发行文件时，把匹配的 Klink 和 Vestigraph wheels 放到同一目录，再从该目录安装：
 
 ```console
-python -m pip install ./klayout_klink-0.6.0-py3-none-any.whl ./vestigraph-0.2.0-py3-none-any.whl
-python -m vestigraph setup
+python -m pip install --find-links ./wheels "klayout-klink>=0.6.0,<0.7" "vestigraph>=0.2,<0.3"
+klink plugin install
 ```
 
-**同步升级**：退出旧 Vestigraph 服务，使用 `pip install --upgrade` 升级兼容的两个包，重新运行 `python -m vestigraph setup`，随后重启 KLayout 和 MCP，使 Python 包、插件及服务登记保持一致。
-
-Vestigraph 的文件历史可以独立安装，klink 核心不依赖它。历史、证据、技能及导出保存在用户本地，产品不附带私人技能。技能炼化需显式开启实验开关，详见 [Vestigraph 联合使用](docs/public/VESTIGRAPH.md)。
+**同步升级**：如果旧 Vestigraph 服务正在运行，先停止它；升级兼容包，运行 `klink plugin install`，然后重启 MCP 和 KLayout。历史、证据、技能及导出保存在用户本地。产品不附带私人技能。技能炼化需显式开启实验开关。详见 [Vestigraph 联合使用](docs/public/VESTIGRAPH.md)。
 
 ## 安装 Python 包
 

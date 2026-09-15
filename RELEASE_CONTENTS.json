@@ -153,7 +153,11 @@
   },
   {
     "path": "docs/public/VESTIGRAPH.md",
-    "sha256": "5191fd4c5f5fb8d259d7cdbad2f610118a2dc9370c8cecad8762844546f44d30"
+    "sha256": "9cbebe97afe10a030b0ad8dd240a823c3ae2e8931e49771d1831c21c7dccf586"
+  },
+  {
+    "path": "docs/public/VESTIGRAPH.zh-CN.md",
+    "sha256": "585f3f5e3f627a0813050c8500b004a31c9485680f66602689bedc83617a8692"
   },
   {
     "path": "examples_klink/public/demos/digital/_multilayer_engine.py",
@@ -1961,11 +1965,11 @@
   },
   {
     "path": "README.md",
-    "sha256": "aeac8413e82be952fd594a5d9742146ee1dc11a68ab5ad7f33492ec7d598922c"
+    "sha256": "8c7bc02be422b144a33ccd6722aef59ea273fde3825918eff15ba4261d66ab31"
   },
   {
     "path": "README.zh-CN.md",
-    "sha256": "1113fd39e5690914d3cfb82c5fa12441e420e58b949bd40299efcd25ebc67337"
+    "sha256": "10d4f1b49e8da37b42d84bbe9296221e062249daa9be850d7acfe0b3b15eba75"
   },
   {
     "path": "rust/klink_boxmaze/.gitignore",
