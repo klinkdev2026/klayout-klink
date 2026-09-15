@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "klink-boxmaze-rs"
-version = "0.5.8"
+version = "0.6.0"
 requires-python = ">=3.10"
 description = "Rust faithful FlexDR box_maze kernel for klink (byte-parity vs the Python reference)"
 readme = "README.md"
@@ -18,3 +18,7 @@ Repository = "https://github.com/klinkdev2026/klayout-klink"
 [tool.maturin]
 module-name = "klink_boxmaze_rs"
 features = ["pyo3/extension-module"]
+# Exclude host-specific build metadata from public wheels.
+[tool.maturin.sbom]
+rust = false
+auditwheel = false

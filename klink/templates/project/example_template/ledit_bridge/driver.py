@@ -23,7 +23,7 @@ import uuid
 # profile / anywhere LOCALAPPDATA is not writable). The klink client and the
 # macro both honour it, so all three ends agree.
 _ROOT = os.environ.get("KLINK_LEDIT_BRIDGE_ROOT") or os.path.join(
-    os.environ.get("LOCALAPPDATA", r"C:\klink_bridge"), "klink", "ledit_bridge")
+    os.environ.get("LOCALAPPDATA") or os.path.join(os.path.expanduser("~"), ".klink_bridge"), "klink", "ledit_bridge")
 NS = os.path.join(_ROOT, "default")
 INBOX = os.path.join(NS, "inbox")
 OUTBOX = os.path.join(NS, "outbox")

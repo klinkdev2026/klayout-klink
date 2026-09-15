@@ -75,8 +75,8 @@ def _register_snippets(profile: str, session_id: str | None) -> str:
     with THIS interpreter's path filled in (the #1 thing agents get wrong is
     which Python has klink). ``sys.executable`` is that interpreter.
 
-    JSON/TOML strings go through ``json.dumps`` so a Windows path's backslashes
-    are escaped correctly (a raw ``D:\\...`` is invalid JSON); the CLI lines use
+    JSON/TOML strings go through ``json.dumps`` so interpreter paths with backslashes
+    are escaped correctly; the CLI lines use
     the raw path, which is what a shell wants. Output is ASCII-only to survive
     non-UTF-8 consoles.
     """

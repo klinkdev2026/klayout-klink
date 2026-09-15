@@ -80,8 +80,7 @@ def test_all_lane_tools_exist(lanes, server_method_names):
 def test_no_removed_context_aliases(lanes):
     text = LANES_PATH.read_text(encoding="utf-8")
     assert "interaction.context." not in text, (
-        "interaction.context.* aliases were removed from the bridge in "
-        "2026-06; lanes.json must use canonical interaction.selection.* names"
+        "lanes.json must use canonical interaction.selection.* names"
     )
 
 

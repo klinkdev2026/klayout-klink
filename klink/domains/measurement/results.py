@@ -234,7 +234,7 @@ def _validate_timestamp(value: Any, problems: list[str]) -> None:
     try:
         datetime.fromisoformat(raw)
     except ValueError:
-        problems.append("timestamp must parse as ISO 8601, e.g. 2025-01-01T12:00:00Z.")
+        problems.append("timestamp must parse as ISO 8601, e.g. YYYY-MM-DDTHH:MM:SSZ.")
 
 
 def _require_string(data: Mapping[str, Any], key: str, problems: list[str]) -> None:

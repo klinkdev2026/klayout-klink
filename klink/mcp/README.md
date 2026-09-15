@@ -164,3 +164,9 @@ the last connection error.
 **Slow performance**
 → This means MCP isn't working and Claude is falling back to manual Python
 scripts. Follow the setup steps above.
+
+## Optional local history and skill tools
+
+Install `vestigraph[klink]` in this MCP interpreter, then restart MCP. The existing extension registry exposes the `vestigraph` domain through `klink.find_tools`; `klink.status` lists extension discovery instructions. Start with `vestigraph.guide {}` and follow the returned next action. No extra MCP server is required.
+
+For KLayout automatic history, run `python -m vestigraph setup` and restart KLayout. Enable local skill refinement explicitly with `VESTIGRAPH_EXPERIMENTAL_SKILLS=1` in the service environment. The tools create local requests/drafts and exports, never install or execute private skills. Details: [Vestigraph usage](../../docs/public/VESTIGRAPH.md).

@@ -8,6 +8,7 @@ an explicit PASS line.
 from __future__ import annotations
 
 import csv
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from klink.domains.measurement import bind_file, write_result_store
@@ -22,6 +23,7 @@ def main() -> None:
     csv_path = out_dir / "x1_drain_iv.csv"
     store_path = out_dir / "measurement_results.json"
     _write_iv_csv(csv_path)
+    base_time = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
 
     records = [
         {
@@ -37,7 +39,7 @@ def main() -> None:
             "limits": {"lo": -0.001, "hi": 0.001, "units": "A", "source": "STDF PTR LO_LIMIT/HI_LIMIT"},
             "outcome": {"value": "not_evaluated", "source": "demo_import_fact"},
             "source": {"instrument_id": "synthetic_smu", "operator": "demo", "script": "measurement_import_demo.py"},
-            "timestamp": "2025-01-01T12:00:00Z",
+            "timestamp": base_time.isoformat().replace("+00:00", "Z"),
         },
         {
             "result_id": "out_resistance_001",
@@ -50,7 +52,7 @@ def main() -> None:
             },
             "conditions": {"temperature_K": 295.0},
             "source": {"instrument_id": "synthetic_dmm", "operator": "demo", "script": "measurement_import_demo.py"},
-            "timestamp": "2025-01-01T12:05:00Z",
+            "timestamp": (base_time + timedelta(minutes=5)).isoformat().replace("+00:00", "Z"),
         },
     ]
     write_result_store(store_path, records)

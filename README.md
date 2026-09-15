@@ -66,6 +66,10 @@ artifacts are intentionally not part of a clean release.
 
 ## What's New
 
+### 0.6.0 — Vestigraph optional integration
+
+klink 0.6.0 adds optional Vestigraph integration while keeping klink usable on its own: install Vestigraph in the same Python environment and restart MCP to use HIST/automatic KLayout history, MCP auto-discovery through `klink.status` and `klink.find_tools`, and local skill tools; skill refinement stays behind an explicit experimental opt-in. Vestigraph can also run as a basic standalone local history service. See [Using Vestigraph](docs/public/VESTIGRAPH.md).
+
 ### 0.5.0 — Layout intent: circle a region, get a managed numbered array
 
 Circle an area with KLayout's own rulers and claim it as a klink
@@ -152,6 +156,29 @@ THIRD_PARTY_NOTICES.md  Third-party notices
 - Optional: Claude Code or another MCP client.
 - Optional: gdsfactory, the `klayout` Python package, NumPy/OpenCV, or detector
   dependencies depending on the workflow.
+
+## Recommended: add Vestigraph local history
+
+klink works independently. For KLayout history, the HIST panel and local skill tools, install Vestigraph into the **same Python environment that runs klink MCP**:
+
+```console
+python -m pip install "klayout-klink>=0.6.0,<0.7" "vestigraph[klink]>=0.2,<0.3"
+python -m vestigraph setup
+python -m vestigraph doctor --integration
+```
+
+Restart KLayout, open a saved GDS/OASIS file, click **HIST**, and check recording status. Restart the MCP client after installation. `klink.status` lists installed extensions; `klink.find_tools` with `domain="vestigraph"` discovers the local tools. No additional MCP server is needed. Installing Python packages does not configure arbitrary chat clients.
+
+For local distribution files, run this from the directory containing both wheels:
+
+```console
+python -m pip install ./klayout_klink-0.6.0-py3-none-any.whl ./vestigraph-0.2.0-py3-none-any.whl
+python -m vestigraph setup
+```
+
+**Upgrade together:** stop the old Vestigraph service, upgrade both compatible packages with `pip install --upgrade`, rerun `python -m vestigraph setup`, then restart KLayout and MCP. This synchronizes the Python packages, bundled editor plugin and companion registration.
+
+Vestigraph also supports standalone file history; klink core does not depend on it. History, evidence, skills and exports stay in local user storage. Private skills are not included in product distributions. Skill refinement requires an explicit experimental opt-in. See [Using Vestigraph](docs/public/VESTIGRAPH.md).
 
 ## Install Python Package
 

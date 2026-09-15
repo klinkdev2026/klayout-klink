@@ -27,10 +27,10 @@ module docstring for the full reuse/replicate breakdown.
 # klink plugin loaded
 python tools/tutorial_capture/gf_ports/draw_gf_ports_tutorial.py \
     --port 8765 \
-    --out-dir "D:\klink_website\assets\tutorials\gf-ports"
+    --out-dir "<website-assets>/tutorials/gf-ports"
 ```
 
-`--out-dir` defaults to `D:\klink_website\assets\tutorials\gf-ports` --
+`--out-dir` defaults to `test_outputs/tutorial_capture/gf-ports` --
 **unlike the other `tools/tutorial_capture/*/draw_*.py` scripts** (which
 default to `test_outputs/tutorial_capture/<name>/` and leave publishing to
 a manual copy step), this one writes PNGs directly into the docs website

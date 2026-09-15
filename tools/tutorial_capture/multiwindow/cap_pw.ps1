@@ -8,8 +8,7 @@ Qt GL canvas there. But CopyFromScreen needs a real screen surface: in a
 disconnected RDP session it throws "The handle is invalid" -- there is no
 desktop to copy from. In that state PrintWindow after a forced
 RedrawWindow(RDW_INVALIDATE|RDW_ALLCHILDREN|RDW_UPDATENOW|RDW_FRAME) DOES
-return a fresh frame (verified live 2026-07: draw via RPC -> capture ->
-the new geometry is in the PNG), because there is no occlusion/composition
+return a fresh frame after an explicit redraw, because there is no occlusion/composition
 path to serve a cached frame from.
 
 capture_window.ps1 tries cap4.ps1 first and falls back to this script only

@@ -251,7 +251,11 @@ def status_summary() -> dict:
     return {
         "installed": [
             {"package": p["package"], "tools": p["tools"],
-             "domains": p["domains"], "resources": p["resources"]}
+             "domains": p["domains"], "resources": p["resources"],
+             "next_actions": [{"tool": "klink.find_tools",
+                               "arguments": {"domain": domain},
+                               "why": "Read this extension domain's guide and tools."}
+                              for domain in p["domains"]]}
             for p in reg.plugins],
         "failures": list(reg.failures),
     }

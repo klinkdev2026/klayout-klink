@@ -90,11 +90,12 @@ def test_empty_selection_event_does_not_allocate_id(tmp_path):
 def test_selection_record_preserves_klayout_session_metadata(tmp_path):
     store = InteractionContextStore(session_id="window-meta", root=tmp_path)
     event = _event(1)
+    layout_path = str(tmp_path / "demo.gds")
     event.update({
         "klayout_session_id": "klayout-8766",
         "klayout_rpc_port": 8766,
         "klayout_pid": 12345,
-        "layout_path": "C:/tmp/demo.gds",
+        "layout_path": layout_path,
         "active_cell": "TOP",
     })
 
@@ -103,7 +104,7 @@ def test_selection_record_preserves_klayout_session_metadata(tmp_path):
     assert record["klayout_session_id"] == "klayout-8766"
     assert record["klayout_rpc_port"] == 8766
     assert record["klayout_pid"] == 12345
-    assert record["layout_path"] == "C:/tmp/demo.gds"
+    assert record["layout_path"] == layout_path
     assert record["active_cell"] == "TOP"
     reloaded = InteractionContextStore(session_id="window-meta", root=tmp_path)
     assert reloaded.latest()["klayout_session_id"] == "klayout-8766"

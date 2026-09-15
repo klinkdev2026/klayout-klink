@@ -7,8 +7,7 @@
 // key exactly: (f, cost, ix, iy, layer, dir_rank) ascending, with dir_rank in
 // the SAME order as Python compares the direction strings: D<E<N<S<U<W.
 //
-// Data layout follows OpenROAD FlexGridGraph (research_refs/.../drt/src/dr/
-// FlexGridGraph.h): a flat per-node array indexed by a packed (x,y,z) int, with
+// Data layout follows OpenROAD FlexGridGraph (`src/drt/src/dr/FlexGridGraph.h`): a flat per-node array indexed by a packed (x,y,z) int, with
 // the constant grid legality (blocked / pad-owner) as flat arrays built ONCE,
 // and the per-box cost classes (hard / routeShape / marker / fixedShape) passed
 // per call as small box-local sets. No process/DRC constants live here -- every

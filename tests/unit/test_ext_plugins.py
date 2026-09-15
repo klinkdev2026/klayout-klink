@@ -122,6 +122,10 @@ def test_fake_distribution_full_loop(monkeypatch):
     assert s["failures"] == []
     assert s["installed"][0]["package"] == "acme-pdk-klink"
     assert "acme_pdk.hello" in s["installed"][0]["tools"]
+    assert s["installed"][0]["next_actions"] == [
+        {"tool": "klink.find_tools", "arguments": {"domain": "acme_pdk"},
+         "why": "Read this extension domain's guide and tools."}
+    ]
 
     # "uninstall": scan again with no eps -> everything gone
     _install(monkeypatch)

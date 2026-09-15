@@ -268,5 +268,14 @@ if mw is not None:
     # Keep a reference alive so the Action isn't garbage-collected.
     klink_server._recorder_button_action = action
     print("[klink] recorder button installed on toolbar")
+
+    # Companion services (descriptors under the klink registry root, companions/*.json):
+    # start them with KLayout and give each one a toolbar button that opens its panel.
+    try:
+        from klink_server import companions as _companions
+        _companions.autostart_all()
+        _companions.install_buttons(menu, pya)
+    except Exception as exc:
+        print(f"[klink] companions unavailable: {exc}")
  </text>
 </klayout-macro>

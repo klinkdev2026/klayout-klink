@@ -7,6 +7,7 @@ import json
 import os
 import threading
 import time
+from pathlib import PureWindowsPath
 
 import pytest
 
@@ -182,7 +183,7 @@ def test_new_design_ok_when_active_design_switches(live_bridge):
 def test_open_design_reopening_active_design_is_fine(live_bridge):
     c = live_bridge(lambda req: {
         "ok": True, "result": {"file": "user_design.tdb"}})
-    out = c.open_design(r"C:\x\user_design.tdb")
+    out = c.open_design(str(PureWindowsPath("x") / "user_design.tdb"))
     assert out["file"] == "user_design.tdb"
 
 
@@ -614,7 +615,9 @@ def test_draw_chunks_oversize_payload_and_sums_results(live_bridge):
     assert out["cell"] == "TOP"
 
 
-def _ansi_hello(root, encoding, name="D:\\设计\\我的库.tdb"):
+def _ansi_hello(root, encoding, name=None):
+    if name is None:
+        name = str(PureWindowsPath("设计") / "我的库.tdb")
     """Write hello.json the way a macro < 0.5.4 does: JSON text in the
     machine's ANSI codepage rather than UTF-8."""
     payload = ('{"schema":1,"proto":1,"macro_version":"0.5.3",'

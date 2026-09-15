@@ -1,0 +1,2726 @@
+[
+  {
+    "path": ".github/ISSUE_TEMPLATE/bug_report.md",
+    "sha256": "350edd27b32866e9e8a3a6e8777bbe73178013bae92cd6107fc7f289cc243aa6"
+  },
+  {
+    "path": ".github/ISSUE_TEMPLATE/config.yml",
+    "sha256": "80339d7e88950b2b9046a89c0b23254f220002023a712f9c62301fcea27a78bd"
+  },
+  {
+    "path": ".github/ISSUE_TEMPLATE/feature_request.md",
+    "sha256": "c3bd46f1037ea41ceb5920cc0f216078260ec40defbec5d28e28941cd0ade265"
+  },
+  {
+    "path": ".github/workflows/ci.yml",
+    "sha256": "65d388211c8fff48e11edd3130bc06dd01b27e9aa51613f25f8060da9b524074"
+  },
+  {
+    "path": ".github/workflows/release.yml",
+    "sha256": "c5c2a506ea973f89a068ae7d207a05f77d2490b90477eecf1ccd7664182e2463"
+  },
+  {
+    "path": ".gitignore",
+    "sha256": "55fc9f88005a0c1c7620266198fbb5b1da22e5dc426c460b578ba213ed460890"
+  },
+  {
+    "path": "CHANGELOG.md",
+    "sha256": "2b2f7b34013168d4b5f2a9da37e496b38c0a5db400c1df117e60083cd0bbd5a3"
+  },
+  {
+    "path": "CLAUDE.md",
+    "sha256": "a63fb5f17e6c66ffb08e4fc0cc3ec7e6a322baa675e95cdd70b27be03c5f44f6"
+  },
+  {
+    "path": "CONTRIBUTING.md",
+    "sha256": "840acf5d07d20ac8ca2fc405df55d63d80300e6c7d920bff26bbfd3ff7c2ec6f"
+  },
+  {
+    "path": "docs/public/25d-view.md",
+    "sha256": "893bad807a465bd96a377d8c953c1a49adcde5844dae5498b2ab2ab0d62d8dcb"
+  },
+  {
+    "path": "docs/public/25d-view.zh-CN.md",
+    "sha256": "f10c8ea5736148fee94e580af5809b42fe752fe0b0f575444ae744bc155bdd29"
+  },
+  {
+    "path": "docs/public/api-stability.md",
+    "sha256": "36956c541a54c9439be4a3582fcb6fe1da8ad7b8760d92614452fa6be45c9220"
+  },
+  {
+    "path": "docs/public/api-stability.zh-CN.md",
+    "sha256": "9b4e32870fd512c85a4570c8bcfe4fb1a21a0e8ddb164ba401b43e98508f2324"
+  },
+  {
+    "path": "docs/public/architecture.md",
+    "sha256": "d50e986808d3200a5d831b0a2597fceaa4e1b77e416b4b7977304532f0809038"
+  },
+  {
+    "path": "docs/public/architecture.zh-CN.md",
+    "sha256": "f9af3b75cb4ed09a8b8430b7b123f3730d7804b88c1b73dd3fd1d1c593681e64"
+  },
+  {
+    "path": "docs/public/assets/ledit_bridge_load.png",
+    "sha256": "e51971664cdb8d393b0468abe51276e05487e5009af91e4924dad702b6aa59bd"
+  },
+  {
+    "path": "docs/public/control-plane.md",
+    "sha256": "da2792884fbe50a548099d28e09ac0740ef59167495f2f68a91fd0366842a03d"
+  },
+  {
+    "path": "docs/public/control-plane.zh-CN.md",
+    "sha256": "8a4ea614fb5b26ab5983dde71b3af68ffbf5ca0906dc3b8c0213fa05f1076dee"
+  },
+  {
+    "path": "docs/public/demos.md",
+    "sha256": "a4c2569d690749d2e182a9b800e3a16a75210c1ef44851471377e83f4f535260"
+  },
+  {
+    "path": "docs/public/demos.zh-CN.md",
+    "sha256": "3bbfca3ebc5e836452ee60ae4cd9b488fb28f785ea250cc38c038fa7792ee6ec"
+  },
+  {
+    "path": "docs/public/drc-lvs-agent-handout.md",
+    "sha256": "f6b809fe4351c4ff4c3e134f21cc5658a289e0fe40a6dda5b5e5fcc229135c70"
+  },
+  {
+    "path": "docs/public/drc-lvs-agent-handout.zh-CN.md",
+    "sha256": "bb950c9aaec1302e33068d4af4cbb775f4f6258deed5f12abd2013737f2093aa"
+  },
+  {
+    "path": "docs/public/drc-lvs.md",
+    "sha256": "ad92fdb648131b2f84124e53cb82ce2e66b08d9d3452068fbd6840c0dd138263"
+  },
+  {
+    "path": "docs/public/drc-lvs.zh-CN.md",
+    "sha256": "8267de5c98e3a64ed7cecba407dde03cb803fffea206fc6c22067a70c84653fe"
+  },
+  {
+    "path": "docs/public/getting-started.md",
+    "sha256": "b30bc0534b3da39346171bb910b89905036c59c0b136bb2afa00689b67fd3938"
+  },
+  {
+    "path": "docs/public/getting-started.zh-CN.md",
+    "sha256": "77a01420b19c07fb1c15bc5a3595d354e796ee72146504dda2a901cc0bdf9f99"
+  },
+  {
+    "path": "docs/public/interactive-workflows.md",
+    "sha256": "2b8cc496aa367de9704301d172de00ce492b60b9e9b666b8408665dde0e83bde"
+  },
+  {
+    "path": "docs/public/interactive-workflows.zh-CN.md",
+    "sha256": "d9b3864dea9a463f96e7149d690a17e1e550fd21f2340e26bd6a2e00daa39e2b"
+  },
+  {
+    "path": "docs/public/layout-intent.md",
+    "sha256": "fe83cddbb33806da9e47505a89df3d2e821cefecacadd85c9aad2e5359c8d164"
+  },
+  {
+    "path": "docs/public/layout-intent.zh-CN.md",
+    "sha256": "3241365576422803e8551ad3866aa0d92676490ee4b34096935d4c7429751c73"
+  },
+  {
+    "path": "docs/public/plugin-packages.md",
+    "sha256": "f9e25f960bef8f045a6bac0fcf18ab1f7ffa62e0eb63d14a29a28d0f21f74866"
+  },
+  {
+    "path": "docs/public/plugin-packages.zh-CN.md",
+    "sha256": "2bdef484de30ce805f156f77e1b79f6d536cb4e9653dcd922c8f2e81e1397029"
+  },
+  {
+    "path": "docs/public/project-model.md",
+    "sha256": "92b61f2071c7e9c92e6f43f86198ede8cfdee81328c2cfa87c5375532790443b"
+  },
+  {
+    "path": "docs/public/project-model.zh-CN.md",
+    "sha256": "4bfdc07b861b3ba1035806f963b0a30b710f80000a16d9360a033d49ef56a9d0"
+  },
+  {
+    "path": "docs/public/README.md",
+    "sha256": "c77d4a41bc5ceff1bef94219518773c2b1ffe673708dfd56887e67414c23ab4d"
+  },
+  {
+    "path": "docs/public/README.zh-CN.md",
+    "sha256": "c9371a64e36e5a2f18a7e6edbcac5db91944a13534816889be73f2ada24ec797"
+  },
+  {
+    "path": "docs/public/recipes.md",
+    "sha256": "3e11c0189b2eba5c73da090ebaaa261f628c9c505cbd380abad4e80502625a9e"
+  },
+  {
+    "path": "docs/public/recipes.zh-CN.md",
+    "sha256": "66eb887fed822396057409371c1aaece18e3daeefe22296bfb69628827480946"
+  },
+  {
+    "path": "docs/public/VESTIGRAPH.md",
+    "sha256": "5191fd4c5f5fb8d259d7cdbad2f610118a2dc9370c8cecad8762844546f44d30"
+  },
+  {
+    "path": "examples_klink/public/demos/digital/_multilayer_engine.py",
+    "sha256": "aa0d1b596e1f38f81763ebbbf8600c9768cdc6c83b8748157a8f3161b4828e78"
+  },
+  {
+    "path": "examples_klink/public/demos/digital/add4.devnet.json",
+    "sha256": "d5903a0372e62a77a79d24c203f6e3bfef342821c93f442e7d0615724e6da141"
+  },
+  {
+    "path": "examples_klink/public/demos/digital/chat_to_netlist_pnr.py",
+    "sha256": "b59f6087076a1b9061a84a03269c41fa57d36522d1c55bfd54172c618ed4d5ec"
+  },
+  {
+    "path": "examples_klink/public/demos/digital/cpu4.devnet.json",
+    "sha256": "807b27180749fe45db27b2dc93cb892a1b51a0a983c4961a764b02bb481e61ed"
+  },
+  {
+    "path": "examples_klink/public/demos/digital/fit_device_pnr_lvs.py",
+    "sha256": "408096012ce3749d07115cf1090dbbacc1a5b735e8e0364f11881e6d540d9a57"
+  },
+  {
+    "path": "examples_klink/public/demos/digital/fit_repeat_device.py",
+    "sha256": "23593dd26ee0f358cdca6153aed35bfc851f01402e2bc3c42e99afab6bdf56af"
+  },
+  {
+    "path": "examples_klink/public/demos/digital/multilayer_pnr_lvs.py",
+    "sha256": "b9638a0e41e1be98958e2c45e13d91a172aaabdb5d46d1bb74882a0ad0657726"
+  },
+  {
+    "path": "examples_klink/public/demos/digital/padframe_pnr_lvs.py",
+    "sha256": "33bbe0478f0144546a9252150528060736e5d66a7e5fcf652eeee2d0075038f2"
+  },
+  {
+    "path": "examples_klink/public/demos/layout/fill_region_demo.py",
+    "sha256": "e6a506c836d6b3ab64d683ba6e2cea298be8ee5ffad76ab895e8ac29f188632a"
+  },
+  {
+    "path": "examples_klink/public/demos/layout_intent/region_numbered_array.py",
+    "sha256": "27e293f8cc902ffb6498d36fb553bd1c684947d24ab9d1c5c5cb5fcb92795c4b"
+  },
+  {
+    "path": "examples_klink/public/demos/nanodevice/ebl_wraparound.py",
+    "sha256": "ed430d0b7bd014692f2e9237aae62a9bc532f5168ce4efe1f6d7a44b7865eaab"
+  },
+  {
+    "path": "examples_klink/public/demos/nanodevice/hallbar.py",
+    "sha256": "ce02ad5cd5200e2726caae151fe178e381c307af758a15d7e07eb2bb5bfe61d5"
+  },
+  {
+    "path": "examples_klink/public/demos/nanodevice/neural_electrode.py",
+    "sha256": "97ecd5db1826f210fd128f6041022e065251430e20b6ca4a25256e7d7a6c7399"
+  },
+  {
+    "path": "examples_klink/public/demos/passives/baw_fbar_planview.py",
+    "sha256": "4bdc2ad19f82297aebbdb8cddbc9d6d422acb605507d11f212578103255a4836"
+  },
+  {
+    "path": "examples_klink/public/demos/passives/idc_capacitor.py",
+    "sha256": "fb367e33602e427c79cae01830d4d64efa8dc22565e8c8f6ad3a150947db5cd8"
+  },
+  {
+    "path": "examples_klink/public/demos/passives/saw_idt_filter.py",
+    "sha256": "233506608e32684642b2cd993dae1c157efccfcbdb30f71af853c4d3a401561f"
+  },
+  {
+    "path": "examples_klink/public/demos/passives/spiral_inductor.py",
+    "sha256": "0a280fe6aa91956994e80ec5a6b58185a4c552e9f40b330b8faa067b66c76c3e"
+  },
+  {
+    "path": "examples_klink/public/demos/photonics/gf_mzi_module.py",
+    "sha256": "3b14dd45beb9c74e86f01fc39f35994fff30183106be438cf7d4ecfda4bbae5b"
+  },
+  {
+    "path": "examples_klink/public/demos/photonics/gf_ports.py",
+    "sha256": "0ff3d19b0d1e5c2cd49286a5451ddf564ed7c9dedeef737cfe76d4e56e8e6220"
+  },
+  {
+    "path": "examples_klink/public/demos/routing/five_routers.py",
+    "sha256": "b057c2e01d8f7a2602971d47ac59ca5853bfd909a3881eba1c2030e2559a9a1e"
+  },
+  {
+    "path": "examples_klink/public/features/23_gdsfactory_route_to_klayout.py",
+    "sha256": "3ec908c6864fd96487a10c7a84609ec051ea9d8be0262147c4e7714b4cc63e02"
+  },
+  {
+    "path": "examples_klink/public/features/24_gdsfactory_route_ports.py",
+    "sha256": "adaa61096623246517c386be3d976da31e9cfc813bdb54b270a566518c87b2b7"
+  },
+  {
+    "path": "examples_klink/public/features/25_gdsfactory_net_examples.py",
+    "sha256": "8fd0769df8a8fb492fcf9edaa5c86045390813d2644b7e1f620626959a0a1a10"
+  },
+  {
+    "path": "examples_klink/public/features/26_gdsfactory_component_marker.py",
+    "sha256": "91db44be784b2f3eae9c670ab814fae9495914967e1acb11a551502fc8034f10"
+  },
+  {
+    "path": "examples_klink/public/features/29_gdsfactory_width_mismatch.py",
+    "sha256": "f9210866cf4166f26d6fcccdf68703a62b3490c0997a1351b49c38070e0a2a8a"
+  },
+  {
+    "path": "examples_klink/public/features/30_gdsfactory_routing_zoo.py",
+    "sha256": "3dca96b31a8d3da86763efef8a50876d188def6397937cc9d9c863e46c8e71e6"
+  },
+  {
+    "path": "examples_klink/public/features/anchor_port_5_example.py",
+    "sha256": "a133f9b477fd3476973f7520ec8af3989332f6d4ff02ad9e2fb2831368f772b9"
+  },
+  {
+    "path": "examples_klink/public/features/anchor_port_5_example_pya.py",
+    "sha256": "ce613b72bad405ccf7db310edef079997fc37ba7baf80eacc300a97cfe72ad87"
+  },
+  {
+    "path": "examples_klink/public/features/fabrication_compose_live.py",
+    "sha256": "b2274c9621e0fc57acb2fa519f80eeb5ed11c113fa21fb06dad64aa8ac1b819f"
+  },
+  {
+    "path": "examples_klink/public/features/fabrication_sites.py",
+    "sha256": "13c0535a119cde7d0e3bee4ae3cc459f20dbf42f0485b4a649a222d551f96e74"
+  },
+  {
+    "path": "examples_klink/public/features/harness_generator.py",
+    "sha256": "eb6c97820570de9dac6241bb2f5b0e2baadaf3188c1483cdbd272822c8637573"
+  },
+  {
+    "path": "examples_klink/public/features/measurement_import_demo.py",
+    "sha256": "c814f9f335393e84de29f93569dca8834046899c2177c0b3423455c35aa2c551"
+  },
+  {
+    "path": "examples_klink/public/features/neuro_probe_gen.py",
+    "sha256": "7fdc17bc984528c425cbe264b2d36e29feb1aa49748ab3f6f837cf367c1097a5"
+  },
+  {
+    "path": "examples_klink/public/features/profile_drc_gate.py",
+    "sha256": "cfb15bda3b6e90737f7ccd51cff768b405b74a9a110f90f4d7603fe490d5c85f"
+  },
+  {
+    "path": "examples_klink/public/features/region_array_labeled.py",
+    "sha256": "8bb58f7bd1e40b1260f6b154bba77202080563f3051f589a26db21d0fdfca71f"
+  },
+  {
+    "path": "examples_klink/public/features/region_claim_fill.py",
+    "sha256": "49105d1ec16c21c98d94437d303798c9e0d07d33892d54efd40dbf5b537fdeb9"
+  },
+  {
+    "path": "examples_klink/public/features/router_damped_stress.py",
+    "sha256": "f855679e7504e54ae245b8b1cfce3816d672cafef92773e78f82b9af89b1564b"
+  },
+  {
+    "path": "examples_klink/public/features/router_future_failure_showcase.py",
+    "sha256": "5c3565a35f60bf8cfa8a5b05770962d2f264c60cf8a07443340923658de8b0c1"
+  },
+  {
+    "path": "examples_klink/public/features/router_missing_algorithm_stress.py",
+    "sha256": "25eefa09368eaf5cfc1faa6117233ebd63ba51657383a6597173bbbc880c0292"
+  },
+  {
+    "path": "examples_klink/public/features/router_steiner_stress.py",
+    "sha256": "99c800211bed27df5f37acbf6213964eedf8b6598085cf2e7b0569b500af38cd"
+  },
+  {
+    "path": "examples_klink/public/features/stack_25d_view.py",
+    "sha256": "50984994a0c8f4f40095e6e78e90ace8a290575a4b821f9cf906f396d6d726b1"
+  },
+  {
+    "path": "examples_klink/public/features/tapered_5_example.py",
+    "sha256": "4500ac2b2dba545ec3fcb2f0d5192cf4ed186ebff21697adc66ec3610e6c388c"
+  },
+  {
+    "path": "examples_klink/public/features/tapered_segments_5_example.py",
+    "sha256": "f9b0090f77a1f516c91b9bd05e6f2f6c93d8d7e590a1f1b35539794f701fc7ea"
+  },
+  {
+    "path": "examples_klink/public/features/tapered_segments_5_fixture.py",
+    "sha256": "85b9ea551750d460aea6437d6aba3eb0501441c9d4ae7d03aff00e39242d57b7"
+  },
+  {
+    "path": "examples_klink/public/features/tapered_segments_5_router.py",
+    "sha256": "9d0c56a0ffc848d650c889a532d49fd859cbde0bfa4d03b13735059cb938d039"
+  },
+  {
+    "path": "examples_klink/public/features/tapered_segments_harness_v1_router.py",
+    "sha256": "9f34eb58a6cf3a681ace85aa28d59127e12671fb34152c7017ec3509e0174f2b"
+  },
+  {
+    "path": "examples_klink/public/imaging/blender_demo.py",
+    "sha256": "4e8d803fb575e56a74aebf346406bb786f3821d36c3764da8849a28d67186276"
+  },
+  {
+    "path": "examples_klink/public/imaging/blender_style.py",
+    "sha256": "feb142b24db9b836dfe389b1ed9d49626bbb0b5d78f2b04f4295a2a3d908b6d8"
+  },
+  {
+    "path": "examples_klink/public/imaging/demo.pyxs",
+    "sha256": "95fc29265d86eeb5759cfb5ded1b8cada6188a850af8e120aae06833a7cc86a0"
+  },
+  {
+    "path": "examples_klink/public/imaging/demo_layout.py",
+    "sha256": "44eca0332523498e21e8094eddee4e9121b2f6f7bf03bdb5b6282b4f34aa230c"
+  },
+  {
+    "path": "examples_klink/public/imaging/demo_stack.py",
+    "sha256": "864c23064b9748ad2b1fbd5ac45ca311006b5110a7070244a16d77bda0678a3e"
+  },
+  {
+    "path": "examples_klink/public/imaging/keyhole_3d_demo.py",
+    "sha256": "2c9c2ac5904a0d7eebcca5eefc38f74b481e907f13783ecc80f2fa6038114f77"
+  },
+  {
+    "path": "examples_klink/public/imaging/README.md",
+    "sha256": "c18791bfa920adb8da15e16adc22826996e860cfa949389728dfe7bf7e7e14ca"
+  },
+  {
+    "path": "examples_klink/public/imaging/render3d_demo.py",
+    "sha256": "8aced109e9159af8e606595f03a5c38482e6558f5723aa298fda0fb5bdeb6cfb"
+  },
+  {
+    "path": "examples_klink/public/imaging/section_style.py",
+    "sha256": "0f5dea9c79c0e5a7e08c596ca612039a4d241896d6dcf8a89dfce395239aa950"
+  },
+  {
+    "path": "examples_klink/public/imaging/sem_demo.py",
+    "sha256": "8b3b7f2507475c78df070f3b958568fc98f35146610df34cb42185b8c0f1b01e"
+  },
+  {
+    "path": "examples_klink/public/imaging/sem_style.py",
+    "sha256": "45e45603f21eec88c1032a984ad2f32ad3de1012dc75370cf1949c8b8ba02f64"
+  },
+  {
+    "path": "examples_klink/public/imaging/viewer_style.py",
+    "sha256": "fd01c2a18aef8a6a2cc716ff7bc4cacd4e2da71494f40869543d08fb0db31401"
+  },
+  {
+    "path": "examples_klink/public/imaging/xsection_demo.py",
+    "sha256": "7f48c9b1aa19506868e50855d76f97fe3e6b230b07d08cffc1ce57f329c60432"
+  },
+  {
+    "path": "examples_klink/public/ledit_bridge/draw_device_demo.py",
+    "sha256": "7ce6ca14724d0eb62f55b32212998cbc444888828a73c2d50438d26b8a3917ed"
+  },
+  {
+    "path": "examples_klink/public/ledit_bridge/driver.py",
+    "sha256": "3a0afceb7ff5fad41d7dff09a45bc925792b7756a2e8509b247ede33bfb87789"
+  },
+  {
+    "path": "examples_klink/public/ledit_bridge/ledit_bridge.cpp",
+    "sha256": "09f0a98f6873aca1a058681cc1486cfe8a7c3634782ef479001c5686478a204a"
+  },
+  {
+    "path": "examples_klink/public/ledit_bridge/README.md",
+    "sha256": "543da19d23e0180a24d4802003f030a98af2e46165955205744f6a7a477a4377"
+  },
+  {
+    "path": "examples_klink/public/ledit_bridge/tcell_template.cpp",
+    "sha256": "494338a5151f5e66f22f577a2e4e36180d138f8135fcd9bfbd10dbf4e030e756"
+  },
+  {
+    "path": "examples_klink/public/ledit_bridge/tcell_workflows.py",
+    "sha256": "54d592901140a751ee3eb3e7aaffaab16703b5eed25b6951335c6baf5a0ab770"
+  },
+  {
+    "path": "examples_klink/public/README.md",
+    "sha256": "d70fa9b0e9079e8899cb23665ee468904c9083943bda3c2cddc99ccb1771757c"
+  },
+  {
+    "path": "examples_klink/public/smoke/04_cells_and_shapes.py",
+    "sha256": "5666ae380c43237b60594438f072770da3d719fd3600948ed583555ed4d0d42b"
+  },
+  {
+    "path": "examples_klink/public/smoke/07_draw_demo.py",
+    "sha256": "075980836c077acd6fbe38020aa1fc0ea795eb85c1e2b97cb1cd9c5cc0fe161f"
+  },
+  {
+    "path": "examples_klink/public/smoke/08_pcell_zoo.py",
+    "sha256": "6e709b9e7769842685a20c14d14e8c483d0545fbdae62dc00052b2ce1bf1b2db"
+  },
+  {
+    "path": "examples_klink/public/smoke/09_delete_undo_demo.py",
+    "sha256": "7cc0e86591cc6651b05432c6e1b1a581c2b3b3a29bc415ab5fe20e2e87ec9a56"
+  },
+  {
+    "path": "examples_klink/public/smoke/10_exec_demo.py",
+    "sha256": "9efe9eab9656f674478ecbeeb5b0bcf9ab7947134288f5682b21fb00ef53873d"
+  },
+  {
+    "path": "examples_klink/public/smoke/21_route_run.py",
+    "sha256": "82506fb35721ae375c752f9cfea08466c283ba9acd0cc6b8ea06542d157874ce"
+  },
+  {
+    "path": "examples_klink/public/sync_to_template.py",
+    "sha256": "6abd762ea4d36c371ce40e2440a0e69b6697e4dcab4c07c043674575f91e6a9b"
+  },
+  {
+    "path": "klink/__init__.py",
+    "sha256": "4a2994c04490fa0ed6007a6e5583370ad30458adf0ed4c7d3b5d82fa7c6ba1e5"
+  },
+  {
+    "path": "klink/_meta.py",
+    "sha256": "336a606cd1e78d2efa042bbb55fcd17d583701d707630f01bdea9564438411f5"
+  },
+  {
+    "path": "klink/anchor/__init__.py",
+    "sha256": "c164f69bc6073bbcfcd8a750f410a4bd185f039f275d90ac41c8be3e7c7ba3ac"
+  },
+  {
+    "path": "klink/anchor/inference.py",
+    "sha256": "e38f39b817074d90093d47e6fa93501aaebdff2d18994f20aaf805ac72eddcf9"
+  },
+  {
+    "path": "klink/anchor/naming.py",
+    "sha256": "0c9ba1385cb4ed5f39944180c240511baf6bd08bb7cb3d24b2a1bf5b4a96b019"
+  },
+  {
+    "path": "klink/anchor/workflow.py",
+    "sha256": "e3d7fcf6f4ca122bac174b7af778b3b5ae73fc591b0a588742e2d190d9e64448"
+  },
+  {
+    "path": "klink/annotation.py",
+    "sha256": "ca5dec22209697abda31b648985949d700771319793721b3c153803eb7c3e8fc"
+  },
+  {
+    "path": "klink/bridges/__init__.py",
+    "sha256": "4a2dd5a833c3e2960f15f450d74b2be04fa9bae4f2d9873676ccc25baa9c6995"
+  },
+  {
+    "path": "klink/bridges/ledit/__init__.py",
+    "sha256": "944b40ffe589b64f7166c95d9de2babb19647ae392089716f2af293ac061f6f1"
+  },
+  {
+    "path": "klink/bridges/ledit/adapter.py",
+    "sha256": "ef0f6ced1ae1646c12e426540aac6355f7b042bf734522b62160781dc260f915"
+  },
+  {
+    "path": "klink/bridges/ledit/client.py",
+    "sha256": "1b99f92c13e22fbcc8d445181c5e283e51c45b7614e032ad6f6a4441776ae7fb"
+  },
+  {
+    "path": "klink/bridges/ledit/tcell.py",
+    "sha256": "4cbf7e24939c1ca74ef6e28477d31f40385df546c8fad52e898f8967d1a1b4a7"
+  },
+  {
+    "path": "klink/bridges/ledit/tree.py",
+    "sha256": "bd22b791e52a043bcfbb3a29e8fadefee3745121dc0e9e878fdef6a077db12e6"
+  },
+  {
+    "path": "klink/cli.py",
+    "sha256": "0a1f5d25ca000ba6a54c81418792bab6f85c619f1dcac147c13cc8e292a681db"
+  },
+  {
+    "path": "klink/client.py",
+    "sha256": "7ca03433e9d3c51e5d2eb3d6fed72dd292e774897b6e467bc835f6144e3c40ad"
+  },
+  {
+    "path": "klink/doctor.py",
+    "sha256": "9ce262cecc6de2ccfa5a3e5660960e11f25a60405e2b2f715e7767a0e751a23a"
+  },
+  {
+    "path": "klink/domains/__init__.py",
+    "sha256": "d67b96a1bb0def702a48f5115a3307ccd39587df2d21359a80a16dff432ce595"
+  },
+  {
+    "path": "klink/domains/fabrication/__init__.py",
+    "sha256": "bb5e5196fec10ea21d6d36796fcfdb4c0f3d250a39faed53b3b11ca6245ec0eb"
+  },
+  {
+    "path": "klink/domains/fabrication/compose.py",
+    "sha256": "18d88aecec19634d8214ac388372fdc08bbe914bf42f86b28f2fe96c2fe2a673"
+  },
+  {
+    "path": "klink/domains/fabrication/mapping.py",
+    "sha256": "e9599a0ae2ae4d063b19ceaff07f458058ec78406588e31f6ee124b20bac7bbc"
+  },
+  {
+    "path": "klink/domains/fabrication/marks.py",
+    "sha256": "7fdd3ea927f9fedb3b6bfc55831dd9d3177cb04486efb051e1678d6ca6f6ee6e"
+  },
+  {
+    "path": "klink/domains/fabrication/orchestrators.py",
+    "sha256": "7d1ffb28ef49d7efb69cd71a4f152e1fe2ea3a23b9e12034f66725be25ac1f71"
+  },
+  {
+    "path": "klink/domains/fabrication/sites.py",
+    "sha256": "0d7a27fa6d3ca041237c3c87a32127f1656868e28bf7f91aa65d1a51060d4560"
+  },
+  {
+    "path": "klink/domains/imaging/__init__.py",
+    "sha256": "28de9a7786e8fc011a956223ad8b11121692bf26aa40073595a0f524861fa149"
+  },
+  {
+    "path": "klink/domains/imaging/_assets/model-viewer.min.js",
+    "sha256": "8923739c8c1b4a02dd9c8cf66da5c2a448235cb5e49e439dd7bbba944ba4fbe1"
+  },
+  {
+    "path": "klink/domains/imaging/_util.py",
+    "sha256": "ef201f84985b0d5a9893be213eefbc8408472d9cc0bb162bcd8a81dea4dae780"
+  },
+  {
+    "path": "klink/domains/imaging/blender_scene.py",
+    "sha256": "e8364ed6443f542f27503308aeede2869a63e18b0d250c89a2061b5040678cff"
+  },
+  {
+    "path": "klink/domains/imaging/blender_style.py",
+    "sha256": "6f886caf4c289b6f47f96e67275309a69d088d0c6f953e6073aa9fc8cb34c9c1"
+  },
+  {
+    "path": "klink/domains/imaging/mesh3d.py",
+    "sha256": "1435eb02dfdec81afac7a25bdcecb1611a2d006256d1bb0f5618775b68164a3c"
+  },
+  {
+    "path": "klink/domains/imaging/motifs.py",
+    "sha256": "25b2e262e24e61c64342fbd084faf747b936d519d228f491f8b618b393f1ae9c"
+  },
+  {
+    "path": "klink/domains/imaging/raster.py",
+    "sha256": "6e80198436c5e06927eceb488d06d54b321c549fe6f132afd419ee8bd4dac11d"
+  },
+  {
+    "path": "klink/domains/imaging/section_style.py",
+    "sha256": "2a339b47afeec2a890c770165bd4abecd3c44738c14c2028c3368c3da9100d1d"
+  },
+  {
+    "path": "klink/domains/imaging/sem_style.py",
+    "sha256": "24404fdba6764a2e6bc280328915b75aa2a6466a3f4da9cc31363052aeb89f84"
+  },
+  {
+    "path": "klink/domains/imaging/viewer.py",
+    "sha256": "8140a99bb93413a8698911a64b4f3bcfbbb023272cf2449b8c0bf2cb054f434c"
+  },
+  {
+    "path": "klink/domains/imaging/viewer_style.py",
+    "sha256": "b11eaf6f615b3e6b5b7ec7531cce5a8efb401bf690c374cbcf133b654f8601af"
+  },
+  {
+    "path": "klink/domains/imaging/visual_stack.py",
+    "sha256": "b97d4ea4861e6a9068652b18bfa83265ffb5604a74647cc4c085b61aaf36bb5b"
+  },
+  {
+    "path": "klink/domains/imaging/xsection_driver.py",
+    "sha256": "8e3442177a0af4c81abea8f9f7371228103b74f3fd7086cc97c62f6afdb44948"
+  },
+  {
+    "path": "klink/domains/layoutintent/__init__.py",
+    "sha256": "3d3ec08692d0d295a47b4bfec2a8e68d74c9dc7e15b73beab01500de7c3776a6"
+  },
+  {
+    "path": "klink/domains/layoutintent/orchestrator.py",
+    "sha256": "a731a918d3452a51ae6244d06c3310e71d1fc3438fb379a81f55ca88fec26459"
+  },
+  {
+    "path": "klink/domains/layoutintent/planner.py",
+    "sha256": "e171de97bb673beed397369ed456d96d8ee894a722c8b806894afd0f7a5e1720"
+  },
+  {
+    "path": "klink/domains/layoutintent/store.py",
+    "sha256": "893dea0333a89511510d7b438f417bd9957ec3c91720e4594c98014be05afed6"
+  },
+  {
+    "path": "klink/domains/measurement/__init__.py",
+    "sha256": "e90b0cadb31edf7253ff2600830b11aa8831a1732399c6888090983908df73c2"
+  },
+  {
+    "path": "klink/domains/measurement/binding.py",
+    "sha256": "557295888391e8e1eb44df003728ef41a5ad51a65bc92a256d9579effc18eaeb"
+  },
+  {
+    "path": "klink/domains/measurement/results.py",
+    "sha256": "edb166552461b1ce28fbc17c5c756f1fb48221421d6f423c6d329d389c8b290b"
+  },
+  {
+    "path": "klink/domains/nanodevice/__init__.py",
+    "sha256": "58bd1a3ac362222f39458881309d6c1ad3f0fab18a29b87c76d0cbd431b86b6d"
+  },
+  {
+    "path": "klink/domains/nanodevice/_deps.py",
+    "sha256": "1e0b2f4f1aa2838c6002fd9f8953e213e0f9a9b42b24a5c1aeb1eb7e433435e0"
+  },
+  {
+    "path": "klink/domains/nanodevice/devices/__init__.py",
+    "sha256": "7654bfc45167528ae323ec99b18a17cd05c1cabecd89ba27b1f58ee9d2ba9883"
+  },
+  {
+    "path": "klink/domains/nanodevice/devices/hallbar.py",
+    "sha256": "b2b08e2ee3bd9e078ecde17f946db0bfe868da91fc3661cfb053d14a6a6d5fcf"
+  },
+  {
+    "path": "klink/domains/nanodevice/devices/wraparound.py",
+    "sha256": "4fe57629267d6b5f7a3eed7bb36b8a1ed0ad7a30b5e60027136388f4a6912e0b"
+  },
+  {
+    "path": "klink/domains/nanodevice/ebl/__init__.py",
+    "sha256": "b07220aa64c2ee3869d32420f2c2883575c467d809017e9a74e58d547cb672e7"
+  },
+  {
+    "path": "klink/domains/nanodevice/ebl/marks.py",
+    "sha256": "72a19803a3d4e701d61166adddc1d3842580962390fbe02792b3ddc9a63dbbe3"
+  },
+  {
+    "path": "klink/domains/nanodevice/ebl/patching.py",
+    "sha256": "f668fbac5417428056a2ee5c049c914a81c34ab286f51fd47f4ce28be6bc3900"
+  },
+  {
+    "path": "klink/domains/nanodevice/ebl/validation.py",
+    "sha256": "107bd9b5e02ad690b70434808f8ddf4b80504a17b8b971a215d2502bd1830584"
+  },
+  {
+    "path": "klink/domains/nanodevice/ebl/writefield.py",
+    "sha256": "babda7fc11279fa7b5e524cd5328cdf16642b2ae973925bff5f0199ef11ab6f8"
+  },
+  {
+    "path": "klink/domains/nanodevice/flake/__init__.py",
+    "sha256": "8d1fd786fa5e632d1b3051bbaa169decf8709f7fbb5e757857623d174112b2c6"
+  },
+  {
+    "path": "klink/domains/nanodevice/flake/align.py",
+    "sha256": "c7fe1ddeda8c1f61c2dab13dfda482829a9351197d5647e10c8995e49ee3fcab"
+  },
+  {
+    "path": "klink/domains/nanodevice/flake/artifacts.py",
+    "sha256": "f7b4a1fdc3c2645a6b97528a18263e84283d24c9ae15dc8e2c58c9380d8073fc"
+  },
+  {
+    "path": "klink/domains/nanodevice/flake/combine.py",
+    "sha256": "09aca2352c90da0cc93fd9b66707ece4d96bff21556e565279a929fa3f8dca99"
+  },
+  {
+    "path": "klink/domains/nanodevice/flake/commit.py",
+    "sha256": "7a01caa7e1245faed996c5203c0c803ffb6031793bec65d3feb4ae66163cf476"
+  },
+  {
+    "path": "klink/domains/nanodevice/flake/detect.py",
+    "sha256": "5f53161745d58590bc527b050b9ee583eedefe688adb4d66e65176eca48af962"
+  },
+  {
+    "path": "klink/domains/nanodevice/flake/detectors.py",
+    "sha256": "92318024d076f7a376fd8ba1d377de42eadf3902af62115c2ddbd891b26279ce"
+  },
+  {
+    "path": "klink/domains/nanodevice/flake/klayoutclaw.py",
+    "sha256": "dfcd6b5ae76259d5a9b6fbafb86f53128727ff2d83559558b17cedd8c6f9860c"
+  },
+  {
+    "path": "klink/domains/nanodevice/flake/priors/graphene_shape_priors.json",
+    "sha256": "055bbd5a614be29985c0fe05de9bc345c8c86a54d4e0c681aaa51aba73785f9f"
+  },
+  {
+    "path": "klink/domains/nanodevice/flake/priors/graphite_classifier.json",
+    "sha256": "6b547de3c205608099a69e4db06223c8da956e4affeea05d0bcf30d07175fe02"
+  },
+  {
+    "path": "klink/domains/nanodevice/flake/priors/graphite_priors.json",
+    "sha256": "172afed236ffb72303155bec411ec640c6de5bb296173fbd09f81ae0e0ae3e6e"
+  },
+  {
+    "path": "klink/domains/nanodevice/flake/priors/graphite_shape_priors.json",
+    "sha256": "fa53faf3588aa45e3c09e8b5652e742bfa6a1641913aea590f4e65d5ed4be0cf"
+  },
+  {
+    "path": "klink/domains/nanodevice/flake/review.py",
+    "sha256": "0473205525ebc1a53e9c5ba8b1e48cddf39a43162cb589f36fa99a8084bd3f19"
+  },
+  {
+    "path": "klink/domains/nanodevice/orchestrators.py",
+    "sha256": "f571aa8c8102b3339f8055743439ad808c0d13016aae532f8100e7f1642301f7"
+  },
+  {
+    "path": "klink/domains/nanodevice/pipeline.py",
+    "sha256": "3f82a5ab3d50951e048d7cab50d41ffd0497fccaf15fdd6c6b62f5cdafb2d007"
+  },
+  {
+    "path": "klink/domains/photonics/__init__.py",
+    "sha256": "b07cbaa3834d7665422e4c25cf1458aeeaba9d7639970f48184d95a2d97687d1"
+  },
+  {
+    "path": "klink/domains/photonics/blackbox.py",
+    "sha256": "a2de68063af2f98cb90fe40057ebb564257e3039af78a859195f5046ec26746d"
+  },
+  {
+    "path": "klink/domains/photonics/gf_import.py",
+    "sha256": "4a46e96134cec245b430a395ddb277a3c00efd4218362cb03cc0ff0e5223982c"
+  },
+  {
+    "path": "klink/domains/photonics/net_intent.py",
+    "sha256": "56e8cfdcea4cafdc3bea415e75eaac436b2fb6738a946dda1ca80c2e15bb5f4f"
+  },
+  {
+    "path": "klink/domains/structdevice/__init__.py",
+    "sha256": "df454e02c745c43034ba75ecde5008e9440780b420b8da52c9e6a4dbaa8d54d0"
+  },
+  {
+    "path": "klink/domains/structdevice/connectivity.py",
+    "sha256": "c4a4f9e01d5d6d3b8733c8ed8d9a1850a918ab45005709c0214a64ac3f4fbb63"
+  },
+  {
+    "path": "klink/domains/structdevice/device_extractor.py",
+    "sha256": "d9aae440ae8e16d37e9e494ce30a70bfadd0e78f713d3242877cc8f86e19ea6e"
+  },
+  {
+    "path": "klink/domains/structdevice/extracted_netlist.py",
+    "sha256": "c5f4eadd14d0229d684ca94bb72342fb83b0f0a20e94dee29c28c496a8165938"
+  },
+  {
+    "path": "klink/domains/structdevice/layout_engine.py",
+    "sha256": "53263faf0247a9f0b0bef9c00a20de2bc36c8d9cee92f1d18b6f64fed59b7783"
+  },
+  {
+    "path": "klink/domains/structdevice/logic_map.py",
+    "sha256": "a683a9c53c4d7d81c423545217eb1ccf591cf7b04a8c8f5d47c7919a318c2490"
+  },
+  {
+    "path": "klink/domains/structdevice/lvs_lite.py",
+    "sha256": "3c6156cf61345840e0e91ad63d10d6122eab7439aa7933de0ee102d3e262e787"
+  },
+  {
+    "path": "klink/domains/structdevice/netlist_build.py",
+    "sha256": "a2a7536fd7b53137ff0d61a8241dadcc9ae2e7a8f8cafc540d4f88117a09c053"
+  },
+  {
+    "path": "klink/domains/structdevice/netlist_lint.py",
+    "sha256": "bbc8d4c6f07ee87cdd9465a25273c57ffc49de08d6ca99829057e3dea735ad3f"
+  },
+  {
+    "path": "klink/domains/structdevice/orchestrators.py",
+    "sha256": "9397ef30943f0140af67257f26cc3d777fda99a49af77dc5408fca012fac2128"
+  },
+  {
+    "path": "klink/domains/structdevice/pcell_diff.py",
+    "sha256": "5b4c323a8bd2e006b5bbb34550a8eeffd75d4b23d30b6a759c0668caf7987b20"
+  },
+  {
+    "path": "klink/domains/structdevice/pcell_fitter.py",
+    "sha256": "919e7d84cdcf579753d9f752d51d378fa52d8d017c213e851813b186d6d58960"
+  },
+  {
+    "path": "klink/domains/structdevice/pcell_native.py",
+    "sha256": "4a9b8410fb16b4d356f5c8509ab0278e872f5e578a5d510ee35fc80a00386f38"
+  },
+  {
+    "path": "klink/domains/structdevice/pcell_repeat.py",
+    "sha256": "42e8c94369a81cf95f8e677940d8bcf0dec7be53477cf7f8893790bd2eb6499f"
+  },
+  {
+    "path": "klink/domains/structdevice/recipes.py",
+    "sha256": "aa2bf3b00b6e31f4c3fd184b3eb90cf596302410ca3e0dde1741c40f51f0d3cf"
+  },
+  {
+    "path": "klink/domains/structdevice/reference_netlist.py",
+    "sha256": "1eed92621c18326eebbfcbf39b7c4165eb7ebb0158a1d44aae82ece43c994c51"
+  },
+  {
+    "path": "klink/domains/structdevice/sizing.py",
+    "sha256": "b914f9ba2ba6180745b39c34069d7c399bd8706e8465fbcc2f9e98aec9cc1376"
+  },
+  {
+    "path": "klink/domains/structdevice/yosys_flow.py",
+    "sha256": "de4c8a9654c5d4275d8d8f0dcb6f190a70e5a9b9b50a8def7b26f17c2ca64b74"
+  },
+  {
+    "path": "klink/errors.py",
+    "sha256": "b76b3168fd6213a50268c7d5f6045e63da5bf259b0ffeb6e51b3dfc6b685fc14"
+  },
+  {
+    "path": "klink/ext.py",
+    "sha256": "7b1104f66b7fd7e4d38787b807a7b8fac18231f7027c816d47983f5b78b4e73b"
+  },
+  {
+    "path": "klink/handshake.py",
+    "sha256": "94ee3f083f2f59a5d7513f7a4f489ca521f8413da0da79b1629649074bafbcaa"
+  },
+  {
+    "path": "klink/mcp/__init__.py",
+    "sha256": "6479a88ef134ef63d0019e297a70d98accb5821ba83c69ee9b3e86ce5800a05f"
+  },
+  {
+    "path": "klink/mcp/__main__.py",
+    "sha256": "0a527d09c03fc912d893499db6f726df5b6e511bbca02647eab5f40e2216c698"
+  },
+  {
+    "path": "klink/mcp/agents/lanes.json",
+    "sha256": "87a7ff3a9b6499f294c7fac7bdf8c62ccccdb56f5939d47cff66c6a2bec99adb"
+  },
+  {
+    "path": "klink/mcp/agents/README.md",
+    "sha256": "a1bf1edd88be4f94e8a5d93e3e8953ccfdb93523a4f804f20328cacde51344e5"
+  },
+  {
+    "path": "klink/mcp/bridge.py",
+    "sha256": "814de80cacb1e41bf87efd3415f7853a994a8df433f86f733924e7b5ccdf0e66"
+  },
+  {
+    "path": "klink/mcp/catalog.py",
+    "sha256": "b58c716e836c35be2c5e4c3916606110b5cd6adfa0846dd4d7f8ea7bbe4f403c"
+  },
+  {
+    "path": "klink/mcp/CLAUDE.md",
+    "sha256": "8b52d78b90d2c92d0b9212f9e6e6af8057c7c466b9d9355e5ffed6e8e787af10"
+  },
+  {
+    "path": "klink/mcp/config.py",
+    "sha256": "889f778d76be741f31140c2dbd3c003872b62effc8f61c56d984e68e5a95772d"
+  },
+  {
+    "path": "klink/mcp/connection.py",
+    "sha256": "b703a142b81d80119c23755654c7c776e81e6f96d4a0eb19e07d35162c6e9367"
+  },
+  {
+    "path": "klink/mcp/diagnostics.py",
+    "sha256": "a9106244a1cc927a672f9c7885dc1b5106e3b5138c355175fb851bd72bc07342"
+  },
+  {
+    "path": "klink/mcp/guide.py",
+    "sha256": "4b60b7e882a29f12bae976d7a37341017195ecaece095be61f98b0153e8ea6f6"
+  },
+  {
+    "path": "klink/mcp/interaction_context.py",
+    "sha256": "dce7d9a4d753ccd24c162352e58dd8a27ab1dbaca8abd729758edaa47655ea4f"
+  },
+  {
+    "path": "klink/mcp/local_tools/__init__.py",
+    "sha256": "62b36af22414f8abf0239464b304a46eb94afc809d00a253c9420c7740c6e6f4"
+  },
+  {
+    "path": "klink/mcp/local_tools/_helpers.py",
+    "sha256": "552721b4f08f8d4371965ca1f21e26c921b2e64cb0108c143379047718a901ea"
+  },
+  {
+    "path": "klink/mcp/local_tools/discovery.py",
+    "sha256": "de44a0bf46580ad84659dffb3a8b27fe8a53ffcd5a35b38e8dffcbb879ee0f9e"
+  },
+  {
+    "path": "klink/mcp/local_tools/imaging.py",
+    "sha256": "137697fa87ae86633d99aef473f632ad1c53cc2c4474691830f8d2dcaa5651ac"
+  },
+  {
+    "path": "klink/mcp/local_tools/interaction.py",
+    "sha256": "e5fe244c447f6b3759e4be2aa00435675ebe5e957fbc7d9a85657857fbda24cc"
+  },
+  {
+    "path": "klink/mcp/local_tools/layout_intent.py",
+    "sha256": "b6777d932714b86442d78badda8120731bdd83a5bd27cb8d824d1e23592326e1"
+  },
+  {
+    "path": "klink/mcp/local_tools/nanodevice.py",
+    "sha256": "c839227906878b9d47af3196205d918231b5d58433e56d2319ea0be26429bff3"
+  },
+  {
+    "path": "klink/mcp/local_tools/photonics.py",
+    "sha256": "1d9afe1eac25abd2e83c4ae3168810c790b1534715de70132f38abd43fdfad95"
+  },
+  {
+    "path": "klink/mcp/local_tools/routing.py",
+    "sha256": "882d2840f5b08101ce953f28c8bd25746dab04cb9f69d512ce93484f0a99e1f7"
+  },
+  {
+    "path": "klink/mcp/local_tools/session.py",
+    "sha256": "0a73c298d798e5f99c5cff882bd2171f9d4440b2a734f434b3bf2235cadbfe39"
+  },
+  {
+    "path": "klink/mcp/local_tools/structdevice.py",
+    "sha256": "75fdf4678c7a313420c99b3e4e83404e976310062827f8a6bc3a1ec0162d9643"
+  },
+  {
+    "path": "klink/mcp/local_tools/upi_ledit.py",
+    "sha256": "1ac039ef28da2543382c4a89daa91065ad70456eaf847bb5536c592d106d93fa"
+  },
+  {
+    "path": "klink/mcp/profiles.py",
+    "sha256": "aec37c44f7c2dd5e33fe17005b2eaf874a4251da01f945dc4660b1f8c6c09a5b"
+  },
+  {
+    "path": "klink/mcp/README.md",
+    "sha256": "ff3f553b7e38be8c15eb29faa574dbdf6d05cf56ad1f82ad66b060bab0167a5b"
+  },
+  {
+    "path": "klink/mcp/registry.py",
+    "sha256": "02779a56e1ac54884cd3f95fa92c296ca7538550ae5e68bb006509efc772b6e0"
+  },
+  {
+    "path": "klink/mcp/results.py",
+    "sha256": "1f4fd4f9e58b6e7c98d6be0f5ddd78f73e2bc506634fb100b4aa61e0e8ac8458"
+  },
+  {
+    "path": "klink/mcp/server.py",
+    "sha256": "5047472c0989da8fe3d7a6341c735da8c3ce49178ff79e17ae26aade72b60f9c"
+  },
+  {
+    "path": "klink/mcp/session.py",
+    "sha256": "401743d2bcc7244ab3e9ea82b3dc398421c8a477faa5470e076d22f2274bbd80"
+  },
+  {
+    "path": "klink/mcp/session_registry.py",
+    "sha256": "98e4409922683f6e6ff31aff6f1660f24d0c2f2a7c12c8a30f2d4c0ac223ea15"
+  },
+  {
+    "path": "klink/mcp/skills/klayout/SKILL.md",
+    "sha256": "18988b392094380daa735cccbba0c34b0a89c589ba76f72397b460f3c9bdf5f2"
+  },
+  {
+    "path": "klink/mcp/skills/klayout-gdsfactory/SKILL.md",
+    "sha256": "4587f9c86409b161ed80efd17208f8dffb6a3b30fd7107d91ab251399cea1e69"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/grain.xml",
+    "sha256": "a9679df3fbcfe6ddbfd759aaf885c94d23171b2c2a76bc9f14534986c4c13dc6"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/pymacros/klink.lym",
+    "sha256": "46db8f13892439ad6f57fb6d6332dc536c2c6448b3b78a7bcf7950f6b4f68c5c"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/__init__.py",
+    "sha256": "cc6bdd21342c43a5d1ff6ea230d159beb91c1d2947da4e987a1df691cd003fc8"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/anchor_pcell.py",
+    "sha256": "aaca40d7de9457e64e7646ebb025c595f1ce6d3c382ce78c7a7adec4b39a256c"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/companions.py",
+    "sha256": "c815b4591833ff56e0e4f31a59e4b887e18502427f6f4c02ce25745ceafbf371"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/connection.py",
+    "sha256": "a358ce76676f620a249541fe8f405610a8d83922b999df9fcb896ff5185625ad"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/context_capture.py",
+    "sha256": "0ddc63dbb127c213a06e902b4eb7cdec297f68cd45c9a1c10037e00a419c9f56"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/ctx.py",
+    "sha256": "525c976c7936a881b64c5278d6eea86cb6f0b55330a1b6da4ccfb6488b21452d"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/dispatcher.py",
+    "sha256": "b637e0f834ad4fdd6e7bcd45984393e8e9fd99bdb17d4bc240f20f85350aa65a"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/errors.py",
+    "sha256": "2ed7f0d5fc455c0eca48236fe2ee3fe58151a46ebff7116212f155861fd81ecb"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/events.py",
+    "sha256": "913c0aeb3b9d2d5715500f0b763a7d3ab5b4cda00a5db7987d730ac0a201c9bd"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/klive_compat.py",
+    "sha256": "ed7243c601bfde339933dcb26c498d1d9b231136bec4935e0d6a002c3d2343f3"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/klive_forward.py",
+    "sha256": "c52c1a0da2f4db9dbd77b980925dc4cc8103a474f038a02ac8e0ac5147bbe9d4"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/log.py",
+    "sha256": "20f320c0ea7bc01dd20b917ffa937ac2c3cdf7e74ef8d1e37ee48671964d2f3e"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/menu_hints.py",
+    "sha256": "a9a2226a35fa5b979ac3a4c0faca55730cc57861961c88c6af55b78a653e51b5"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/__init__.py",
+    "sha256": "24c4c6b9514b04d83803dee6f5944ed4873b5de1981b2129c6dc2d84bdc5007a"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/anchor_m.py",
+    "sha256": "ef28ac598e23719daa7fd0ef2bd14787d84c38b525fcc6e5a3af97719ad92699"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/annotation_m.py",
+    "sha256": "b7155ec23fcff50e8fda82df08a4d0a47ffc9737507a575d779b7b099f04bb5b"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/cell_m.py",
+    "sha256": "56f7551b91fc0dde13d0a65f3da1c48bfaf814daa6953b032743f78adf6d75f1"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/d25_m.py",
+    "sha256": "20f40d9c234122e7fa08f0f9cc43366c3d73ab306ff0ce056ed731bec1dd4d85"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/drc_m.py",
+    "sha256": "0d81d37b17dc801c216f7e01f21f7f842957b816ab20e5110622641306c23371"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/edit_m.py",
+    "sha256": "6013da032e90dd9b615aa269014c75a2a8376da2362c814223d32f62fbe08328"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/events_m.py",
+    "sha256": "d2c9f0f37a7cd7c1aab5833c71803fba3cb594fa23d3c93c85c1e802c2faf40b"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/exec_m.py",
+    "sha256": "dc4ffb8b436463277a96715ab041317b6e0ca46765d9bcfd3c3198963c52748f"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/fill_m.py",
+    "sha256": "950a8fd6e6c772ce3a9ef9714df247ecc97c8f4a4685c3f39c3c3fddcbdd62e3"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/geometry_m.py",
+    "sha256": "9f36e49e17a7709d1a33e9b7809d919761c0fc4d84739058fb0c833bccf711d1"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/instance_m.py",
+    "sha256": "c2c54fd2f87d91b612e2791e05dc40386d9a16f75df6563fdd6e65596f73e2f3"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/intent_m.py",
+    "sha256": "1aa2b4be29c02fb9d8a02b22043bb084708fea843c963d498bd774762a9472cd"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/layer_m.py",
+    "sha256": "203c519cc3c4f0a1678c396f156896836029db494842b7146de919bab18f3d6c"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/layer_view_m.py",
+    "sha256": "663b2a0c30d5a9462af4ce87f9b705693ccc6896e76973c59637893ba7d3cbee"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/layout_m.py",
+    "sha256": "6fb952fe61062b1d62f1ace53a57d35ee7e46f9254b8ead468ba49f203d4c8b6"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/library_m.py",
+    "sha256": "249c6d783ce081bf97197a93a1ec749dfffece1a28ccc36384f12c10096356c4"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/lvs_m.py",
+    "sha256": "8ffa943c0a71935072533e59e2c41de9868187df352b08040da52cc88f410b99"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/marker_m.py",
+    "sha256": "3a2ee41ebbc977516298d4f8530d7a01172db859a31eb9711f94de340fba001b"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/meta_m.py",
+    "sha256": "0ad0364881b1106e26090e42fec00b9677a576abe1fe397fb1b7615709b313b1"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/modify_m.py",
+    "sha256": "f062257670a550db1c83e483caa8f2bd53e50bb67c41e2197124aefd5d5164d1"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/pcell_m.py",
+    "sha256": "6fda3e69a1238cfc6bb9e0b58c4f784e534bd787b28ff760e60f8b802c8ed859"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/port_m.py",
+    "sha256": "6033e21be7cb14d31558ef4c64959afa0b2744d57934d66640535133efc7ae49"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/recorder_m.py",
+    "sha256": "3d6aefad4b463dcc4d1d07fadd70cf427984a39c003ca1ab300983d5f7ae8c67"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/region_m.py",
+    "sha256": "5742b571ca61d678fa218cfdcea9a494abda583a9a7cdd573880392642aec077"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/selection_m.py",
+    "sha256": "f10f784d65c78348584ba4f74a1f8f1cd52b0ae3b49dfd657ade06660be99e51"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/session_m.py",
+    "sha256": "88c73b641ff60379d8d711c1b07a70f55b3e9fb2922729f495b265879f411e2b"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/shape_m.py",
+    "sha256": "0a00c3afd3ff188516a0fec1aa388dc7b68634b2377d2dfefd83e849f2194c7c"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/transfer_m.py",
+    "sha256": "63c1b2ff66561d36269d63e9aace2f911efc44df8e26ac45f5e7b0f817fe523b"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/view_m.py",
+    "sha256": "6124055e9b190ba71f96b304d082e1ef556f3a845d1147cdc1fadfebc8360ab1"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/port_pcell.py",
+    "sha256": "36ba9455790bf8aff68c2b63ff500fec3f9077a51bd9ebe9e4e27a13cc07f43d"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/protocol.py",
+    "sha256": "5e9983cf4dbc3dbe7dc643c4fef95bdb649d07bc12be826586a08b5a015c5c2c"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/recorder.py",
+    "sha256": "8a491e2238b13d32834ea413ec8a9fc68a9be1c634ce7c71982d84c9372efaf3"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/recorder_pya.py",
+    "sha256": "05ae2673943fd46754ab7e4406f3c56472cd72baa9c5095065055032b14d492b"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/region_geom.py",
+    "sha256": "9aff3bb9fd117e288f017bdab4d79b11ee45133d1d550cf8f78fd65d4d5699d7"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/region_pcell.py",
+    "sha256": "395147cc7d9000df51ab35ca511a47c0b67b7ab8b3cc0af67be0c382cf6cb9f3"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/registry.py",
+    "sha256": "86f6b356c0e7c44ad6ab3e0f7941b3cc0ab7d337ede48dd3b38fbd2e214d6a12"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/send_journal.py",
+    "sha256": "5dbd877120e5d77e15bcce1dac045693d7958ab56d8ae560a33741dd0967f914"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/server.py",
+    "sha256": "1a4b01b25fd58f2276b6cffe5f2a3760848b41013b4669798f7f88f3520c2f00"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/session_registry.py",
+    "sha256": "e1874d2bd935ba92bb09842e028e4432a9af289f8b09749938e1192481915bd5"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/signals.py",
+    "sha256": "10aa48c4dce31a395f3b31708166ada838719ef1ca936e2ba8cd7704664a7756"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/structdevice_pcell.py",
+    "sha256": "432c4946c0cc00379fbc16adcf11f273e8a21a99b54cad9aa8340a098d0b28c6"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/transfer_pending.py",
+    "sha256": "053fb9543dfeab6fe60b9603378a155533b82a2244fe3171515ec7e537862a1b"
+  },
+  {
+    "path": "klink/plugin_payload/klink_plugin/python/klink_server/txn.py",
+    "sha256": "28004ace94c5307fcc17d01f9e2712ed887524a927e5952cb4d2f91ede73ce9e"
+  },
+  {
+    "path": "klink/plugin_payload/README.md",
+    "sha256": "866137e87275b2f4bf5c764e26d145db1d48ddb3be12e385bcc67cc1d0d6dbe1"
+  },
+  {
+    "path": "klink/port/__init__.py",
+    "sha256": "437203189dcefc8b71307a3ccd3ca14991fc5e31ade54a03a37faa450b79c112"
+  },
+  {
+    "path": "klink/port/blackbox.py",
+    "sha256": "d0318a6f69827c36068e387fb13679adc245b858aaa8e90cfd08649828becb83"
+  },
+  {
+    "path": "klink/port/inference.py",
+    "sha256": "e16ee5741df662b593f405df4746662d87ba066bdba880c0eff0465d471ef6c5"
+  },
+  {
+    "path": "klink/port/naming.py",
+    "sha256": "3547efcccfce171339a0e89e619f6ce3396a6af048d16f3785265ecf0a8b0f88"
+  },
+  {
+    "path": "klink/port/validation.py",
+    "sha256": "306764f13cbb8ea2653620ece1b9897827d2087b292e0d66c3d1c84812dfc162"
+  },
+  {
+    "path": "klink/port/workflow.py",
+    "sha256": "40909217ca904292da77c853de3be89abd438f9ae73e2217d9a8d6a7bc0bef14"
+  },
+  {
+    "path": "klink/process_stack.py",
+    "sha256": "54be28862db9898c89f98a5f74abdc100554878fbb82ca6d28d3f22f5cef244c"
+  },
+  {
+    "path": "klink/py.typed",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "klink/routing/__init__.py",
+    "sha256": "7bb7235313fbab3a01b7157ba0e51eb716a04d96c8151be001ba6c96953ddf45"
+  },
+  {
+    "path": "klink/routing/backends/__init__.py",
+    "sha256": "a07cb2c835ba6d794cab6a589ffff98c9255fbf8ddfae03207099fb7e3734ffb"
+  },
+  {
+    "path": "klink/routing/backends/flexdr/__init__.py",
+    "sha256": "bfeddea477ab030adfae3f3107f60d475deeebbabe7adc73169b240cfaad1228"
+  },
+  {
+    "path": "klink/routing/backends/flexdr/flexdr.py",
+    "sha256": "44e514a2e0bbc3b1f5e325b6faadcbe573599b783de3d51290caa1206bc07107"
+  },
+  {
+    "path": "klink/routing/backends/gdsfactory/__init__.py",
+    "sha256": "10ec40de57b00f1de9f9a95650b8a5ac46bfc6bad34a8cceff28ea74af35125a"
+  },
+  {
+    "path": "klink/routing/backends/gdsfactory/gdsfactory_backend.py",
+    "sha256": "63bb519381dfe68d81ea03e4bd82948635ace4b41a1609c3ba08bb0bf2ddbdae"
+  },
+  {
+    "path": "klink/routing/backends/gdsfactory/gdsfactory_components.py",
+    "sha256": "5e6f54c0414a05fe6669ab30ba152a3cf5456dc99f45fdfe85a09b46d582a27e"
+  },
+  {
+    "path": "klink/routing/backends/gdsfactory/gdsfactory_ports.py",
+    "sha256": "8734a89c9b97a22786b7ef8d77eeff7daf19206beca86e01a71d129946f3e400"
+  },
+  {
+    "path": "klink/routing/backends/geometric/__init__.py",
+    "sha256": "8763c92ff18804fc3aef7f8100e114253fcb1a841422176ea27d488ffb4058c5"
+  },
+  {
+    "path": "klink/routing/backends/geometric/damped.py",
+    "sha256": "c1beb9ba61ae4e30521ba3f22e12a7ff0372675e6d835b151845178327a7034b"
+  },
+  {
+    "path": "klink/routing/backends/geometric/global_channel.py",
+    "sha256": "f7ae8a6bb0c2025a815c1871574f9afaa83bc27767aabd6baf5ce954846459c5"
+  },
+  {
+    "path": "klink/routing/backends/geometric/multilayer.py",
+    "sha256": "a4661572a41419d522568365e1a5c8478e5bacc72f2166f832b1d314b80d968f"
+  },
+  {
+    "path": "klink/routing/backends/geometric/steiner.py",
+    "sha256": "7aa7d7d799873418acafdf2f8dbef145c69611d43c16cda8855e60f7ee349944"
+  },
+  {
+    "path": "klink/routing/backends/geometric/tapered.py",
+    "sha256": "6a161f79e7305731b8369dfadd58eb2ff57ae31e4073f17524b7a72ade69b1cd"
+  },
+  {
+    "path": "klink/routing/backends/geometric/tapered_segments.py",
+    "sha256": "8c3d27ae9f22c61b42c2cf8e723500df861baabca5da71f1998bd66fed4a8815"
+  },
+  {
+    "path": "klink/routing/backends/negotiated/__init__.py",
+    "sha256": "7803ec4693b29b12111d7d8f006acd937da562fde97ecf5651877a6a63b5bd6e"
+  },
+  {
+    "path": "klink/routing/backends/negotiated/bounded_router.py",
+    "sha256": "4b183ae2a00fb13c6a932658a4cdc53fe84a1271e3c3bb1bd04649fa9fdb6973"
+  },
+  {
+    "path": "klink/routing/backends/negotiated/hier_router.py",
+    "sha256": "a33a3bc5e827bc87fb6888596a95aaeb645999256050b734f67800faaf6edd57"
+  },
+  {
+    "path": "klink/routing/backends/negotiated/negotiated.py",
+    "sha256": "29fc9a3d6c161f925ec3932167b7a52ef4c8fc75792299ddfcf0e7a1156ca342"
+  },
+  {
+    "path": "klink/routing/backends/negotiated/negotiated_grid.py",
+    "sha256": "192cc1d5b407628dcde8e8a8ad6ddf262fc3fb52f160b8580a44c63506f32b4f"
+  },
+  {
+    "path": "klink/routing/backends/negotiated/negotiated_resources.py",
+    "sha256": "ff36a9e0b828069b81e6ca59fae2f1682c32b9b7c97c0180e9e6b868597df185"
+  },
+  {
+    "path": "klink/routing/backends/pnr_multilayer/__init__.py",
+    "sha256": "fb4b6ef72b52cd3bc1b0fecb2d38ca6ab2582c35b57027e9e8adac5645e786d4"
+  },
+  {
+    "path": "klink/routing/backends/pnr_multilayer/dr/__init__.py",
+    "sha256": "a2ef0a2c858d8bcaed82e98cf2cfa5c73f616938a15d19c654280d39a381ebf9"
+  },
+  {
+    "path": "klink/routing/backends/pnr_multilayer/dr/legality.py",
+    "sha256": "7a5a741827f050663e171cb06aca0fd324619d197377ad6f61030d693e688976"
+  },
+  {
+    "path": "klink/routing/backends/pnr_multilayer/dr/maze.py",
+    "sha256": "80372ec1e9af0150019e7770574450a6ad299d444652333e669b52f36087f9e2"
+  },
+  {
+    "path": "klink/routing/backends/pnr_multilayer/dr/rust_bridge.py",
+    "sha256": "1c84675af4e5f8f4ba858b682bd142388fce49daee524f4a9f8fc81e0690c0ce"
+  },
+  {
+    "path": "klink/routing/backends/pnr_multilayer/dr/trackgrid_adapter.py",
+    "sha256": "1e9fd3c1d751d13f4442ea12ac3117c6cdc21ef493fae2364e942a75a6a6a836"
+  },
+  {
+    "path": "klink/routing/backends/pnr_multilayer/gr3d/__init__.py",
+    "sha256": "bb2fe7e9de50b1be042506bc6c2276a886afdff1fc86af2dd60c8de03a70997b"
+  },
+  {
+    "path": "klink/routing/backends/pnr_multilayer/gr3d/layer_assign.py",
+    "sha256": "48925cba223e37154a94c39e3d396c53faa3798794f9d44497fe264b8db428d2"
+  },
+  {
+    "path": "klink/routing/backends/pnr_multilayer/grid/__init__.py",
+    "sha256": "85228b98e82f83925fcd8aa133cfc76bbda7b923bfd8742036417995e4e0e306"
+  },
+  {
+    "path": "klink/routing/backends/pnr_multilayer/grid/track_grid.py",
+    "sha256": "81785bb9cbeee05a2ca36adedd35aaff090769c6b0db380f6856fc1c2ebcc909"
+  },
+  {
+    "path": "klink/routing/backends/pnr_multilayer/pa/__init__.py",
+    "sha256": "e51cbc0d9dc7a07e059ccd522192e61c65f15b5384595006ceed2083a25d04f1"
+  },
+  {
+    "path": "klink/routing/backends/pnr_multilayer/pa/flexpa.py",
+    "sha256": "530a21f20e7def25b32443edad9d5615b4530e9f4119992a94c7fc343aecb1de"
+  },
+  {
+    "path": "klink/routing/backends/pnr_multilayer/pnr_flexdr.py",
+    "sha256": "ba244c44e4e11a8091176a9d09419a87fd533acc3cde41a6fb10a96558f9ff56"
+  },
+  {
+    "path": "klink/routing/backends/pnr_multilayer/pnr_flexta.py",
+    "sha256": "a0088e954468e383e5c7d95dc74aac121f45e6c08f261f02646570f4ec5408cc"
+  },
+  {
+    "path": "klink/routing/backends/pnr_multilayer/README.md",
+    "sha256": "d109af9d8b36fa5d35adec6c53aca4b6c81f6f4c2de3de8b2e602505ab968342"
+  },
+  {
+    "path": "klink/routing/backends/pnr_multilayer/ta/__init__.py",
+    "sha256": "ae1fa4d9ff1c98a78cdfe6cbe09441868d6232d8ef07984709cf9d6ec749c99d"
+  },
+  {
+    "path": "klink/routing/backends/pnr_multilayer/ta/track_assign.py",
+    "sha256": "b629d569feb4455c05eb181d5ffb16e6f50a558383d7bfad7a24ea9f0fb7d730"
+  },
+  {
+    "path": "klink/routing/core/__init__.py",
+    "sha256": "2c787efbc94715edc9ffa2528dff3e23d9315c6ccff5bb176379082f2e7ba7e5"
+  },
+  {
+    "path": "klink/routing/core/intent.py",
+    "sha256": "5102de563f2a5cafaaecba54c7ab12f57758f0bebc0504bd226c73d66e7a8389"
+  },
+  {
+    "path": "klink/routing/core/validation.py",
+    "sha256": "d71a3039b8cd5ca6cffc4783b5558cea83797b40a677cfbe0c7981e20fde9c92"
+  },
+  {
+    "path": "klink/routing/geom/__init__.py",
+    "sha256": "713a15494b81b61ff942b24dcf71b871c29ecbb3326dff7b079dd0d958f32f7b"
+  },
+  {
+    "path": "klink/routing/geom/bends.py",
+    "sha256": "f07ea9c25773ab7aa50aa9b7764e484bc1e3ef74f840c475d923bd0fb35eacae"
+  },
+  {
+    "path": "klink/routing/geom/constraints.py",
+    "sha256": "fdcc0cd41f9f6a29e57686bc56c9fbc3b557eb88b3c3d7979399e36dbb0cbca1"
+  },
+  {
+    "path": "klink/routing/geom/geometric.py",
+    "sha256": "44367fba77ae1f9ba058c86b94c1c02e55319b7d2d951ac7e570a895ef669359"
+  },
+  {
+    "path": "klink/routing/geom/geometry.py",
+    "sha256": "8f2b64e81a86e64d3707f49f8169475253768bb9729ae736b09140a7c19029f5"
+  },
+  {
+    "path": "klink/routing/geom/path_quality.py",
+    "sha256": "f42396c65b917de0608393b46210c46acb6e16625f942d2edccb67f070e4c498"
+  },
+  {
+    "path": "klink/routing/geom/planner.py",
+    "sha256": "0bb1f727c85bcc71e45cc27b63b912d89842c4cac1f081ad28fa86267e6add4e"
+  },
+  {
+    "path": "klink/routing/geom/port.py",
+    "sha256": "7fcd7b44fc27ed2a8e5b02b106b31b76cfe3a6ffcece5061f91148be1bf4328c"
+  },
+  {
+    "path": "klink/routing/geom/run.py",
+    "sha256": "c086fb46564f1ed44e8f2aeabc5d8d03b6efbcfdd6b0ddf43bf9be93a9f8314f"
+  },
+  {
+    "path": "klink/routing/geom/writeback.py",
+    "sha256": "585cb66250371dd958c0c729b84861a1dfd406952af94b0fabad0fc24368a642"
+  },
+  {
+    "path": "klink/routing/grid/__init__.py",
+    "sha256": "d523a8cd478ed851a4529375dc14f13f3aee98a58d64272a3c85b5c8cda965c4"
+  },
+  {
+    "path": "klink/routing/grid/capacity_grid.py",
+    "sha256": "4b38787b0d7f74742a8eb3448899feda2a6d54c3edf3688a39a10377e0d79003"
+  },
+  {
+    "path": "klink/routing/grid/cell_realize.py",
+    "sha256": "0e2af16894ce8909d49fccee4a35357ce591d309fd601e83a21ebef5818096d1"
+  },
+  {
+    "path": "klink/routing/grid/clean_pdn.py",
+    "sha256": "0aa5fa70f747618e47b765448b6e43964497765f0ff1f766196eb74f807640dd"
+  },
+  {
+    "path": "klink/routing/grid/feature_grid.py",
+    "sha256": "491a213166cd2c0068ff684d6692927b7cb36d91bcc90f9dae32799be3500b13"
+  },
+  {
+    "path": "klink/routing/grid/feature_grid_3d.py",
+    "sha256": "676ef8b28a4e04764c981218455571e9fc7666ca1bbb599fadccb82407a80ae4"
+  },
+  {
+    "path": "klink/routing/grid/floorplan.py",
+    "sha256": "7350458b3c771ea700fc7df1b3e78ca6b98eb9a3c05626df39b538d921fe8398"
+  },
+  {
+    "path": "klink/routing/grid/gcell.py",
+    "sha256": "426f87a80c4c81997fe88da17d8f0fb3dad1e92b1e17bbfd49ec562fb892a2d4"
+  },
+  {
+    "path": "klink/routing/grid/global_router.py",
+    "sha256": "0263021236dd120a31fa65892e2493b7ad2187d084082efd0325259a4420420b"
+  },
+  {
+    "path": "klink/routing/grid/pad_harvest.py",
+    "sha256": "617051631b75b4e95c04c62f1ff37a4d42a906b42183669d8973a00c1400ef4e"
+  },
+  {
+    "path": "klink/routing/grid/pathfinder.py",
+    "sha256": "521cefae7d8c0c8cb6ab96f6fdca7a5248242a6347b0719a1bbf97b2f3edfadd"
+  },
+  {
+    "path": "klink/routing/grid/placer.py",
+    "sha256": "9cfa7149d6b88fb88366c49255136f40450717dbecdaf7ba7c4d9da199c7700d"
+  },
+  {
+    "path": "klink/routing/grid/process_profile.py",
+    "sha256": "aed35383b09cb74b1e45336736197dd436a42cb00fdd930a890b2300104fe13b"
+  },
+  {
+    "path": "klink/routing/grid/profile_drc.py",
+    "sha256": "97bd41dff6b18e30dc330d32d1cb7d33ddce3622271c01158e689b4f2d05b27c"
+  },
+  {
+    "path": "klink/spec/__init__.py",
+    "sha256": "64d2ba22d5e7a64939e061f3cf4ab5964645ecd066eafe5eeca3a4e0d20feb4c"
+  },
+  {
+    "path": "klink/spec/v1.py",
+    "sha256": "3c278ed841243c82ba6e82fbd98afca153ca0b96922a09aff9ed1eb735124cc3"
+  },
+  {
+    "path": "klink/stack25d.py",
+    "sha256": "4bc99249da1b3c74b581c541456d6b9f300463f50af2d7650b6876b5890717fe"
+  },
+  {
+    "path": "klink/templates/project/AGENTS.md",
+    "sha256": "e9e1ddadd4ccf138944d5a77e5217ba4ccf13f19a446b6a54695a5e3ae22f12f"
+  },
+  {
+    "path": "klink/templates/project/CLAUDE.md",
+    "sha256": "382cea7c03d4647e67ceca259cf1c79245f46ae7525df05af241c2b52f6f8f26"
+  },
+  {
+    "path": "klink/templates/project/custom_devices/digital_pnr_lvs.py",
+    "sha256": "8776f59a51046a1e61a5cf57410dcedb75e9b67bbc4af7f28784e72f6ad8835d"
+  },
+  {
+    "path": "klink/templates/project/custom_devices/README.md",
+    "sha256": "a0233dc86293e85d4b0c141225309aa3adc8921c66373a23ba3c57d70ae19d13"
+  },
+  {
+    "path": "klink/templates/project/custom_devices/runs/INDEX.md",
+    "sha256": "0cf5819719cc8271837c2dfc353b429167687c72fc85bd6ca0668bc896944d35"
+  },
+  {
+    "path": "klink/templates/project/custom_devices/toolbox/__init__.py",
+    "sha256": "7adddb7bcc02bf25a7c2e6e3ce37199825aac44014d46fac87bfb5588f297e88"
+  },
+  {
+    "path": "klink/templates/project/example_template/digital/_multilayer_engine.py",
+    "sha256": "aa0d1b596e1f38f81763ebbbf8600c9768cdc6c83b8748157a8f3161b4828e78"
+  },
+  {
+    "path": "klink/templates/project/example_template/digital/add4.devnet.json",
+    "sha256": "d5903a0372e62a77a79d24c203f6e3bfef342821c93f442e7d0615724e6da141"
+  },
+  {
+    "path": "klink/templates/project/example_template/digital/chat_to_netlist_pnr.py",
+    "sha256": "b59f6087076a1b9061a84a03269c41fa57d36522d1c55bfd54172c618ed4d5ec"
+  },
+  {
+    "path": "klink/templates/project/example_template/digital/cpu4.devnet.json",
+    "sha256": "807b27180749fe45db27b2dc93cb892a1b51a0a983c4961a764b02bb481e61ed"
+  },
+  {
+    "path": "klink/templates/project/example_template/digital/fit_device_pnr_lvs.py",
+    "sha256": "408096012ce3749d07115cf1090dbbacc1a5b735e8e0364f11881e6d540d9a57"
+  },
+  {
+    "path": "klink/templates/project/example_template/digital/multilayer_pnr_lvs.py",
+    "sha256": "b9638a0e41e1be98958e2c45e13d91a172aaabdb5d46d1bb74882a0ad0657726"
+  },
+  {
+    "path": "klink/templates/project/example_template/digital/padframe_pnr_lvs.py",
+    "sha256": "33bbe0478f0144546a9252150528060736e5d66a7e5fcf652eeee2d0075038f2"
+  },
+  {
+    "path": "klink/templates/project/example_template/imaging/blender_demo.py",
+    "sha256": "4e8d803fb575e56a74aebf346406bb786f3821d36c3764da8849a28d67186276"
+  },
+  {
+    "path": "klink/templates/project/example_template/imaging/blender_style.py",
+    "sha256": "feb142b24db9b836dfe389b1ed9d49626bbb0b5d78f2b04f4295a2a3d908b6d8"
+  },
+  {
+    "path": "klink/templates/project/example_template/imaging/demo.pyxs",
+    "sha256": "95fc29265d86eeb5759cfb5ded1b8cada6188a850af8e120aae06833a7cc86a0"
+  },
+  {
+    "path": "klink/templates/project/example_template/imaging/demo_layout.py",
+    "sha256": "44eca0332523498e21e8094eddee4e9121b2f6f7bf03bdb5b6282b4f34aa230c"
+  },
+  {
+    "path": "klink/templates/project/example_template/imaging/demo_stack.py",
+    "sha256": "864c23064b9748ad2b1fbd5ac45ca311006b5110a7070244a16d77bda0678a3e"
+  },
+  {
+    "path": "klink/templates/project/example_template/imaging/keyhole_3d_demo.py",
+    "sha256": "2c9c2ac5904a0d7eebcca5eefc38f74b481e907f13783ecc80f2fa6038114f77"
+  },
+  {
+    "path": "klink/templates/project/example_template/imaging/README.md",
+    "sha256": "c18791bfa920adb8da15e16adc22826996e860cfa949389728dfe7bf7e7e14ca"
+  },
+  {
+    "path": "klink/templates/project/example_template/imaging/render3d_demo.py",
+    "sha256": "8aced109e9159af8e606595f03a5c38482e6558f5723aa298fda0fb5bdeb6cfb"
+  },
+  {
+    "path": "klink/templates/project/example_template/imaging/section_style.py",
+    "sha256": "0f5dea9c79c0e5a7e08c596ca612039a4d241896d6dcf8a89dfce395239aa950"
+  },
+  {
+    "path": "klink/templates/project/example_template/imaging/sem_demo.py",
+    "sha256": "8b3b7f2507475c78df070f3b958568fc98f35146610df34cb42185b8c0f1b01e"
+  },
+  {
+    "path": "klink/templates/project/example_template/imaging/sem_style.py",
+    "sha256": "45e45603f21eec88c1032a984ad2f32ad3de1012dc75370cf1949c8b8ba02f64"
+  },
+  {
+    "path": "klink/templates/project/example_template/imaging/viewer_style.py",
+    "sha256": "fd01c2a18aef8a6a2cc716ff7bc4cacd4e2da71494f40869543d08fb0db31401"
+  },
+  {
+    "path": "klink/templates/project/example_template/imaging/xsection_demo.py",
+    "sha256": "7f48c9b1aa19506868e50855d76f97fe3e6b230b07d08cffc1ce57f329c60432"
+  },
+  {
+    "path": "klink/templates/project/example_template/layout/fill_region_demo.py",
+    "sha256": "e6a506c836d6b3ab64d683ba6e2cea298be8ee5ffad76ab895e8ac29f188632a"
+  },
+  {
+    "path": "klink/templates/project/example_template/layout_intent/region_numbered_array.py",
+    "sha256": "27e293f8cc902ffb6498d36fb553bd1c684947d24ab9d1c5c5cb5fcb92795c4b"
+  },
+  {
+    "path": "klink/templates/project/example_template/ledit_bridge/draw_device_demo.py",
+    "sha256": "7ce6ca14724d0eb62f55b32212998cbc444888828a73c2d50438d26b8a3917ed"
+  },
+  {
+    "path": "klink/templates/project/example_template/ledit_bridge/driver.py",
+    "sha256": "3a0afceb7ff5fad41d7dff09a45bc925792b7756a2e8509b247ede33bfb87789"
+  },
+  {
+    "path": "klink/templates/project/example_template/ledit_bridge/ledit_bridge.cpp",
+    "sha256": "09f0a98f6873aca1a058681cc1486cfe8a7c3634782ef479001c5686478a204a"
+  },
+  {
+    "path": "klink/templates/project/example_template/ledit_bridge/README.md",
+    "sha256": "543da19d23e0180a24d4802003f030a98af2e46165955205744f6a7a477a4377"
+  },
+  {
+    "path": "klink/templates/project/example_template/ledit_bridge/tcell_template.cpp",
+    "sha256": "494338a5151f5e66f22f577a2e4e36180d138f8135fcd9bfbd10dbf4e030e756"
+  },
+  {
+    "path": "klink/templates/project/example_template/ledit_bridge/tcell_workflows.py",
+    "sha256": "54d592901140a751ee3eb3e7aaffaab16703b5eed25b6951335c6baf5a0ab770"
+  },
+  {
+    "path": "klink/templates/project/example_template/nanodevice/ebl_wraparound.py",
+    "sha256": "ed430d0b7bd014692f2e9237aae62a9bc532f5168ce4efe1f6d7a44b7865eaab"
+  },
+  {
+    "path": "klink/templates/project/example_template/nanodevice/hallbar.py",
+    "sha256": "ce02ad5cd5200e2726caae151fe178e381c307af758a15d7e07eb2bb5bfe61d5"
+  },
+  {
+    "path": "klink/templates/project/example_template/nanodevice/neural_electrode.py",
+    "sha256": "97ecd5db1826f210fd128f6041022e065251430e20b6ca4a25256e7d7a6c7399"
+  },
+  {
+    "path": "klink/templates/project/example_template/passives/baw_fbar_planview.py",
+    "sha256": "4bdc2ad19f82297aebbdb8cddbc9d6d422acb605507d11f212578103255a4836"
+  },
+  {
+    "path": "klink/templates/project/example_template/passives/idc_capacitor.py",
+    "sha256": "fb367e33602e427c79cae01830d4d64efa8dc22565e8c8f6ad3a150947db5cd8"
+  },
+  {
+    "path": "klink/templates/project/example_template/passives/saw_idt_filter.py",
+    "sha256": "233506608e32684642b2cd993dae1c157efccfcbdb30f71af853c4d3a401561f"
+  },
+  {
+    "path": "klink/templates/project/example_template/passives/spiral_inductor.py",
+    "sha256": "0a280fe6aa91956994e80ec5a6b58185a4c552e9f40b330b8faa067b66c76c3e"
+  },
+  {
+    "path": "klink/templates/project/example_template/photonics/gf_mzi_module.py",
+    "sha256": "3b14dd45beb9c74e86f01fc39f35994fff30183106be438cf7d4ecfda4bbae5b"
+  },
+  {
+    "path": "klink/templates/project/example_template/photonics/gf_ports.py",
+    "sha256": "0ff3d19b0d1e5c2cd49286a5451ddf564ed7c9dedeef737cfe76d4e56e8e6220"
+  },
+  {
+    "path": "klink/templates/project/example_template/README.md",
+    "sha256": "f55c34ff2d1f3c6671ea7985af6fc54ec5fc3b356f84a8b4fb11da79e6657105"
+  },
+  {
+    "path": "klink/templates/project/example_template/routing/five_routers.py",
+    "sha256": "b057c2e01d8f7a2602971d47ac59ca5853bfd909a3881eba1c2030e2559a9a1e"
+  },
+  {
+    "path": "klink/templates/project/gitignore",
+    "sha256": "2764e2ac74952cdb61b5c8d0faa92afb9a4a8adc5e7234a6bfa8faaeb78d1582"
+  },
+  {
+    "path": "klink/templates/project/mcp.example.json",
+    "sha256": "cfd8546000b8723f444fc5d33113f0eb20eec69a7d40a61ec16140b0298955dd"
+  },
+  {
+    "path": "klink/templates/project/pdk.py",
+    "sha256": "cf88f8409613864d9b7df098f4dd881b32303c1a5ef0fb916a92031220bcae3c"
+  },
+  {
+    "path": "klink/templates/project/README.md",
+    "sha256": "eb22b6873d9f0e0a7bc1b35f82890d5cbb82efdd0e7e173c7191df858ee76421"
+  },
+  {
+    "path": "klink/templates/project/README.zh-CN.md",
+    "sha256": "1583d4afd4cc6d782279291c9da4cbb3f8ef148526fe6ee2a8e5e5e082bb95cb"
+  },
+  {
+    "path": "klink/templates/project/recipes/README.md",
+    "sha256": "5a76e2ee5c881741891193184db99ae62a65c1c8c814a567775f523e7bdb8e28"
+  },
+  {
+    "path": "klink/transfer.py",
+    "sha256": "bfa9ca97165516dd1f319d388883d174998ea888429f3fbc9a2446c4ba9854c0"
+  },
+  {
+    "path": "klink/transport.py",
+    "sha256": "8141241212829f353b1b2ef1111802402c2c54689b87c9eb755ac13a00ef9ef3"
+  },
+  {
+    "path": "klink/types.py",
+    "sha256": "26dbbb80138f0b0702afcb3ba9f2a21e524a801da84e5ee59f844a889fc423ed"
+  },
+  {
+    "path": "klink_plugin/grain.xml",
+    "sha256": "a9679df3fbcfe6ddbfd759aaf885c94d23171b2c2a76bc9f14534986c4c13dc6"
+  },
+  {
+    "path": "klink_plugin/pymacros/klink.lym",
+    "sha256": "46db8f13892439ad6f57fb6d6332dc536c2c6448b3b78a7bcf7950f6b4f68c5c"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/__init__.py",
+    "sha256": "cc6bdd21342c43a5d1ff6ea230d159beb91c1d2947da4e987a1df691cd003fc8"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/anchor_pcell.py",
+    "sha256": "aaca40d7de9457e64e7646ebb025c595f1ce6d3c382ce78c7a7adec4b39a256c"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/companions.py",
+    "sha256": "c815b4591833ff56e0e4f31a59e4b887e18502427f6f4c02ce25745ceafbf371"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/connection.py",
+    "sha256": "a358ce76676f620a249541fe8f405610a8d83922b999df9fcb896ff5185625ad"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/context_capture.py",
+    "sha256": "0ddc63dbb127c213a06e902b4eb7cdec297f68cd45c9a1c10037e00a419c9f56"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/ctx.py",
+    "sha256": "525c976c7936a881b64c5278d6eea86cb6f0b55330a1b6da4ccfb6488b21452d"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/dispatcher.py",
+    "sha256": "b637e0f834ad4fdd6e7bcd45984393e8e9fd99bdb17d4bc240f20f85350aa65a"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/errors.py",
+    "sha256": "2ed7f0d5fc455c0eca48236fe2ee3fe58151a46ebff7116212f155861fd81ecb"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/events.py",
+    "sha256": "913c0aeb3b9d2d5715500f0b763a7d3ab5b4cda00a5db7987d730ac0a201c9bd"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/klive_compat.py",
+    "sha256": "ed7243c601bfde339933dcb26c498d1d9b231136bec4935e0d6a002c3d2343f3"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/klive_forward.py",
+    "sha256": "c52c1a0da2f4db9dbd77b980925dc4cc8103a474f038a02ac8e0ac5147bbe9d4"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/log.py",
+    "sha256": "20f320c0ea7bc01dd20b917ffa937ac2c3cdf7e74ef8d1e37ee48671964d2f3e"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/menu_hints.py",
+    "sha256": "a9a2226a35fa5b979ac3a4c0faca55730cc57861961c88c6af55b78a653e51b5"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/methods/__init__.py",
+    "sha256": "24c4c6b9514b04d83803dee6f5944ed4873b5de1981b2129c6dc2d84bdc5007a"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/methods/anchor_m.py",
+    "sha256": "ef28ac598e23719daa7fd0ef2bd14787d84c38b525fcc6e5a3af97719ad92699"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/methods/annotation_m.py",
+    "sha256": "b7155ec23fcff50e8fda82df08a4d0a47ffc9737507a575d779b7b099f04bb5b"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/methods/cell_m.py",
+    "sha256": "56f7551b91fc0dde13d0a65f3da1c48bfaf814daa6953b032743f78adf6d75f1"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/methods/d25_m.py",
+    "sha256": "20f40d9c234122e7fa08f0f9cc43366c3d73ab306ff0ce056ed731bec1dd4d85"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/methods/drc_m.py",
+    "sha256": "0d81d37b17dc801c216f7e01f21f7f842957b816ab20e5110622641306c23371"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/methods/edit_m.py",
+    "sha256": "6013da032e90dd9b615aa269014c75a2a8376da2362c814223d32f62fbe08328"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/methods/events_m.py",
+    "sha256": "d2c9f0f37a7cd7c1aab5833c71803fba3cb594fa23d3c93c85c1e802c2faf40b"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/methods/exec_m.py",
+    "sha256": "dc4ffb8b436463277a96715ab041317b6e0ca46765d9bcfd3c3198963c52748f"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/methods/fill_m.py",
+    "sha256": "950a8fd6e6c772ce3a9ef9714df247ecc97c8f4a4685c3f39c3c3fddcbdd62e3"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/methods/geometry_m.py",
+    "sha256": "9f36e49e17a7709d1a33e9b7809d919761c0fc4d84739058fb0c833bccf711d1"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/methods/instance_m.py",
+    "sha256": "c2c54fd2f87d91b612e2791e05dc40386d9a16f75df6563fdd6e65596f73e2f3"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/methods/intent_m.py",
+    "sha256": "1aa2b4be29c02fb9d8a02b22043bb084708fea843c963d498bd774762a9472cd"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/methods/layer_m.py",
+    "sha256": "203c519cc3c4f0a1678c396f156896836029db494842b7146de919bab18f3d6c"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/methods/layer_view_m.py",
+    "sha256": "663b2a0c30d5a9462af4ce87f9b705693ccc6896e76973c59637893ba7d3cbee"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/methods/layout_m.py",
+    "sha256": "6fb952fe61062b1d62f1ace53a57d35ee7e46f9254b8ead468ba49f203d4c8b6"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/methods/library_m.py",
+    "sha256": "249c6d783ce081bf97197a93a1ec749dfffece1a28ccc36384f12c10096356c4"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/methods/lvs_m.py",
+    "sha256": "8ffa943c0a71935072533e59e2c41de9868187df352b08040da52cc88f410b99"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/methods/marker_m.py",
+    "sha256": "3a2ee41ebbc977516298d4f8530d7a01172db859a31eb9711f94de340fba001b"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/methods/meta_m.py",
+    "sha256": "0ad0364881b1106e26090e42fec00b9677a576abe1fe397fb1b7615709b313b1"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/methods/modify_m.py",
+    "sha256": "f062257670a550db1c83e483caa8f2bd53e50bb67c41e2197124aefd5d5164d1"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/methods/pcell_m.py",
+    "sha256": "6fda3e69a1238cfc6bb9e0b58c4f784e534bd787b28ff760e60f8b802c8ed859"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/methods/port_m.py",
+    "sha256": "6033e21be7cb14d31558ef4c64959afa0b2744d57934d66640535133efc7ae49"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/methods/recorder_m.py",
+    "sha256": "3d6aefad4b463dcc4d1d07fadd70cf427984a39c003ca1ab300983d5f7ae8c67"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/methods/region_m.py",
+    "sha256": "5742b571ca61d678fa218cfdcea9a494abda583a9a7cdd573880392642aec077"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/methods/selection_m.py",
+    "sha256": "f10f784d65c78348584ba4f74a1f8f1cd52b0ae3b49dfd657ade06660be99e51"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/methods/session_m.py",
+    "sha256": "88c73b641ff60379d8d711c1b07a70f55b3e9fb2922729f495b265879f411e2b"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/methods/shape_m.py",
+    "sha256": "0a00c3afd3ff188516a0fec1aa388dc7b68634b2377d2dfefd83e849f2194c7c"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/methods/transfer_m.py",
+    "sha256": "63c1b2ff66561d36269d63e9aace2f911efc44df8e26ac45f5e7b0f817fe523b"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/methods/view_m.py",
+    "sha256": "6124055e9b190ba71f96b304d082e1ef556f3a845d1147cdc1fadfebc8360ab1"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/port_pcell.py",
+    "sha256": "36ba9455790bf8aff68c2b63ff500fec3f9077a51bd9ebe9e4e27a13cc07f43d"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/protocol.py",
+    "sha256": "5e9983cf4dbc3dbe7dc643c4fef95bdb649d07bc12be826586a08b5a015c5c2c"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/recorder.py",
+    "sha256": "8a491e2238b13d32834ea413ec8a9fc68a9be1c634ce7c71982d84c9372efaf3"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/recorder_pya.py",
+    "sha256": "05ae2673943fd46754ab7e4406f3c56472cd72baa9c5095065055032b14d492b"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/region_geom.py",
+    "sha256": "9aff3bb9fd117e288f017bdab4d79b11ee45133d1d550cf8f78fd65d4d5699d7"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/region_pcell.py",
+    "sha256": "395147cc7d9000df51ab35ca511a47c0b67b7ab8b3cc0af67be0c382cf6cb9f3"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/registry.py",
+    "sha256": "86f6b356c0e7c44ad6ab3e0f7941b3cc0ab7d337ede48dd3b38fbd2e214d6a12"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/send_journal.py",
+    "sha256": "5dbd877120e5d77e15bcce1dac045693d7958ab56d8ae560a33741dd0967f914"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/server.py",
+    "sha256": "1a4b01b25fd58f2276b6cffe5f2a3760848b41013b4669798f7f88f3520c2f00"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/session_registry.py",
+    "sha256": "e1874d2bd935ba92bb09842e028e4432a9af289f8b09749938e1192481915bd5"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/signals.py",
+    "sha256": "10aa48c4dce31a395f3b31708166ada838719ef1ca936e2ba8cd7704664a7756"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/structdevice_pcell.py",
+    "sha256": "432c4946c0cc00379fbc16adcf11f273e8a21a99b54cad9aa8340a098d0b28c6"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/transfer_pending.py",
+    "sha256": "053fb9543dfeab6fe60b9603378a155533b82a2244fe3171515ec7e537862a1b"
+  },
+  {
+    "path": "klink_plugin/python/klink_server/txn.py",
+    "sha256": "28004ace94c5307fcc17d01f9e2712ed887524a927e5952cb4d2f91ede73ce9e"
+  },
+  {
+    "path": "LICENSE",
+    "sha256": "b395af9dd26d2f910bfbf7ab50bdc3ce103991169ea22e6a64368fed48934ad0"
+  },
+  {
+    "path": "pyproject.toml",
+    "sha256": "e3801a06c0cad1d162d30ae26286bb9234e39aa1cc61a40ba62f7191b1c9a4ee"
+  },
+  {
+    "path": "README.md",
+    "sha256": "aeac8413e82be952fd594a5d9742146ee1dc11a68ab5ad7f33492ec7d598922c"
+  },
+  {
+    "path": "README.zh-CN.md",
+    "sha256": "1113fd39e5690914d3cfb82c5fa12441e420e58b949bd40299efcd25ebc67337"
+  },
+  {
+    "path": "rust/klink_boxmaze/.gitignore",
+    "sha256": "517b2c5ebb94b4ec644cc7999710d327942ee37d73168930b0c6f5f4b44bf6ae"
+  },
+  {
+    "path": "rust/klink_boxmaze/Cargo.lock",
+    "sha256": "1fac1c4dc1110ebb6742642e9830ee7c21efcb02b7a54ae14b0659fd20333f01"
+  },
+  {
+    "path": "rust/klink_boxmaze/Cargo.toml",
+    "sha256": "7700c9046868fbcdd26003ccae664dc19e754e8ed609a276523a57dc64eaa58b"
+  },
+  {
+    "path": "rust/klink_boxmaze/pyproject.toml",
+    "sha256": "5d55249dbd3c97ae56ec4f47e941854f52d0b28aa80b2f990d8cfbb1f6e4a74c"
+  },
+  {
+    "path": "rust/klink_boxmaze/README.md",
+    "sha256": "8345f2bc3452d8e06b10b60792977386e123430046954879800194c4e434a48e"
+  },
+  {
+    "path": "rust/klink_boxmaze/src/lib.rs",
+    "sha256": "5add969bb49342b3420444e2d16faba352ca7464cf9f5938e679c10adcb01ba4"
+  },
+  {
+    "path": "rust/klink_trackmaze/.gitignore",
+    "sha256": "306fd52e74fca6746e12acc750f232de15e71da917756a1270d74c91f5eb7368"
+  },
+  {
+    "path": "rust/klink_trackmaze/Cargo.lock",
+    "sha256": "1765edfaaf77e7462edb75ef02c05051161a40d0cf2206057fdfd65837bc46c7"
+  },
+  {
+    "path": "rust/klink_trackmaze/Cargo.toml",
+    "sha256": "3e0602f5f44f4a04dafbcd88dcd3845d7936d0c8571e5c786d52f1fde383c716"
+  },
+  {
+    "path": "rust/klink_trackmaze/pyproject.toml",
+    "sha256": "f7742646b2083f2b7ff4d944d6aab7fd94692b36d6833ee528def1f30b9efc0b"
+  },
+  {
+    "path": "rust/klink_trackmaze/src/lib.rs",
+    "sha256": "29fe5355914b3c0d467d2b17db0dedeecfae9d8f18103225f2820a6f6dcd9e9b"
+  },
+  {
+    "path": "SECURITY.md",
+    "sha256": "2cca1bb6e43d7c309289d9a941040d5908ae0b8ff4684b5080a60688d3d55d46"
+  },
+  {
+    "path": "tests/fixtures/mcp/raw_method_specs.json",
+    "sha256": "0c4df0a6a0a8c928eca9aec48f0ed01f6de09f2fccadbdca552955c5be08d562"
+  },
+  {
+    "path": "tests/fixtures/mcp/regen_snapshot.py",
+    "sha256": "b1a579e93fb537c364ea08131ef1b0d0a066b3924b6ccf2631166cb6a476cc66"
+  },
+  {
+    "path": "tests/fixtures/mcp/tools_snapshot_all.json",
+    "sha256": "3402a2b69d4fa3dff0a08213968cc3ebf2c963a20aba904d2b51705a962786d8"
+  },
+  {
+    "path": "tests/fixtures/mcp/tools_snapshot_default.json",
+    "sha256": "48f7fea360f57af78d0f05642d2447a7e9e49a5e9519b5d2fe02eaafbf16831d"
+  },
+  {
+    "path": "tests/public/synth_pdk.py",
+    "sha256": "3a0a78adacf5c22e29c660694253ea7d077cc592b1908d6f1f3742789d21a5b9"
+  },
+  {
+    "path": "tests/public/test_bounded_router_public.py",
+    "sha256": "6be6870be56cf91a446c7455f29614655bec554471efcf33b851654fda4ca3c4"
+  },
+  {
+    "path": "tests/public/test_clean_pdn_public.py",
+    "sha256": "c210a413994b5a23352e7cecb5e25667b7713531c77e72523b74965305d73f6d"
+  },
+  {
+    "path": "tests/public/test_imaging_blender.py",
+    "sha256": "7dbca57c20737da5eb1537973e52d4eba6b06993200d75f29dda1141283f1b33"
+  },
+  {
+    "path": "tests/public/test_imaging_raster.py",
+    "sha256": "82bbd4cfad3855812b736d9032ddd0fdbc2a19ddc511ed5388e68283acba0a54"
+  },
+  {
+    "path": "tests/public/test_imaging_render3d.py",
+    "sha256": "fc1b3845132c5ae6aae54977e95eeb14ac1006a6848aeb050341f0a6bf7438f8"
+  },
+  {
+    "path": "tests/public/test_imaging_taper_cutaway.py",
+    "sha256": "e9fde752cc10fd0e0fc89964c26331a7e917e11f301d8c5e0952e18f5f4fc4b8"
+  },
+  {
+    "path": "tests/public/test_imaging_weld_slits.py",
+    "sha256": "e9c9eb152516bf4df3da9ef7d5d1b248676da7a7076fa5a96b5a1cf2e0a374b3"
+  },
+  {
+    "path": "tests/public/test_imaging_xsection.py",
+    "sha256": "a6d104913217cb04f8f43ba796b315d79b1e80fc517085e968f77aad71017c83"
+  },
+  {
+    "path": "tests/public/test_logic_map_public.py",
+    "sha256": "ad3de41a13595abbf57da48c2a8d691ab4f4494704a3f1b058ae88951fd81f00"
+  },
+  {
+    "path": "tests/public/test_pcell_diff.py",
+    "sha256": "7080e55dc3c24672357a65a71c7aaf5a299ae7a90c8298d7c3bac77328a620f3"
+  },
+  {
+    "path": "tests/public/test_pcell_fitter.py",
+    "sha256": "4afff403d41ab7fafc726e771b7abb698eeca5c6b4123802ebabfbf1ec9a4e2d"
+  },
+  {
+    "path": "tests/public/test_pcell_repeat.py",
+    "sha256": "8fea1bcfb7eb248219dd65bbe1aa5873ab25e8cb255b35b61b09295aad8fc309"
+  },
+  {
+    "path": "tests/public/test_process_profile_public.py",
+    "sha256": "5d59cf193aa8416be6a94cc6ee2c79177c0e3a845b97840ae53c3546152e0ea9"
+  },
+  {
+    "path": "tests/public/test_process_stack_public.py",
+    "sha256": "14a4c7f47c904eab83cf6a88b1ea0f498b5bb43d31e684c1eefc626e3fbaec9b"
+  },
+  {
+    "path": "tests/public/test_profile_drc_public.py",
+    "sha256": "8c29e2fc1605fd2dde6c150aabf18acfe9804bd5d3a433f60d03d38acea31d74"
+  },
+  {
+    "path": "tests/public/test_recipes_public.py",
+    "sha256": "538c463d8c9154bf853256a9d21cbc4668c53eb3c928bfbdd06d121befe2d06b"
+  },
+  {
+    "path": "tests/public/test_reference_netlist_public.py",
+    "sha256": "eaa8bd01528311eeb824b1e47bfe076c8331558be997b298d9f3b5c86e62e83b"
+  },
+  {
+    "path": "tests/public/test_scale_pipeline_public.py",
+    "sha256": "dc075f1e4b9793bb02f28b39431fede2d64eaef283b4283c395409764eb9c39d"
+  },
+  {
+    "path": "tests/public/test_sizing_public.py",
+    "sha256": "ba20f4f4dfac9441b3dd8e2ead1c68b46edc6ab24fe86b230b46e09bb5d16310"
+  },
+  {
+    "path": "tests/public/test_stack25d_public.py",
+    "sha256": "f9d643f7f2f493cb2ebf7ceebff52841429693087d12ccfb6a33bfb17cc3744b"
+  },
+  {
+    "path": "tests/public/test_structdevice_pcell_math.py",
+    "sha256": "aea9209d484a3e32cd73698eb073945276edeab46f338e1667d40a98262af25f"
+  },
+  {
+    "path": "tests/public/test_yosys_public.py",
+    "sha256": "181a2744a4ffc9233e3e575b37b8379095c3dae81adc8d44b0807a44f5391ed7"
+  },
+  {
+    "path": "tests/unit/conftest.py",
+    "sha256": "0ff8a614741c5013d97baae7975fdd1298f80c6e2ffe46fac58c1ff405554978"
+  },
+  {
+    "path": "tests/unit/test_agent_lanes.py",
+    "sha256": "f944cf810c9f3fb803fbf25d6c3ed14b09cf820c716e9efe26788f5b5762060f"
+  },
+  {
+    "path": "tests/unit/test_anchor_inference.py",
+    "sha256": "526a6c8b3a3e04f37a2c1275e93dbbc727f3c625241418d54e0a0eb81cbaac01"
+  },
+  {
+    "path": "tests/unit/test_annotation_policy.py",
+    "sha256": "4efa372546ab247fd93325f883c5c3a5cc222f6b71c7a3faf2a43fa68a4d8f9c"
+  },
+  {
+    "path": "tests/unit/test_backend_isolation.py",
+    "sha256": "c57aee86f2c44c0867f3bc27f5a9d9c5e68616cfb483dbfd42399c39e1d3d154"
+  },
+  {
+    "path": "tests/unit/test_blackbox_ports.py",
+    "sha256": "9b4e382dfbe2f53729de98b518c076a0273f1c29752e7c97a152d5b34241ae28"
+  },
+  {
+    "path": "tests/unit/test_blender_style.py",
+    "sha256": "b974ab927910a5f8e5415fa1c308f8765c64404ab93ac93a6cc481027d8f6d49"
+  },
+  {
+    "path": "tests/unit/test_bounded_router_rs.py",
+    "sha256": "9bfdc8637cbe037e68842f4aa6d584e585c4db51001ff6b7b163a5e47d04cd19"
+  },
+  {
+    "path": "tests/unit/test_capacity_grid.py",
+    "sha256": "c29015b1a188b3259b73a3a1286d733451269c405ac4deb8a67b636725e420ab"
+  },
+  {
+    "path": "tests/unit/test_cli_plugin.py",
+    "sha256": "40c2ef087a0dea916a6f3d2c8ddb6209c526e9d4c0e3c5f70c0e8760be38d1b3"
+  },
+  {
+    "path": "tests/unit/test_cli_update.py",
+    "sha256": "3e8cb707390313ad986c21410b519592c4f399141ce09ac1b010c9e43d73ab56"
+  },
+  {
+    "path": "tests/unit/test_client_disconnect.py",
+    "sha256": "f70f7477553c216ef532e161cf9bd8222cd29cfe51bce68defb817e8aa3bd80e"
+  },
+  {
+    "path": "tests/unit/test_client_discovery.py",
+    "sha256": "8c20ca9f9e6667ee3831e26d27b31f98c65384cb53829ed79150cc7c66f270bb"
+  },
+  {
+    "path": "tests/unit/test_companions.py",
+    "sha256": "980ec48b664d4b6bc8713c163a8ddb479c6555c64ea761e0f17b882963a23cfc"
+  },
+  {
+    "path": "tests/unit/test_device_extractor.py",
+    "sha256": "aa0330e6cad559c21c20934e253429db3559c42b2945253585171ee87e8b44f9"
+  },
+  {
+    "path": "tests/unit/test_dispatcher_required_params.py",
+    "sha256": "6f72623b944fc19fd3a179cfc4b33c1c013db212a5e02e44dc73e160c20b7dfd"
+  },
+  {
+    "path": "tests/unit/test_doctor.py",
+    "sha256": "ccd47764d749cefbc35a1872ed9fd1615fc60b12528a1668050e04e44097f77b"
+  },
+  {
+    "path": "tests/unit/test_ext_plugins.py",
+    "sha256": "92b5214f469090037a424f71ccceadcd6976a7884a20d9ed91707e5249df999b"
+  },
+  {
+    "path": "tests/unit/test_extracted_netlist.py",
+    "sha256": "042560076b7f7ac5e29286883d17cad05bbda339129d49cc6cf560afb85f8720"
+  },
+  {
+    "path": "tests/unit/test_fabrication_compose.py",
+    "sha256": "4b0940ea3652d718e7a2e420c2ec9d06b5992ff0f248a0154e2982119195b48f"
+  },
+  {
+    "path": "tests/unit/test_fabrication_mapping.py",
+    "sha256": "5c536ae4fd5bc99687c7c01dd7817cdee1af142eddc02604e711483a345f4084"
+  },
+  {
+    "path": "tests/unit/test_fabrication_marks.py",
+    "sha256": "75e0e29d2816c9b22248f881930a7a8aec599692529428b02c74e4d95839d807"
+  },
+  {
+    "path": "tests/unit/test_fabrication_orchestrator.py",
+    "sha256": "1fe53da6361cd29876c03a26dbb313b727e3f7ec0414f3355d86cc0295a3500f"
+  },
+  {
+    "path": "tests/unit/test_fabrication_sites.py",
+    "sha256": "f7494c446fd5a92813153942b9c1b0864c5d686041f57764439524a5ce289350"
+  },
+  {
+    "path": "tests/unit/test_feature_grid.py",
+    "sha256": "8d18737e184aabb4e8437e1957424751c6b5c9942d443b6f4ef207bb1de8a1f7"
+  },
+  {
+    "path": "tests/unit/test_feature_grid_3d.py",
+    "sha256": "3943f7e1a7635c8ef581fcbcce8510f284cd07b32599c0929ada42382c0c01ec"
+  },
+  {
+    "path": "tests/unit/test_flexdr.py",
+    "sha256": "eccd4bb79b47c12dfcc10b5a91142d62aac66698d7f0f7126caa73d2b2f23d18"
+  },
+  {
+    "path": "tests/unit/test_flexpa_t2.py",
+    "sha256": "f7cb3d69082d8af4fe952872c4558809d61d1f7d854fb5c0659ebfcbb8c895f6"
+  },
+  {
+    "path": "tests/unit/test_floorplan.py",
+    "sha256": "c64c774514758cb46fb70cb453f528e4d9ed1ce7c22b0e7eef473451d864f523"
+  },
+  {
+    "path": "tests/unit/test_gdsfactory_components.py",
+    "sha256": "fea4f06a36938f4368898e89cf43212b2116a2e28d0396eca1b188db4fe155e1"
+  },
+  {
+    "path": "tests/unit/test_gdsfactory_ports.py",
+    "sha256": "ccca97580961dade8cae629a0c8dc8a31cabdff798dbec1f7c0e9d35ba56a45b"
+  },
+  {
+    "path": "tests/unit/test_gf_import.py",
+    "sha256": "a4f2e8edb9f9452065b1aa48c61799c246a15924faac9865e5ef78f626cb01c0"
+  },
+  {
+    "path": "tests/unit/test_global_router.py",
+    "sha256": "09bdaa38d8c7166fd3de3aabb853628fc26c8e82a94af1669c9bb2d6c83c7cf5"
+  },
+  {
+    "path": "tests/unit/test_handshake.py",
+    "sha256": "e60e95d173e47c4186ff826bf2f3ae56c5782537f219bccd09813f43dab37b51"
+  },
+  {
+    "path": "tests/unit/test_import_closure.py",
+    "sha256": "d0f9b60fa6fa93d832e29312d4ce4f13cc82b6ea44f0c7723f36005a85ab068b"
+  },
+  {
+    "path": "tests/unit/test_instance_identity.py",
+    "sha256": "e8bdc62c59daeb0db39428398aa3b5f2b4e0369cc53d5cdb338ac108afd9b372"
+  },
+  {
+    "path": "tests/unit/test_interaction_context.py",
+    "sha256": "76698b8229f82134ba3f15f2e81a07d387ada7d4ed68435bce8b702d3df31b5c"
+  },
+  {
+    "path": "tests/unit/test_klayout_import_guard.py",
+    "sha256": "698723f7ad01588805bc7074bafbacbcc06bb9d8a3763ec9b0087cdd774afaff"
+  },
+  {
+    "path": "tests/unit/test_klayout_native_copy_semantics.py",
+    "sha256": "c5b95ae29e03f9637958b875486a85290c88f697edc8f7bb2c5b2e22829e2cfd"
+  },
+  {
+    "path": "tests/unit/test_klive_compat.py",
+    "sha256": "b1f94e186d7c1bfe88588b220732592b87e8ebf88fab33759df9dfa55d7264c0"
+  },
+  {
+    "path": "tests/unit/test_layoutintent_planner.py",
+    "sha256": "a90221c2761628813df82174a24461001e9692fad089f31e67a68a0934091531"
+  },
+  {
+    "path": "tests/unit/test_ledit_bridge.py",
+    "sha256": "0086bfa85357f9a07c3fa0472bb8d0f63ba1fc86d1b77639f79ece8cc7c36337"
+  },
+  {
+    "path": "tests/unit/test_ledit_device_starter.py",
+    "sha256": "dff8e65e9d172d02d4b2c364ead791a46dec20faa43911f6e270ee1e050cb774"
+  },
+  {
+    "path": "tests/unit/test_ledit_mcp_tools.py",
+    "sha256": "eb0b8404b20d86d0a460b93496f4dca464b3c80dc374f369d71797c4ec0f7d67"
+  },
+  {
+    "path": "tests/unit/test_ledit_tcell_scaffold.py",
+    "sha256": "463b5933a43509fc437424ea0403559d63eefc740eab47ccec10b951e4aa1484"
+  },
+  {
+    "path": "tests/unit/test_ledit_tree.py",
+    "sha256": "98e626871afdcea4729fb6a06a9ce9b87c3984e871ff8debfbf90f06192bd35a"
+  },
+  {
+    "path": "tests/unit/test_ledit_tree_layer_of.py",
+    "sha256": "d0c137a4881af2ca3bcba8707c706665cd10b16197c44991a51ec4c0d0210795"
+  },
+  {
+    "path": "tests/unit/test_legality_t5b.py",
+    "sha256": "332d518da43ab9ccf6e0b14d81ce3ce2316f2ec27ef5249af6c92c035c71ceca"
+  },
+  {
+    "path": "tests/unit/test_marker_pcells_zero_area.py",
+    "sha256": "314391b42d4a36f281d5d49fdad5c157a21de5bb6640ba4ad6524fd67457f12e"
+  },
+  {
+    "path": "tests/unit/test_maze_t5c.py",
+    "sha256": "c066ce583e16dd7ced1a3d569168811113b8a6f5ebccb7078fb73462bc90902d"
+  },
+  {
+    "path": "tests/unit/test_mcp_discovery.py",
+    "sha256": "4ff8a499164c267c0fbd6460a1f6a2e4e9303e895538438792b121b2cc189b56"
+  },
+  {
+    "path": "tests/unit/test_mcp_guide.py",
+    "sha256": "5bedcff513d09f443ce39014c7f9c03016dc1ba4c3625b57ab020b741ba72409"
+  },
+  {
+    "path": "tests/unit/test_mcp_lifecycle.py",
+    "sha256": "9f27f958a62e2436091b915e456f844dbeb3c633c9d9c42f90ce4615b8c8c0e5"
+  },
+  {
+    "path": "tests/unit/test_mcp_profiles.py",
+    "sha256": "ed8a870e6707786259e292d1f0afeec6815807bdb01d7caf17d700c5d0dafd82"
+  },
+  {
+    "path": "tests/unit/test_mcp_register.py",
+    "sha256": "9d88d9b7eb58f0d5a20f0d2eeeb5cc5b2a5afc66de9fa1cab45e56dddf499c8c"
+  },
+  {
+    "path": "tests/unit/test_mcp_tools_snapshot.py",
+    "sha256": "66dbaa7991fbb8b7728d830245188d5f34ed72cde01a556a123c486992fb2d65"
+  },
+  {
+    "path": "tests/unit/test_nanodevice_basic_layout.py",
+    "sha256": "31bb1eda734a804ea2d3d3771bd3f225a574ab72362b782907616627f55cf41f"
+  },
+  {
+    "path": "tests/unit/test_nanodevice_complex_example.py",
+    "sha256": "a9b6c1341e6c34992620edf271d8ef9ebb3fdafdae1e625c0d616742a3ee88ba"
+  },
+  {
+    "path": "tests/unit/test_nanodevice_flake.py",
+    "sha256": "2368dac71323269488568768b81eb67ecc4d164f5612a9db1faebf47df1028f8"
+  },
+  {
+    "path": "tests/unit/test_nanodevice_klayoutclaw_baseline.py",
+    "sha256": "90742e5ac81932622faed562ffd4cef15c8c4a66db8981195774211776d2ef1c"
+  },
+  {
+    "path": "tests/unit/test_nanodevice_klayoutclaw_detectors.py",
+    "sha256": "9b7da8cc358203d22278f66eada5a481bf589bad73f11229229af1b49f6ad06b"
+  },
+  {
+    "path": "tests/unit/test_nanodevice_optional_boundary.py",
+    "sha256": "5850f7814c5630ed0104479127586b22da740b86ddc3a2401da7843d4530d987"
+  },
+  {
+    "path": "tests/unit/test_nanodevice_orchestrators.py",
+    "sha256": "9c3cb2ab74d1164c204ee8b9f8806cc7100e42b7be9ff800745ce585f4306370"
+  },
+  {
+    "path": "tests/unit/test_nanodevice_routing.py",
+    "sha256": "792e3140b16fbfdb654391a3cf6d0cfa1d937f97435156954b44936cb72ce6f2"
+  },
+  {
+    "path": "tests/unit/test_nanodevice_stage_cache.py",
+    "sha256": "b256dbc92f3086c49367f857334fc9ee80e87f310c8a47ea2f3c17daf998174d"
+  },
+  {
+    "path": "tests/unit/test_nanodevice_writefield.py",
+    "sha256": "cb3925a8e295eabfcf3ffabdcc53ce7728605cc9b54c8733b779359c22c13fed"
+  },
+  {
+    "path": "tests/unit/test_negotiated_control.py",
+    "sha256": "d16e4a858a90d9e8f8315c1c3834cd1c2ebb6e1e3d5c943b28cb3fa34afccd37"
+  },
+  {
+    "path": "tests/unit/test_negotiated_grid.py",
+    "sha256": "5683c653b70659c3421fed0618c99d5a9057cc6af92e5646453d2ec18ad00624"
+  },
+  {
+    "path": "tests/unit/test_negotiated_resources.py",
+    "sha256": "73fe28e6f0c6560367a4e4b0ef81704ffcdbb0c9ac978cc2e895ba71460631c6"
+  },
+  {
+    "path": "tests/unit/test_optional_gdsfactory_boundary.py",
+    "sha256": "5ba739dfda502ff2d0a7d0c11149224fec90c2fe3063637393b9b34a21973e18"
+  },
+  {
+    "path": "tests/unit/test_padframe.py",
+    "sha256": "aff992b5be8bb72f181a544d5bfd4978ffa7c60fdf51c901157a97e9dd03ae49"
+  },
+  {
+    "path": "tests/unit/test_passive_templates.py",
+    "sha256": "c3e0e05180f248011a5698bbec20545dac6c17489cdbff54998866fffcb2609b"
+  },
+  {
+    "path": "tests/unit/test_pathfinder.py",
+    "sha256": "46f011e1ab6f125dfe8e6629419a8ccbee51128845fa81ed7f9af13fcd5702dd"
+  },
+  {
+    "path": "tests/unit/test_pathfinder_rs.py",
+    "sha256": "1fb054af628712b62348761c7f7df788cce9791caee2804ea36d3d49d3efdd6b"
+  },
+  {
+    "path": "tests/unit/test_pcell_native.py",
+    "sha256": "f35e2275f94c52d2a9123223192c05fce8fe91a9c3dcbb9ac11b9adb384e680e"
+  },
+  {
+    "path": "tests/unit/test_photonics_collective_route.py",
+    "sha256": "8ac50367ea083545c6124e053f0b9bc7cd1af4a7f8dc4f10c385c6484a4f5d5e"
+  },
+  {
+    "path": "tests/unit/test_photonics_euler_bend.py",
+    "sha256": "cae8183c8331ff9a8425f85c03cc14ed0686abc5cb19a349d0a13d36f376b1be"
+  },
+  {
+    "path": "tests/unit/test_photonics_mark_visibility.py",
+    "sha256": "db86b19903be882be9d3e4160143df6926f5a3bd660397f0d42debcd8c26196e"
+  },
+  {
+    "path": "tests/unit/test_photonics_net_intent.py",
+    "sha256": "eec03f8583a8aabae18d7ff866ab4ddde8e1a26f71727505ff101122e8f73936"
+  },
+  {
+    "path": "tests/unit/test_photonics_optical_keepout.py",
+    "sha256": "d73cc8ed631824a6f6511c46b04dd1c6155f82bce830683a3ed0d099a043e8ce"
+  },
+  {
+    "path": "tests/unit/test_placer.py",
+    "sha256": "68c391e20a3ef608da31dc57c6f5d0cf87e90a4176f4e7f84ded9ad7514a7fd8"
+  },
+  {
+    "path": "tests/unit/test_plugin_payload_synced.py",
+    "sha256": "b29b06064ba706c15d9ce14175a4dfca0304eac259e448a03856a6dc4d39c740"
+  },
+  {
+    "path": "tests/unit/test_plugin_transfer_pending.py",
+    "sha256": "b6b7d5f25d632805fe2ad26ecb7030f651ff6a9baed9b84ac0ade9becc857b84"
+  },
+  {
+    "path": "tests/unit/test_port_inference.py",
+    "sha256": "88acbb8292d04251f4d125c26e145849b62e8601c7cdc8d088e23aa52f418da8"
+  },
+  {
+    "path": "tests/unit/test_port_mark_many_validation.py",
+    "sha256": "444d5408491a39264ef42d8b8a24a3c644924f2177e3539282851662e942d684"
+  },
+  {
+    "path": "tests/unit/test_port_routing.py",
+    "sha256": "20cbf5ba2349b6c36c92008888ae0113b4eef7aa69a69788fb09b36b5a7cd3fe"
+  },
+  {
+    "path": "tests/unit/test_region_geom.py",
+    "sha256": "33ee89b1603ec90a13a0834259a8d430e5a267f16006fbae5b9b963fdbf0613d"
+  },
+  {
+    "path": "tests/unit/test_release_sync.py",
+    "sha256": "1e401084ed930759a3c30f59e20fcd1a0646a874ad5e51ed74c5a33c9096c894"
+  },
+  {
+    "path": "tests/unit/test_routing_backend_matrix.py",
+    "sha256": "8e716086f690da4c4598cf0c21aaed78303e90bd5d1e58315c88b6b7e8684454"
+  },
+  {
+    "path": "tests/unit/test_routing_constraints.py",
+    "sha256": "c3cccab04dc71a6f6b72eb10da119b735137a427534ae20c7d74a14e90ff251a"
+  },
+  {
+    "path": "tests/unit/test_routing_damped.py",
+    "sha256": "02c2b055af787a48f2fc86f8923e3784b6f91cbc7b9c8bcfa90843eba3d6ba83"
+  },
+  {
+    "path": "tests/unit/test_routing_geometric.py",
+    "sha256": "bef1f5ff92f240cbb2c2e35f485e76d69768fca3109d3a7d177b159841fa6f5d"
+  },
+  {
+    "path": "tests/unit/test_routing_geometric_adjacency.py",
+    "sha256": "bd9540ac5c5c94b529d8069c87fde66d36f115a7e6ea42d6642f36abebd9f459"
+  },
+  {
+    "path": "tests/unit/test_routing_global_channel.py",
+    "sha256": "bdd4c9bd393d7dae6cb232bf9b40d324f66984d7d88430baa54c11757c169282"
+  },
+  {
+    "path": "tests/unit/test_routing_intent.py",
+    "sha256": "64f1806104d25f7711289df447d9d429fd84b25b1217e5cfec931900a7a1328e"
+  },
+  {
+    "path": "tests/unit/test_routing_multilayer.py",
+    "sha256": "42c68a25d50f11d3a4d52f065913d2608298d7d895a6580ec4d9062343fbd189"
+  },
+  {
+    "path": "tests/unit/test_routing_path_quality.py",
+    "sha256": "31e07dbdbb3027a411e3708cd3fa9b42f23d436063b43227ffa83db6551f47e9"
+  },
+  {
+    "path": "tests/unit/test_routing_planner.py",
+    "sha256": "2342f71524f8ccab3abe8676f1f820befeb75fe88b9f59c4007705ffcc1e89c2"
+  },
+  {
+    "path": "tests/unit/test_routing_run.py",
+    "sha256": "a352b45640ad63e8c367e6e56d23acff6b87d67a603997fccf9b693fc6a05b96"
+  },
+  {
+    "path": "tests/unit/test_routing_steiner.py",
+    "sha256": "40ece75cd0120018fd7056c0bded721215d9b47352c87392a99c049dbfe4e325"
+  },
+  {
+    "path": "tests/unit/test_routing_tapered.py",
+    "sha256": "5daa87d3bf60c989164b731c0879097d578ab1b17cfc64192db5624db6993c84"
+  },
+  {
+    "path": "tests/unit/test_routing_tapered_segments.py",
+    "sha256": "f7eb0d187f48f542f4e5b819c3e0bfda36877240893fbdd680b5b012b6031f9d"
+  },
+  {
+    "path": "tests/unit/test_routing_validation.py",
+    "sha256": "3da167680a7139fb39afe3498031b0dc37699a98b9fc3ef72c453f39d786c3eb"
+  },
+  {
+    "path": "tests/unit/test_section_style.py",
+    "sha256": "c87e9501f61b2afe1e2ced4c7fba211f427466705d24fbec9734c9b5c2a34a2e"
+  },
+  {
+    "path": "tests/unit/test_sem_style.py",
+    "sha256": "9c22b97a0427f86d60f1d49142a92cbe76c2e4c354cf53cd71c4e3aa61de2d05"
+  },
+  {
+    "path": "tests/unit/test_send_journal_catchup.py",
+    "sha256": "08e417004a9e27ecceadd36c14024bcd2d8447fe814aec3169ef9c8b310495b4"
+  },
+  {
+    "path": "tests/unit/test_session_registry.py",
+    "sha256": "a2c2d639d46c3aba627914308e0f3287c0fdcb5966c10d7dc09740de10d8de49"
+  },
+  {
+    "path": "tests/unit/test_structdevice_connectivity.py",
+    "sha256": "61453b0dd9c90f8916af6455dbef5d6cea69e5ff5d07c027a3f28777f06e222b"
+  },
+  {
+    "path": "tests/unit/test_structdevice_lvs_lite.py",
+    "sha256": "dc93c88c564fcefaeab4a202f75249abfd1c9c9a1419ae0f95607b41343fa19f"
+  },
+  {
+    "path": "tests/unit/test_template_starters_synced.py",
+    "sha256": "d60db4719041b588c6f8707d9fe07d66e47617fefb7023c5d3ac9a7160f394d9"
+  },
+  {
+    "path": "tests/unit/test_tool_schema.py",
+    "sha256": "2b46a408380f5ee94dc82891e7604abfe0b0abd8e5ecfc6fe654b1f354a56a81"
+  },
+  {
+    "path": "tests/unit/test_track_assign_t4.py",
+    "sha256": "65580a390ad7a2cb4d5d35f5145be43a14827115da01f78191b37a8c7df35c1c"
+  },
+  {
+    "path": "tests/unit/test_track_grid_t1.py",
+    "sha256": "36fea94dae4be9d034dd422452117827f7134145eea3bb3d1cf430059980cd17"
+  },
+  {
+    "path": "tests/unit/test_trackgrid_adapter_t5a.py",
+    "sha256": "bca03bbc5fe0b7bdabc950d7392df2c6375f915cc376ac620e2f3bb6ac1f71ef"
+  },
+  {
+    "path": "tests/unit/test_transfer_core.py",
+    "sha256": "184e941817128d2618f53558442f88a66384e45c2c769783976b6e56a78aded4"
+  },
+  {
+    "path": "tests/unit/test_view_zoom_units.py",
+    "sha256": "07611b674a7ad494babcb1903b313996e48cf2e8295675a6870f21f6588e0289"
+  },
+  {
+    "path": "tests/unit/test_viewer_style.py",
+    "sha256": "38a81bd6915b6f6bef3ca234f8cd0d2fdd3ac776c2870b7d7f43f861d079943f"
+  },
+  {
+    "path": "THIRD_PARTY_NOTICES.md",
+    "sha256": "9c4d467e342947abbd49467581ba812d3e025c3e82f32af00d908a1264f6e147"
+  },
+  {
+    "path": "tools/release_sync.py",
+    "sha256": "01859bcca01161a3e48fc063ab6c8f8fce3c6ad1ddb385a60b2f5d2d1f03bb4e"
+  },
+  {
+    "path": "tools/tutorial_capture/ebl_wraparound/annotate_detail.py",
+    "sha256": "e21aebbca6cdce02e9d1cb8ef76bb7eba76b4a397590ee20cd4cb19fc7ab8958"
+  },
+  {
+    "path": "tools/tutorial_capture/ebl_wraparound/draw_ebl_tutorial.py",
+    "sha256": "b38436d1bc4712a425cc30a72a880026a5326161b3d9a3f1f4bccdeae217f921"
+  },
+  {
+    "path": "tools/tutorial_capture/fit_device/annotate_detail.py",
+    "sha256": "15bf1f081c4adc6c840d7aa3d0fc65d66d31c41e1aa35db8fd7dfd21bf8c3218"
+  },
+  {
+    "path": "tools/tutorial_capture/fit_device/draw_fit_device_tutorial.py",
+    "sha256": "b4e863a2bf7b3bb687118ba76b2707ce1cbcbbf1ccada82c417788e7335c57fa"
+  },
+  {
+    "path": "tools/tutorial_capture/gf_mzi_module/annotate_detail.py",
+    "sha256": "79d89d3425a2f2db9e5c707168f9b3962c223e7602ffa310ac0cbedcc47a6cc4"
+  },
+  {
+    "path": "tools/tutorial_capture/gf_mzi_module/draw_gf_mzi_tutorial.py",
+    "sha256": "6ca16d540dc84c595fd0ecd3eb7eb67dd2b9f4b75bd46be83797e0186ce0e5f0"
+  },
+  {
+    "path": "tools/tutorial_capture/gf_ports/cap4.ps1",
+    "sha256": "de184105d5425de8e0ef0f1f23da5830febdf9a0d80268f586c9ef6da8564c43"
+  },
+  {
+    "path": "tools/tutorial_capture/gf_ports/capture_send_window.ps1",
+    "sha256": "e1cd323e0148a8d217b7bbb17ee913eaf3dd92bc90633a8b5ad28ffb1de41d09"
+  },
+  {
+    "path": "tools/tutorial_capture/gf_ports/crop.ps1",
+    "sha256": "04e5e3e7d49eee48291d6ee3637bc4d849905b798a5ee13b05d04219de3e5473"
+  },
+  {
+    "path": "tools/tutorial_capture/gf_ports/draw_gf_ports_tutorial.py",
+    "sha256": "7ac547305374526a35f506a5ec9e4e9c9ba6b7b8110d60c3d83251356194602c"
+  },
+  {
+    "path": "tools/tutorial_capture/gf_ports/gfsend.ps1",
+    "sha256": "daa8adca5c06fc4a289b1963713e7f1eb7bd6d8f9f4b69d6a04380b5a601f78b"
+  },
+  {
+    "path": "tools/tutorial_capture/gf_ports/README.md",
+    "sha256": "1c250f45a44049bf544c5b85c3e7c68329d7131457ffc621ff4a097d5cb405f6"
+  },
+  {
+    "path": "tools/tutorial_capture/gf_ports/send-cn.json",
+    "sha256": "c8a05914ed81543eac8d88c0183021d7eda3c9548ac4005c61f128d2b972068d"
+  },
+  {
+    "path": "tools/tutorial_capture/gf_ports/send-en.json",
+    "sha256": "e6ed8c3780980b608e5556ddb770588ffb06729fb10edb235c9ca6dd9fa6d83e"
+  },
+  {
+    "path": "tools/tutorial_capture/hallbar/draw_hallbar_tutorial.py",
+    "sha256": "8b3dc94c88c39d94078545535823e8b24c457e3451b15b574facce94448fe688"
+  },
+  {
+    "path": "tools/tutorial_capture/layout_intent/draw_layout_intent_tutorial.py",
+    "sha256": "a541482ea6662fe121e65c2def006a9b7dd95c028edb99ae53cd846d67590294"
+  },
+  {
+    "path": "tools/tutorial_capture/multiwindow/annotate3.ps1",
+    "sha256": "8994ce227c9807beb252a64b5985c0ad82d4e84e154e642a52180e543a8a9daa"
+  },
+  {
+    "path": "tools/tutorial_capture/multiwindow/cap4.ps1",
+    "sha256": "de184105d5425de8e0ef0f1f23da5830febdf9a0d80268f586c9ef6da8564c43"
+  },
+  {
+    "path": "tools/tutorial_capture/multiwindow/cap_pw.ps1",
+    "sha256": "5a4a55ebe2244e495c67703a874034264e47181f9962252e960a0c35b96d89da"
+  },
+  {
+    "path": "tools/tutorial_capture/multiwindow/capture_window.ps1",
+    "sha256": "9afba0b356c7047e5e76ffb5a72b8e174268e41c8d38d3f7cbdadf384d4a00b0"
+  },
+  {
+    "path": "tools/tutorial_capture/multiwindow/draw_multiwindow_tutorial.py",
+    "sha256": "b779859df8676b91c5da4853123b3deff7471eee36e3fcd9ae2e9b6d9270a37b"
+  },
+  {
+    "path": "tools/tutorial_capture/multiwindow/labels-cn.json",
+    "sha256": "f48abb0f7deacf67f994da53616e4293d08224db20e6f3a47d42ca71ec369033"
+  },
+  {
+    "path": "tools/tutorial_capture/multiwindow/labels-en.json",
+    "sha256": "3311ca4da3371443f644ec747c724d364838f7e5b8ee0783536cf5ef038a4403"
+  },
+  {
+    "path": "tools/tutorial_capture/multiwindow/README.md",
+    "sha256": "6e396a54b75dcec765913baffca508646e3d326e6c6092abaf2f5ee84e216d89"
+  },
+  {
+    "path": "tools/tutorial_capture/neural_electrode/annotate_detail.py",
+    "sha256": "e316e79883fd6efb279e1f98d4f601bd567ef62001421bd22fb92cdb8a7042df"
+  },
+  {
+    "path": "tools/tutorial_capture/neural_electrode/draw_neural_tutorial.py",
+    "sha256": "29d431524cea8cf43023c837fbd4335e1d04fb36069fbcd1bb8f6109fe3988dc"
+  },
+  {
+    "path": "tools/tutorial_capture/padframe/draw_padframe_tutorial.py",
+    "sha256": "5c365579755c3257a2dc690a4d386fab8f7b9787bd94e994a7c4147e4ed1f9d9"
+  },
+  {
+    "path": "tools/tutorial_capture/passives/annotate_detail.py",
+    "sha256": "492d5094bc972524760f9b3f8a29c416edc47e292a36f51de62f329b7aea1fe5"
+  },
+  {
+    "path": "tools/tutorial_capture/passives/draw_passives_tutorial.py",
+    "sha256": "25bf6b3087d03dc5831a6f95f323de21dc6b77fa6de44ef2d2791afb976ab875"
+  },
+  {
+    "path": "tools/tutorial_capture/README.md",
+    "sha256": "dee1f657ab8394795e0e3a3f0e8b214de0cb7af393bf4fb32bac08077cf9ca88"
+  },
+  {
+    "path": "tools/tutorial_capture/routing/draw_routing_tutorial.py",
+    "sha256": "1ffdee1d6180de5a7814377078fc3e985ecd77e6db16687048d94f0c3962fee0"
+  }
+]

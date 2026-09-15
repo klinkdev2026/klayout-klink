@@ -73,8 +73,9 @@ def test_forward_klive_request_forwards_layout_show_file_to_target(tmp_path):
         calls.append(kwargs)
         return {"loaded": kwargs["params"]["path"], "type": "open", "cells": 3}
 
+    gds_path = str(tmp_path / "a.gds")
     response = forward_klive_request(
-        {"gds": "C:/tmp/a.gds", "keep_position": False, "technology": "DemoTech"},
+        {"gds": gds_path, "keep_position": False, "technology": "DemoTech"},
         registry=registry,
         rpc_call=fake_rpc_call,
         timeout=12.0,
@@ -82,12 +83,12 @@ def test_forward_klive_request_forwards_layout_show_file_to_target(tmp_path):
 
     assert response["target_session"] == "klayout-8767"
     assert response["target_port"] == 8767
-    assert response["file"] == "C:/tmp/a.gds"
+    assert response["file"] == gds_path
     assert calls == [{
         "host": "127.0.0.1",
         "port": 8767,
         "method": "layout.show_file",
-        "params": {"path": "C:/tmp/a.gds", "mode": "new", "keep_position": False, "technology": "DemoTech"},
+        "params": {"path": gds_path, "mode": "new", "keep_position": False, "technology": "DemoTech"},
         "timeout": 12.0,
     }]
 
@@ -98,7 +99,7 @@ def test_forward_klive_request_rejects_local_target_to_avoid_deadlock(tmp_path):
 
     with pytest.raises(KliveCompatError, match="local klive-compatible server"):
         forward_klive_request(
-            {"gds": "C:/tmp/a.gds"},
+            {"gds": str(tmp_path / "a.gds")},
             registry=registry,
             avoid_session_id="klayout-8765",
         )

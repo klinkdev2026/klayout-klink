@@ -30,15 +30,15 @@ classifiers = [
 # from source (needs a Rust toolchain) — or use `--no-deps` for the pure-Python
 # core only (everything still runs, just slower on large P&R).
 # Version bound: core and kernels are released together and the byte-parity
-# promise only holds within a minor series — an old core must not pick up a
-# newer kernel line. Both kernels are runtime dependencies, so
-# `pip install klayout-klink` brings klink + both Rust accelerators (boxmaze for
-# single-stack P&R, trackmaze for the multilayer engine) in one shot. They are
-# speed-only (pure-Python fallbacks exist); `pip install --no-deps` gives the
-# pure-Python core alone when you cannot fetch/build a kernel wheel.
+# promise holds within a compatible minor series. Both kernels are runtime
+# dependencies, so `pip install klayout-klink` brings klink + both Rust
+# accelerators (boxmaze for single-stack P&R, trackmaze for the multilayer
+# engine) in one shot. They are speed-only (pure-Python fallbacks exist);
+# `pip install --no-deps` gives the pure-Python core alone when you cannot
+# fetch/build a kernel wheel.
 dependencies = [
-    "klink-boxmaze-rs>=0.5,<0.6",
-    "klink-trackmaze-rs>=0.5,<0.6",
+    "klink-boxmaze-rs>=0.6,<0.7",
+    "klink-trackmaze-rs>=0.6,<0.7",
 ]
 
 [project.optional-dependencies]

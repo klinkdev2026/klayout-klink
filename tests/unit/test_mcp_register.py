@@ -5,6 +5,7 @@ be ASCII so it survives a non-UTF-8 console."""
 import json
 import re
 import sys
+from pathlib import PureWindowsPath
 
 from klink.mcp.__main__ import _register_snippets
 
@@ -16,10 +17,9 @@ def _block(out: str, top_key: str) -> str:
 
 
 def test_json_blocks_valid_with_windows_path(monkeypatch):
-    # A Windows path: its backslashes MUST be escaped in JSON/TOML or the block
-    # is invalid (a raw C:\... has bad \escapes). This is the bug the snippet
-    # builder guards by routing paths through json.dumps.
-    monkeypatch.setattr(sys, "executable", r"C:\Program Files\klink venv\Scripts\python.exe")
+    # A Windows-style path: its backslashes MUST be escaped in JSON/TOML or the block
+    # is invalid. This is the bug the snippet builder guards by routing paths through json.dumps.
+    monkeypatch.setattr(sys, "executable", str(PureWindowsPath("klink venv") / "Scripts" / "python.exe"))
     out = _register_snippets("read,write,verify,escape", "project-klink")
 
     # standard mcpServers (Cursor/Windsurf/Claude Desktop) + VS Code "servers"

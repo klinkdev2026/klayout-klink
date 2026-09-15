@@ -110,7 +110,7 @@ def default_root() -> str:
     env = os.environ.get("KLINK_LEDIT_BRIDGE_ROOT")
     if env:
         return env
-    base = os.environ.get("LOCALAPPDATA", r"C:\klink_bridge")
+    base = os.environ.get("LOCALAPPDATA") or os.path.join(os.path.expanduser("~"), ".klink_bridge")
     return os.path.join(base, "klink", "ledit_bridge")
 
 

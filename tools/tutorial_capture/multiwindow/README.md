@@ -26,7 +26,7 @@ assumed.
 # plugin loaded -- see Preconditions below
 python tools/tutorial_capture/multiwindow/draw_multiwindow_tutorial.py \
     --src-port 8765 --dst-port 8767 \
-    --out-dir "D:\klink_website\assets\tutorials\multiwindow"
+    --out-dir "<website-assets>/tutorials/multiwindow"
 ```
 
 CN PNGs go to `--out-dir`, EN twins to `<out-dir>/en`. The script never

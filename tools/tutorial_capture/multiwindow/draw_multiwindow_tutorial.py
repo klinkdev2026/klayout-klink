@@ -55,7 +55,7 @@ visible and maximized to 1550x838:
 
     python tools/tutorial_capture/multiwindow/draw_multiwindow_tutorial.py \\
         --src-port 8765 --dst-port 8767 \\
-        --out-dir "D:\\klink_website\\assets\\tutorials\\multiwindow"
+        --out-dir "<website-assets>/tutorials/multiwindow"
 """
 from __future__ import annotations
 
@@ -83,7 +83,7 @@ ANNOTATE_SCRIPT = SCRIPT_DIR / "annotate3.ps1"
 LABELS_CN = SCRIPT_DIR / "labels-cn.json"
 LABELS_EN = SCRIPT_DIR / "labels-en.json"
 
-DEFAULT_OUT = Path(r"D:\klink_website\assets\tutorials\multiwindow")
+DEFAULT_OUT = REPO_ROOT / "test_outputs" / "tutorial_capture" / "multiwindow"
 
 EXPECTED_W = 1550
 EXPECTED_H = 838

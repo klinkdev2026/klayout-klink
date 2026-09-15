@@ -546,10 +546,9 @@ static bool init_paths() {
     char buf[MAX_PATH] = {0};
     std::string p;
 
-    // KLINK_LEDIT_BRIDGE_ROOT is the escape hatch for callers that cannot
-    // write LOCALAPPDATA (sandboxes, redirected profiles). The klink client
-    // has honoured it all along; the macro did not, so the two ends pointed
-    // at different directories and the hatch silently did nothing.
+    // KLINK_LEDIT_BRIDGE_ROOT relocates the exchange directory. When it is
+    // unset, use LOCALAPPDATA or the user's home directory, matching the
+    // Python client/driver path contract.
     DWORD n = GetEnvironmentVariableA("KLINK_LEDIT_BRIDGE_ROOT", buf, MAX_PATH);
     if (n > 0 && n < MAX_PATH) {
         p = buf;
@@ -557,19 +556,37 @@ static bool init_paths() {
     } else {
         n = GetEnvironmentVariableA("LOCALAPPDATA", buf, MAX_PATH);
         std::string base;
-        if (n > 0 && n < MAX_PATH) base = buf;
-        else base = "C:\\klink_bridge";      // fallback if env unavailable
+        if (n > 0 && n < MAX_PATH) {
+            base = buf;
+        } else {
+            n = GetEnvironmentVariableA("USERPROFILE", buf, MAX_PATH);
+            if (n > 0 && n < MAX_PATH) {
+                base = buf;
+            } else {
+                char drive[MAX_PATH] = {0};
+                char homepath[MAX_PATH] = {0};
+                DWORD dn = GetEnvironmentVariableA("HOMEDRIVE", drive, MAX_PATH);
+                DWORD hn = GetEnvironmentVariableA("HOMEPATH", homepath, MAX_PATH);
+                if (dn > 0 && dn < MAX_PATH && hn > 0 && hn < MAX_PATH) {
+                    base = std::string(drive) + std::string(homepath);
+                } else {
+                    LDialog_MsgBox("klink bridge: set KLINK_LEDIT_BRIDGE_ROOT to a writable folder before loading the macro", 0);
+                    return false;
+                }
+            }
+            base += "\.klink_bridge";
+        }
         // build the tree piece by piece (no recursive mkdir on WinAPI)
         p = base;
         ensure_dir(p);
-        p += "\\klink";        if (!ensure_dir(p)) return false;
-        p += "\\ledit_bridge"; if (!ensure_dir(p)) return false;
+        p += "\klink";        if (!ensure_dir(p)) return false;
+        p += "\ledit_bridge"; if (!ensure_dir(p)) return false;
     }
-    p += "\\default";         if (!ensure_dir(p)) return false;
+    p += "\default";         if (!ensure_dir(p)) return false;
     g_root   = p;
-    g_inbox  = p + "\\inbox";  if (!ensure_dir(g_inbox))  return false;
-    g_outbox = p + "\\outbox"; if (!ensure_dir(g_outbox)) return false;
-    g_logPath = p + "\\bridge.log";
+    g_inbox  = p + "\inbox";  if (!ensure_dir(g_inbox))  return false;
+    g_outbox = p + "\outbox"; if (!ensure_dir(g_outbox)) return false;
+    g_logPath = p + "\bridge.log";
     return true;
 }
 
@@ -2391,7 +2408,7 @@ static bool cmd_save_image(Ctx& ctx, const JVal& params, JVal& result,
     std::string path = params.str_or("path", "");
     if (params.str_or("cell", "").empty() || path.empty()) {
         err  = "params.cell and params.path are required";
-        next = "pass {\"cell\":\"X\",\"path\":\"C:\\\\out\\\\x.png\"}; "
+        next = "pass {\"cell\":\"X\",\"path\":\"out/x.png\"}; "
                "width_px/height_px/dpi default to 1600/1200/96";
         return false;
     }

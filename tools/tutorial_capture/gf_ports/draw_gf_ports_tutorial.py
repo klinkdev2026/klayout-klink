@@ -55,7 +55,7 @@ Run against a live KLayout (klink plugin loaded) with gdsfactory in this
 interpreter:
 
     python tools/tutorial_capture/gf_ports/draw_gf_ports_tutorial.py [--port 8765]
-        [--out-dir D:\\klink_website\\assets\\tutorials\\gf-ports]
+        [--out-dir <website-assets>/tutorials/gf-ports]
         [--skip-send-capture]
 
 See tools/tutorial_capture/gf_ports/README.md for the gf-7-send*.png window
@@ -88,10 +88,9 @@ from examples_klink.public.demos.photonics.gf_ports import (
     scenario_gf_auto, scenario_blackbox,
 )
 
-# Default output: the docs website checkout's asset directory (see module
-# docstring for why this differs from the other tutorial_capture scripts).
-# Override with --out-dir if the website checkout lives elsewhere.
-DEFAULT_OUT = Path(r"D:\klink_website\assets\tutorials\gf-ports")
+# Default output follows the other tutorial capture scripts: a repo-local generated folder.
+# Pass --out-dir to write directly into a website checkout asset directory.
+DEFAULT_OUT = REPO_ROOT / "test_outputs" / "tutorial_capture" / "gf-ports"
 
 SEND_SCRIPT = Path(__file__).resolve().parent / "capture_send_window.ps1"
 
