@@ -36,6 +36,8 @@ declared dependencies are klink's own two Rust acceleration kernels, shipped as
 prebuilt wheels. Virtual environments, caches, build outputs, and local test
 artifacts are intentionally not part of a clean release.
 
+**Complete installation:** Install Vestigraph in the same Python environment to enable the full Klink + Vestigraph feature set, including saved-layout history, **HIST**, and local agent history tools. `python -m pip install vestigraph` installs Vestigraph, the compatible `klayout-klink`, and the default Rust scanner.
+
 ## What It Does
 
 - Controls KLayout over local TCP RPC, with batch methods sized for generated
@@ -68,7 +70,7 @@ artifacts are intentionally not part of a clean release.
 
 ### 0.6.0 — Vestigraph local history integration
 
-klink 0.6.0 provides the extension path Vestigraph uses for KLayout history: install Vestigraph in the same Python environment, run `klink plugin install`, restart the MCP client so `klink.status` and `klink.find_tools` discover the tools, then restart KLayout and open HIST. Skill refinement stays behind an explicit experimental opt-in. See [Using Vestigraph](docs/public/VESTIGRAPH.md).
+klink 0.6.0 supports Vestigraph 0.2.0 local history through the existing extension registry. The full combined workflow requires Vestigraph installed in the Python environment that runs `klink-mcp`. Run `klink plugin install`, restart MCP for automatic tool discovery and companion registration, then restart KLayout and click **HIST**. Skill refinement requires an explicit experimental opt-in. See [Using Vestigraph](docs/public/VESTIGRAPH.md).
 
 ### 0.5.0 — Layout intent: circle a region, get a managed numbered array
 
@@ -157,9 +159,9 @@ THIRD_PARTY_NOTICES.md  Third-party notices
 - Optional: gdsfactory, the `klayout` Python package, NumPy/OpenCV, or detector
   dependencies depending on the workflow.
 
-## Add Vestigraph local history
+## Install the complete Klink + Vestigraph workflow
 
-For KLayout history, the HIST panel and local skill tools, add Vestigraph to the same Python environment that runs `klink-mcp`. The KLayout plugin remains the Klink plugin and is installed by the Klink command:
+For the complete workflow, including saved-layout history, **HIST**, and local agent history tools, install Vestigraph into the same Python environment that runs `klink-mcp`:
 
 ```console
 python -m pip install "vestigraph>=0.2,<0.3"
@@ -169,16 +171,9 @@ klink plugin install
 python -m vestigraph doctor --integration
 ```
 
-Restarting MCP lets the Klink extension registry discover Vestigraph and register its local companion for that Python environment. `klink.status` lists installed extensions; `klink.find_tools` with `domain="vestigraph"` discovers the local tools. No additional MCP server is needed. Installing Python packages does not configure arbitrary chat clients.
+Vestigraph installs the compatible `klayout-klink` and `vestigraph-scan-core` dependencies. Rust scanning is enabled automatically when the native module is available. Restarting MCP discovers the history tools and registers the local companion. Use `klink.status` to list extensions and `klink.find_tools` with `domain="vestigraph"` to discover the tools. No separate MCP server or `vestigraph setup` step is needed.
 
-For local distribution files before PyPI publication, place matching Klink and Vestigraph wheels in one directory and install from it:
-
-```console
-python -m pip install --find-links ./wheels "klayout-klink>=0.6.0,<0.7" "vestigraph>=0.2,<0.3"
-klink plugin install
-```
-
-**Upgrade together:** stop the old Vestigraph service if one is running, upgrade compatible packages, run `klink plugin install`, then restart MCP and KLayout. History, evidence, skills and exports stay in local user storage. Private skills are not included in product distributions. Skill refinement requires an explicit experimental opt-in. See [Using Vestigraph](docs/public/VESTIGRAPH.md).
+**Upgrade together:** Stop any running Vestigraph service, upgrade compatible packages, run `klink plugin install`, then restart MCP and KLayout. History, evidence, skills, and exports stay in local user storage. Private skills are not included in the packages. See [Using Vestigraph](docs/public/VESTIGRAPH.md).
 
 ## Install Python Package
 

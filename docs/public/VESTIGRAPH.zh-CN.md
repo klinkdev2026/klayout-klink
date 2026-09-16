@@ -4,7 +4,7 @@
 
 # Vestigraph 本地历史
 
-Vestigraph 为 Klink 安装加入本地文件与 KLayout 历史。需要 Python 3.10+、KLayout 桌面 0.30.x，以及 Klink 0.6.0 或兼容的后续 0.6.x。
+需要在运行 `klink-mcp` 的同一个 Python 环境安装 Vestigraph，才能使用 klink + Vestigraph 的完整功能，包括本地文件与已保存版图历史、HIST 和 agent 历史工具。需要 Python 3.10+、KLayout 桌面 0.30.x，以及 Klink 0.6.0 或兼容的后续 0.6.x。
 
 ## 安装与同步
 
@@ -16,7 +16,7 @@ klink plugin install
 python -m vestigraph doctor --integration
 ```
 
-`pip install vestigraph` 会安装兼容的 Klink 依赖。`klink plugin install` 安装或升级 KLayout 插件。重启 MCP 后，现有 Klink 扩展注册表会发现 Vestigraph，并为该 Python 环境登记 companion。不需要额外 MCP server。安装包不会配置聊天客户端。
+`pip install vestigraph` 会安装兼容的 `klayout-klink` 和 `vestigraph-scan-core` 依赖，原生模块可用时自动使用 Rust 扫描。`klink plugin install` 安装或升级 KLayout 插件。重启 MCP 后，现有 Klink 扩展注册表会发现 Vestigraph，并为该 Python 环境登记 companion。不需要额外 MCP server。安装包不会配置聊天客户端。
 
 升级时，如果旧 Vestigraph 服务正在运行，先停止它；升级包，重新运行 `klink plugin install`，然后重启 MCP 和 KLayout。Vestigraph、Klink MCP 和 companion 登记应使用同一个 Python 环境。
 

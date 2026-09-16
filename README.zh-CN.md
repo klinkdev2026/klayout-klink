@@ -27,6 +27,8 @@ klink 是一个面向 [KLayout](https://www.klayout.de/) 的 AI-native 控制面
 
 核心 Python 包不引入任何第三方运行依赖——唯一声明的依赖是 klink 自己的两个 Rust 加速内核(以预编译轮子发布)。虚拟环境、缓存、构建产物和本机测试输出都不属于干净 release。
 
+**完整安装：** 需要在同一个 Python 环境中安装 Vestigraph，才能使用 klink + Vestigraph 的完整功能，包括已保存版图历史、**HIST** 和本地 agent 历史工具。`python -m pip install vestigraph` 会安装 Vestigraph、兼容的 `klayout-klink` 及默认 Rust 扫描器。
+
 ## 功能概览
 
 - 通过本机 TCP RPC 控制 KLayout，批量方法按生成式版图设计(单次调用可写入
@@ -57,7 +59,7 @@ klink 是一个面向 [KLayout](https://www.klayout.de/) 的 AI-native 控制面
 
 ### 0.6.0 — Vestigraph 本地历史集成
 
-klink 0.6.0 提供 Vestigraph 用于 KLayout 历史的扩展通路：在同一个 Python 环境安装 Vestigraph，运行 `klink plugin install`，重启 MCP 客户端让 `klink.status` 和 `klink.find_tools` 发现工具，然后重启 KLayout 并打开 HIST。技能炼化仍需显式实验开关。详见 [Vestigraph 联合使用](docs/public/VESTIGRAPH.md)。
+klink 0.6.0 通过现有扩展注册表支持 Vestigraph 0.2.0 本地历史。完整联合工作流需要将 Vestigraph 安装到运行 `klink-mcp` 的 Python 环境。运行 `klink plugin install`，重启 MCP 以自动发现工具并登记 companion，再重启 KLayout 并点击 **HIST**。技能炼化需显式开启实验开关。详见 [Vestigraph 联合使用](docs/public/VESTIGRAPH.zh-CN.md)。
 
 ### 0.5.0 —— 布局意图：圈个区域，得到受管的编号阵列
 
@@ -133,28 +135,21 @@ THIRD_PARTY_NOTICES.md  第三方声明
 - 可选: Claude Code 或其它 MCP 客户端。
 - 可选: gdsfactory、`klayout` Python 包、NumPy/OpenCV 或 detector 依赖，取决于具体工作流。
 
-## 添加 Vestigraph 本地历史
+## 安装完整的 klink + Vestigraph 工作流
 
-需要 KLayout 历史、HIST 面板和本地技能工具时，把 Vestigraph 安装到运行 `klink-mcp` 的同一个 Python 环境。Vestigraph 会安装兼容 Klink 依赖；KLayout 插件仍使用 Klink 命令安装：
+完整工作流包含已保存版图历史、**HIST** 和本地 agent 历史工具，需要把 Vestigraph 安装到运行 `klink-mcp` 的同一个 Python 环境：
 
 ```console
 python -m pip install "vestigraph>=0.2,<0.3"
 klink plugin install
 # 重启运行 klink-mcp 的 MCP 客户端
-# 重启 KLayout，打开已保存的 GDS/OASIS，然后点击 HIST
+# 重启 KLayout，打开已保存的 GDS/OASIS 版图，然后点击 HIST
 python -m vestigraph doctor --integration
 ```
 
-重启 MCP 后，Klink 扩展注册表会发现 Vestigraph，并为该 Python 环境登记本地 companion。`klink.status` 会列出已安装扩展；`klink.find_tools` 使用 `domain="vestigraph"` 可发现本地工具。不需要额外的 MCP server。安装 Python 包不会自动配置任意聊天客户端。
+Vestigraph 会安装兼容的 `klayout-klink` 和 `vestigraph-scan-core` 依赖。原生模块可用时自动使用 Rust 扫描。重启 MCP 后会发现历史工具，并登记本地 companion。使用 `klink.status` 查看扩展，使用 `klink.find_tools` 的 `domain="vestigraph"` 发现工具。不需要额外 MCP server，也不需要运行 `vestigraph setup`。
 
-PyPI 发布前使用本地发行文件时，把匹配的 Klink 和 Vestigraph wheels 放到同一目录，再从该目录安装：
-
-```console
-python -m pip install --find-links ./wheels "klayout-klink>=0.6.0,<0.7" "vestigraph>=0.2,<0.3"
-klink plugin install
-```
-
-**同步升级**：如果旧 Vestigraph 服务正在运行，先停止它；升级兼容包，运行 `klink plugin install`，然后重启 MCP 和 KLayout。历史、证据、技能及导出保存在用户本地。产品不附带私人技能。技能炼化需显式开启实验开关。详见 [Vestigraph 联合使用](docs/public/VESTIGRAPH.md)。
+**同步升级：** 先停止正在运行的 Vestigraph 服务，升级兼容包，运行 `klink plugin install`，然后重启 MCP 和 KLayout。历史、证据、技能及导出保存在用户本地，安装包不附带私人技能。详见 [Vestigraph 联合使用](docs/public/VESTIGRAPH.zh-CN.md)。
 
 ## 安装 Python 包
 

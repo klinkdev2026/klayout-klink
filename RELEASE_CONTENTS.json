@@ -153,11 +153,11 @@
   },
   {
     "path": "docs/public/VESTIGRAPH.md",
-    "sha256": "9cbebe97afe10a030b0ad8dd240a823c3ae2e8931e49771d1831c21c7dccf586"
+    "sha256": "912f9829d5da0029336bbb7f1ab693c9cc4c938b582ba72f8a987e2cc68c60a9"
   },
   {
     "path": "docs/public/VESTIGRAPH.zh-CN.md",
-    "sha256": "585f3f5e3f627a0813050c8500b004a31c9485680f66602689bedc83617a8692"
+    "sha256": "ec884cfdf6ea25b7ffe5cacd81aad81ef3d8c9c81e0e1a5e55aaedafbb54bb2e"
   },
   {
     "path": "examples_klink/public/demos/digital/_multilayer_engine.py",
@@ -1965,11 +1965,11 @@
   },
   {
     "path": "README.md",
-    "sha256": "8c7bc02be422b144a33ccd6722aef59ea273fde3825918eff15ba4261d66ab31"
+    "sha256": "325731b557195f93c9a34ab6a98881ae1d0aa418a2b47f43564d1057ef5bd53e"
   },
   {
     "path": "README.zh-CN.md",
-    "sha256": "10d4f1b49e8da37b42d84bbe9296221e062249daa9be850d7acfe0b3b15eba75"
+    "sha256": "c0c1030f509ec62a3f0181269f03cc11c17bbbfcc3940ab759f5e71638aacf66"
   },
   {
     "path": "rust/klink_boxmaze/.gitignore",
