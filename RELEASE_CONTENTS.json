@@ -25,7 +25,7 @@
   },
   {
     "path": "CHANGELOG.md",
-    "sha256": "2b2f7b34013168d4b5f2a9da37e496b38c0a5db400c1df117e60083cd0bbd5a3"
+    "sha256": "38e710aec5f136cbd13b62c811f08cd85e89402686933edf284e12e82dca597a"
   },
   {
     "path": "CLAUDE.md",
@@ -457,7 +457,7 @@
   },
   {
     "path": "klink/_meta.py",
-    "sha256": "336a606cd1e78d2efa042bbb55fcd17d583701d707630f01bdea9564438411f5"
+    "sha256": "caf1a8383505c02a24b52c752bbdc5d4b58785980d6cac7b888b0e416decbebb"
   },
   {
     "path": "klink/anchor/__init__.py",
@@ -961,7 +961,7 @@
   },
   {
     "path": "klink/plugin_payload/klink_plugin/grain.xml",
-    "sha256": "a9679df3fbcfe6ddbfd759aaf885c94d23171b2c2a76bc9f14534986c4c13dc6"
+    "sha256": "8089a4abdcffe0fb6c2ac5a8644692c699154debe2ddf38b99d571fca331836f"
   },
   {
     "path": "klink/plugin_payload/klink_plugin/pymacros/klink.lym",
@@ -1097,7 +1097,7 @@
   },
   {
     "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/meta_m.py",
-    "sha256": "0ad0364881b1106e26090e42fec00b9677a576abe1fe397fb1b7615709b313b1"
+    "sha256": "7ee55fd744c03154ef3fa8aca0cb77442d901b4e457a4f66d57e3aaf0172f489"
   },
   {
     "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/modify_m.py",
@@ -1725,7 +1725,7 @@
   },
   {
     "path": "klink_plugin/grain.xml",
-    "sha256": "a9679df3fbcfe6ddbfd759aaf885c94d23171b2c2a76bc9f14534986c4c13dc6"
+    "sha256": "8089a4abdcffe0fb6c2ac5a8644692c699154debe2ddf38b99d571fca331836f"
   },
   {
     "path": "klink_plugin/pymacros/klink.lym",
@@ -1861,7 +1861,7 @@
   },
   {
     "path": "klink_plugin/python/klink_server/methods/meta_m.py",
-    "sha256": "0ad0364881b1106e26090e42fec00b9677a576abe1fe397fb1b7615709b313b1"
+    "sha256": "7ee55fd744c03154ef3fa8aca0cb77442d901b4e457a4f66d57e3aaf0172f489"
   },
   {
     "path": "klink_plugin/python/klink_server/methods/modify_m.py",
@@ -1989,7 +1989,7 @@
   },
   {
     "path": "rust/klink_boxmaze/pyproject.toml",
-    "sha256": "5d55249dbd3c97ae56ec4f47e941854f52d0b28aa80b2f990d8cfbb1f6e4a74c"
+    "sha256": "e67a2aa6aa5139538ebaed2dc4451b036c4361333847cdab665e06e176fd1721"
   },
   {
     "path": "rust/klink_boxmaze/README.md",
@@ -2013,7 +2013,7 @@
   },
   {
     "path": "rust/klink_trackmaze/pyproject.toml",
-    "sha256": "f7742646b2083f2b7ff4d944d6aab7fd94692b36d6833ee528def1f30b9efc0b"
+    "sha256": "703b9259e5fcd046357c02eafe6d70074f799bb98ff496806cbff51067487100"
   },
   {
     "path": "rust/klink_trackmaze/src/lib.rs",

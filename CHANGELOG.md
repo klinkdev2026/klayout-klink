@@ -1,5 +1,11 @@
 ﻿# Changelog
 
+## 0.6.1
+
+- Align the MCP/plugin version reported by the live KLayout server with the 0.6.1 release.
+- Document Codex, Pi, and Kimi Code skill installation and MCP registration.
+
+
 ## 0.6.0
 
 - Registered local companion services can start with KLayout and expose their toolbar actions.
