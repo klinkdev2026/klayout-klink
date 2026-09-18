@@ -1973,7 +1973,7 @@
   },
   {
     "path": "README.zh-CN.md",
-    "sha256": "21774a46ffd6254d1a005f3fb406c18bf7e9cf533e5ca279d156336420973311"
+    "sha256": "e631a2552e1832758d430afafe94738fe047c7ea82a304be1b1b8f8ec86240cf"
   },
   {
     "path": "rust/klink_boxmaze/.gitignore",
