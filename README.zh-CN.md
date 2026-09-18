@@ -363,6 +363,16 @@ klink-mcp --setup .
 CLAUDE.md
 ```
 
+Shared skill installation for Codex, Pi, and Kimi Code:
+
+```powershell
+klink-mcp --install-skills .agents/skills
+klink-mcp --install-skills .pi/skills
+klink-mcp --install-skills .kimi-code/skills
+```
+
+Codex reads `AGENTS.md` and `.agents/skills/`. Pi discovers `.agents/skills/` or `.pi/skills/`. Kimi Code discovers `.agents/skills/` or `.kimi-code/skills/` and invokes skills with `/skill:<name>`. Register MCP separately with the client-specific configuration; installing skills does not register MCP.
+
 把 MCP server 注册给 Claude Code：
 
 ```powershell

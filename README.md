@@ -407,6 +407,26 @@ This installs or updates:
 CLAUDE.md
 ```
 
+The same packaged skills can be installed for other agents. The shared
+`.agents/skills/` layout is used by Codex, Pi, and Kimi Code; Pi also accepts
+`.pi/skills/`, and Kimi Code accepts `.kimi-code/skills/`:
+
+```powershell
+klink-mcp --install-skills .agents/skills
+# Optional agent-specific project layouts:
+klink-mcp --install-skills .pi/skills
+klink-mcp --install-skills .kimi-code/skills
+```
+
+Codex reads the project's `AGENTS.md` and discovers skills from the shared
+`.agents/skills/` directory. A `klink init` project already contains `AGENTS.md`;
+for an existing project, copy the project template or add the relevant klink
+rules to its own `AGENTS.md` rather than overwriting project instructions.
+
+Pi discovers `.agents/skills/` or `.pi/skills/` after a new session. Kimi Code
+discoveries include `.agents/skills/` and `.kimi-code/skills/`; invoke a skill
+with `/skill:<name>` when needed. Review skill files before enabling them.
+
 Register the MCP server with your agent explicitly. Installing the Python package does not register an MCP server with Claude Code, Claude Desktop, Codex, or another client. Each client has its own configuration. The helper prints the command for the interpreter that owns your klink installation:
 
 ```powershell

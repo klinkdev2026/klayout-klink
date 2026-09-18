@@ -1969,11 +1969,11 @@
   },
   {
     "path": "README.md",
-    "sha256": "feac6654d292b519c17b83376b8fe02b07b872b414a5c1ff2fc1fc86cd277c9f"
+    "sha256": "f67cab674a1abd2c62b2425da0d82963e956c6e17a87c9ba20c9b6facc434103"
   },
   {
     "path": "README.zh-CN.md",
-    "sha256": "e631a2552e1832758d430afafe94738fe047c7ea82a304be1b1b8f8ec86240cf"
+    "sha256": "20cba6dc319e5ad0fb276df02d72a8726e97ed40cbf80d88c559fb0c0253ac37"
   },
   {
     "path": "rust/klink_boxmaze/.gitignore",
