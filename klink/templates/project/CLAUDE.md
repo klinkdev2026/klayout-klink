@@ -13,6 +13,16 @@ Claude-Code specifics:
   process purity, batch RPCs, selection-first debugging, LVS-only pass, and the
   never-commit-GDS rule — is in AGENTS.md.
 
+## Vestigraph workflow
+
+For Vestigraph, HIST, saved layout history or skill refinement, first call
+`klink.find_tools domain=vestigraph`, then `vestigraph.guide {}` and follow
+`next_action`. Read [recipes/vestigraph.md](recipes/vestigraph.md) for setup
+and examples, and the Vestigraph section in [AGENTS.md](AGENTS.md) for rules.
+Install the optional package in klink MCP's Python environment and restart MCP;
+no separate MCP server is needed. Existing requests use `skill -> submit`;
+new requests use `history -> refine -> submit`. Refinement is off by default.
+
 ## Tanner L-Edit workflow
 
 If the user mentions L-Edit, Tanner, `.tdb`, or T-Cell, klink drives that

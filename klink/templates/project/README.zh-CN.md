@@ -53,3 +53,9 @@ agent 会:
 模板**绝不发布 GDS**,你也**绝不要**把专有 GDS/PDK 提交到这里。用到私有几何的
 recipe 只搭好**代码**;运行时你指向自己的文件。开源 PDK 可以依赖,但同样不该进
 版本控制。
+
+## Vestigraph 版图历史
+
+HIST、版本历史和技能提炼的用法和例子见
+[recipes/vestigraph.md](recipes/vestigraph.md)。Agent 先调用
+`klink.find_tools domain=vestigraph`，再调用 `vestigraph.guide {}`。

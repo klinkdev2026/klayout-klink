@@ -63,3 +63,9 @@ The template **never ships GDS**, and you must **never commit** a proprietary
 GDS/PDK here. Recipes that use private geometry scaffold the *code*; you point
 them at your own files at run time. Open PDKs are fine to depend on but still
 don't belong in version control.
+
+## Vestigraph history
+
+For HIST, saved layout versions and skill refinement, see
+[recipes/vestigraph.md](recipes/vestigraph.md). The agent starts with
+`klink.find_tools domain=vestigraph`, then `vestigraph.guide {}`.

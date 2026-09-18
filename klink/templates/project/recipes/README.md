@@ -15,6 +15,12 @@ There is **no default recipe**. The domain you describe becomes the default.
 | **Silicon photonics** | Open **or** your own | `klink.routing.backends.gdsfactory.gdsfactory_ports.route_gdsfactory_ports` + `klink.domains.photonics.blackbox` harvester | Runs on an **open-source gdsfactory PDK** out of the box; swap in your **proprietary foundry PDK** by changing only `(cell-name set, stub layer, route layer)`. |
 | **Digital P&R → LVS** | Bring your own | `map_logic_to_devices(...)` → place → FlexDR route → live LVS | Verilog → device netlist → route → `match=True`. Needs **your** transistor layout + a device library in `pdk.py`. The transistor GDS is yours and confidential. |
 
+## Layout history and skill refinement
+
+For Vestigraph / HIST, saved versions and reusable skills, see
+[vestigraph.md](vestigraph.md). Start with `klink.find_tools domain=vestigraph`
+and `vestigraph.guide {}`. This optional workflow needs no `pdk.py` scaffold.
+
 ## Geometry tiers
 
 - **Self-contained** — generated entirely from `pdk.py` + code. Ships and runs.

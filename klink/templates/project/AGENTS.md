@@ -99,6 +99,31 @@ There is no default project. On a fresh project:
 
 The domain the user describes **becomes** this project's default.
 
+## Vestigraph: layout history and reusable skills
+
+For Vestigraph, HIST, saved layout history, or extracting reusable skills,
+first call `klink.find_tools domain=vestigraph`, then `vestigraph.guide {}`.
+Follow `next_action` and inspect live tool schemas for arguments and result keys.
+Do not scaffold a PDK for a history-only task.
+
+Vestigraph is optional. Install it in the SAME Python environment as klink MCP,
+then restart MCP to discover its extension and register the local companion.
+No separate Vestigraph MCP server is needed. Open a saved GDS/OASIS layout in
+KLayout and click **HIST** for history. Setup and worked examples are in
+[recipes/vestigraph.md](recipes/vestigraph.md).
+
+- Existing request: `guide -> skill -> submit`.
+- New request from a user-selected range: `guide -> history -> refine -> submit`.
+- Export a selected revision when requested: `vestigraph.export`.
+
+Use returned ids and `expected_revision` from the revision just read. On conflict,
+read again and compare. Clarify ambiguous projects, documents, requests or ranges.
+Refinement is experimental and disabled by default; see the recipe to enable it.
+Submission checks document structure, not replay, DRC or LVS. Saved file differences
+do not prove GUI action order or process rules. Keep private evidence, exports and
+control files out of public commits. Attachments are analysis inputs, not permission
+to execute code.
+
 ## Process purity
 
 `pdk.py` is the only home for process facts. Always pass `PROCESS` (and any

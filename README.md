@@ -407,11 +407,19 @@ This installs or updates:
 CLAUDE.md
 ```
 
-Register the MCP server with Claude Code:
+Register the MCP server with your agent explicitly. Installing the Python package does not register an MCP server with Claude Code, Claude Desktop, Codex, or another client. Each client has its own configuration. The helper prints the command for the interpreter that owns your klink installation:
 
 ```powershell
-claude mcp add klayout -- python -m klink.mcp --profile read,write,verify,escape --session-id project-klink
+klink-mcp --register
 ```
+
+For Claude Code, run the printed command from a terminal (not the `/mcp` chat command). The general form is:
+
+```powershell
+claude mcp add klayout -- <klink-python> -m klink.mcp --profile read,write,verify,escape --session-id project-klink
+```
+
+Restart the client after registration. If the wrapper is unavailable, invoke `klink.mcp` with the same Python that has the package; `python -m klink` is not the MCP entry point.
 
 Common profiles:
 
