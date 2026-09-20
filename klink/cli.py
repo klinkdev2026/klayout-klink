@@ -145,7 +145,7 @@ def init(target: str) -> int:
     if gi.exists():
         gi.rename(dst / ".gitignore")
     # Empty working dirs are not carried as package data; create them here.
-    for sub in ("custom_devices", "specs", "out"):
+    for sub in ("custom_devices", "runs", "specs", "out"):
         (dst / sub).mkdir(exist_ok=True)
 
     print(f"Created klink project in {dst}")
@@ -161,7 +161,7 @@ def update(target: str, *, dry_run: bool = False) -> int:
     """Refresh a project's bundled ``example_template/`` from the installed
     package. This is the copy-and-adapt reference set (the starter demos); it is
     package-owned, so it is safe to overwrite. Everything YOU own -- ``pdk.py``,
-    ``custom_devices/``, ``.klink/`` (session + net tables), ``out/``, ``specs/``
+    ``custom_devices/``, ``runs/``, ``.klink/`` (session + net tables), ``out/``, ``specs/``
     -- is never touched. Use this after upgrading klink so a `klink init` project
     picks up new/fixed starters without a destructive re-init."""
     dst = Path(target).resolve()
@@ -236,7 +236,7 @@ def update(target: str, *, dry_run: bool = False) -> int:
         print("note: 'updated' files are overwritten with the packaged "
               "version. If you edited one of them in place, copy it into "
               "custom_devices/ first (use --dry-run to preview).")
-    print("Left untouched: pdk.py, custom_devices/, .klink/, out/, specs/ (your files).")
+    print("Left untouched: pdk.py, custom_devices/, runs/, .klink/, out/, specs/ (your files).")
     return 0
 
 
@@ -267,8 +267,8 @@ _RUN_PY_TEMPLATE = """\
 import sys
 from pathlib import Path
 
-# project root (two levels up: custom_devices/runs/<this>/)
-ROOT = Path(__file__).resolve().parents[3]
+# project root (two levels up: runs/<this>/)
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "custom_devices"))
 
@@ -311,7 +311,7 @@ def run_new(slug: str, *, project: str = ".") -> int:
         print("slug must contain some letters/digits, e.g. "
               "`klink run new my-first-task`")
         return 2
-    runs = cd / "runs"
+    runs = proj / "runs"
     runs.mkdir(exist_ok=True)
     today = datetime.date.today().isoformat()
     name = f"{today}_{slug}"

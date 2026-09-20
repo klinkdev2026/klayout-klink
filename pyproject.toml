@@ -63,6 +63,7 @@ klink-mcp = "klink.mcp.__main__:main"
 klink = [
     "templates/project/*",
     "templates/project/custom_devices/**/*",
+    "templates/project/runs/*",
     "templates/project/example_template/**/*",
     "templates/project/recipes/*",
     "mcp/skills/klayout/*",

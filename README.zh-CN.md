@@ -232,7 +232,7 @@ agent 自己执行,项目自己的 agent 规则要求每个任务一开始就这
 klink run new pad-ring-v2
 ```
 
-这会生成一个带日期的 `custom_devices/runs/<日期>_<slug>/` 文件夹,里面放着
+这会生成一个带日期的 `runs/<日期>_<slug>/` 文件夹,里面放着
 `run.py` driver stub(已经 import 了 `pdk` 和 `toolbox`)、装这个任务产物的
 `out/` 目录,以及一份 `notes.md` 模板(需求 / 做了什么 / 验证证据)——driver、
 产物、笔记放在一起。文件夹创建的一刻就在 `runs/INDEX.md` 台账里登记一行

@@ -1,22 +1,19 @@
 # custom_devices/
 
-Your code lives here — in TWO strata, because "my reusable tools" and
-"what I did last Tuesday" are different things and mixing them flat is
-how a project rots:
+Reusable code lives here. Task records live separately in `../runs/`
+at the project root, so generated scripts and artifacts are visible beside
+the other project-level working directories:
 
 ```
 custom_devices/
   toolbox/          your ASSETS: reusable, verified, importable tools
-    __init__.py     the index — keep its export list current
-  runs/             your LEDGER: one folder per task
-    INDEX.md        one line per run, newest on top
-    YYYY-MM-DD_example-array/
-      run.py        the driver for THIS task (imports toolbox + pdk)
-      out/          THIS task's artifacts (never a shared out/ pile)
-      notes.md      what was asked, what was done, VERIFICATION
-                    EVIDENCE (real LVS/geometry output, not vibes);
-                    if a recording was made, its replay script is
-                    copied in here too
+    __init__.py     the index ? keep its export list current
+runs/               your LEDGER, at the project root
+  INDEX.md          one line per run, newest on top
+  YYYY-MM-DD_example-array/
+    run.py          the driver for THIS task (imports toolbox + pdk)
+    out/            THIS task's artifacts
+    notes.md        request, work, and real verification evidence
 ```
 
 Rules that keep it tidy (the agent follows these; so should you):
@@ -36,8 +33,8 @@ Rules that keep it tidy (the agent follows these; so should you):
 4. **Commit per run.** The git history is the one record that never
    rots.
 
-A quick throwaway probe may sit flat in `custom_devices/` — but the
-moment it produces an artifact worth keeping, it was a run.
+A quick throwaway probe may sit flat in `custom_devices/`, but any task that
+produces an artifact worth keeping belongs in the project-root `runs/` ledger.
 
 Every build script, wherever it lives:
 

@@ -262,7 +262,7 @@ for it at the start of every task:
 klink run new pad-ring-v2
 ```
 
-This creates a dated `custom_devices/runs/<date>_<slug>/` folder holding a
+This creates a dated `runs/<date>_<slug>/` folder holding a
 `run.py` driver stub (already importing `pdk` and `toolbox`), an `out/` folder
 for that task's artifacts, and a `notes.md` template (request / what was done /
 verification evidence) — driver, output, and notes travel together. The folder

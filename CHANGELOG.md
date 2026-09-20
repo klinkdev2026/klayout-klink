@@ -1,5 +1,10 @@
 ﻿# Changelog
 
+## 0.6.3
+
+- Create task run folders at the `klink init` project root as `runs/<run>/`, beside `custom_devices/`, instead of nesting generated scripts and artifacts under `custom_devices/runs/`.
+- Generate run drivers with the corrected project-root lookup and keep root-level `runs/` untouched during `klink update`.
+
 ## 0.6.2
 
 - Update `klink init` project guidance for Vestigraph checkpoint grouping, pending manual-edit capture, 30-item default history, and explicit additive restore.

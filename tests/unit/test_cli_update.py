@@ -1,6 +1,6 @@
 """`klink update` refreshes the project's example_template/ from the installed
 package WITHOUT touching anything the user owns (pdk.py, custom_devices/,
-.klink/, out/, specs/). This is the non-destructive alternative to re-running
+runs/, .klink/, out/, specs/). This is the non-destructive alternative to re-running
 `klink init` (which refuses a non-empty dir)."""
 from klink.cli import _template_dir, init, update
 
@@ -14,6 +14,7 @@ def test_update_refreshes_example_template_only(tmp_path):
     (proj / ".klink").mkdir(exist_ok=True)
     (proj / ".klink" / "net.json").write_text("USER NET TABLE\n")
     (proj / "custom_devices" / "d.py").write_text("USER DEVICE\n")
+    (proj / "runs" / "KEEP.md").write_text("USER RUN\n")
 
     # a starter the user (or a stale install) left out of date, plus a starter
     # the package no longer ships. Starters live in category subfolders now.
@@ -32,6 +33,7 @@ def test_update_refreshes_example_template_only(tmp_path):
     assert (proj / "pdk.py").read_text() == "USER PDK\n"               # untouched
     assert (proj / ".klink" / "net.json").read_text() == "USER NET TABLE\n"
     assert (proj / "custom_devices" / "d.py").read_text() == "USER DEVICE\n"
+    assert (proj / "runs" / "KEEP.md").read_text() == "USER RUN\n"
 
 
 def test_update_rejects_a_non_project_dir(tmp_path):
@@ -51,7 +53,7 @@ def test_init_lays_the_two_strata_skeleton(tmp_path):
     proj = tmp_path / "proj"
     assert main(["init", str(proj)]) == 0
     toolbox = proj / "custom_devices" / "toolbox" / "__init__.py"
-    index = proj / "custom_devices" / "runs" / "INDEX.md"
+    index = proj / "runs" / "INDEX.md"
     assert toolbox.exists() and "Graduation" in toolbox.read_text(
         encoding="utf-8")
     assert index.exists() and "one line per run" in index.read_text(
@@ -75,7 +77,8 @@ def test_run_new_creates_dated_folder_and_ledger_line(tmp_path):
     assert main(["init", str(proj)]) == 0
     assert main(["run", "new", "My Array!!", "--project", str(proj)]) == 0
     assert main(["run", "new", "other-task", "--project", str(proj)]) == 0
-    runs = proj / "custom_devices" / "runs"
+    runs = proj / "runs"
+    assert not (proj / "custom_devices" / "runs").exists()
     dirs = sorted(d.name for d in runs.iterdir() if d.is_dir())
     import datetime
     today = datetime.date.today().isoformat()
@@ -83,6 +86,9 @@ def test_run_new_creates_dated_folder_and_ledger_line(tmp_path):
     assert dirs[1] == f"{today}_other-task"
     rd = runs / dirs[1]
     assert (rd / "run.py").exists() and (rd / "out").is_dir()
+    run_text = (rd / "run.py").read_text(encoding="utf-8")
+    assert "parents[2]" in run_text
+    assert "parents[3]" not in run_text
     assert "Verification evidence" in (rd / "notes.md").read_text(
         encoding="utf-8")
     index = (runs / "INDEX.md").read_text(encoding="utf-8")

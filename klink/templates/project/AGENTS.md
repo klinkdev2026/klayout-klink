@@ -12,12 +12,13 @@ You may create and edit only:
 - `pdk.py` — the process (layers, vias, dimensions) + the device library
   (`DEVICES`/`LIBRARY`) and the sizing CHOICE (`SIZING`) for P&R. Sizing is a
   design decision YOU specify here (klink ships the mechanism, never the choice).
-- `custom_devices/` — code you write, in TWO strata (see its README):
-  - `toolbox/` — reusable, verified tools (a real package;
-    `__init__.py` is the index — read it BEFORE writing a generator,
-    the tool may already exist);
-  - `runs/<date>_<slug>/` — one folder per task holding its `run.py`,
-    its `out/` artifacts, and its `notes.md` record TOGETHER.
+- `custom_devices/` ? reusable code you write:
+  - `toolbox/` contains verified, importable tools (a real package;
+    `__init__.py` is the index ? read it BEFORE writing a generator,
+    the tool may already exist).
+- `runs/<date>_<slug>/` ? one folder per task at the PROJECT ROOT,
+  beside `custom_devices/`, holding its `run.py`, `out/` artifacts,
+  and `notes.md` record together.
 - `specs/` — `.klink` specs
 - `out/` — generated artifacts (legacy shared pile; prefer the
   current run's own `out/`)
