@@ -76,6 +76,13 @@ class ToolRegistry:
             "description": spec.get("description", ""),
             "inputSchema": spec.get("params", {"type": "object"}),
         }
+        if spec.get("mutates"):
+            from copy import deepcopy
+            tool["inputSchema"] = deepcopy(tool["inputSchema"])
+            tool["inputSchema"].setdefault("properties", {})["_reason"] = {
+                "type": "string", "maxLength": 240,
+                "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content.",
+            }
         return tool
 
     # ------------------------------------------------------------------

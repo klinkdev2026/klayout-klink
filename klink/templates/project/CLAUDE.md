@@ -22,6 +22,9 @@ and examples, and the Vestigraph section in [AGENTS.md](AGENTS.md) for rules.
 Install the optional package in klink MCP's Python environment and restart MCP;
 no separate MCP server is needed. Existing requests use `skill -> submit`;
 new requests use `history -> refine -> submit`. Refinement is off by default.
+Call `vestigraph.restore` only after the user selects one checkpoint, using
+`guide -> history -> restore -> history`; it appends history instead of deleting
+later versions.
 
 ## Tanner L-Edit workflow
 

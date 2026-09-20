@@ -103,6 +103,9 @@ class KLinkClient:
         if not self._running:
             raise KLinkTransportError("client not connected; call connect() first")
 
+        guard = getattr(self, "_before_call", None)
+        if guard is not None:
+            guard(method, params or {})
         req_id = next(self._id_counter)
         q: queue.Queue = queue.Queue(maxsize=1)
         with self._pending_lock:

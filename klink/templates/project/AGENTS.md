@@ -115,6 +115,10 @@ KLayout and click **HIST** for history. Setup and worked examples are in
 - Existing request: `guide -> skill -> submit`.
 - New request from a user-selected range: `guide -> history -> refine -> submit`.
 - Export a selected revision when requested: `vestigraph.export`.
+- Restore only after the user explicitly selects a checkpoint:
+  `vestigraph.guide -> vestigraph.history -> vestigraph.restore -> vestigraph.history`.
+  Restore appends a new checkpoint,
+  preserves all existing history, and checkpoints pending manual edits first.
 
 Use returned ids and `expected_revision` from the revision just read. On conflict,
 read again and compare. Clarify ambiguous projects, documents, requests or ranges.

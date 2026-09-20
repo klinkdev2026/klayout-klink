@@ -1,5 +1,10 @@
 ﻿# Changelog
 
+## 0.6.2
+
+- Update `klink init` project guidance for Vestigraph checkpoint grouping, pending manual-edit capture, 30-item default history, and explicit additive restore.
+- Add a worked `vestigraph.restore` flow to generated Agent and Claude instructions while preserving the requirement that the user selects the checkpoint.
+
 ## 0.6.1
 
 - Align the MCP/plugin version reported by the live KLayout server with the 0.6.1 release.

@@ -161,3 +161,17 @@ def events_unsubscribe(params, ctx):
     else:
         raise RpcError(ErrorCode.BAD_PARAMS, "channels must be a list or '*'")
     return {"active": sorted(conn.subscriptions)}
+
+
+@method(
+    "events.flush",
+    description="Drain pending editor change notifications before an external pre-edit checkpoint. Does not modify geometry.",
+    params_schema={"type": "object", "properties": {}},
+    returns_schema={"type": "object", "properties": {"flushed": {"type": "boolean"}}},
+    tags=["events", "read"],
+)
+def events_flush(params, ctx):
+    hub = getattr(_broadcaster(ctx), "signals", None)
+    if hub is not None:
+        hub._run_pending_diff()
+    return {"flushed": True}

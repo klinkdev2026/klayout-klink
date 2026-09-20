@@ -56,6 +56,16 @@ def test_init_lays_the_two_strata_skeleton(tmp_path):
         encoding="utf-8")
     assert index.exists() and "one line per run" in index.read_text(
         encoding="utf-8").lower()
+    agent_rules = (proj / "AGENTS.md").read_text(encoding="utf-8")
+    claude_rules = (proj / "CLAUDE.md").read_text(encoding="utf-8")
+    history_recipe = (proj / "recipes" / "vestigraph.md").read_text(
+        encoding="utf-8")
+    assert all("vestigraph.restore" in text for text in (
+        agent_rules, claude_rules, history_recipe))
+    assert "do not invent a restore MCP tool" not in history_recipe
+    assert "30 most recent" in history_recipe
+    assert "pending manual edits" in " ".join(history_recipe.split())
+    assert "preserves all existing history" in " ".join(agent_rules.split())
 
 
 def test_run_new_creates_dated_folder_and_ledger_line(tmp_path):

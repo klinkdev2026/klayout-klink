@@ -59,3 +59,4 @@ recipe 只搭好**代码**;运行时你指向自己的文件。开源 PDK 可以
 HIST、版本历史和技能提炼的用法和例子见
 [recipes/vestigraph.md](recipes/vestigraph.md)。Agent 先调用
 `klink.find_tools domain=vestigraph`，再调用 `vestigraph.guide {}`。
+历史默认返回最近 30 条检查点摘要，只在用户明确要求时读取全部。AI 写入前会先把待处理的手动修改保存为检查点。用户选定版本后可用 `vestigraph.restore` 恢复；恢复会追加新检查点并保留全部历史。

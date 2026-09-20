@@ -1136,10 +1136,17 @@ class SignalHub:
 
         self._bump("diff_runs")
         t0 = time.perf_counter()
+        previous_manual = getattr(self, "_diff_manual_changes", False)
+        live = _capture_cause()
+        completing_rpc = bool(live and live.get("method") != "events.flush")
+        self._diff_manual_changes = (not completing_rpc
+                                     and any(not entry.get("cause") for entry in entries))
         try:
             self._do_full_diff(source=src, caused_by=caused_by or None)
         except Exception as e:
             print(f"[klink] debounced diff error: {e}")
+        finally:
+            self._diff_manual_changes = previous_manual
         self._last_diff_ms = (time.perf_counter() - t0) * 1000.0
 
     # ------------------------------------------------------------------
@@ -1625,6 +1632,8 @@ class SignalHub:
             live = _capture_cause()
             if live is not None:
                 caused_by = [live]
+        if getattr(self, "_diff_manual_changes", False):
+            data = dict(data, manual_changes=True)
         if caused_by:
             # Never mutate the caller's dict; copy to local.
             data = dict(data)

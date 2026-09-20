@@ -69,3 +69,4 @@ don't belong in version control.
 For HIST, saved layout versions and skill refinement, see
 [recipes/vestigraph.md](recipes/vestigraph.md). The agent starts with
 `klink.find_tools domain=vestigraph`, then `vestigraph.guide {}`.
+History returns 30 recent checkpoint summaries by default and reads all only on an explicit user request. Pending manual edits are checkpointed before AI writes. A user-selected version can be restored with `vestigraph.restore`; restore appends a new checkpoint and preserves the complete history.

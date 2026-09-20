@@ -52,3 +52,8 @@ For companion startup, KLayout must inherit this environment. For a custom servi
 History, frozen evidence, drafts, revisions and exports stay in user storage. Private skills are not shipped in either product. The adapter uses authenticated loopback HTTP and does not upload, execute or install skills. The user's agent client determines how returned information is handled.
 
 Submission checks document structure only. Author statements are separate from platform checks. Saved-file differences do not prove GUI action order, replay, DRC/LVS or process intent. On a revision conflict, read the latest skill before changing it.
+## Checkpoints and restore
+
+One continuous AI drawing operation becomes one checkpoint. Pending manual changes are checkpointed before AI writes. `vestigraph.history` returns 30 recent summaries by default and reads all only after an explicit user request.
+
+After the user selects a checkpoint, call `vestigraph.restore` with the active saved document/session and a short reason. Restore replaces the working file and reloads it, then appends a new checkpoint with restore provenance. It never deletes earlier or later checkpoints.

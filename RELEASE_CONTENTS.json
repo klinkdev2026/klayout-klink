@@ -25,7 +25,7 @@
   },
   {
     "path": "CHANGELOG.md",
-    "sha256": "38e710aec5f136cbd13b62c811f08cd85e89402686933edf284e12e82dca597a"
+    "sha256": "35d706812faad6b2482dfbad4d0ec2aa45cee57fcf591559756eca51bd5eef69"
   },
   {
     "path": "CLAUDE.md",
@@ -153,11 +153,11 @@
   },
   {
     "path": "docs/public/VESTIGRAPH.md",
-    "sha256": "912f9829d5da0029336bbb7f1ab693c9cc4c938b582ba72f8a987e2cc68c60a9"
+    "sha256": "520de7e6f9be28ae357b328bab62cd78de6a4514c0af72578f53617803924310"
   },
   {
     "path": "docs/public/VESTIGRAPH.zh-CN.md",
-    "sha256": "ec884cfdf6ea25b7ffe5cacd81aad81ef3d8c9c81e0e1a5e55aaedafbb54bb2e"
+    "sha256": "1ce005c00f0a2bfd3d919cc5151820cf70eb608c87484b0014c9150fd410990d"
   },
   {
     "path": "examples_klink/public/demos/digital/_multilayer_engine.py",
@@ -457,7 +457,7 @@
   },
   {
     "path": "klink/_meta.py",
-    "sha256": "caf1a8383505c02a24b52c752bbdc5d4b58785980d6cac7b888b0e416decbebb"
+    "sha256": "f7bd51edced4448479021f4f503a651a0c73a6d670faf10eeed8fbe1a415fdad"
   },
   {
     "path": "klink/anchor/__init__.py",
@@ -509,7 +509,7 @@
   },
   {
     "path": "klink/client.py",
-    "sha256": "7ca03433e9d3c51e5d2eb3d6fed72dd292e774897b6e467bc835f6144e3c40ad"
+    "sha256": "603801dbf6455179aebfb535610a83484429f83dabb4f2e6829c89f8adfc01e0"
   },
   {
     "path": "klink/doctor.py",
@@ -861,7 +861,7 @@
   },
   {
     "path": "klink/mcp/connection.py",
-    "sha256": "b703a142b81d80119c23755654c7c776e81e6f96d4a0eb19e07d35162c6e9367"
+    "sha256": "130b8e569f485d321f389480357584d538de0b12d115382cfe402a0598fd29f1"
   },
   {
     "path": "klink/mcp/diagnostics.py",
@@ -870,6 +870,10 @@
   {
     "path": "klink/mcp/guide.py",
     "sha256": "4b60b7e882a29f12bae976d7a37341017195ecaece095be61f98b0153e8ea6f6"
+  },
+  {
+    "path": "klink/mcp/history_guard.py",
+    "sha256": "7286406022ea3ddda9a63ac4ff4ad9227bab148ade3d63fc05fea202dd32615a"
   },
   {
     "path": "klink/mcp/interaction_context.py",
@@ -933,7 +937,7 @@
   },
   {
     "path": "klink/mcp/registry.py",
-    "sha256": "02779a56e1ac54884cd3f95fa92c296ca7538550ae5e68bb006509efc772b6e0"
+    "sha256": "88b0f6487be2fa5697b8763d9a14610b906c5178711ed5d9dd5e8034e7639943"
   },
   {
     "path": "klink/mcp/results.py",
@@ -945,7 +949,7 @@
   },
   {
     "path": "klink/mcp/session.py",
-    "sha256": "401743d2bcc7244ab3e9ea82b3dc398421c8a477faa5470e076d22f2274bbd80"
+    "sha256": "a5d35e1afa4796c46bde86097a943a0a6d7784a982ecc5872912a2cbe83960b6"
   },
   {
     "path": "klink/mcp/session_registry.py",
@@ -961,7 +965,7 @@
   },
   {
     "path": "klink/plugin_payload/klink_plugin/grain.xml",
-    "sha256": "8089a4abdcffe0fb6c2ac5a8644692c699154debe2ddf38b99d571fca331836f"
+    "sha256": "53d64fca4b58bd02f446c98b73c523ac20722fcfa5807f18cb7809746c37144d"
   },
   {
     "path": "klink/plugin_payload/klink_plugin/pymacros/klink.lym",
@@ -993,7 +997,7 @@
   },
   {
     "path": "klink/plugin_payload/klink_plugin/python/klink_server/dispatcher.py",
-    "sha256": "b637e0f834ad4fdd6e7bcd45984393e8e9fd99bdb17d4bc240f20f85350aa65a"
+    "sha256": "fb85f53ffe4f9669b127ac4a0f0ab5846f420d9885a91485e3b99d5c835e7aab"
   },
   {
     "path": "klink/plugin_payload/klink_plugin/python/klink_server/errors.py",
@@ -1001,7 +1005,7 @@
   },
   {
     "path": "klink/plugin_payload/klink_plugin/python/klink_server/events.py",
-    "sha256": "913c0aeb3b9d2d5715500f0b763a7d3ab5b4cda00a5db7987d730ac0a201c9bd"
+    "sha256": "91fb79c4cedac15991eccad7dda8940b8ef18537b0bb9ecf2d75f5fa78209e22"
   },
   {
     "path": "klink/plugin_payload/klink_plugin/python/klink_server/klive_compat.py",
@@ -1049,7 +1053,7 @@
   },
   {
     "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/events_m.py",
-    "sha256": "d2c9f0f37a7cd7c1aab5833c71803fba3cb594fa23d3c93c85c1e802c2faf40b"
+    "sha256": "a66eedb82810f722e3f0715918b2bb6ecfa0e361e79e2e4d65a5a0e0102a7166"
   },
   {
     "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/exec_m.py",
@@ -1097,7 +1101,7 @@
   },
   {
     "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/meta_m.py",
-    "sha256": "7ee55fd744c03154ef3fa8aca0cb77442d901b4e457a4f66d57e3aaf0172f489"
+    "sha256": "9823727fa98601c7cde75c04db43fbc006c411702612bd625de8971250b162ae"
   },
   {
     "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/modify_m.py",
@@ -1181,7 +1185,7 @@
   },
   {
     "path": "klink/plugin_payload/klink_plugin/python/klink_server/signals.py",
-    "sha256": "10aa48c4dce31a395f3b31708166ada838719ef1ca936e2ba8cd7704664a7756"
+    "sha256": "cc2ea81eb87afc07d02010266cdad4b9bad91263afcdd4f4e2423039ba076465"
   },
   {
     "path": "klink/plugin_payload/klink_plugin/python/klink_server/structdevice_pcell.py",
@@ -1505,11 +1509,11 @@
   },
   {
     "path": "klink/templates/project/AGENTS.md",
-    "sha256": "64946e79304443f5a45e0ec9cbc7ec08864f613f0789da15940fe8ee33977f8b"
+    "sha256": "f14fb87b81cdbd50cca54a41d2a717ed54ff1c8de1380c5528e4bd4a0731c340"
   },
   {
     "path": "klink/templates/project/CLAUDE.md",
-    "sha256": "a39557b8a08096389afd8e1890eee115f64573b4f555b1807a7aeed84e7d3e35"
+    "sha256": "b9ac35c762f5616507a147e5afa7ca19dba8482c2bea401592dae6d4e89dd3be"
   },
   {
     "path": "klink/templates/project/custom_devices/digital_pnr_lvs.py",
@@ -1697,11 +1701,11 @@
   },
   {
     "path": "klink/templates/project/README.md",
-    "sha256": "08648b001aab1235fef619b53ce61cf50e2b63039c3eaaf6bc28c810709d2d75"
+    "sha256": "db61419b00b334f67ab1118721d0ac9413e122d22cc2b70b776b082375c233e8"
   },
   {
     "path": "klink/templates/project/README.zh-CN.md",
-    "sha256": "3101f826479c186758f378928e441a386207a74cded85fb39ac4da33097a033a"
+    "sha256": "dc94798a4bedae75362ae9aae712947b936ce93145a80a129839890080a3d730"
   },
   {
     "path": "klink/templates/project/recipes/README.md",
@@ -1709,7 +1713,7 @@
   },
   {
     "path": "klink/templates/project/recipes/vestigraph.md",
-    "sha256": "5d36483d9d81722fa25a2321b45d764ffe90610571d4ec8269c99500f74effcd"
+    "sha256": "caa3b2760a570f7d63ddef312601f91b2979b7af4c85e2980fa94c7722dea5e1"
   },
   {
     "path": "klink/transfer.py",
@@ -1725,7 +1729,7 @@
   },
   {
     "path": "klink_plugin/grain.xml",
-    "sha256": "8089a4abdcffe0fb6c2ac5a8644692c699154debe2ddf38b99d571fca331836f"
+    "sha256": "53d64fca4b58bd02f446c98b73c523ac20722fcfa5807f18cb7809746c37144d"
   },
   {
     "path": "klink_plugin/pymacros/klink.lym",
@@ -1757,7 +1761,7 @@
   },
   {
     "path": "klink_plugin/python/klink_server/dispatcher.py",
-    "sha256": "b637e0f834ad4fdd6e7bcd45984393e8e9fd99bdb17d4bc240f20f85350aa65a"
+    "sha256": "fb85f53ffe4f9669b127ac4a0f0ab5846f420d9885a91485e3b99d5c835e7aab"
   },
   {
     "path": "klink_plugin/python/klink_server/errors.py",
@@ -1765,7 +1769,7 @@
   },
   {
     "path": "klink_plugin/python/klink_server/events.py",
-    "sha256": "913c0aeb3b9d2d5715500f0b763a7d3ab5b4cda00a5db7987d730ac0a201c9bd"
+    "sha256": "91fb79c4cedac15991eccad7dda8940b8ef18537b0bb9ecf2d75f5fa78209e22"
   },
   {
     "path": "klink_plugin/python/klink_server/klive_compat.py",
@@ -1813,7 +1817,7 @@
   },
   {
     "path": "klink_plugin/python/klink_server/methods/events_m.py",
-    "sha256": "d2c9f0f37a7cd7c1aab5833c71803fba3cb594fa23d3c93c85c1e802c2faf40b"
+    "sha256": "a66eedb82810f722e3f0715918b2bb6ecfa0e361e79e2e4d65a5a0e0102a7166"
   },
   {
     "path": "klink_plugin/python/klink_server/methods/exec_m.py",
@@ -1861,7 +1865,7 @@
   },
   {
     "path": "klink_plugin/python/klink_server/methods/meta_m.py",
-    "sha256": "7ee55fd744c03154ef3fa8aca0cb77442d901b4e457a4f66d57e3aaf0172f489"
+    "sha256": "9823727fa98601c7cde75c04db43fbc006c411702612bd625de8971250b162ae"
   },
   {
     "path": "klink_plugin/python/klink_server/methods/modify_m.py",
@@ -1945,7 +1949,7 @@
   },
   {
     "path": "klink_plugin/python/klink_server/signals.py",
-    "sha256": "10aa48c4dce31a395f3b31708166ada838719ef1ca936e2ba8cd7704664a7756"
+    "sha256": "cc2ea81eb87afc07d02010266cdad4b9bad91263afcdd4f4e2423039ba076465"
   },
   {
     "path": "klink_plugin/python/klink_server/structdevice_pcell.py",
@@ -1989,7 +1993,7 @@
   },
   {
     "path": "rust/klink_boxmaze/pyproject.toml",
-    "sha256": "e67a2aa6aa5139538ebaed2dc4451b036c4361333847cdab665e06e176fd1721"
+    "sha256": "b49ea3218c32378097b1ad1b3fcbfd4e90fc95335c283f67051d005a7e00d00d"
   },
   {
     "path": "rust/klink_boxmaze/README.md",
@@ -2013,7 +2017,7 @@
   },
   {
     "path": "rust/klink_trackmaze/pyproject.toml",
-    "sha256": "703b9259e5fcd046357c02eafe6d70074f799bb98ff496806cbff51067487100"
+    "sha256": "98e1361c698a5c9fc2d8e81ef1ef6de5990c667a09b5c0d4bcd75e14749c31ff"
   },
   {
     "path": "rust/klink_trackmaze/src/lib.rs",
@@ -2029,15 +2033,15 @@
   },
   {
     "path": "tests/fixtures/mcp/regen_snapshot.py",
-    "sha256": "b1a579e93fb537c364ea08131ef1b0d0a066b3924b6ccf2631166cb6a476cc66"
+    "sha256": "cdeadaa4e47a5d6f18cd1e93af786343a788e5385bcfa945f11470c109b808b0"
   },
   {
     "path": "tests/fixtures/mcp/tools_snapshot_all.json",
-    "sha256": "3402a2b69d4fa3dff0a08213968cc3ebf2c963a20aba904d2b51705a962786d8"
+    "sha256": "a2c2cb5e036037dbe7aa3f592b06064043bf146c316859b5c102c31b5575779c"
   },
   {
     "path": "tests/fixtures/mcp/tools_snapshot_default.json",
-    "sha256": "48f7fea360f57af78d0f05642d2447a7e9e49a5e9519b5d2fe02eaafbf16831d"
+    "sha256": "cbb200e6ed0555bec9a12e8d3eb965636ce65cecf7114f25f1e82670a6578af6"
   },
   {
     "path": "tests/public/synth_pdk.py",
@@ -2173,7 +2177,7 @@
   },
   {
     "path": "tests/unit/test_cli_update.py",
-    "sha256": "3e8cb707390313ad986c21410b519592c4f399141ce09ac1b010c9e43d73ab56"
+    "sha256": "d64caa254e466a89cfa9d7f208d08fca59a0c195489418d9ab9ecd455e838a6d"
   },
   {
     "path": "tests/unit/test_client_disconnect.py",
@@ -2338,6 +2342,10 @@
   {
     "path": "tests/unit/test_mcp_guide.py",
     "sha256": "5bedcff513d09f443ce39014c7f9c03016dc1ba4c3625b57ab020b741ba72409"
+  },
+  {
+    "path": "tests/unit/test_mcp_history_guard.py",
+    "sha256": "7b10408f09058bc5410db14d4b280b778ed557f0bc3981add44019b0b0796b6b"
   },
   {
     "path": "tests/unit/test_mcp_lifecycle.py",

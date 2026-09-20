@@ -118,6 +118,11 @@
           "technology": {
             "type": "string",
             "description": "KLayout technology name to apply to the loaded layout"
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         },
         "required": [
@@ -139,6 +144,11 @@
             "type": "integer",
             "default": 0,
             "description": "Which cellview to save (0 = active)."
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         },
         "required": [
@@ -156,6 +166,11 @@
             "type": "integer",
             "default": 0,
             "description": "Which cellview to clear (0 = active)."
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -204,6 +219,11 @@
               "skip"
             ],
             "default": "rename"
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         },
         "additionalProperties": false
@@ -241,6 +261,11 @@
           "cellview_index": {
             "type": "integer",
             "default": 0
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -310,6 +335,11 @@
           "name": {
             "type": "string",
             "description": "Desired cell name."
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -330,6 +360,11 @@
             "type": "boolean",
             "default": false,
             "description": "If true, also delete cells that become orphaned."
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -353,6 +388,11 @@
           "allow_suffix": {
             "type": "boolean",
             "default": false
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -385,6 +425,11 @@
           "name": {
             "type": "string",
             "description": "Optional display name shown in the layer panel."
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -506,6 +551,11 @@
           "library": {
             "type": "string",
             "description": "Library name; omit to refresh all libraries."
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         },
         "additionalProperties": false
@@ -534,6 +584,11 @@
           },
           "description": {
             "type": "string"
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         },
         "additionalProperties": false
@@ -639,6 +694,11 @@
             "type": "array",
             "minItems": 2,
             "maxItems": 2
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         },
         "additionalProperties": false
@@ -694,6 +754,11 @@
               "cell": {},
               "layer": {}
             }
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         },
         "additionalProperties": false
@@ -788,6 +853,11 @@
             "minimum": 1,
             "maximum": 20000,
             "default": 5000
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         },
         "additionalProperties": false
@@ -817,6 +887,11 @@
             "type": "array",
             "minItems": 4,
             "maxItems": 4
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         },
         "additionalProperties": false
@@ -852,6 +927,11 @@
           },
           "mirror": {
             "type": "boolean"
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         },
         "additionalProperties": false
@@ -880,6 +960,11 @@
           "dry_run": {
             "type": "boolean",
             "default": false
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         },
         "additionalProperties": false
@@ -900,6 +985,11 @@
           "prune_variant": {
             "type": "boolean",
             "default": true
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         },
         "additionalProperties": false
@@ -981,6 +1071,11 @@
             "type": "array",
             "minItems": 4,
             "maxItems": 4
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -1028,6 +1123,11 @@
           "dry_run": {
             "type": "boolean",
             "default": false
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -1054,6 +1154,11 @@
           "dry_run": {
             "type": "boolean",
             "default": false
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -1087,6 +1192,11 @@
           },
           "points_dbu": {
             "type": "array"
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -1142,6 +1252,11 @@
           "round_ends": {
             "type": "boolean",
             "default": false
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -1189,6 +1304,11 @@
           },
           "size_dbu": {
             "type": "integer"
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -1254,6 +1374,11 @@
           "dry_run": {
             "type": "boolean",
             "default": false
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -1358,6 +1483,11 @@
                 "maxItems": 2
               }
             }
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -1425,6 +1555,11 @@
           "dry_run": {
             "type": "boolean",
             "default": false
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -1526,6 +1661,11 @@
                 "maxItems": 2
               }
             }
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -1589,6 +1729,11 @@
           "dry_run": {
             "type": "boolean",
             "default": false
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -1666,6 +1811,11 @@
           "dry_run": {
             "type": "boolean",
             "default": false
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -1749,7 +1899,14 @@
       "name": "selection.clear",
       "description": "Clear the current object selection in the active view.",
       "inputSchema": {
-        "type": "object"
+        "type": "object",
+        "properties": {
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
+          }
+        }
       }
     },
     {
@@ -1790,6 +1947,11 @@
             "minimum": 1,
             "maximum": 20000,
             "default": 5000
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -1817,14 +1979,28 @@
       "name": "edit.undo",
       "description": "Undo the most recent undoable operation (a klink mutating RPC, a Macro IDE edit, or a GUI edit). This is the programmatic equivalent of Edit > Undo. Returns before/after stack snapshots so callers can detect no-op undos. Non-undoable things (e.g. view zoom) are skipped automatically by KLayout.",
       "inputSchema": {
-        "type": "object"
+        "type": "object",
+        "properties": {
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
+          }
+        }
       }
     },
     {
       "name": "edit.redo",
       "description": "Redo the most recently undone operation. Pair with edit.undo. Returns before/after stack snapshots so callers can verify the stack actually advanced.",
       "inputSchema": {
-        "type": "object"
+        "type": "object",
+        "properties": {
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
+          }
+        }
       }
     },
     {
@@ -1860,6 +2036,11 @@
           "index": {
             "type": "integer",
             "minimum": 0
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -1911,7 +2092,14 @@
       "name": "view.zoom_fit",
       "description": "Fit the entire layout into the viewport (equivalent to GUI's 'Zoom Fit').",
       "inputSchema": {
-        "type": "object"
+        "type": "object",
+        "properties": {
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
+          }
+        }
       }
     },
     {
@@ -1931,6 +2119,11 @@
             "minItems": 4,
             "maxItems": 4,
             "description": "[x1,y1,x2,y2] in integer database units."
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -1957,6 +2150,11 @@
             "type": "number",
             "default": 0.001,
             "description": "Database unit of the new layout, in microns."
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -1976,6 +2174,11 @@
             "type": "integer",
             "minimum": 0,
             "description": "Maximum hierarchy level to draw."
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -2008,6 +2211,11 @@
           "view_index": {
             "type": "integer",
             "description": "0-based index of the view to close. Default: active view."
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -2218,6 +2426,11 @@
           "snap": {
             "type": "boolean",
             "description": "Snap to objects when moved."
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -2274,6 +2487,11 @@
           },
           "id": {
             "type": "integer"
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -2290,6 +2508,11 @@
           "category": {
             "type": "string",
             "description": "Delete every ruler carrying this tag (e.g. 'klink' for agent-drawn ones)."
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -2303,6 +2526,11 @@
           "confirm": {
             "type": "boolean",
             "default": false
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -2338,6 +2566,11 @@
             "type": "boolean",
             "default": false,
             "description": "Keep the zero-length ruler when the measurement finds nothing."
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -2483,6 +2716,11 @@
           "protect_cellview": {
             "type": "boolean",
             "description": "When true (default), snippets containing high-risk layout ownership operations detach the active cellview before execution and repair it afterward."
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -2491,7 +2729,14 @@
       "name": "exec.reset",
       "description": "Clear the per-connection Python namespace used by exec.python. Equivalent to calling exec.python with reset=true and no code. Useful when a client wants a fresh sandbox without running anything else.",
       "inputSchema": {
-        "type": "object"
+        "type": "object",
+        "properties": {
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
+          }
+        }
       }
     },
     {
@@ -2536,6 +2781,11 @@
           "stderr_limit": {
             "type": "integer",
             "description": "Max bytes of stderr. Default 65536."
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -2641,6 +2891,11 @@
           "layer": {
             "type": "string",
             "description": "'L/D', e.g. '999/99'"
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -2713,6 +2968,11 @@
           },
           "slide_edge": {
             "type": "string"
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -2842,6 +3102,11 @@
           "slide_edge": {
             "type": "string",
             "description": "Default slide_edge for items that omit it."
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -2892,6 +3157,11 @@
           "prefix": {
             "type": "string",
             "default": "P"
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -2948,6 +3218,11 @@
           },
           "layer": {
             "type": "string"
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -3013,6 +3288,11 @@
           },
           "layer": {
             "type": "string"
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -3032,6 +3312,11 @@
           },
           "name": {
             "type": "string"
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -3050,6 +3335,11 @@
           },
           "layer": {
             "type": "string"
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -3066,6 +3356,11 @@
           "layer": {
             "type": "string",
             "description": "'L/D', e.g. '999/1'"
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -3136,6 +3431,11 @@
           },
           "path_points": {
             "type": "string"
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -3185,6 +3485,11 @@
           "prefix": {
             "type": "string",
             "default": "A"
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -3246,6 +3551,11 @@
           },
           "path_points": {
             "type": "string"
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -3316,6 +3626,11 @@
           },
           "path_points": {
             "type": "string"
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -3335,6 +3650,11 @@
           },
           "id": {
             "type": "string"
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -3353,6 +3673,11 @@
           },
           "layer": {
             "type": "string"
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -3452,6 +3777,11 @@
           "keep_rulers": {
             "type": "boolean",
             "default": false
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -3530,6 +3860,11 @@
         "properties": {
           "name": {
             "type": "string"
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -3565,6 +3900,11 @@
                 "description": "Instance displacement of the copy to KEEP (region.list shows each copy's bbox; anchor = bbox lower-left)."
               }
             }
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -3581,6 +3921,11 @@
           "layer": {
             "type": "string",
             "description": "'L/D', e.g. '999/10'"
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -3604,6 +3949,11 @@
           },
           "expected_managed_digest": {
             "type": "string"
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -3715,6 +4065,11 @@
           },
           "plan_hash": {
             "type": "string"
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         }
       }
@@ -3732,6 +4087,11 @@
           "clear_after": {
             "type": "boolean",
             "default": true
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         },
         "additionalProperties": false
@@ -3756,6 +4116,11 @@
           "dry_run": {
             "type": "boolean",
             "default": false
+          },
+          "_reason": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Short explanation of this edit for local history. Do not include credentials or confidential source content."
           }
         },
         "additionalProperties": false

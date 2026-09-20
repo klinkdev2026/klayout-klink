@@ -44,6 +44,8 @@ class Connection:
             ctx._client.connect()
             cat = ctx._client.methods()["methods"]
             ctx._method_specs = {spec["name"]: spec for spec in cat}
+            from .history_guard import attach
+            attach(ctx, ctx._client)
             ctx._tools = filter_methods(cat, ctx._profiles)
             self.subscribe_interaction_events()
             self.subscribe_registered_session_events()

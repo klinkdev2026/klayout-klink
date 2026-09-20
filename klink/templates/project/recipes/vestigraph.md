@@ -33,7 +33,38 @@ separate MCP calls:
 Inspect the live schemas and follow `next_action`. Use returned project/document
 ids with `vestigraph.history` to query versions. Clarify which document the user
 means if there are multiple candidates. Old-version import and recovery are
-available in HIST; do not invent a restore MCP tool.
+available in HIST. Use the explicit `vestigraph.restore` tool only after the
+user selects a checkpoint.
+
+## AI editing and checkpoint summaries
+
+Save an unsaved editor document into this project before editing. The local
+history store retains snapshots; it does not write your working source file.
+With Klink 0.6.x and Vestigraph 0.2.2 or newer, Klink MCP waits for pending
+manual edits to be checkpointed before sending an AI mutation. Continuous AI
+edits are grouped after the configured idle window, rather than stored as a
+separate checkpoint for every inserted shape.
+Provide a short `_reason` for editor write tools when their live schema includes
+it; the checkpoint records that explanation. Do not include private source
+content or credentials in the reason.
+
+`vestigraph.history` normally returns the 30 most recent summaries, including
+manual checkpoints. Each summary includes its ID, title, source, save time and
+recorded explanation. A modification time is reported only when observed; it
+is not inferred from the save timestamp. Set `all: true` only when the user
+explicitly requests the complete checkpoint list. Use the local web panel for
+full event details and comparisons.
+
+## Example: restore a selected checkpoint
+
+Ask: "Restore checkpoint CHECKPOINT_ID and keep the rest of my history."
+
+1. Resolve the active saved document and KLayout session with `vestigraph.guide` and `vestigraph.history`.
+2. If the user has not named a checkpoint, show the recent summaries and ask them to select one. Do not choose on their behalf.
+3. Call `vestigraph.restore` with the selected document, checkpoint, active session, and a short user-approved reason.
+4. Read history again and report the new restore checkpoint. The selected content becomes current, while every earlier and later checkpoint remains available.
+
+Restore saves pending manual editor changes first, replaces the saved working file atomically, reloads the same path in KLayout, and appends a checkpoint carrying `restore_of`. It requires a saved live document; an unsaved layout must be saved into the project first.
 
 ## Example: draft a skill from an existing request
 

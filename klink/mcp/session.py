@@ -33,6 +33,10 @@ class SessionOps:
             default_call_timeout=self.ctx._call_timeout,
         )
         client.connect()
+        from .history_guard import attach
+        attach(self.ctx, client,
+               lambda: {spec["name"]: spec for spec in client.methods()["methods"]},
+               session_id=session_id)
         return client
 
     def session_labels(self) -> dict:

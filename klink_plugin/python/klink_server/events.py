@@ -30,6 +30,7 @@ VALID_CHANNELS = {
     "cells_changed",
     "instances_changed",
     "job_progress",
+    "job_started",
     "job_done",
 }
 

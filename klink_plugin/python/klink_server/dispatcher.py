@@ -106,9 +106,40 @@ class Dispatcher:
             "trace_id": ctx.trace_id,
             "conn_id": conn.conn_id,
         }
+        # Agents may provide a short, non-sensitive explanation without
+        # changing every tool schema. Never accept arbitrary argument dumps.
+        reason = params.get("_reason") or params.get("reason") or params.get("intent")
+        if isinstance(reason, str) and reason.strip():
+            cause["reason"] = reason.strip()[:240]
         _REQUEST_STACK.append(cause)
         try:
+            if spec.mutates and method not in ("layout.save_file",):
+                conn.events.emit("job_started", {
+                    "method": method,
+                    "request_id": req_id,
+                    "trace_id": ctx.trace_id,
+                    "caused_by": [cause],
+                })
             result = spec.handler(params, ctx)
+            # Close every successful mutating RPC with a durable boundary.
+            # Vestigraph uses this event to group a continuous AI edit burst,
+            # rather than waiting for its idle timer. The cause is deliberately
+            # limited to method/trace identifiers; arguments never enter history.
+            if spec.mutates and method not in ("layout.save_file",):
+                # Attribute the completed mutation while its RPC context is
+                # still alive. Later GUI notifications must not reclassify
+                # this same change as a new manual edit.
+                from .server import instance
+                hub = getattr(instance(), "signals", None)
+                if hub is not None:
+                    hub._schedule_diff(source="rpc_completed")
+                    hub._run_pending_diff()
+                conn.events.emit("job_done", {
+                    "method": method,
+                    "request_id": req_id,
+                    "trace_id": ctx.trace_id,
+                    "caused_by": [cause],
+                })
             conn.send(make_response_ok(req_id, result))
         except RpcError as e:
             conn.send(make_response_err(
