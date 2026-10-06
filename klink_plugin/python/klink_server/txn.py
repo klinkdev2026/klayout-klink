@@ -32,11 +32,22 @@ def auto_txn(view: pya.LayoutView, title: str):
     depth = _AUTO_DEPTH.get(vid, 0)
 
     own = depth == 0
+    txn_open = False
     if own:
+        # Undo transactions require an editable view. In viewer mode
+        # `Shapes.insert` raises "No undo/redo support on non-editable
+        # shape lists", so fall back to plain (non-undoable) edits there.
         try:
-            view.transaction(title)
+            if not view.is_editable():
+                view.enable_edits(True)
         except Exception:
-            own = False
+            pass
+        try:
+            if view.is_editable():
+                view.transaction(title)
+                txn_open = True
+        except Exception:
+            txn_open = False
 
     _AUTO_DEPTH[vid] = depth + 1
     try:
@@ -44,10 +55,11 @@ def auto_txn(view: pya.LayoutView, title: str):
     finally:
         _AUTO_DEPTH[vid] = _AUTO_DEPTH.get(vid, 1) - 1
         if own:
-            try:
-                view.commit()
-            except Exception:
-                pass
+            if txn_open:
+                try:
+                    view.commit()
+                except Exception:
+                    pass
             # Keep the layer panel in sync with the Layout. Without this,
             # layers created by layer.ensure / shape.insert_* exist in
             # the GDS but aren't rendered until the user manually
