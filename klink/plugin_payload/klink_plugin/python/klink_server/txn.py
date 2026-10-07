@@ -7,10 +7,10 @@ the documented `LayoutView.transaction(title)` / `LayoutView.commit()` pair.
 Ctrl+Z in the GUI (or `edit.undo` from the client) then reverts one RPC at
 a time.
 
-Undo transactions require an editable view. In viewer mode (where
-`view.is_editable()` stays False even after `enable_edits(True)`), no
-transaction is opened and edits are applied directly instead: they do NOT
-appear on the undo stack and cannot be reverted via Ctrl+Z / `edit.undo`.
+Undo transactions require an editable view. In viewer mode
+(`view.is_editable()` is False), no transaction is opened and edits are
+applied directly instead. These edits do not appear on the undo stack and
+cannot be reverted via Ctrl+Z / `edit.undo`.
 
 Nested auto_txn calls on the same view reuse the outermost transaction,
 because KLayout's Manager rejects nested begin() calls.
@@ -32,26 +32,18 @@ _CUSTOM_REDO: list = []
 @contextmanager
 def auto_txn(view: pya.LayoutView, title: str):
     """Wrap one RPC's worth of edits in a KLayout transaction titled
-    `title`, so a single Ctrl+Z reverts the whole edit."""
+    `title` when the view is editable, so a single Ctrl+Z reverts the edit."""
     vid = id(view)
     depth = _AUTO_DEPTH.get(vid, 0)
 
     own = depth == 0
     txn_open = False
-    restore_ro = False
     if own:
         # Undo transactions require an editable view. In viewer mode
         # `Shapes.insert` raises "No undo/redo support on non-editable
         # shape lists", so fall back to plain (non-undoable) edits there.
-        try:
-            if not view.is_editable():
-                view.enable_edits(True)
-                # enable_edits flips the view into edit mode permanently;
-                # restore the read-only state after this RPC so a
-                # deliberately read-only view keeps its protection.
-                restore_ro = view.is_editable()
-        except Exception:
-            restore_ro = False
+        # enable_edits controls a separate edit-disable counter, not
+        # viewer/editable mode; leave that counter untouched.
         try:
             if view.is_editable():
                 view.transaction(title)
@@ -68,11 +60,6 @@ def auto_txn(view: pya.LayoutView, title: str):
             if txn_open:
                 try:
                     view.commit()
-                except Exception:
-                    pass
-            if restore_ro:
-                try:
-                    view.enable_edits(False)
                 except Exception:
                     pass
             # Keep the layer panel in sync with the Layout. Without this,
