@@ -12,6 +12,10 @@ entry onto KLayout's undo stack, identical to what an interactive edit
 in the GUI would do - so these three RPCs let an LLM agent say
 "oops, revert that" without the user reaching for Ctrl+Z.
 
+Exception: in viewer mode (`view.is_editable()` False) no transaction is
+opened; edits are applied directly, produce no undo-stack entry, and are
+invisible to these three RPCs.
+
 Underlying API, by what actually works in KLayout 0.30
 -----------------------------------------------------
 To perform the action we use `MainWindow.cm_undo()` / `cm_redo()` -
