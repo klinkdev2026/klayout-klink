@@ -150,7 +150,7 @@ Copy-Item -Path ".\klink_plugin" -Destination "$env:USERPROFILE\KLayout\salt\" -
         <pre><code>cd /path/to/klink
 mkdir -p ~/.klayout/salt
 cp -R klink_plugin ~/.klayout/salt/</code></pre>
-        <p>Restart KLayout. A successful plugin startup prints something like:</p>
+        <p>Restart KLayout in <strong>editor mode</strong>: <code>klayout -e</code> (or enable <em>File &gt; Setup &gt; Application &gt; Editing Mode &gt; Use editing mode by default</em>). In viewer mode layouts are read-only and nothing can be undone, so every klink write tool is refused with <code>ERR_VIEWER_MODE</code>. A successful plugin startup prints something like:</p>
         <pre><code>[klink.server] listening on 127.0.0.1:8765</code></pre>
 
         <h2 id="smoke">Smoke test</h2>
@@ -218,6 +218,7 @@ klink-mcp --setup .</code></pre>
         <ul>
           <li>Python cannot connect: check KLayout is running, the plugin was copied, KLayout was restarted, and the port is correct.</li>
           <li>MCP tools exist but calls fail: MCP is running but KLayout is unreachable. Start KLayout and call <code>klink.reconnect</code> or restart the MCP client.</li>
+          <li>Write tools return <code>ERR_VIEWER_MODE</code>: KLayout was started in viewer mode (without <code>-e</code>), so layouts are read-only and nothing can be undone. Close KLayout, start it with <code>klayout -e</code>, then call <code>klink.reconnect</code>. Read-only tools keep working; <code>klink.status</code> (<code>editor_mode</code>) and <code>python -m klink.doctor</code> show the current mode.</li>
           <li>gdsfactory tools miss dependencies: install <code>gdsfactory</code> into the same interpreter that runs the MCP server.</li>
           <li>PowerShell blocks venv activation: allow scripts for the current process.</li>
         </ul>

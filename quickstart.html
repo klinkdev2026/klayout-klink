@@ -153,7 +153,7 @@ Copy-Item -Path ".\klink_plugin" -Destination "$env:USERPROFILE\KLayout\salt\" -
         <pre><code>cd /path/to/klink
 mkdir -p ~/.klayout/salt
 cp -R klink_plugin ~/.klayout/salt/</code></pre>
-        <p>复制后重启 KLayout。插件启动成功时，KLayout console 会出现类似：</p>
+        <p>复制后以<strong>编辑模式</strong>重启 KLayout：<code>klayout -e</code>（或在 <em>File &gt; Setup &gt; Application &gt; Editing Mode</em> 勾选默认使用编辑模式）。viewer 模式下版图只读、无法撤销，klink 的所有写工具都会返回 <code>ERR_VIEWER_MODE</code>。插件启动成功时，KLayout console 会出现类似：</p>
         <pre><code>[klink.server] listening on 127.0.0.1:8765</code></pre>
         <p>如果 <code>8765</code> 被占用，插件会尝试后续端口直到 <code>8799</code>。每个 KLayout 窗口都是独立 session。</p>
 
@@ -229,6 +229,7 @@ klink-mcp --setup .</code></pre>
         <ul>
           <li>Python 连接失败：确认 KLayout 已启动、插件已复制到 salt、重启过 KLayout、端口正确。</li>
           <li>MCP 工具存在但调用报连接错误：MCP server 在跑，但 KLayout 不可达。启动 KLayout 后调用 <code>klink.reconnect</code> 或重启 MCP client。</li>
+          <li>写工具返回 <code>ERR_VIEWER_MODE</code>：KLayout 以 viewer 模式启动（没带 <code>-e</code>），版图只读、无法撤销。关闭 KLayout，用 <code>klayout -e</code> 重新启动，再调用 <code>klink.reconnect</code>。只读工具照常可用；<code>klink.status</code> 的 <code>editor_mode</code> 和 <code>python -m klink.doctor</code> 会显示当前模式。</li>
           <li>gdsfactory 工具缺依赖：在运行 MCP server 的同一个 Python 环境里安装 <code>gdsfactory</code>。</li>
           <li>PowerShell 不允许激活 venv：只对当前进程放开脚本执行策略。</li>
         </ul>
