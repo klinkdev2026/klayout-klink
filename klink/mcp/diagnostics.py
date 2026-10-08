@@ -26,12 +26,14 @@ class Diagnostics:
 
     def status(self) -> dict:
         ctx = self.ctx
+        handshake = self.version_handshake_status()
         return {
             "connected": ctx._client is not None,
             "host": ctx._host,
             "port": ctx._port,
             "interpreter": sys.executable,
             "capabilities": _optional_capabilities(),
+            "editor_mode": _editor_mode_block(handshake),
             "active_session_id": ctx._active_session_id,
             "session_registry": str(ctx._sessions.root),
             "profiles": list(ctx._profiles),
@@ -50,7 +52,7 @@ class Diagnostics:
                 "errors": dict(ctx._session_event_errors),
             },
             "journal_catchup_counts": dict(ctx._journal_catchup_counts),
-            "version_handshake": self.version_handshake_status(),
+            "version_handshake": handshake,
             "extensions": _extensions_status(),
         }
 
@@ -80,6 +82,31 @@ class Diagnostics:
                 "live round trip); it says nothing about the plugin. Call "
                 "klink.reconnect, then read klink.status again")
             return result
+
+
+def _editor_mode_block(handshake: dict) -> dict:
+    """Top-level `editor_mode` for klink.status, lifted out of the live
+    handshake so an agent sees viewer mode without digging.
+
+    editable: True (editor mode, `klayout -e`), False (viewer mode: every
+    write RPC is refused with ERR_VIEWER_MODE), None (unknown: not
+    connected, handshake stale, no view open, or a plugin older than
+    0.6.4 that does not report it)."""
+    editable = handshake.get("editable")
+    if handshake.get("stale"):
+        editable = None
+    block = {"editable": editable}
+    if editable is False:
+        block["next_action"] = handshake.get("editor_mode_next_action") or (
+            "KLayout is running in viewer mode: write RPCs are refused "
+            "(ERR_VIEWER_MODE). Close KLayout and start it with "
+            "`klayout -e`, then call klink.reconnect.")
+    elif editable is None:
+        block["note"] = (
+            "unknown: not connected, no view open, or the plugin predates "
+            "0.6.4; a viewer-mode KLayout surfaces as ERR_VIEWER_MODE on "
+            "the first write RPC either way.")
+    return block
 
 
 def _optional_capabilities() -> dict:

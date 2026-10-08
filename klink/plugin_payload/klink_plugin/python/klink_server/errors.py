@@ -10,6 +10,10 @@ class ErrorCode:
     NO_SELECTION = "ERR_NO_SELECTION"
     NOT_FOUND = "ERR_NOT_FOUND"
     TXN_STATE = "ERR_TXN_STATE"
+    # KLayout runs in viewer mode (started without `-e`): layouts are
+    # non-editable containers and no undo transaction can be opened, so
+    # every write RPC is refused up front with the restart instruction.
+    VIEWER_MODE = "ERR_VIEWER_MODE"
     CANCELLED = "ERR_CANCELLED"
     TIMEOUT = "ERR_TIMEOUT"
     EXEC = "ERR_EXEC"

@@ -361,6 +361,19 @@ def run_doctor(
             )
         if handshake.get("klayout_version"):
             add("klayout", True, f"KLayout {handshake['klayout_version']}")
+        # Viewer mode (KLayout started without `-e`): every write RPC is
+        # refused with ERR_VIEWER_MODE, so say it here before the first
+        # draw call does. None = plugin older than 0.6.4 or no view open.
+        editable = handshake.get("editable")
+        if editable is False:
+            add(
+                "editor_mode",
+                False,
+                "KLayout is in viewer mode; write RPCs are refused",
+                handshake.get("editor_mode_next_action", ""),
+            )
+        elif editable is True:
+            add("editor_mode", True, "KLayout is in editor mode (-e)")
 
     if want_scan:
         sessions = _scan_for_sessions(host)

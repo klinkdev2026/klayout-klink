@@ -325,7 +325,11 @@ cp -R klink_plugin ~/.klayout/salt/
 Either way the plugin ends up at `<KLayout salt dir>/klink_plugin/` (the folder
 that contains `grain.xml`).
 
-Restart KLayout after installing the plugin. Each KLayout window runs its own
+Restart KLayout after installing the plugin, in **editor mode**: `klayout -e`
+(or enable *File > Setup > Application > Editing Mode > Use editing mode by
+default*). In viewer mode layouts are read-only and nothing can be undone,
+so every klink write RPC is refused with `ERR_VIEWER_MODE`; `klink.status`
+reports the mode under `editor_mode`. Each KLayout window runs its own
 klink session: it binds the first free port in `8765`–`8799` and registers as
 session `klayout-<port>`, so with several windows open there is one listener
 per window (`8765`, `8766`, …). A successful startup prints:
@@ -497,6 +501,15 @@ Check that:
 The MCP server is running, but KLayout is not reachable. Start KLayout with the
 plugin loaded, then call `klink.reconnect` or restart the MCP client. Use
 `klink.status` to inspect the last connection error.
+
+### Write tools return `ERR_VIEWER_MODE`
+
+KLayout was started in viewer mode (without `-e`), so its layouts are
+read-only and no undo transaction can be opened. Close KLayout, start it with
+`klayout -e` (or enable *File > Setup > Application > Editing Mode*), then
+call `klink.reconnect`. Read-only tools keep working in viewer mode;
+`klink.status` (`editor_mode`) and `python -m klink.doctor` show the current
+mode.
 
 ### gdsfactory or detector tools report missing dependencies
 

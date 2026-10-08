@@ -42,7 +42,9 @@ hard-coded default project.
 ## Setup
 
 1. `pip install klayout-klink` (into the same Python that runs the MCP server).
-2. Install the klink plugin into KLayout (package manager), then start KLayout.
+2. Install the klink plugin into KLayout (package manager), then start KLayout
+   in editor mode (`klayout -e`; viewer mode refuses every write with
+   `ERR_VIEWER_MODE`).
 3. Copy `mcp.example.json` into your agent's MCP config and edit the paths.
 4. Open this folder with your agent and describe what you want to build.
 

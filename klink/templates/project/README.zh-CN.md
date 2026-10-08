@@ -37,7 +37,8 @@ agent 会:
 ## 安装
 
 1. `pip install klayout-klink`(装进运行 MCP server 的同一个 Python)。
-2. 用 KLayout 包管理器装 klink 插件,然后启动 KLayout。
+2. 用 KLayout 包管理器装 klink 插件,然后以编辑模式启动 KLayout(`klayout -e`;
+   viewer 模式下所有写操作都会被拒,返回 `ERR_VIEWER_MODE`)。
 3. 把 `mcp.example.json` 拷进 agent 的 MCP 配置并改路径。
 4. 用 agent 打开本文件夹,描述你要做什么。
 
