@@ -1,5 +1,11 @@
 ﻿# Changelog
 
+## 0.6.4
+
+- Viewer mode is refused up front instead of failing mid-edit. When KLayout runs without `-e`, every write RPC returns `ERR_VIEWER_MODE` with the restart instruction before touching the layout; read-only RPCs keep working. Previously the first `shape.insert_*` failed with KLayout's "No undo/redo support on non-editable shape lists" (reported in public PR #19). Writes are never applied without an undo transaction, so an agent cannot change a layout the user is unable to undo.
+- `hello`, the client handshake, `klink.status` (`editor_mode`) and `python -m klink.doctor` report whether KLayout is in editor mode and name the fix when it is not.
+- Documentation states that KLayout must be started in editor mode (`klayout -e`).
+
 ## 0.6.3
 
 - Create task run folders at the `klink init` project root as `runs/<run>/`, beside `custom_devices/`, instead of nesting generated scripts and artifacts under `custom_devices/runs/`.

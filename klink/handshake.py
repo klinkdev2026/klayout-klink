@@ -39,7 +39,23 @@ def evaluate_handshake(
 
     ``server_info`` is the dict returned by ``hello()`` (or ``{}`` / ``None``
     if the plugin could not be reached or returned no version).
+
+    Viewer mode (``editable`` False in ``hello``) is reported alongside:
+    ``editor_mode_next_action`` always carries the restart instruction, and
+    it is also promoted to ``next_action`` when no version problem already
+    claims that slot (version skew is the more fundamental fix).
     """
+    result = _evaluate_versions(client_version, client_protocol, server_info)
+    if result.get("editable") is False and "next_action" not in result:
+        result["next_action"] = result["editor_mode_next_action"]
+    return result
+
+
+def _evaluate_versions(
+    client_version: str,
+    client_protocol: int,
+    server_info: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
     server = server_info or {}
     server_protocol = server.get("protocol")
     result: Dict[str, Any] = {
@@ -51,7 +67,18 @@ def evaluate_handshake(
         "server_protocol": server_protocol,
         "klayout_version": server.get("klayout_version"),
         "compatible": server_protocol == client_protocol,
+        # True/False from the plugin's `hello` (0.6.4+), None when the
+        # plugin predates the field or no view is open. False means
+        # viewer mode: every write RPC is refused with ERR_VIEWER_MODE.
+        "editable": server.get("editable"),
     }
+    if result["editable"] is False:
+        result["editor_mode_next_action"] = server.get("next_action") or (
+            "KLayout is running in viewer mode: write RPCs are refused "
+            "(ERR_VIEWER_MODE) because nothing could be undone. Close "
+            "KLayout and start it in editor mode with `klayout -e`, then "
+            "call klink.reconnect."
+        )
     if result["compatible"]:
         # Same protocol is NECESSARY, not sufficient: a plugin many
         # releases behind still answers protocol 1 but is missing every

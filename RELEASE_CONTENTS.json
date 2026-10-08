@@ -21,11 +21,11 @@
   },
   {
     "path": ".gitignore",
-    "sha256": "55fc9f88005a0c1c7620266198fbb5b1da22e5dc426c460b578ba213ed460890"
+    "sha256": "b15a6451c8a46c2fc9235a21f85ec17fcbecd7529a9b9cd221c2f4c20ba0108f"
   },
   {
     "path": "CHANGELOG.md",
-    "sha256": "f3a41996e9f7b570f8ac61b7e4a18a3dd416f25aaf02e80d7b6c730370ae945c"
+    "sha256": "2bc61e50266a30232e15661050d86ee24df53d5e1ced3f2c53528e4138fbcfd3"
   },
   {
     "path": "CLAUDE.md",
@@ -457,7 +457,7 @@
   },
   {
     "path": "klink/_meta.py",
-    "sha256": "8ef3b6876f7f6b8ddcaf408104ba8500169b465fcebb93e27419eb769a4afc6e"
+    "sha256": "479d3541e9569a8a42dfe21345b813c53df563c7516cd97b6765cc8776cff0c7"
   },
   {
     "path": "klink/anchor/__init__.py",
@@ -513,7 +513,7 @@
   },
   {
     "path": "klink/doctor.py",
-    "sha256": "9ce262cecc6de2ccfa5a3e5660960e11f25a60405e2b2f715e7767a0e751a23a"
+    "sha256": "bc3a1b450089d0b364758df44e5283e2efd05652aa0cc927898f21d7c4b4db9d"
   },
   {
     "path": "klink/domains/__init__.py",
@@ -825,7 +825,7 @@
   },
   {
     "path": "klink/handshake.py",
-    "sha256": "94ee3f083f2f59a5d7513f7a4f489ca521f8413da0da79b1629649074bafbcaa"
+    "sha256": "5f0003740b4226cf49bff279c2ea4ee5b9fc50444216916024451fc2fcbf3675"
   },
   {
     "path": "klink/mcp/__init__.py",
@@ -865,7 +865,7 @@
   },
   {
     "path": "klink/mcp/diagnostics.py",
-    "sha256": "a9106244a1cc927a672f9c7885dc1b5106e3b5138c355175fb851bd72bc07342"
+    "sha256": "64f5b0906afa433849e4750ca4e003e4fb03674f2ab1abedfef405c907dc291a"
   },
   {
     "path": "klink/mcp/guide.py",
@@ -965,7 +965,7 @@
   },
   {
     "path": "klink/plugin_payload/klink_plugin/grain.xml",
-    "sha256": "fb54b06217c3d040e7d041471a8767ecdabb6c393ea67739cde561f4fbaf28e7"
+    "sha256": "c068b5713bff6444309b94a2c91185be005b90da29f806d8f40bcc43d1cb225a"
   },
   {
     "path": "klink/plugin_payload/klink_plugin/pymacros/klink.lym",
@@ -1001,7 +1001,7 @@
   },
   {
     "path": "klink/plugin_payload/klink_plugin/python/klink_server/errors.py",
-    "sha256": "2ed7f0d5fc455c0eca48236fe2ee3fe58151a46ebff7116212f155861fd81ecb"
+    "sha256": "31ca3eb19a937e1f5172dbf88b4f8b0e28bc4f1397df29077ef498a3f013c71b"
   },
   {
     "path": "klink/plugin_payload/klink_plugin/python/klink_server/events.py",
@@ -1101,7 +1101,7 @@
   },
   {
     "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/meta_m.py",
-    "sha256": "1ef973c4eee4ad81c129f76d3be9b93d25a0c569d69eacb4f479df62491935d4"
+    "sha256": "cf8eff1e6b6cd1dbbeb703aa93377c7c078e7c0b2dfa3b6fe651577d768b2d89"
   },
   {
     "path": "klink/plugin_payload/klink_plugin/python/klink_server/methods/modify_m.py",
@@ -1197,7 +1197,7 @@
   },
   {
     "path": "klink/plugin_payload/klink_plugin/python/klink_server/txn.py",
-    "sha256": "28004ace94c5307fcc17d01f9e2712ed887524a927e5952cb4d2f91ede73ce9e"
+    "sha256": "746fa6b86f2db2987e36b547ac10333b3acffc2f949f910f1093dd7249613038"
   },
   {
     "path": "klink/plugin_payload/README.md",
@@ -1697,11 +1697,11 @@
   },
   {
     "path": "klink/templates/project/README.md",
-    "sha256": "db61419b00b334f67ab1118721d0ac9413e122d22cc2b70b776b082375c233e8"
+    "sha256": "5c29a1b1bbab708366bf1b7d5b7499c750b7148d67aff5941277bd0b1e9a3103"
   },
   {
     "path": "klink/templates/project/README.zh-CN.md",
-    "sha256": "dc94798a4bedae75362ae9aae712947b936ce93145a80a129839890080a3d730"
+    "sha256": "2092e6a10bd074091eea1627fdd550fb5e77e416b775d9419f881f1f42287b7f"
   },
   {
     "path": "klink/templates/project/recipes/README.md",
@@ -1729,7 +1729,7 @@
   },
   {
     "path": "klink_plugin/grain.xml",
-    "sha256": "fb54b06217c3d040e7d041471a8767ecdabb6c393ea67739cde561f4fbaf28e7"
+    "sha256": "c068b5713bff6444309b94a2c91185be005b90da29f806d8f40bcc43d1cb225a"
   },
   {
     "path": "klink_plugin/pymacros/klink.lym",
@@ -1765,7 +1765,7 @@
   },
   {
     "path": "klink_plugin/python/klink_server/errors.py",
-    "sha256": "2ed7f0d5fc455c0eca48236fe2ee3fe58151a46ebff7116212f155861fd81ecb"
+    "sha256": "31ca3eb19a937e1f5172dbf88b4f8b0e28bc4f1397df29077ef498a3f013c71b"
   },
   {
     "path": "klink_plugin/python/klink_server/events.py",
@@ -1865,7 +1865,7 @@
   },
   {
     "path": "klink_plugin/python/klink_server/methods/meta_m.py",
-    "sha256": "1ef973c4eee4ad81c129f76d3be9b93d25a0c569d69eacb4f479df62491935d4"
+    "sha256": "cf8eff1e6b6cd1dbbeb703aa93377c7c078e7c0b2dfa3b6fe651577d768b2d89"
   },
   {
     "path": "klink_plugin/python/klink_server/methods/modify_m.py",
@@ -1961,7 +1961,7 @@
   },
   {
     "path": "klink_plugin/python/klink_server/txn.py",
-    "sha256": "28004ace94c5307fcc17d01f9e2712ed887524a927e5952cb4d2f91ede73ce9e"
+    "sha256": "746fa6b86f2db2987e36b547ac10333b3acffc2f949f910f1093dd7249613038"
   },
   {
     "path": "LICENSE",
@@ -1973,11 +1973,11 @@
   },
   {
     "path": "README.md",
-    "sha256": "5fca3101629d6a3f2d2bffe5bbdcb9e1163c57dffc6045e7533adee4e4fb228e"
+    "sha256": "dadf00488eb25d7bed8bb3d4113a25baae8385e2c8234c590cf8fafd68aa9eab"
   },
   {
     "path": "README.zh-CN.md",
-    "sha256": "d5387e944f8088bfa7e3f9354a96c741daf7605896ebe40e4dbff03ef986c114"
+    "sha256": "268f7d356cd89b4ede359a3abc2cce2c0c806979a8e540ba1ae5ce0c9c27bf00"
   },
   {
     "path": "rust/klink_boxmaze/.gitignore",
@@ -1993,7 +1993,7 @@
   },
   {
     "path": "rust/klink_boxmaze/pyproject.toml",
-    "sha256": "89b1e1aeb992c27d5e3861c06c968683d9ec0d167deb1ca25b7a1c928592582a"
+    "sha256": "0385ac499df33b7338daa9ff5d22cfb58422733f80ff2be5bee5b73771696d80"
   },
   {
     "path": "rust/klink_boxmaze/README.md",
@@ -2017,7 +2017,7 @@
   },
   {
     "path": "rust/klink_trackmaze/pyproject.toml",
-    "sha256": "1012e82489496eaf35f5afca187c0424a4b33654ee1c6bcdaec8329b17933b74"
+    "sha256": "1508ad9e6f4d922393fca6ccd0552277a7e60e0b92a0f338242a8e59df186af5"
   },
   {
     "path": "rust/klink_trackmaze/src/lib.rs",
@@ -2269,7 +2269,7 @@
   },
   {
     "path": "tests/unit/test_handshake.py",
-    "sha256": "e60e95d173e47c4186ff826bf2f3ae56c5782537f219bccd09813f43dab37b51"
+    "sha256": "a61b7c81442cc8f3018c8ed77efb62e658c830e8514b0a32fe6fad0e7c943bae"
   },
   {
     "path": "tests/unit/test_import_closure.py",
@@ -2358,6 +2358,10 @@
   {
     "path": "tests/unit/test_mcp_register.py",
     "sha256": "9d88d9b7eb58f0d5a20f0d2eeeb5cc5b2a5afc66de9fa1cab45e56dddf499c8c"
+  },
+  {
+    "path": "tests/unit/test_mcp_status_editor_mode.py",
+    "sha256": "52c374258666c82fb587009d44198b65f33db7a7d46eae308b45fa5997a4a91d"
   },
   {
     "path": "tests/unit/test_mcp_tools_snapshot.py",
@@ -2594,6 +2598,10 @@
   {
     "path": "tests/unit/test_transfer_core.py",
     "sha256": "184e941817128d2618f53558442f88a66384e45c2c769783976b6e56a78aded4"
+  },
+  {
+    "path": "tests/unit/test_txn_viewer_mode.py",
+    "sha256": "7af94b41147804143193317cdf041febb15e9efbab67ca852e8bdfdb90f07415"
   },
   {
     "path": "tests/unit/test_view_zoom_units.py",

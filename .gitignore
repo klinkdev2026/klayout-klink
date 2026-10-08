@@ -40,6 +40,10 @@ KlayoutClaw-main/
 virtuoso-bridge-lite-main/
 klive/
 
+# Third-party SKILL reference material (local study only; contains vendor
+# scripts, OA libraries and documents of unknown license — never commit)
+skill_docs/
+
 # Stale local examples / scratch (deliberately untracked)
 examples/
 examples_gdsfactory/

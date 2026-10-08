@@ -66,3 +66,46 @@ def test_compatible_newer_plugin_version_flags_client_older():
     assert r["compatible"] is True
     assert r["version_skew"] == "client_older"
     assert "pip install -U klayout-klink" in r["next_action"]
+
+
+# --- viewer mode (plugin 0.6.4+ reports `editable` in hello) -------------
+
+def test_viewer_mode_promoted_to_next_action_when_versions_fine():
+    info = _server(1)
+    info["editable"] = False
+    r = evaluate_handshake("0.1.0", 1, info)
+    assert r["compatible"] is True
+    assert r["editable"] is False
+    assert "klayout -e" in r["editor_mode_next_action"]
+    # no version problem claims the slot, so the restart instruction is
+    # the one thing an agent reading `next_action` sees
+    assert r["next_action"] == r["editor_mode_next_action"]
+
+
+def test_viewer_mode_uses_plugin_wording_when_given():
+    info = _server(1)
+    info["editable"] = False
+    info["next_action"] = "plugin says: restart with -e"
+    r = evaluate_handshake("0.1.0", 1, info)
+    assert r["editor_mode_next_action"] == "plugin says: restart with -e"
+
+
+def test_viewer_mode_does_not_mask_a_version_problem():
+    info = _server(2)
+    info["editable"] = False
+    r = evaluate_handshake("0.1.0", 1, info)
+    assert r["compatible"] is False
+    assert "newer" in r["next_action"]            # version fix stays primary
+    assert "klayout -e" in r["editor_mode_next_action"]
+
+
+def test_editor_mode_and_old_plugin_are_quiet():
+    info = _server(1)
+    info["editable"] = True
+    r = evaluate_handshake("0.1.0", 1, info)
+    assert r["editable"] is True
+    assert "editor_mode_next_action" not in r and "next_action" not in r
+    # plugin older than 0.6.4: field absent -> None, never False
+    r = evaluate_handshake("0.1.0", 1, _server(1))
+    assert r["editable"] is None
+    assert "next_action" not in r

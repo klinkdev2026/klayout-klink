@@ -288,7 +288,10 @@ cp -R klink_plugin ~/.klayout/salt/
 两种方式最终插件都位于 `<KLayout salt 目录>/klink_plugin/`（即包含
 `grain.xml` 的那个文件夹）。
 
-安装插件后重启 KLayout。每个 KLayout 窗口运行自己的 klink session：绑定
+安装插件后以**编辑模式**重启 KLayout：`klayout -e`（或在 *File > Setup >
+Application > Editing Mode* 勾选默认使用编辑模式）。viewer 模式下版图只读、
+无法撤销，klink 的所有写 RPC 都会返回 `ERR_VIEWER_MODE`；`klink.status` 的
+`editor_mode` 会报告当前模式。每个 KLayout 窗口运行自己的 klink session：绑定
 `8765`–`8799` 中第一个空闲端口，并以 `klayout-<port>` 注册 session。同时开多个
 窗口就有多个监听（`8765`、`8766`、……）。启动成功时，KLayout 控制台会打印：
 
@@ -428,6 +431,10 @@ python -m pytest -q tests/public
 ### MCP 工具有了，但调用时报 KLayout 连接错误
 
 这说明 MCP server 在运行，但 KLayout 不可达。启动带插件的 KLayout 后，调用 `klink.reconnect` 或重启 MCP 客户端。用 `klink.status` 查看最后一次连接错误。
+
+### 写工具返回 `ERR_VIEWER_MODE`
+
+KLayout 以 viewer 模式启动（没带 `-e`），版图只读、无法打开 undo 事务。关闭 KLayout，用 `klayout -e` 重新启动（或在 *File > Setup > Application > Editing Mode* 勾选默认编辑模式），然后调用 `klink.reconnect`。viewer 模式下只读工具照常可用；`klink.status` 的 `editor_mode` 和 `python -m klink.doctor` 会显示当前模式。
 
 ### gdsfactory 或 detector 工具报缺依赖
 

@@ -10,10 +10,36 @@ from __future__ import annotations
 import pya
 
 from ..registry import method, all_specs
+from ..txn import VIEWER_MODE_NEXT_ACTION, view_is_editable
 
 SERVER_NAME = "klink"
-SERVER_VERSION = "0.6.3"
+SERVER_VERSION = "0.6.4"
 PROTOCOL_VERSION = 1
+
+
+def _editable_report() -> dict:
+    """`editable` for hello: the process-level answer from
+    `Application.is_editable()` (valid before any tab is open — a fresh
+    viewer-mode KLayout has no view yet), falling back to the current
+    view; None only when neither can tell. Viewer mode carries the
+    restart instruction so the very first call already names the fix."""
+    editable = None
+    try:
+        probe = getattr(pya.Application.instance(), "is_editable", None)
+        if probe is not None:
+            editable = bool(probe())
+    except Exception:
+        editable = None
+    if editable is None:
+        try:
+            view = pya.LayoutView.current()
+        except Exception:
+            view = None
+        editable = view_is_editable(view)
+    out = {"editable": editable}
+    if editable is False:
+        out["next_action"] = VIEWER_MODE_NEXT_ACTION
+    return out
 
 
 @method(
@@ -40,18 +66,30 @@ PROTOCOL_VERSION = 1
             "protocol": {"type": "integer"},
             "klayout_version": {"type": "string"},
             "capabilities": {"type": "array", "items": {"type": "string"}},
+            "editable": {
+                "type": ["boolean", "null"],
+                "description": (
+                    "Whether KLayout runs in editor mode (`klayout -e`). "
+                    "False = viewer mode: every write RPC is refused with "
+                    "ERR_VIEWER_MODE and `next_action` here says how to "
+                    "restart. null = no view open yet."
+                ),
+            },
+            "next_action": {"type": "string"},
         },
     },
     tags=["meta"],
 )
 def hello(params, ctx):
-    return {
+    out = {
         "server": SERVER_NAME,
         "version": SERVER_VERSION,
         "protocol": PROTOCOL_VERSION,
         "klayout_version": pya.__version__,
         "capabilities": sorted({spec.name.split(".")[0] for spec in all_specs().values()}),
     }
+    out.update(_editable_report())
+    return out
 
 
 @method(
