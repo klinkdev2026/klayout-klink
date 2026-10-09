@@ -53,6 +53,12 @@ class KLinkClient:
     # Lifecycle
     # ------------------------------------------------------------------
     def connect(self) -> "KLinkClient":
+        # Idempotent: the documented idiom `with KLinkClient().connect() as c:`
+        # calls connect() and then __enter__ -> connect() again. A live
+        # client must not open a second socket or start a second reader.
+        t = self._reader_thread
+        if self._running and t is not None and t.is_alive():
+            return self
         self._transport.connect()
         self._running = True
         self._reader_thread = threading.Thread(

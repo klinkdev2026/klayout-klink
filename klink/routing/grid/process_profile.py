@@ -38,7 +38,7 @@ class ProcessProfile:
     col_pitch_um: float                          # gate-to-gate within a row
     # --- optional below: structural ("absent = this process has none") + neutral/solver knobs ---
     keepout_layers: Tuple[str, ...] = ()         # layers routing must never touch
-    # OPTIONAL dedicated SIGNAL-BACKBONE layers (Track 2 multi-layer P&R). When set,
+    # OPTIONAL dedicated SIGNAL-BACKBONE layers (multi-layer P&R engines). When set,
     # long signal backbones are confined to THESE layers -- a clean subset of
     # routing_layers that carries NO device terminals / PDN -- while pin access still
     # vias DOWN to the terminal layers through the full routing_layers stack. This is
@@ -86,7 +86,8 @@ class ProcessProfile:
 
     def signal_routing_layers(self) -> Tuple[str, ...]:
         """Layers a SIGNAL backbone may run on: the dedicated `signal_layers` when
-        set (Track 2), else every routing layer (Track 1, byte-identical)."""
+        set (multi-layer P&R), else every routing layer (the single-layer flexdr
+        default, byte-identical)."""
         return self.signal_layers or self.routing_layers
 
     def layer_direction(self, layer: str) -> str:

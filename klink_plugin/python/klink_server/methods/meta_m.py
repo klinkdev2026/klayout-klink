@@ -13,7 +13,7 @@ from ..registry import method, all_specs
 from ..txn import VIEWER_MODE_NEXT_ACTION, view_is_editable
 
 SERVER_NAME = "klink"
-SERVER_VERSION = "0.6.4"
+SERVER_VERSION = "0.6.5"
 PROTOCOL_VERSION = 1
 
 

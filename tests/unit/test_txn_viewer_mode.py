@@ -130,3 +130,100 @@ def test_viewer_refusal_is_repeatable_across_rpcs():
     with txn.auto_txn(view, "now editable"):
         pass
     assert view.transactions == ["now editable"]
+
+
+# ----------------------------------------------------------------------
+# Application-level probe: refuse a write BEFORE its default tab exists
+# ----------------------------------------------------------------------
+
+class _FakeApp:
+    def __init__(self, editable):
+        if editable is not None:
+            self.is_editable = lambda: editable
+
+
+def _fake_pya(app=None, raises=False):
+    class _Application:
+        @staticmethod
+        def instance():
+            if raises:
+                raise RuntimeError("no application")
+            return app
+    return type("FakePya", (), {"Application": _Application})
+
+
+def test_require_editable_app_refuses_viewer_mode(monkeypatch):
+    monkeypatch.setattr(txn, "pya", _fake_pya(_FakeApp(False)))
+    assert txn.app_is_editable() is False
+    with pytest.raises(RpcError) as info:
+        txn.require_editable_app()
+    err = info.value
+    assert err.code == ErrorCode.VIEWER_MODE
+    assert "klayout -e" in err.data["next_action"]
+    assert err.data["next_action"] == txn.VIEWER_MODE_NEXT_ACTION
+    assert err.data["editable"] is False
+
+
+def test_require_editable_app_allows_editor_mode(monkeypatch):
+    monkeypatch.setattr(txn, "pya", _fake_pya(_FakeApp(True)))
+    assert txn.app_is_editable() is True
+    txn.require_editable_app()
+
+
+@pytest.mark.parametrize("fake", [
+    _fake_pya(raises=True),            # instance() raises
+    _fake_pya(_FakeApp(None)),         # no is_editable attribute
+    _fake_pya(None),                   # instance() returns None
+    type("NoApp", (), {}),             # pya without Application
+])
+def test_require_editable_app_unknown_never_blocks(monkeypatch, fake):
+    monkeypatch.setattr(txn, "pya", fake)
+    assert txn.app_is_editable() is None
+    txn.require_editable_app()
+
+
+class _FakeMainWindow:
+    def __init__(self):
+        self.created = 0
+
+    def create_layout(self, mode):
+        self.created += 1
+        raise RuntimeError("stop after create (test)")
+
+    def current_view(self):
+        return None
+
+
+def test_default_layout_not_created_for_refused_write(monkeypatch):
+    from klink_server.methods import cell_m
+    monkeypatch.setattr(txn, "pya", _fake_pya(_FakeApp(False)))
+
+    # write RPC in viewer mode: refused before a tab exists
+    monkeypatch.setattr(cell_m, "_current_rpc_mutates", lambda: True)
+    mw = _FakeMainWindow()
+    with pytest.raises(RpcError) as info:
+        cell_m._create_default_layout(mw)
+    assert info.value.code == ErrorCode.VIEWER_MODE
+    assert mw.created == 0
+
+    # read RPC (or no RPC context) in viewer mode: old behaviour, tab created
+    for mutates in (False, None):
+        monkeypatch.setattr(cell_m, "_current_rpc_mutates", lambda m=mutates: m)
+        mw = _FakeMainWindow()
+        with pytest.raises(RpcError) as info:
+            cell_m._create_default_layout(mw)
+        assert info.value.code == ErrorCode.INTERNAL  # from the fake create
+        assert mw.created == 1
+
+
+def test_current_rpc_mutates_reads_dispatch_context(monkeypatch):
+    from klink_server import dispatcher
+    from klink_server.methods import cell_m
+    monkeypatch.setattr(dispatcher, "_REQUEST_STACK", [])
+    assert cell_m._current_rpc_mutates() is None
+    dispatcher._REQUEST_STACK.append({"method": "cell.create"})
+    assert cell_m._current_rpc_mutates() is True
+    dispatcher._REQUEST_STACK[-1] = {"method": "cell.list"}
+    assert cell_m._current_rpc_mutates() is False
+    dispatcher._REQUEST_STACK[-1] = {"method": "no.such.method"}
+    assert cell_m._current_rpc_mutates() is None

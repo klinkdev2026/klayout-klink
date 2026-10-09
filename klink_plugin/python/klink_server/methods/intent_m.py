@@ -4,7 +4,9 @@ Design contract: docs/REGION_INTENT_DESIGN.md sect.8/sect.9. All planning, AI, a
 validation happen BEFORE this call; the payload is fully materialized typed
 geometry. Inside the transaction this method only writes -- it never runs
 business logic that can fail halfway (KLayout exposes no transaction abort,
-proven by the I0 probe, so validate-before-mutate is the only safe shape).
+proven by the I0 probe; `auto_txn` now rolls a failed body back by
+commit-then-undo as a safety net, but validate-before-mutate stays the
+only shape that never has anything to roll back).
 
 Ownership model (I0 ruling): revisioned container child + root swap. Each
 apply creates a FRESH container cell; `mode=replace` finds the old root
