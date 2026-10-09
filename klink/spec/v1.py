@@ -1,7 +1,7 @@
 """klink.spec.json v1 — the engineering-fact projection of a layout.
 
-Contract designed by the main lane (docs/STRUCTURE_AS_DEVICE_IR.md §4;
-the parked Codex prototype was reference only, this is a fresh design).
+Contract: docs/STRUCTURE_AS_DEVICE_IR.md §4 (a fresh design, not derived from
+any earlier prototype).
 
 Principles, enforced structurally where possible:
 

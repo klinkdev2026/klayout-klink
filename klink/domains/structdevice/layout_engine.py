@@ -625,8 +625,8 @@ def route_and_draw_flexdr(client, cell, netlist, placement, *, profile, layers, 
     may sit far outside the device block (devices outside the ring work the
     same way -- routes pass between pads). Power-net pads (VDD/GND) are NOT
     routed by this signal engine; tie them to the PDN rail/strap externally."""
-    _track1 = engine is None   # Track 1 (frozen flexdr) is the only engine that
-    if engine is None:         # takes use_rust; Track 2 engines own their toggle.
+    _track1 = engine is None   # the default frozen single-layer flexdr engine is the only
+    if engine is None:         # one that takes use_rust; multi-layer engines own their toggle.
         from klink.routing.backends.flexdr import flexdr as engine
     route_flexdr = engine.route_flexdr
     flexgc_lite = engine.flexgc_lite
@@ -775,7 +775,7 @@ def route_and_draw_flexdr(client, cell, netlist, placement, *, profile, layers, 
             next_action = (
                 "give routing more room, then re-run: raise the profile's "
                 "col_pitch_um / y_step_um (looser placement) or lower wire_clear_um; "
-                "if it persists the net needs more routing layers (Track 2).")
+                "if it persists the net needs more routing layers (a multi-layer P&R engine).")
         elif markers:
             next_action = ("the route has DRC violations; loosen spacing "
                            "(raise wire_clear_um / prl_spacing_um) or the floorplan, "

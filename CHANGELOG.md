@@ -1,5 +1,11 @@
 ﻿# Changelog
 
+## 0.6.5
+
+- In viewer mode, a write RPC that needed a layout tab no longer leaves an empty tab behind: the editor-mode check now runs before the default tab is created, with the same `ERR_VIEWER_MODE` instruction.
+- `KLinkClient.connect()` is idempotent. The documented `with KLinkClient().connect() as c:` form used to connect twice and start two reader threads.
+- Write RPCs are atomic on failure. When an RPC body fails after it already changed the layout, the partial edit is rolled back before the error is returned, and the error's `data.transaction.partial_edit` says what happened (`none`, `undone`, `left_as_undo_entry`, `unknown`). The rollback only ever undoes the entry the RPC itself created, never a user's own edit; the reverted edit stays available as redo until the next edit. A write for which no undo transaction could be opened is refused with `ERR_TXN_STATE` instead of being applied without undo, and a failed commit is reported (`applied: true`) instead of being swallowed. Previously a failing RPC could leave a half-applied edit in the layout while returning an error, so retrying a tool was not safe.
+
 ## 0.6.4
 
 - Viewer mode is refused up front instead of failing mid-edit. When KLayout runs without `-e`, every write RPC returns `ERR_VIEWER_MODE` with the restart instruction before touching the layout; read-only RPCs keep working. Previously the first `shape.insert_*` failed with KLayout's "No undo/redo support on non-editable shape lists" (reported in public PR #19). Writes are never applied without an undo transaction, so an agent cannot change a layout the user is unable to undo.

@@ -8,7 +8,7 @@ margin, so exploration is O(net span) instead of O(whole grid). Correctness is
 unchanged because legality (_wire_ok) and congestion footprints are identical;
 we only refuse to wander outside the net's window.
 
-Imports only STABLE modules. Does not touch Codex-churned files.
+Imports only stable modules; it does not depend on the experimental routers.
 """
 from __future__ import annotations
 

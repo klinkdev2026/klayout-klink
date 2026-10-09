@@ -25,7 +25,24 @@ import pya
 
 from ..registry import method
 from ..errors import RpcError, ErrorCode
-from ..txn import auto_txn
+from ..txn import auto_txn, require_editable_app
+
+
+def _current_rpc_mutates() -> bool | None:
+    """True/False from the in-flight RPC's `mutates` flag; None when no RPC
+    is being dispatched or the method is not registered."""
+    try:
+        from ..dispatcher import current_request
+        from ..registry import get as get_method
+        req = current_request()
+        if not req:
+            return None
+        spec = get_method(req.get("method"))
+        if spec is None:
+            return None
+        return bool(spec.mutates)
+    except Exception:
+        return None
 
 
 def _process_events_best_effort() -> None:
@@ -41,7 +58,15 @@ def _create_default_layout(mw, *, name: str = "TOP", dbu: float = 0.001):
     KLayout can start with the plugin loaded but no layout tab open. Most
     klink methods operate on an active LayoutView, so we create the same
     default blank layout a user would create manually via File > New.
+
+    In viewer mode (KLayout started without `-e`) a WRITE RPC is refused
+    here, before the tab is created, so the refused call does not leave an
+    empty tab behind (auto_txn would refuse it a moment later anyway).
+    Read RPCs (`mutates=False`) keep the old behaviour: they still get a
+    blank tab and an empty answer.
     """
+    if _current_rpc_mutates() is True:
+        require_editable_app()
     try:
         mw.create_layout(1)
     except Exception as e:
