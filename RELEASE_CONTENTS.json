@@ -1301,7 +1301,7 @@
   },
   {
     "path": "klink/routing/backends/negotiated/bounded_router.py",
-    "sha256": "4b183ae2a00fb13c6a932658a4cdc53fe84a1271e3c3bb1bd04649fa9fdb6973"
+    "sha256": "07b9ca69ec0c4f5027f20a42742ce3f70d6198926a2942cd1e0835bb95246e46"
   },
   {
     "path": "klink/routing/backends/negotiated/hier_router.py",
@@ -1501,7 +1501,7 @@
   },
   {
     "path": "klink/spec/v1.py",
-    "sha256": "3c278ed841243c82ba6e82fbd98afca153ca0b96922a09aff9ed1eb735124cc3"
+    "sha256": "afa9c1b4d9395c45d060843c57b4d7b3c23b5b04f10ed261d8a9d7577ec49746"
   },
   {
     "path": "klink/stack25d.py",
