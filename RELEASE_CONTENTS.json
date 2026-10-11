@@ -2521,7 +2521,7 @@
   },
   {
     "path": "tests/unit/test_mcp_tools_toolbar_domain.py",
-    "sha256": "09741c7d3d5467047b8f9b0f10cfdc22b576335405e0bcfb00ab8d6e57d68951"
+    "sha256": "7a17061ecaaec4d799cca1a5cf4194cc4ec5060e0b205003f18ca380e315604b"
   },
   {
     "path": "tests/unit/test_nanodevice_basic_layout.py",
@@ -2741,7 +2741,7 @@
   },
   {
     "path": "tests/unit/test_template_tools_starters.py",
-    "sha256": "7cbce1fea66c96d2e505235624ef74aa0cf7c111f72b88c766660c98d905f04d"
+    "sha256": "853bd6530aeabc70f8a2749d2628da4c1a788b4465f4dd84122a423570962744"
   },
   {
     "path": "tests/unit/test_tool_cli_pipeline.py",

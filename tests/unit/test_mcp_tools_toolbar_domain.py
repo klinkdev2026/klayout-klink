@@ -104,6 +104,9 @@ def test_lanes_allow_tools():
 
 
 def test_claude_build_adapter_mirrors_lane():
-    text = (REPO / ".claude" / "agents" / "layout-build.md").read_text(encoding="utf-8-sig")
+    adapter = REPO / ".claude" / "agents" / "layout-build.md"
+    if not adapter.is_file():  # dev-only Claude Code adapter; the public tree ships lanes.json only
+        pytest.skip("dev-only .claude/agents adapter not present")
+    text = adapter.read_text(encoding="utf-8-sig")
     for name in ("tool_run", "tool_list", "tool_get"):
         assert f"mcp__klayout__{name}" in text

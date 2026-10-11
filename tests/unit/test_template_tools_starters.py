@@ -8,6 +8,8 @@ make the feature discoverable from a scaffolded project.
 import pathlib
 import sys
 
+import pytest
+
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 PUBLIC = ROOT / "examples_klink" / "public"
 PROJECT = ROOT / "klink" / "templates" / "project"
@@ -124,6 +126,8 @@ def test_agent_pointers_name_the_pipeline():
 def test_skill_toolbar_section_is_the_pipeline_and_copies_identical():
     shipped = ROOT / "klink" / "mcp" / "skills" / "klayout" / "SKILL.md"
     local = ROOT / ".claude" / "skills" / "klayout" / "SKILL.md"
+    if not local.is_file():  # dev-only copy; the public tree ships klink/mcp/skills only
+        pytest.skip("dev-only .claude/skills copy not present")
     assert shipped.read_bytes() == local.read_bytes(), (
         "copy klink/mcp/skills/klayout/SKILL.md to .claude/skills/klayout/SKILL.md")
     text = shipped.read_text(encoding="utf-8")
