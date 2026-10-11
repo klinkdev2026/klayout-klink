@@ -1,0 +1,24 @@
+{
+  "id": "bool_region",
+  "title": "Boolean of two layers inside the selection",
+  "label": "BOOL2",
+  "description": "The selection (shapes and instances) only defines a clip region; the boolean is computed between two layers of the current cell (hierarchy included), each clipped to that region, into an output layer. Layers A and B are picked from the layers found under the region; the output from the layout's layers or a new one.",
+  "inputs": {"selection": {"min": 1}},
+  "params": {
+    "layer_a":     {"type": "layer", "from": "region", "title": "layer A"},
+    "layer_b":     {"type": "layer", "from": "region", "exclude": ["layer_a"], "title": "layer B"},
+    "output":      {"type": "layer", "from": "layout", "allow_new": true, "default": "3/0",
+                    "title": "output layer"},
+    "op":          {"type": "enum", "choices": ["and", "or", "not", "xor"], "default": "and",
+                    "title": "operation (A op B)"},
+    "keep_output": {"type": "bool", "default": true,
+                    "title": "keep what is already on the output layer inside the region"}
+  },
+  "presets": {
+    "and": {"title": "A AND B", "params": {"op": "and", "keep_output": true}},
+    "or":  {"title": "A OR B",  "params": {"op": "or",  "keep_output": true}},
+    "not": {"title": "A NOT B", "params": {"op": "not", "keep_output": true}},
+    "xor": {"title": "A XOR B", "params": {"op": "xor", "keep_output": true}}
+  },
+  "prompt": "missing"
+}

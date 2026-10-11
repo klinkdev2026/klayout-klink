@@ -279,6 +279,9 @@ def _open_browser(link: str) -> None:
 # loop runs (measured 4-8 s for a 0.5 s start). Everything below runs on the GUI thread and
 # never blocks: spawn returns immediately, readiness is polled by a QTimer.
 _actions: dict = {}
+# Items inserted at "@toolbar.end" live at "@toolbar.<id>"; deleting "@toolbar.end.<id>" is a
+# silent no-op (verified live on KLayout 0.30), so every delete below uses this prefix.
+MENU_PATH = "@toolbar."
 _pending: dict = {}      # name -> {"spec", "port", "deadline", "open": bool}
 _timer = None            # pya.QTimer while something is pending
 _pya = None
@@ -375,14 +378,23 @@ def _on_open(spec: dict) -> None:
 
 
 def install_buttons(menu, pya, root: str | Path | None = None) -> list[str]:
-    """One toolbar button per descriptor; re-runs replace previous buttons. Returns button ids."""
+    """One toolbar button per descriptor; re-runs replace previous buttons and drop the buttons
+    of descriptors that disappeared. Returns button ids."""
     global _pya
     _pya = pya
     ids = []
-    for spec in load_descriptors(root):
+    specs = load_descriptors(root)
+    wanted = {f"klink_companion_{spec['name']}" for spec in specs}
+    for stale in [b for b in _actions if b not in wanted]:
+        try:
+            menu.delete_item(MENU_PATH + stale)
+        except Exception as exc:
+            _log.warning("companion button %s: delete_item failed: %s", stale, exc)
+        del _actions[stale]
+    for spec in specs:
         button_id = f"klink_companion_{spec['name']}"
         try:
-            menu.delete_item(f"@toolbar.end.{button_id}")
+            menu.delete_item(MENU_PATH + button_id)  # leftover from a previous macro run
         except Exception:
             pass
         action = pya.Action()

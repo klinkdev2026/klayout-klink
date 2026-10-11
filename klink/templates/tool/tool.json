@@ -1,0 +1,10 @@
+{
+  "id": "my_tool",
+  "title": "My tool",
+  "label": "MYTOOL",
+  "description": "Counts the selected shapes per layer (scaffold; edit run.py).",
+  "inputs": {"selection": {"min": 0}},
+  "params": {},
+  "presets": {},
+  "prompt": "missing"
+}

@@ -36,6 +36,16 @@
           "items": {
             "type": "string"
           }
+        },
+        "editable": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "Whether KLayout runs in editor mode (`klayout -e`). False = viewer mode: every write RPC is refused with ERR_VIEWER_MODE and `next_action` here says how to restart. null = no view open yet."
+        },
+        "next_action": {
+          "type": "string"
         }
       }
     },
@@ -4371,6 +4381,26 @@
     ]
   },
   {
+    "name": "events.flush",
+    "description": "Drain pending editor change notifications before an external pre-edit checkpoint. Does not modify geometry.",
+    "params": {
+      "type": "object",
+      "properties": {}
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "flushed": {
+          "type": "boolean"
+        }
+      }
+    },
+    "tags": [
+      "events",
+      "read"
+    ]
+  },
+  {
     "name": "exec.python",
     "description": "Escape hatch: run arbitrary Python code in KLayout's Qt main thread. Full pya access, full filesystem access - equivalent to running a macro from the IDE. Pre-bound globals: pya, mw (main window), view (current LayoutView), layout (active Layout).\n\nState persists across calls ON THE SAME CONNECTION. Pass `reset=true` to wipe the namespace first. stdout/stderr are captured and returned as strings. If the last top-level statement is an expression, its value comes back as `return_value` (Jupyter-style); otherwise had_result=false.\n\nExceptions in user code do NOT fail the RPC - they come back inside result.exception along with any stdout/stderr captured before the raise. Only malformed requests (missing `code`, oversized, syntax error) return ok=false. Callers writing LLM feedback loops should branch on result.exception.",
     "params": {
@@ -6327,6 +6357,87 @@
     },
     "tags": [
       "session"
+    ]
+  },
+  {
+    "name": "buttons.reload",
+    "description": "Re-read the button manifests under <registry_root>/buttons/*.json and sync the KLayout toolbar to them: add new buttons, update changed texts in place, delete buttons whose manifest is gone. Returns installed/updated/removed/skipped ids and the current button list. Write manifests with `klink button add` first.",
+    "params": {
+      "type": "object"
+    },
+    "tags": [
+      "buttons"
+    ]
+  },
+  {
+    "name": "buttons.list",
+    "description": "List the custom toolbar buttons currently installed, plus the manifest directory.",
+    "params": {
+      "type": "object"
+    },
+    "tags": [
+      "buttons"
+    ]
+  },
+  {
+    "name": "tool.run",
+    "description": "Run an installed deterministic tool (<registry_root>/tools/<id>/: tool.json + run.py) inside KLayout on the current view's selection, as ONE undo step. Params resolve as tool defaults <- preset <- `params`. With interactive=false (default) nothing is asked: a layer param with a `from` list and one candidate is filled in (result `auto`); otherwise a param without a value is ERR_TOOL_PARAMS (layer choices in data.candidates). With interactive=true KLayout opens ONE form with every param pre-filled (layers listed from the selection/layout, plus `new layer...`); the call blocks while it is open; cancel returns status 'cancelled'. Errors: ERR_TOOL_NOT_FOUND, ERR_TOOL_INPUT (e.g. too few shapes selected), ERR_TOOL_PARAMS, ERR_TOOL_RUN (run.py raised; the edit was rolled back). Install tools with `klink tool install <dir|zip>`.",
+    "params": {
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "installed tool id (tool.list)"
+        },
+        "preset": {
+          "type": "string",
+          "description": "preset name from tool.get"
+        },
+        "params": {
+          "type": "object",
+          "description": "param name -> value; overrides the preset"
+        },
+        "interactive": {
+          "type": "boolean",
+          "default": false,
+          "description": "ask the params in one KLayout form"
+        }
+      }
+    },
+    "mutates": true,
+    "tags": [
+      "tools"
+    ]
+  },
+  {
+    "name": "tool.list",
+    "description": "List the deterministic tools installed under <registry_root>/tools/ (id, title, label, presets, problem when unusable).",
+    "params": {
+      "type": "object"
+    },
+    "tags": [
+      "tools"
+    ]
+  },
+  {
+    "name": "tool.get",
+    "description": "Return one installed tool's normalized tool.json (params with defaults, presets, prompt policy, min_shapes, min_selected) plus its directory and run.py path.",
+    "params": {
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      }
+    },
+    "tags": [
+      "tools"
     ]
   }
 ]

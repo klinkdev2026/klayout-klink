@@ -18,6 +18,7 @@ same gap for the KLayout side: the salt plugin ships inside the wheel
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import shutil
@@ -347,6 +348,340 @@ def run_new(slug: str, *, project: str = ".") -> int:
     return 0
 
 
+def _button_sync(do_reload: bool) -> None:
+    """After a manifest change: ask the running KLayout to re-sync its toolbar."""
+    if not do_reload:
+        print("--no-reload: applied at the next buttons.reload RPC or KLayout start")
+        return
+    from . import buttons
+    from .client import KLinkClient
+
+    try:
+        with KLinkClient(connect_timeout=1.0).connect() as client:
+            report = buttons.reload(client)
+    except Exception as exc:  # KLayout not running / old plugin without buttons.reload
+        print(f"file written; KLayout not reachable or not updated ({type(exc).__name__}: {exc}); "
+              "the button will appear at the next KLayout start")
+        return
+    print("installed=%s updated=%s removed=%s skipped=%s" % (
+        report.get("installed", []), report.get("updated", []), report.get("removed", []),
+        [f"{s.get('file')}: {s.get('reason')}" for s in report.get("skipped", [])]))
+    for bid, detail in (report.get("items") or {}).items():
+        print(f"  {bid}: " + " ".join(f"{k}={v}" for k, v in detail.items()))
+
+
+def _button_items(item_args: list[str], def_args: list[str]) -> list[dict] | None:
+    """--item ID=TITLE / --item-definition ID=PATH -> items list.
+
+    Each value is split at the first '='.
+    """
+    if not item_args and not def_args:
+        return None
+    items, by_id = [], {}
+    for raw in item_args:
+        sid, sep, title = raw.partition("=")
+        if not sep:
+            raise ValueError(f"--item {raw!r}: expected ID=TITLE")
+        if sid in by_id:
+            raise ValueError(f"--item {sid!r} given twice")
+        by_id[sid] = {"id": sid, "title": title} if title else {"id": sid}
+        items.append(by_id[sid])
+    for raw in def_args:
+        sid, sep, path = raw.partition("=")
+        if not sep or not path:
+            raise ValueError(f"--item-definition {raw!r}: expected ID=PATH")
+        if sid not in by_id:
+            raise ValueError(f"--item-definition {sid!r}: no --item {sid}=TITLE given")
+        by_id[sid]["definition"] = path
+    return items
+
+
+def button_cmd(args) -> int:
+    from . import buttons
+
+    if args.button_cmd == "add":
+        try:
+            items = _button_items(args.item or [], args.item_definition or [])
+            path = buttons.define(args.id, args.label, title=args.title, definition=args.definition,
+                                  items=items, promote=False if args.no_promote else None,
+                                  icon=args.icon)
+        except ValueError as exc:
+            print(str(exc))
+            return 2
+        print(f"wrote {path}")
+        _button_sync(not args.no_reload)
+        return 0
+    if args.button_cmd == "item":
+        try:
+            if args.item_cmd == "set":
+                path = buttons.set_item(args.button, args.item_id, title=args.title,
+                                        definition=args.definition)
+                print(f"wrote {path} (item {args.item_id!r})")
+            elif args.item_cmd == "remove":
+                if not buttons.remove_item(args.button, args.item_id):
+                    print(f"button {args.button!r} has no item {args.item_id!r}")
+                    return 1
+                print(f"removed item {args.item_id!r} from button {args.button!r}")
+            else:
+                return -1
+        except FileNotFoundError as exc:
+            print(str(exc))
+            return 1
+        except ValueError as exc:
+            print(str(exc))
+            return 2
+        _button_sync(not args.no_reload)
+        return 0
+    if args.button_cmd == "remove":
+        if not buttons.remove(args.id):
+            print(f"no manifest for button {args.id!r} in {buttons.buttons_dir()}")
+            return 1
+        print(f"removed {buttons.buttons_dir() / (args.id + '.json')}")
+        _button_sync(not args.no_reload)
+        return 0
+    if args.button_cmd == "list":
+        entries = buttons.list_defined()
+        print(f"{buttons.buttons_dir()}: {len(entries)} manifest(s)")
+        for e in entries:
+            status = "ok" if e["problem"] is None else f"SKIPPED: {e['problem']}"
+            print(f"  {e.get('id', Path(e['file']).stem):<20} {e.get('label', ''):<7} "
+                  f"{e.get('title') or ''}  [{status}]")
+            if isinstance(e.get("icon"), str):
+                missing = "" if Path(e["icon"]).is_file() else "  (file missing: text button)"
+                print(f"      icon: {e['icon']}{missing}")
+            items = e.get("items") if isinstance(e.get("items"), list) else []
+            for it in items:
+                if not isinstance(it, dict):
+                    continue
+                extra = f"  -> {it['definition']}" if isinstance(it.get("definition"), str) else ""
+                print(f"      - {it.get('id')!s:<16} {it.get('title') or it.get('id')}{extra}")
+            if e.get("promote") is False:
+                print("      (promote: false -- the parent keeps the button's own label)")
+        return 0
+    return -1
+
+
+def _print_reload(report) -> None:
+    if isinstance(report, str):
+        print(report)
+        return
+    print("toolbar: installed=%s updated=%s removed=%s" % (
+        report.get("installed", []), report.get("updated", []), report.get("removed", [])))
+
+
+def tool_cmd(args) -> int:
+    from . import tools
+
+    if args.tool_cmd == "install":
+        try:
+            rep = tools.install(args.src, reload=not args.no_reload)
+        except (OSError, ValueError) as exc:
+            print(str(exc))
+            return 2
+        print(f"installed {rep['id']} -> {rep['dir']}")
+        print(f"button {rep['button']}" + (f" (entries: {', '.join(rep['items'])})" if rep["items"] else ""))
+        _print_reload(rep["reload"])
+        return 0
+    if args.tool_cmd == "uninstall":
+        try:
+            removed = tools.uninstall(args.id, reload=not args.no_reload)
+        except ValueError as exc:
+            print(str(exc))
+            return 2
+        if not removed:
+            print(f"no tool {args.id!r} installed in {tools.tools_dir()}")
+            return 1
+        print(f"uninstalled {args.id}")
+        return 0
+    if args.tool_cmd == "list":
+        entries = tools.list_installed()
+        print(f"{tools.tools_dir()}: {len(entries)} tool(s)")
+        for e in entries:
+            status = "ok" if e["problem"] is None else f"UNUSABLE: {e['problem']}"
+            presets = f"  presets: {', '.join(e['presets'])}" if e["presets"] else ""
+            print(f"  {e['id']:<20} {e.get('title') or ''}  [{status}]{presets}")
+        return 0
+    if args.tool_cmd == "export":
+        try:
+            print(f"wrote {tools.export(args.id, args.zip)}")
+        except FileNotFoundError as exc:
+            print(str(exc))
+            return 1
+        return 0
+    if args.tool_cmd == "run":
+        from .client import KLinkClient
+        from .errors import KLinkServerError
+
+        params = {}
+        for raw in args.param or []:
+            key, sep, value = raw.partition("=")
+            if not sep or not key:
+                print(f"--param {raw!r}: expected NAME=VALUE")
+                return 2
+            params[key] = value
+        try:
+            with KLinkClient(connect_timeout=2.0).connect() as client:
+                out = tools.run(client, args.id, preset=args.preset, params=params,
+                                interactive=args.interactive)
+        except KLinkServerError as exc:
+            print(f"[{exc.code}] {exc.message}")
+            if exc.hint:
+                print(f"next: {exc.hint}")
+            data = exc.data if isinstance(exc.data, dict) else {}
+            if data.get("stdout"):
+                print("stdout (printed by run.py before it failed):")
+                print(_indent(data["stdout"]))
+            if data.get("traceback") and exc.code == "ERR_TOOL_RUN":
+                tb = [ln for ln in str(data["traceback"]).splitlines() if ln.strip()]
+                print("traceback (tail):")
+                print(_indent("\n".join(tb[-4:])))
+            print(f"journal: python -m klink.cli tool log {args.id}")
+            return 1
+        except Exception as exc:  # transport: KLayout not running
+            print(f"KLayout not reachable ({type(exc).__name__}: {exc}); start KLayout with klink loaded")
+            return 1
+        print(f"{out.get('status')}: {out.get('tool')} preset={out.get('preset')} "
+              f"selection={out.get('selection_count')} {out.get('wall_ms')} ms")
+        result = out.get("result")
+        if isinstance(result, dict) and result.get("stdout"):
+            print("stdout:")
+            print(_indent(result["stdout"]))
+            result = {k: v for k, v in result.items() if k != "stdout"}
+        if result is not None:
+            print(json.dumps(result, ensure_ascii=False))
+        return 0
+    if args.tool_cmd == "new":
+        return _tool_new(args)
+    if args.tool_cmd == "check":
+        return _tool_check(args)
+    if args.tool_cmd == "log":
+        return _tool_log(args)
+    return -1
+
+
+def _indent(text, prefix: str = "    ") -> str:
+    return "\n".join(prefix + ln for ln in str(text).splitlines())
+
+
+def _tool_new(args) -> int:
+    from . import tools
+
+    try:
+        rep = tools.scaffold(args.id, dest=args.dir, from_dir=args.from_dir, title=args.title,
+                             label=args.label, min_selected=args.min_selected, macro=args.macro,
+                             icon=args.icon)
+    except (OSError, ValueError) as exc:
+        print(str(exc))
+        return 2
+    rel = Path(rep["dir"]).as_posix()
+    shown = ", ".join(rep["files"]) if len(rep["files"]) <= 6 else f"{len(rep['files'])} files"
+    origin = f" from {Path(args.from_dir).as_posix()}" if args.from_dir else ""
+    form = "def run(ctx, params)" if rep["form"] == "run" else "plain macro" if rep["form"] else "?"
+    print(f"created {rel}  ({shown}){origin}  [run.py form: {form}]")
+    for err in rep["check"]["errors"]:
+        print(f"  ERROR: {err}")
+    for warn in rep["check"]["warnings"]:
+        print(f"  warning: {warn}")
+    print("next:")
+    print(f"  python -m klink.cli tool check {rel}")
+    print(f"  python -m klink.cli tool install {rel}")
+    print(f"  python -m klink.cli tool run {rep['id']}            # select the input in KLayout first")
+    print(f"  python -m klink.cli tool log {rep['id']}")
+    return 0
+
+
+def _fmt_value(v) -> str:
+    return "-" if v is None else json.dumps(v, ensure_ascii=False)
+
+
+def _tool_check(args) -> int:
+    from . import tools
+
+    rep = tools.check(args.target)
+    if args.json:
+        print(json.dumps({k: rep[k] for k in ("ok", "errors", "warnings", "form", "params", "presets",
+                                              "dir", "id", "prompt", "icon")}, ensure_ascii=False, indent=2))
+        return 0 if rep["ok"] else 1
+    form = {"run": "def run(ctx, params)", "macro": "plain KLayout macro"}.get(rep["form"], "unknown")
+    print(f"{rep['dir']}: tool {rep['id']!r}, run.py form: {form}, prompt: {rep['prompt'] or '-'}, "
+          f"icon: {rep['icon'] or '- (text button)'}")
+    if rep["params"]:
+        print("params:")
+        rows = [("name", "type", "default", "from", "exclude", "allow_new", "asked")]
+        for p in rep["params"]:
+            rows.append((p["name"], str(p["type"]), "(required)" if p["required"] else _fmt_value(p["default"]),
+                         p["from"] or "-", ",".join(p["exclude"]) if isinstance(p["exclude"], list) else "-",
+                         _fmt_value(p["allow_new"]), p["asked"]))
+        widths = [max(len(r[i]) for r in rows) for i in range(len(rows[0]))]
+        for r in rows:
+            print("  " + "  ".join(c.ljust(w) for c, w in zip(r, widths)).rstrip())
+    else:
+        print("params: none")
+    if rep["presets"]:
+        print("presets:")
+        for pre in rep["presets"]:
+            vals = ", ".join(f"{k}={_fmt_value(v)}" for k, v in pre["params"].items()) or "-"
+            print(f"  {pre['name']:<16} {pre['title']!s:<28} {vals}")
+    for err in rep["errors"]:
+        print(f"ERROR: {err}")
+    for warn in rep["warnings"]:
+        print(f"warning: {warn}")
+    print(f"{'FAILED' if rep['errors'] else 'ok'}: {len(rep['errors'])} error(s), "
+          f"{len(rep['warnings'])} warning(s)")
+    return 0 if rep["ok"] else 1
+
+
+def _tool_log(args) -> int:
+    import time as _time
+    from . import tools
+
+    recs = tools.read_log(args.id, n=args.n)
+    if args.json:
+        print(json.dumps(recs, ensure_ascii=False, indent=2))
+        return 0
+    if not recs:
+        what = f"tool {args.id!r}" if args.id else "any tool"
+        print(f"no runs recorded for {what} in {tools.journals_dir()}; click the button or run "
+              f"`python -m klink.cli tool run {args.id or '<id>'}`")
+        return 0
+    for i, r in enumerate(recs):
+        if i:
+            print()
+        ts = r.get("ts")
+        when = _time.strftime("%Y-%m-%d %H:%M:%S", _time.localtime(ts)) if isinstance(ts, (int, float)) else "?"
+        head = (f"{when}  {r.get('status', '?').upper()}  tool={r.get('tool')}  preset={r.get('preset') or '-'}"
+                f"  session={r.get('session')}")
+        extra = [] if r.get("wall_ms") is None else [f"{r['wall_ms']} ms"]
+        if r.get("seq") is not None:
+            extra.append(f"seq {r['seq']}")
+        if r.get("interactive"):
+            extra.append("interactive")
+        print(head + (f"  ({', '.join(extra)})" if extra else ""))
+        if "selection_count" in r:
+            print(f"  selection: {r.get('selection_count')} shape(s), {r.get('selected_count')} object(s)")
+        if r.get("params") is not None:
+            print(f"  params: {json.dumps(r['params'], ensure_ascii=False)}")
+        if r.get("auto"):
+            print(f"  auto:   {json.dumps(r['auto'], ensure_ascii=False)}")
+        result = r.get("result")
+        stdout = r.get("stdout")
+        if isinstance(result, dict):
+            stdout = stdout or result.get("stdout")
+            result = {k: v for k, v in result.items() if k != "stdout"}
+        if result is not None:
+            print(f"  result: {json.dumps(result, ensure_ascii=False)}")
+        if stdout:
+            print("  stdout:")
+            print(_indent(stdout, "    | "))
+        err = r.get("error")
+        if isinstance(err, dict):
+            print(f"  error:  [{err.get('code')}] {err.get('message')}"
+                  + (f" ({err['type']})" if err.get("type") else ""))
+            if err.get("hint"):
+                print(f"  hint:   {err['hint']}")
+    return 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="klink", description="klink command-line tools.")
     ap.add_argument("--version", action="version",
@@ -393,6 +728,113 @@ def main(argv=None) -> int:
                       help="the klink project directory (default: "
                            "current dir)")
 
+    p_btn = sub.add_parser(
+        "button", help="manage custom KLayout toolbar buttons (manifests under "
+                       "<registry_root>/buttons/)")
+    btn_sub = p_btn.add_subparsers(dest="button_cmd")
+    p_ba = btn_sub.add_parser("add", help="write a button manifest and hot-add it")
+    p_ba.add_argument("id", help="button id: ^[a-z][a-z0-9_]{0,39}$")
+    p_ba.add_argument("--label", required=True, help="toolbar text (cut to 6 chars)")
+    p_ba.add_argument("--title", default=None, help="tooltip / action title (default: id)")
+    p_ba.add_argument("--definition", default=None,
+                      help="opaque path/string echoed in every click record")
+    p_ba.add_argument("--item", action="append", metavar="ID=TITLE",
+                      help="dropdown entry (repeatable, menu order); makes the button a dropdown. "
+                           "TITLE is the entry's one name: it is also what the parent shows "
+                           "once that entry is clicked")
+    p_ba.add_argument("--item-definition", action="append", metavar="ID=PATH",
+                      help="definition for one --item (repeatable; default: the button's)")
+    p_ba.add_argument("--icon", default=None, metavar="FILE",
+                      help="optional .png/.svg shown on the toolbar with the label under it "
+                           "(stored as its absolute path; the file must exist)")
+    p_ba.add_argument("--no-promote", action="store_true",
+                      help="dropdown: the parent always shows the button's own label/title "
+                           "(its click still runs the current item)")
+    p_ba.add_argument("--no-reload", action="store_true",
+                      help="only write the file; do not contact KLayout")
+    p_bi = btn_sub.add_parser("item", help="add/replace/remove ONE dropdown entry of a button")
+    item_sub = p_bi.add_subparsers(dest="item_cmd")
+    p_bis = item_sub.add_parser("set", help="add (append) or replace one dropdown entry")
+    p_bis.add_argument("button")
+    p_bis.add_argument("item_id", metavar="item")
+    p_bis.add_argument("--title", default=None, help="entry name (default: item id); the parent shows it once "
+                            "this entry is clicked")
+    p_bis.add_argument("--definition", default=None,
+                       help="opaque string echoed in this entry's click records "
+                            "(default: the button's)")
+    p_bis.add_argument("--no-reload", action="store_true",
+                       help="only write the file; do not contact KLayout")
+    p_bir = item_sub.add_parser("remove", help="remove one dropdown entry")
+    p_bir.add_argument("button")
+    p_bir.add_argument("item_id", metavar="item")
+    p_bir.add_argument("--no-reload", action="store_true",
+                       help="only write the file; do not contact KLayout")
+    p_br = btn_sub.add_parser("remove", help="delete a button manifest and hot-remove it")
+    p_br.add_argument("id")
+    p_br.add_argument("--no-reload", action="store_true",
+                      help="only delete the file; do not contact KLayout")
+    btn_sub.add_parser("list", help="list the button manifests on disk")
+
+    p_tool = sub.add_parser(
+        "tool", help="manage deterministic KLayout tools (tool.json + run.py under "
+                     "<registry_root>/tools/<id>/)")
+    tool_sub = p_tool.add_subparsers(dest="tool_cmd")
+    p_ti = tool_sub.add_parser("install", help="install a tool directory or .zip and add its button")
+    p_ti.add_argument("src", help="tool directory (named like its id) or a .zip of one")
+    p_ti.add_argument("--no-reload", action="store_true", help="do not contact KLayout")
+    p_tu = tool_sub.add_parser("uninstall", help="remove a tool and its button")
+    p_tu.add_argument("id")
+    p_tu.add_argument("--no-reload", action="store_true", help="do not contact KLayout")
+    tool_sub.add_parser("list", help="list installed tools")
+    p_te = tool_sub.add_parser("export", help="zip an installed tool (shareable, installable)")
+    p_te.add_argument("id")
+    p_te.add_argument("zip")
+    p_tr = tool_sub.add_parser("run", help="run an installed tool in the running KLayout")
+    p_tr.add_argument("id")
+    p_tr.add_argument("--preset")
+    p_tr.add_argument("--param", action="append", metavar="NAME=VALUE",
+                      help="param value (repeatable); overrides the preset")
+    p_tr.add_argument("--interactive", action="store_true",
+                      help="ask the params in one KLayout form")
+    p_tn = tool_sub.add_parser(
+        "new", help="scaffold a tool folder (tool.json + run.py + README.md) to edit, check and install",
+        description="Scaffold <dir>/<id>/ with tool.json, run.py and README.md. The default run.py is "
+                    "a `def run(ctx, params)` skeleton whose docstring spells out the whole contract; "
+                    "it installs and runs as is (it counts the selected shapes per layer).")
+    p_tn.add_argument("id", help="tool id: ^[a-z][a-z0-9_]{0,39}$ (also the folder name)")
+    p_tn.add_argument("--dir", default=".klink/tools",
+                      help="parent folder for the new tool (default: .klink/tools)")
+    p_tn.add_argument("--from", dest="from_dir", default=None, metavar="TOOL_DIR",
+                      help="copy an existing tool folder (e.g. example_template/tools/bool_region) "
+                           "and rewrite its id")
+    p_tn.add_argument("--title", default=None, help="tool.json title (default: from the id)")
+    p_tn.add_argument("--label", default=None,
+                      help="toolbar text, at most 6 characters shown (default: the id's first 6, upper case)")
+    p_tn.add_argument("--min-selected", type=int, default=None, metavar="N",
+                      help="inputs.selection.min: klink refuses the run with fewer selected objects")
+    p_tn.add_argument("--icon", default=None, metavar="FILE",
+                      help="optional .png/.svg (24x24 or 32x32) copied in as icon.<ext> and set as "
+                           "tool.json \"icon\"; without it the button is text only")
+    p_tn.add_argument("--macro", action="store_true",
+                      help="write a plain KLayout macro skeleton instead of def run(ctx, params)")
+    p_tc = tool_sub.add_parser(
+        "check", help="lint a tool folder or installed tool without KLayout (all problems at once)",
+        description="Check tool.json and run.py without KLayout and report every problem found: "
+                    "validator errors, run.py missing / syntax errors, the run.py form, the params "
+                    "and presets, and warnings for patterns that misbehave at run time. Exit code "
+                    "1 on errors, 0 when only warnings.")
+    p_tc.add_argument("target", help="tool directory, or the id of an installed tool")
+    p_tc.add_argument("--json", action="store_true",
+                      help="print {ok, errors, warnings, form, params, presets} as JSON")
+    p_tl = tool_sub.add_parser(
+        "log", help="show recent tool runs from the plugin's journals (all sessions)",
+        description="Read <registry_root>/journals/*.tools.jsonl (written by the klink plugin for "
+                    "every button click / tool run), merge all sessions, sort by time and print the "
+                    "newest N runs, newest last: status, params, result, stdout, error + hint.")
+    p_tl.add_argument("id", nargs="?", default=None, help="only runs of this tool")
+    p_tl.add_argument("-n", type=int, default=5, help="how many runs to show (default 5; 0 = all)")
+    p_tl.add_argument("--json", action="store_true", help="dump the records as JSON")
+
     # `klink doctor` used to drop every flag on the floor (doctor_main([])),
     # so --scan/--report were reachable only as `python -m klink.doctor`.
     p_doc = sub.add_parser(
@@ -427,6 +869,18 @@ def main(argv=None) -> int:
             return plugin_status(salt)
         p_plugin.print_help()
         return 1
+    if args.cmd == "button":
+        rc = button_cmd(args)
+        if rc == -1:
+            p_btn.print_help()
+            return 2
+        return rc
+    if args.cmd == "tool":
+        rc = tool_cmd(args)
+        if rc == -1:
+            p_tool.print_help()
+            return 2
+        return rc
     if args.cmd == "doctor":
         from .doctor import main as doctor_main
 

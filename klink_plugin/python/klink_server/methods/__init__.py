@@ -32,3 +32,5 @@ from . import region_m  # noqa: F401
 from . import intent_m  # noqa: F401
 from . import transfer_m  # noqa: F401
 from . import session_m  # noqa: F401
+from . import buttons_m  # noqa: F401
+from . import tools_m  # noqa: F401

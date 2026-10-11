@@ -555,6 +555,45 @@ DOMAINS: "OrderedDict[str, dict]" = OrderedDict([
             "abutted and not routed."
         ),
     }),
+    ("tools", {
+        "title": "Toolbar tools (user macros as buttons)",
+        "summary": "Run / inspect the user's installed deterministic tools (a pya macro + tool.json = one toolbar button, one undo step) and resync the toolbar.",
+        "prefixes": ["tool", "buttons"],
+        "usage": (
+            "A deterministic tool is a folder <id>/ with tool.json (id, title, "
+            "optional label <=6 chars, inputs.selection.min, params, presets, "
+            "prompt) and run.py = an UNMODIFIED KLayout pya macro or "
+            "`def run(ctx, params)`. It is installed USER-LEVEL under "
+            "<registry root>/tools/<id>/ and shows up as a toolbar button "
+            "(each preset = a dropdown entry). The plugin runs it inside "
+            "KLayout as ONE undo step, rolls the edit back if it raises, "
+            "shows the error, and journals every run. klink ships ZERO tools.\n"
+            "INSTALL IS NOT AN RPC: run the CLI `python -m klink.cli tool "
+            "install <dir|zip>` (also uninstall / list / export <id> <zip> / "
+            "run) or the Python API `klink.tools.install(path)` (installs, "
+            "writes the button manifest and asks KLayout to reload the "
+            "toolbar). Recommended project source: .klink/tools/<id>/ "
+            "(versioned; klink never reads it directly, you install FROM it). "
+            "Authoring recipe: recipes/tools.md in a `klink init` project; "
+            "examples: example_template/tools/.\n"
+            "tool.list -> installed ids, titles, labels, presets and a "
+            "`problem` line for an unusable tool. tool.get -> the normalized "
+            "tool.json (defaults, presets, prompt, min_selected) + run_path. "
+            "tool.run {id, preset?, params?, interactive?} runs it on the "
+            "CURRENT selection: with interactive=false (default) nothing is "
+            "asked, so every param without a default/preset value must be "
+            "passed (ERR_TOOL_PARAMS otherwise; its hint lists the "
+            "candidates); interactive=true opens KLayout dialogs and blocks "
+            "until the user answers. Errors: ERR_TOOL_NOT_FOUND (hint lists "
+            "installed ids), ERR_TOOL_INPUT (too few selected), ERR_TOOL_RUN "
+            "(run.py raised; partial edit undone). Verify a new tool by "
+            "selecting its input (selection.set_box), tool.run, then "
+            "shape.query; edit.undo reverts the run in one step.\n"
+            "buttons.list shows the custom toolbar buttons; buttons.reload "
+            "re-syncs the toolbar to the manifests on disk (needed after "
+            "hand-editing an installed tool.json's label/presets)."
+        ),
+    }),
     ("escape_hatch", {
         "title": "Escape hatch (pya exec, events, recorder)",
         "summary": "Raw KLayout pya execution, the event stream, and the replay recorder. Use only when typed RPCs don't cover it.",

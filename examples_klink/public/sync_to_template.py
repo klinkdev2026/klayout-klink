@@ -19,6 +19,8 @@ a flat pile:
       routing/     five_routers (Port/Anchor + tapered backend; LIVE)
       digital/     fit_device_pnr_lvs, padframe_pnr_lvs, chat_to_netlist_pnr,
                    multilayer_pnr_lvs (+ engine/netlists; LIVE, see below)
+      tools/       bool_region, bool_region_macro, bool_selection (DIRECTORY
+                   starters: whole tool folders, see TOOL_STARTERS)
 
 A starter must be fully self-contained: it imports only `klink` (plus
 `klayout.db` for offline geometry), carries its own layers, and needs no bundled
@@ -116,19 +118,43 @@ STARTERS: dict[str, list[tuple[str, str]]] = {
     ],
 }
 
+# DIRECTORY starters: deterministic toolbar tools (tool.json + run.py [+ README])
+# are folders, copied WHOLE from features/tools/<id>/ to example_template/tools/<id>/
+# (klink ships zero INSTALLED tools; these are copy-and-install examples).
+TOOL_STARTERS: list[str] = ["bool_region", "bool_region_macro", "bool_selection"]
+TOOL_SRC = SRC / "features" / "tools"
+TOOL_CATEGORY = "tools"
+
 TEMPLATE = SRC.parents[1] / "klink" / "templates" / "project" / "example_template"
 
 
+def _tool_files(tool_id: str) -> list[Path]:
+    """Files of one directory starter, relative to its folder (no caches)."""
+    root = TOOL_SRC / tool_id
+    return sorted(
+        f.relative_to(root) for f in root.rglob("*")
+        if f.is_file() and "__pycache__" not in f.parts and f.suffix != ".pyc"
+    )
+
+
 def _planned() -> list[tuple[Path, Path]]:
-    """Return (source_path, template_path) for every starter."""
+    """Return (source_path, template_path) for every starter file
+    (single-file starters + every file of every directory starter)."""
     pairs: list[tuple[Path, Path]] = []
     for category, items in STARTERS.items():
         for bucket, name in items:
             pairs.append((SRC / bucket / name, TEMPLATE / category / name))
+    for tool_id in TOOL_STARTERS:
+        for rel in _tool_files(tool_id):
+            pairs.append((TOOL_SRC / tool_id / rel,
+                          TEMPLATE / TOOL_CATEGORY / tool_id / rel))
     return pairs
 
 
 def main() -> int:
+    missing_tools = [t for t in TOOL_STARTERS if not (TOOL_SRC / t).is_dir()]
+    if missing_tools:
+        raise SystemExit("missing tool starter folder(s): " + ", ".join(missing_tools))
     pairs = _planned()
     missing = [str(s) for s, _ in pairs if not s.exists()]
     if missing:
@@ -140,13 +166,26 @@ def main() -> int:
         if stale not in wanted:
             stale.unlink()
             print(f"removed stale: {stale.relative_to(TEMPLATE.parent)}")
+    # directory starters are mirrored exactly: drop any other file under tools/
+    # (a file removed from a source tool, or a tool dropped from TOOL_STARTERS)
+    tools_root = TEMPLATE / TOOL_CATEGORY
+    if tools_root.is_dir():
+        for stale in tools_root.rglob("*"):
+            if stale.is_file() and stale not in wanted:
+                stale.unlink()
+                print(f"removed stale: {stale.relative_to(TEMPLATE.parent)}")
+        for d in sorted((p for p in tools_root.rglob("*") if p.is_dir()),
+                        key=lambda p: len(p.parts), reverse=True):
+            if not any(d.iterdir()):
+                d.rmdir()
 
     for src, dst in pairs:
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, dst)
 
     ok = all(filecmp.cmp(src, dst, shallow=False) for src, dst in pairs)
-    print(f"synced {len(pairs)} starter(s) into {len(STARTERS)} categories -> {TEMPLATE}")
+    print(f"synced {len(pairs)} starter file(s) into {len(STARTERS) + 1} categories "
+          f"({len(TOOL_STARTERS)} tool folder(s) under {TOOL_CATEGORY}/) -> {TEMPLATE}")
     print("starters == template:", ok)
     return 0 if ok else 1
 

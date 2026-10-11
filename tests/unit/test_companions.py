@@ -448,9 +448,10 @@ def test_install_buttons_creates_one_action_per_descriptor(tmp_path):
     assert ids == ["klink_companion_alpha", "klink_companion_beta"]
 
     # delete-before-insert for both buttons, in order
+    # the item inserted at "@toolbar.end" lives at "@toolbar.<id>"; that is the path to delete
     assert menu.deleted == [
-        "@toolbar.end.klink_companion_alpha",
-        "@toolbar.end.klink_companion_beta",
+        "@toolbar.klink_companion_alpha",
+        "@toolbar.klink_companion_beta",
     ]
     assert [entry[1] for entry in menu.inserted] == ids
 
@@ -462,6 +463,23 @@ def test_install_buttons_creates_one_action_per_descriptor(tmp_path):
     # kept alive so pya does not drop them
     assert companions._actions["klink_companion_alpha"] is alpha_action
     assert companions._actions["klink_companion_beta"] is beta_action
+
+
+def test_install_buttons_removes_button_of_vanished_descriptor(tmp_path):
+    companions._actions.clear()
+    alpha = tmp_path / "companions" / "alpha.json"
+    _write_json(alpha, _valid_spec(name="alpha"))
+    _write_json(tmp_path / "companions" / "beta.json", _valid_spec(name="beta"))
+    companions.install_buttons(_FakeMenu(), _FakePya, root=tmp_path)
+    assert set(companions._actions) == {"klink_companion_alpha", "klink_companion_beta"}
+
+    alpha.unlink()
+    menu = _FakeMenu()
+    ids = companions.install_buttons(menu, _FakePya, root=tmp_path)
+
+    assert ids == ["klink_companion_beta"]
+    assert menu.deleted[0] == "@toolbar.klink_companion_alpha"  # stale button dropped first
+    assert set(companions._actions) == {"klink_companion_beta"}
 
 
 # ====================================================================== autostart_all

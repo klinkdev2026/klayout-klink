@@ -30,7 +30,12 @@ Failure contract (what a caller may rely on when an RPC returns an error):
   just created". The undo Manager drops empty transactions (verified on
   0.30.7: a commit with no changes leaves `has_undo` False), so the undo
   only fires when the top undo entry carries this RPC's title; it never
-  reverts something the user did. The reverted edit remains available as
+  reverts something the user did. When the entry on top BEFORE the call
+  already had the same title (a repeated RPC / tool run), a net-zero
+  insert+erase is recorded first so the entry undone is certainly this
+  call's (verified live: otherwise a failed, edit-free second run undid
+  the first run); if that edit is impossible nothing is undone and
+  `partial_edit` is "unknown". The reverted edit remains available as
   a redo entry until the next edit. The error's `data.transaction` block
   reports what happened (`partial_edit`: "none" | "undone" |
   "left_as_undo_entry" | "unknown").
@@ -160,11 +165,47 @@ def _open_transaction(view, title: str) -> None:
         ) from exc
 
 
-def _rollback(view, title: str) -> dict:
+def _undo_top(view):
+    """Title of the entry edit.undo would revert right now, or None."""
+    mgr = _manager_for(view)
+    if mgr is None:
+        return None
+    try:
+        return mgr.transaction_for_undo() if mgr.has_undo() else None
+    except Exception:
+        return None
+
+
+def _record_sentinel(view) -> bool:
+    """Make the open transaction non-empty with a net-zero edit (insert and
+    erase a 1-dbu box in the current cell), so commit() is guaranteed to
+    push an entry of our own. False when no such edit can be made."""
+    try:
+        cv = view.active_cellview()
+        ly, cell = cv.layout(), cv.cell
+        li = next(iter(ly.layer_indexes()), None)
+        if cell is None or li is None:
+            return False
+        shapes = cell.shapes(li)
+        shapes.erase(shapes.insert(pya.Box(0, 0, 1, 1)))
+        return True
+    except Exception:
+        return False
+
+
+def _rollback(view, title: str, pre_top=None) -> dict:
     """Close the transaction opened for `title` after its body raised, and
-    undo whatever it recorded. Returns the `transaction` report that is
+    undo whatever it recorded. `pre_top` is the undo label from before the
+    transaction was opened. Returns the `transaction` report that is
     attached to the outgoing error."""
     info = {"title": title, "applied": False, "partial_edit": "unknown"}
+    _refresh_view(view)  # inside the transaction, same reason as in _close_transaction
+    # Same title already on top (e.g. a second run of the same tool / RPC):
+    # if this body changed nothing, its empty transaction is dropped and the
+    # entry on top is the PREVIOUS call's, which must not be undone. A
+    # recorded net-zero edit makes the top entry certainly ours.
+    collision = pre_top is not None and pre_top == title
+    sentinel = _record_sentinel(view) if collision else False
     try:
         view.commit()
     except Exception as exc:
@@ -196,6 +237,14 @@ def _rollback(view, title: str) -> dict:
         info["partial_edit"] = "none"
         return info
 
+    if collision and not sentinel:
+        info["partial_edit"] = "unknown"
+        info["note"] = ("the previous undo entry has the same title %r, so the "
+                        "top entry may be the previous call's; it was NOT undone "
+                        "automatically. If this call changed the layout (check "
+                        "with a read RPC), call edit.undo once" % title)
+        return info
+
     try:
         mgr.undo()
     except Exception as exc:
@@ -207,7 +256,12 @@ def _rollback(view, title: str) -> dict:
 
     info["partial_edit"] = "undone"
     info["redo_entry"] = title
-    _refresh_view(view)
+    # Repaint only: the transaction is closed, so no layer-panel edit here
+    # (that is what used to wipe the undo stack).
+    try:
+        view.update_content()
+    except Exception:
+        pass
     return info
 
 
@@ -267,10 +321,16 @@ def _close_transaction(view, title: str) -> None:
     """Commit on the success path. A failing commit is surfaced, not
     swallowed: the edit is already in the layout, but its undo entry is
     not guaranteed, and the caller must know that."""
+    # The layer-panel refresh must happen INSIDE the transaction: on 0.30.x,
+    # add_missing_layers() for a layer the body just created, issued after
+    # commit(), is an edit outside any transaction and WIPES the whole undo
+    # stack (reproduced live: layer.ensure of a new layer after an undoable
+    # box insert left has_undo == False). Inside, it is just part of the
+    # same undo entry.
+    _refresh_view(view)
     try:
         view.commit()
     except Exception as exc:
-        _refresh_view(view)
         _schedule_diff()
         raise RpcError(
             ErrorCode.TXN_STATE,
@@ -285,7 +345,6 @@ def _close_transaction(view, title: str) -> None:
                                   "undo_entry": "unknown",
                                   "cause": repr(exc)}},
         ) from exc
-    _refresh_view(view)
     _schedule_diff()
 
 
@@ -304,6 +363,7 @@ def auto_txn(view: pya.LayoutView, title: str):
 
     if own:
         require_editable(view)
+        pre_top = _undo_top(view)
         _open_transaction(view, title)
 
     _AUTO_DEPTH[vid] = depth + 1
@@ -313,7 +373,7 @@ def auto_txn(view: pya.LayoutView, title: str):
         _AUTO_DEPTH[vid] = depth
         if not own:
             raise
-        info = _rollback(view, title)
+        info = _rollback(view, title, pre_top)
         raise _attach_transaction_info(exc, info) from exc
     else:
         _AUTO_DEPTH[vid] = depth

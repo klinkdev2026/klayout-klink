@@ -26,6 +26,14 @@ Call `vestigraph.restore` only after the user selects one checkpoint, using
 `guide -> history -> restore -> history`; it appends history instead of deleting
 later versions.
 
+## Toolbar tools (macro -> button)
+
+If the user says button, toolbar, 工具 / 按钮, or wants a KLayout macro on a
+one-click button, follow [recipes/tools.md](recipes/tools.md) step by step;
+the pipeline is `tool new -> check -> install -> run -> log`
+(`python -m klink.cli tool ...`). MCP side: `klink.find_tools domain=tools`.
+Examples: `example_template/tools/`; rules in [AGENTS.md](AGENTS.md).
+
 ## Tanner L-Edit workflow
 
 If the user mentions L-Edit, Tanner, `.tdb`, or T-Cell, klink drives that

@@ -21,6 +21,13 @@ For Vestigraph / HIST, saved versions and reusable skills, see
 [vestigraph.md](vestigraph.md). Start with `klink.find_tools domain=vestigraph`
 and `vestigraph.guide {}`. This optional workflow needs no `pdk.py` scaffold.
 
+## Toolbar tools (a KLayout macro as a button)
+
+Not a domain — no `pdk.py` needed. To turn a pya macro that works in KLayout
+into a one-click toolbar button (one undo step, rollback on error, presets as
+dropdown entries), see [tools.md](tools.md). Start with
+`klink.find_tools domain=tools`; examples are in `example_template/tools/`.
+
 ## Geometry tiers
 
 - **Self-contained** — generated entirely from `pdk.py` + code. Ships and runs.

@@ -17,10 +17,16 @@ regenerating.
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
-from klink.mcp.bridge import KLinkMCPBridge
-from klink.mcp.profiles import filter_methods
+# Run as `python tests/fixtures/mcp/regen_snapshot.py`: sys.path[0] is this folder, so a stale
+# klink in site-packages would win over the repo. Put the repo first (the 0.7.0 snapshot was
+# first regenerated from an old 0.5.8 klink this way).
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+
+from klink.mcp.bridge import KLinkMCPBridge  # noqa: E402
+from klink.mcp.profiles import filter_methods  # noqa: E402
 
 FIX = Path(__file__).resolve().parent
 DEFAULT_PROFILE = ["read", "write", "verify", "escape"]

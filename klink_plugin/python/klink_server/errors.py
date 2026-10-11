@@ -17,6 +17,11 @@ class ErrorCode:
     CANCELLED = "ERR_CANCELLED"
     TIMEOUT = "ERR_TIMEOUT"
     EXEC = "ERR_EXEC"
+    # Deterministic tools (klink_server/tools.py, docs/TOOLS.md).
+    TOOL_NOT_FOUND = "ERR_TOOL_NOT_FOUND"
+    TOOL_INPUT = "ERR_TOOL_INPUT"
+    TOOL_PARAMS = "ERR_TOOL_PARAMS"
+    TOOL_RUN = "ERR_TOOL_RUN"
     INTERNAL = "ERR_INTERNAL"
 
 
