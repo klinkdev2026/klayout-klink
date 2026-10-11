@@ -174,7 +174,7 @@ if mw is not None:
 
     _session_badge_id = "klink_session_badge"
     try:
-        menu.delete_item(f"@toolbar.end.{_session_badge_id}")
+        menu.delete_item(f"@toolbar.{_session_badge_id}")
     except Exception:
         pass
     session_action = pya.Action()
@@ -202,7 +202,7 @@ if mw is not None:
 
     _send_btn_id = "klink_send_selection"
     try:
-        menu.delete_item(f"@toolbar.end.{_send_btn_id}")
+        menu.delete_item(f"@toolbar.{_send_btn_id}")
     except Exception:
         pass
     send_action = pya.Action()
@@ -218,7 +218,7 @@ if mw is not None:
 
     _gf_target_btn_id = "klink_gdsfactory_target"
     try:
-        menu.delete_item(f"@toolbar.end.{_gf_target_btn_id}")
+        menu.delete_item(f"@toolbar.{_gf_target_btn_id}")
     except Exception:
         pass
     gf_target_action = pya.Action()
@@ -236,7 +236,7 @@ if mw is not None:
     # clipboard buttons. Remove old buttons if they exist from previous runs.
     _paste_btn_id = "klink_paste_transfer"
     try:
-        menu.delete_item(f"@toolbar.end.{_paste_btn_id}")
+        menu.delete_item(f"@toolbar.{_paste_btn_id}")
     except Exception:
         pass
     try:
@@ -246,7 +246,7 @@ if mw is not None:
 
     _clear_transfer_btn_id = "klink_clear_transfer"
     try:
-        menu.delete_item(f"@toolbar.end.{_clear_transfer_btn_id}")
+        menu.delete_item(f"@toolbar.{_clear_transfer_btn_id}")
     except Exception:
         pass
     try:
@@ -257,7 +257,7 @@ if mw is not None:
     _btn_id = "klink_recorder"
     # Remove any leftover from a previous Stop/Run before re-inserting.
     try:
-        menu.delete_item(f"@toolbar.end.{_btn_id}")
+        menu.delete_item(f"@toolbar.{_btn_id}")
     except Exception:
         pass
     action = pya.Action()
@@ -277,5 +277,12 @@ if mw is not None:
         _companions.install_buttons(menu, pya)
     except Exception as exc:
         print(f"[klink] companions unavailable: {exc}")
+
+    # Custom toolbar buttons (manifests under the klink registry root, buttons/*.json).
+    try:
+        from klink_server import buttons as _buttons
+        _buttons.install_all(menu, pya)
+    except Exception as exc:
+        print(f"[klink] buttons unavailable: {exc}")
  </text>
 </klayout-macro>

@@ -37,8 +37,8 @@ classifiers = [
 # `pip install --no-deps` gives the pure-Python core alone when you cannot
 # fetch/build a kernel wheel.
 dependencies = [
-    "klink-boxmaze-rs>=0.6,<0.7",
-    "klink-trackmaze-rs>=0.6,<0.7",
+    "klink-boxmaze-rs>=0.7,<0.8",
+    "klink-trackmaze-rs>=0.7,<0.8",
 ]
 
 [project.optional-dependencies]
@@ -66,6 +66,7 @@ klink = [
     "templates/project/runs/*",
     "templates/project/example_template/**/*",
     "templates/project/recipes/*",
+    "templates/tool/*",
     "mcp/skills/klayout/*",
     "mcp/skills/klayout-gdsfactory/*",
     "mcp/agents/*",

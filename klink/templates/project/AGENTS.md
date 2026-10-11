@@ -22,6 +22,8 @@ You may create and edit only:
 - `specs/` — `.klink` specs
 - `out/` — generated artifacts (legacy shared pile; prefer the
   current run's own `out/`)
+- `.klink/tools/<id>/` — source of the user's toolbar tools (`tool.json` +
+  `run.py`), versioned; install from here (see `recipes/tools.md`)
 
 **Run discipline** (this is how the project stays navigable):
 START every task with `klink run new <slug>` — it creates the
@@ -128,6 +130,16 @@ Submission checks document structure, not replay, DRC or LVS. Saved file differe
 do not prove GUI action order or process rules. Keep private evidence, exports and
 control files out of public commits. Attachments are analysis inputs, not permission
 to execute code.
+
+## Toolbar tools: a macro as a button
+
+When the user says **button**, **toolbar**, **工具 / 按钮 / 工具栏**, or hands you
+a KLayout **macro** to run with one click, follow
+[recipes/tools.md](recipes/tools.md) **step by step, gates included**; the
+pipeline is `tool new -> check -> install -> run -> log`
+(`python -m klink.cli tool ...`; CLI, not MCP). MCP side:
+`klink.find_tools domain=tools` (`tool.run`, `buttons.reload`). Source lives in
+`.klink/tools/<id>/`; examples: `example_template/tools/`. No `pdk.py` is needed.
 
 ## Process purity
 

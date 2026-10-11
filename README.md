@@ -68,6 +68,10 @@ artifacts are intentionally not part of a clean release.
 
 ## What's New
 
+### 0.7.0 — Your own toolbar buttons
+
+A folder with `tool.json` + `run.py` (an unmodified KLayout macro, or `def run(ctx, params)`) becomes a KLayout toolbar button that runs as one undo step, with presets as dropdown entries and parameters asked in one form whose layer lists come from the actual selection. klink ships no tools: your agent writes them. `klink init` projects get the procedure (`recipes/tools.md`) and the CLI pipeline `klink tool new → check → install → run → log`; three example tools sit in `example_template/tools/`. Plain buttons (`klink button`) and an MCP `tools` domain (`tool.run`, `buttons.list`, …) come with it. See [Toolbar tools](docs/public/toolbar-tools.md).
+
 ### 0.6.0 — Vestigraph local history integration
 
 klink 0.6.0 supports Vestigraph 0.2.0 local history through the existing extension registry. The full combined workflow requires Vestigraph installed in the Python environment that runs `klink-mcp`. Run `klink plugin install`, restart MCP for automatic tool discovery and companion registration, then restart KLayout and click **HIST**. Skill refinement requires an explicit experimental opt-in. See [Using Vestigraph](docs/public/VESTIGRAPH.md).

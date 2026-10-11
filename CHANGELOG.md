@@ -1,4 +1,13 @@
-﻿# Changelog
+# Changelog
+
+## 0.7.0
+
+- Custom toolbar buttons. A button is a JSON manifest under `<registry root>/buttons/` managed with `klink button add / remove / list`; the KLayout toolbar picks changes up through the `buttons.reload` RPC without a restart. A click is journaled and emitted as a `button_triggered` event; a button may carry dropdown entries. Optional `icon` (PNG or SVG) next to the label; without it the button is text only.
+- Deterministic tools: a folder with `tool.json` + `run.py` becomes a toolbar button that runs inside KLayout as one undo step. `run.py` is either an unmodified KLayout pya macro or `def run(ctx, params)`. Presets become dropdown entries. If the run raises, the partial edit is rolled back and the message is shown; every run is journaled; the last printed line goes to the status bar. klink ships no tools; three example tools come with `klink init` under `example_template/tools/` as sources.
+- Parameters are asked in one form, laid out like KLayout's Boolean Operations dialog: every param in one window, layer params as drop-downs of the layers actually present (`"from": "region" | "selection" | "layout"`, with `exclude`, `allow_new` -> `new layer…`, `allow_same`), the layers of the selected shapes first and preselected, a single-layer marker's own layer last. Non-interactive runs fill a single candidate and otherwise return `ERR_TOOL_PARAMS` with the candidates. Layers are accepted as `1/0`, `1`, `1,0` or `1 0`.
+- A command-driven pipeline for writing tools: `klink tool new <id>` scaffolds `.klink/tools/<id>/` with a `run.py` that documents the whole `ctx`/`params` contract and runs as is; `klink tool check <dir>` validates `tool.json` and `run.py` without KLayout and reports every error and warning at once; `klink tool install / uninstall / list / export / run`; `klink tool log <id>` prints the run journal (status, params, result, printed output, error + hint). `klink init` projects get `recipes/tools.md`: the numbered procedure with a gate per step, the `tool.json` key tables, the `run.py` contract and a pya cheat-sheet; `AGENTS.md` / `CLAUDE.md` and the klayout skill point to it. Project tool sources live in `.klink/tools/` (kept by the project `.gitignore`).
+- MCP: new `tools` domain — `tool.list`, `tool.get`, `tool.run`, `buttons.list`, `buttons.reload` (`klink.find_tools domain=tools`); the layout-build lane may run tools.
+- Fixes: the KLayout plugin's session heartbeat no longer leaves `.tmp` files behind when the atomic replace fails on Windows (retry, clean up, sweep stale files); the layer-panel refresh after a write RPC that created a layer stays inside the undo transaction; a rollback no longer matches a user's own undo entry of the same title.
 
 ## 0.6.5
 

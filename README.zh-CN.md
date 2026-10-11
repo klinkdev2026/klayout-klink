@@ -57,6 +57,10 @@ klink 是一个面向 [KLayout](https://www.klayout.de/) 的 AI-native 控制面
 
 ## 更新亮点
 
+### 0.7.0 —— 自己的工具栏按钮
+
+一个文件夹里放 `tool.json` + `run.py`（原样的 KLayout 宏，或 `def run(ctx, params)`），就是一个 KLayout 工具栏按钮：一次点击一步撤销，预设变成下拉项，参数在一个窗口里问完，图层下拉列的是选区里真实存在的层。klink 自身不带任何工具，按钮由你的 agent 来写。`klink init` 项目自带流程文档（`recipes/tools.md`）和命令行流水线 `klink tool new → check → install → run → log`，`example_template/tools/` 里有三个示例工具。普通按钮（`klink button`）和 MCP 的 `tools` 域（`tool.run`、`buttons.list` 等）一并提供。详见 [工具栏工具](docs/public/toolbar-tools.zh-CN.md)。
+
 ### 0.6.0 — Vestigraph 本地历史集成
 
 klink 0.6.0 通过现有扩展注册表支持 Vestigraph 0.2.0 本地历史。完整联合工作流需要将 Vestigraph 安装到运行 `klink-mcp` 的 Python 环境。运行 `klink plugin install`，重启 MCP 以自动发现工具并登记 companion，再重启 KLayout 并点击 **HIST**。技能炼化需显式开启实验开关。详见 [Vestigraph 联合使用](docs/public/VESTIGRAPH.zh-CN.md)。

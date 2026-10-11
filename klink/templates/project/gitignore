@@ -9,8 +9,10 @@
 out/*
 !out/.gitkeep
 
-# klink session/interaction state
-.klink/
+# klink session/interaction state -- except .klink/tools/, the versioned
+# source of your toolbar tools (see recipes/tools.md)
+.klink/*
+!.klink/tools/
 
 # Python
 __pycache__/

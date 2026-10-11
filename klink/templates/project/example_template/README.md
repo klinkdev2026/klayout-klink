@@ -19,6 +19,13 @@ digital/      fit_device_pnr_lvs, padframe_pnr_lvs, chat_to_netlist_pnr,
 imaging/      xsection_demo, render3d_demo, sem_demo, blender_demo
 ledit_bridge/ draw_device_demo, tcell_workflows, driver
                                            (Tanner L-Edit, not KLayout)
+tools/        bool_region_macro, bool_region, bool_selection
+                                           (toolbar tools = folders: tool.json +
+                                            run.py; install, don't run them;
+                                            own variant: python -m klink.cli
+                                            tool new <id> --from
+                                            example_template/tools/<id> --
+                                            see ../recipes/tools.md)
 ```
 
 ## Tanner L-Edit, not KLayout (`ledit_bridge/`)

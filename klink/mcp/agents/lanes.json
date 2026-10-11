@@ -115,7 +115,12 @@
     "imaging.xsection_run",
     "imaging.render3d",
     "imaging.sem_top",
-    "imaging.blender"
+    "imaging.blender",
+    "tool.list",
+    "tool.get",
+    "tool.run",
+    "buttons.list",
+    "buttons.reload"
    ],
    "rules": [
     "Delegate bulk drawing/marking to layout-build, routing to layout-route, verification to layout-verify, pya escape-hatch work to pya-exec; do not perform those inline.",
@@ -234,6 +239,9 @@
     "region.set_layer",
     "nanodevice.hallbar",
     "nanodevice.detect_commit",
+    "tool.list",
+    "tool.get",
+    "tool.run",
     "edit.undo",
     "edit.redo"
    ],

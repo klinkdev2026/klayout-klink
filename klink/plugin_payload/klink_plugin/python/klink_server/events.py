@@ -32,6 +32,7 @@ VALID_CHANNELS = {
     "job_progress",
     "job_started",
     "job_done",
+    "button_triggered",
 }
 
 

@@ -68,6 +68,7 @@ class FakeView:
         self.transactions: list[str] = []
         self.commits = 0
         self.refreshes = 0
+        self.order: list[str] = []  # 'refresh' / 'commit' call order
         self._open: str | None = None
         self._journal: list[str] = []
         self.fail_transaction = False
@@ -94,6 +95,7 @@ class FakeView:
         if self._open is None:
             raise RuntimeError("Internal error: m_opened was not true")
         self.commits += 1
+        self.order.append("commit")
         if self._journal and self.manager is not None:
             self.manager.undo_stack.append(self._open)
             self.manager.redo_stack.clear()
@@ -111,6 +113,7 @@ class FakeView:
 
     def add_missing_layers(self):
         self.refreshes += 1
+        self.order.append("refresh")
 
     def update_content(self):
         pass
@@ -253,3 +256,116 @@ def test_success_path_unchanged():
     assert view.shapes == ["box"]
     assert view.commits == 1 and view.refreshes == 1
     assert mgr.undo_stack == ["klink: shape.insert_box"]
+
+
+def test_layer_panel_refresh_happens_inside_the_transaction():
+    """0.30.x: add_missing_layers() AFTER commit() for a layer the body created is an edit
+    outside any transaction and wipes the whole undo stack (reproduced live with
+    layer.ensure of a new layer). The refresh must therefore precede commit(), on the
+    success path and on the rollback path alike."""
+    mgr = FakeManager()
+    view = FakeView(mgr)
+    with txn.auto_txn(view, "klink: create layer 7/0"):
+        view.insert("layer 7/0")
+    assert view.order == ["refresh", "commit"]
+    assert mgr.undo_stack == ["klink: create layer 7/0"]
+
+    view = FakeView(FakeManager())
+    with pytest.raises(Exception):  # wrapped as RpcError by the failure contract
+        with txn.auto_txn(view, "klink: failing"):
+            view.insert("partial")
+            raise RuntimeError("boom")
+    assert view.order == ["refresh", "commit"]
+
+
+# A repeated call (same title) whose body changes nothing must not undo the
+# PREVIOUS call's entry (reproduced live on 0.30.7 with two runs of one tool).
+class StackView(FakeView):
+    """FakeView whose undo reverts exactly the top entry's journal (the base
+    fake chains its revert closures, which is fine for one entry only)."""
+
+    def commit(self):
+        if self._open is None:
+            raise RuntimeError("Internal error: m_opened was not true")
+        self.commits += 1
+        self.order.append("commit")
+        if self._journal:
+            self.manager.undo_stack.append(self._open)
+            self.manager.redo_stack.clear()
+            self.journals.append(list(self._journal))
+
+            def undo():
+                self.manager.redo_stack.append(self.manager.undo_stack.pop())
+                for shape in self.journals.pop():
+                    self.shapes.remove(shape)
+            self.manager.undo = undo
+        self._open = None
+        self._journal = []
+
+
+def _stack_view():
+    view = StackView(FakeManager())
+    view.journals = []
+    return view, view.manager
+
+
+def _fake_sentinel(view):
+    view.insert("~sentinel")  # recorded in the open transaction, undone with it
+    return True
+
+
+@pytest.mark.parametrize("body_edits", [False, True])
+def test_same_title_failure_never_undoes_the_previous_call(monkeypatch, body_edits):
+    monkeypatch.setattr(txn, "_record_sentinel", _fake_sentinel)
+    view, mgr = _stack_view()
+    with txn.auto_txn(view, "klink tool: T"):
+        view.insert("first-run")
+    with pytest.raises(RpcError) as info:
+        with txn.auto_txn(view, "klink tool: T"):
+            if body_edits:
+                view.insert("partial")
+            raise ValueError("layer_b does not exist")
+    assert view.shapes == ["first-run"]  # the previous run's result is intact
+    assert mgr.undo_stack == ["klink tool: T"]
+    assert info.value.data["transaction"]["partial_edit"] == "undone"
+
+
+def test_same_title_without_sentinel_reports_unknown_and_undoes_nothing(monkeypatch):
+    monkeypatch.setattr(txn, "_record_sentinel", lambda view: False)
+    view, mgr = _stack_view()
+    with txn.auto_txn(view, "klink tool: T"):
+        view.insert("first-run")
+    with pytest.raises(RpcError) as info:
+        with txn.auto_txn(view, "klink tool: T"):
+            raise ValueError("boom")
+    assert view.shapes == ["first-run"] and mgr.undo_stack == ["klink tool: T"]
+    tx = info.value.data["transaction"]
+    assert tx["partial_edit"] == "unknown" and "NOT undone" in tx["note"]
+
+
+def test_different_title_on_top_needs_no_sentinel(monkeypatch):
+    calls = []
+    monkeypatch.setattr(txn, "_record_sentinel", lambda view: calls.append(1) or True)
+    view, mgr = _stack_view()
+    with txn.auto_txn(view, "klink: other"):
+        view.insert("user")
+    with pytest.raises(RpcError) as info:
+        with txn.auto_txn(view, "klink tool: T"):
+            raise ValueError("boom")
+    assert calls == [] and info.value.data["transaction"]["partial_edit"] == "none"
+    assert view.shapes == ["user"] and mgr.undo_stack == ["klink: other"]
+
+
+def test_record_sentinel_is_net_zero_on_a_real_layout():
+    import pya
+    ly = pya.Layout()
+    top = ly.create_cell("TOP")
+    li = ly.layer(1, 0)
+    top.shapes(li).insert(pya.Box(0, 0, 10, 10))
+    cv = type("CV", (), {"layout": lambda self: ly, "cell": top})()
+    view = type("V", (), {"active_cellview": lambda self: cv})()
+    assert txn._record_sentinel(view) is True
+    assert top.shapes(li).size() == 1
+    empty = pya.Layout()
+    cv2 = type("CV", (), {"layout": lambda self: empty, "cell": empty.create_cell("E")})()
+    assert txn._record_sentinel(type("V", (), {"active_cellview": lambda self: cv2})()) is False

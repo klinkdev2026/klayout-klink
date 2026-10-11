@@ -17,6 +17,7 @@ written for users adopting the tool, kept in sync with shipped behavior.
 | [control-plane](control-plane.md) ([中文](control-plane.zh-CN.md)) | The typed RPC surface, MCP tool catalogue (`klink.find_tools`), batch authoring, escape hatch |
 | [interactive-workflows](interactive-workflows.md) ([中文](interactive-workflows.zh-CN.md)) | SEND selection memory, multi-session transfer, the recorder |
 | [layout-intent](layout-intent.md) ([中文](layout-intent.zh-CN.md)) | Regions from KLayout rulers, executable numbered arrays, clean export |
+| [toolbar-tools](toolbar-tools.md) ([中文](toolbar-tools.zh-CN.md)) | Deterministic tools as KLayout toolbar buttons: `tool.json` + `run.py`, one click = one undo step |
 
 ## Release scope (current)
 

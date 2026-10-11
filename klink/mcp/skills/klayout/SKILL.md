@@ -445,6 +445,32 @@ Prefer typed RPCs for normal layout edits. Use `exec.python` only as an escape
 hatch for unsupported KLayout API operations, compact diagnostics, or one-off
 debugging scripts.
 
+## Toolbar buttons from a user's macro
+
+When the user wants a one-click toolbar button (or says button / toolbar /
+工具 / 按钮, or hands over a working pya macro), build a deterministic tool, not
+an `exec.python` script. Follow `recipes/tools.md` of a `klink init` project
+step by step (each step has a gate); examples: `example_template/tools/`.
+
+```bash
+python -m klink.cli tool new <id> --min-selected N   # or --from example_template/tools/<ex> / --macro
+#   edit .klink/tools/<id>/tool.json (params need a default or a preset value) + run.py
+python -m klink.cli tool check .klink/tools/<id>     # gate: ok: 0 error(s); read every warning
+python -m klink.cli tool install .klink/tools/<id>   # gate: toolbar: installed=['<id>'] (or updated)
+python -m klink.cli tool run <id> [--preset p] [--param k=v]   # gate: ok: ... ; then shape.query, one edit.undo reverts
+python -m klink.cli tool log <id> -n 3               # after the user's click: gate: newest record OK
+```
+
+`run.py` contract: `def run(ctx, params)` (or the macro unchanged, with no
+top-level `run`); dbu integers; layer index via
+`ctx.layout.layer(pya.LayerInfo(l, d))`; validate before the first edit; user
+errors `raise ValueError("<what>; <what to do>")`; never open your own
+`view.transaction()` or dialogs; print one line; return a small dict. MCP side
+(`klink.find_tools domain=tools`): `tool.list/get/run` (`interactive=false`:
+the `ERR_TOOL_PARAMS` hint lists layer candidates), `buttons.list/reload`.
+new/check/install/log/export/uninstall are CLI only (`klink.tools`).
+Icon only when the user asks: a 24x24/32x32 `.png`/`.svg` in the tool folder + `"icon": "icon.png"` in tool.json (or `tool new --icon <file>`); no `icon` = text button.
+
 ## Recorder
 
 The recorder is a replay-script generator, not a literal RPC logger. Bulk RPCs

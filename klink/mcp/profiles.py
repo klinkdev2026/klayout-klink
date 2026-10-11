@@ -51,6 +51,13 @@ PROFILE_ALIASES = {
 }
 
 
+#: Toolbar-tool RPCs (domain ``tools``). The plugin tags them ``tools`` /
+#: ``buttons`` instead of read/write, so the intent axis names them here:
+#: listing/inspecting is read, running a tool or re-syncing the toolbar is write.
+_TOOLS_READ = frozenset({"tool.list", "tool.get", "buttons.list"})
+_TOOLS_WRITE = frozenset({"tool.run", "buttons.reload"})
+
+
 def normalize_profiles(profiles: List[str]) -> List[str]:
     """Map legacy profile names to their modern equivalents (idempotent)."""
     return [PROFILE_ALIASES.get(p, p) for p in profiles]
@@ -65,9 +72,10 @@ def filter_methods(specs: List[dict], profiles: List[str]) -> List[dict]:
     Intent rules
     ------------
     read    ``tags`` contains ``"meta"`` or ``"read"`` (plus view-only
-            navigation, recorder, and selection.send_context helpers).
+            navigation, recorder, selection.send_context helpers, and
+            tool.list / tool.get / buttons.list).
     write   ``tags`` contains ``"write"`` or ``"undo"`` (plus selection.clear /
-            selection.set_box); never DRC/LVS.
+            selection.set_box, tool.run, buttons.reload); never DRC/LVS.
     verify  ``name`` starts with ``"drc."`` or ``"lvs."`` (run checks).
     escape  ``name`` starts with ``"exec."`` or ``"events."``.
     """
@@ -102,6 +110,7 @@ def filter_methods(specs: List[dict], profiles: List[str]) -> List[dict]:
                 "selection.clear", "selection.set_box",
                 "selection.send_context",
             )
+            or name in _TOOLS_READ
         ):
             matched = True
 
@@ -110,6 +119,7 @@ def filter_methods(specs: List[dict], profiles: List[str]) -> List[dict]:
         ) and (
             tags & {"write", "undo"}
             or name in ("selection.clear", "selection.set_box", "view.new_tab")
+            or name in _TOOLS_WRITE
         ):
             matched = True
 
