@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>MCP 工具参考 - klink</title>
-  <meta name="description" content="klink MCP / RPC 工具完整参考：15 个领域、195 个工具，每个工具的功能、参数和调用示例。">
+  <meta name="description" content="klink MCP / RPC 工具完整参考：16 个领域、201 个工具，每个工具的功能、参数和调用示例。">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="assets/styles.css">
 </head>
@@ -92,7 +92,7 @@
       <div class="container">
         <div class="eyebrow">MCP / RPC reference</div>
         <h1>MCP 工具完整参考</h1>
-        <p>klink 的控制面只有一份工具目录，两张脸：typed Python client（<code>KLinkClient</code>）和暴露给 agent 的 MCP 工具。二者都由 live plugin 的 method registry 生成，不存在会漂移的手写清单。本页把 <strong>127 个 plugin RPC</strong> + <strong>68 个 MCP 本地工具</strong>（共 195 个）按 15 个领域逐一列出：功能、参数、示例。</p>
+        <p>klink 的控制面只有一份工具目录，两张脸：typed Python client（<code>KLinkClient</code>）和暴露给 agent 的 MCP 工具。二者都由 live plugin 的 method registry 生成，不存在会漂移的手写清单。本页把 <strong>133 个 plugin RPC</strong> + <strong>68 个 MCP 本地工具</strong>（共 201 个）按 16 个领域逐一列出：功能、参数、示例。</p>
       </div>
     </section>
 
@@ -117,6 +117,7 @@
           <a href="#d-photonics">13 &middot; 硅光</a>
           <a href="#d-ledit">14 &middot; L-Edit 桥</a>
           <a href="#d-escape">15 &middot; Escape hatch</a>
+          <a href="#d-tools">16 &middot; 工具栏按钮与工具</a>
         </nav>
       </aside>
 
@@ -139,6 +140,7 @@
           <a href="#d-photonics">device_photonics</a>
           <a href="#d-ledit">bridge_ledit</a>
           <a href="#d-escape">escape_hatch</a>
+          <a href="#d-tools">tools</a>
         </div>
         <h3>阅读约定</h3>
         <ul>
@@ -183,7 +185,7 @@ klink.find_tools query="lvs route"          # 跨全部工具的关键词排序�
         <pre><code>python -m klink.mcp --profile read,write,verify,escape      # 默认
 python -m klink.mcp --profile read,device_photonics         # 混合两轴
 python -m klink.mcp --profile routing_backends              # 只暴露一个领域</code></pre>
-        <p>所有<strong>本地工具</strong>在任意意图 profile 下都始终包含；核心导航工具 <code>klink.find_tools</code> / <code>klink.status</code> / <code>klink.reconnect</code> 永远在。旧别名仍有效：<code>basic→read</code>、<code>draw→write</code>、<code>advanced→escape</code>、<code>drc→verify</code>。
+        <p>所有<strong>本地工具</strong>在任意意图 profile 下都始终包含；核心导航工具 <code>klink.find_tools</code> / <code>klink.status</code> / <code>klink.reconnect</code> 永远在。旧别名仍有效：<code>basic→read</code>、<code>draw→write</code>、<code>advanced→escape</code>、<code>drc→verify</code>。</p>
 
         <h2 id="d-connection" class="anchor-h">1 &middot; 连接、自检、发现与视图 <span class="tool-count">connection_and_view &middot; 30 tools</span></h2>
         <div class="domain-intro">
@@ -262,7 +264,7 @@ klink.transfer_commit package_id="pkg_0001"</code></pre>
           </tbody>
         </table>
 
-        <h2 id="d-geometry" class="anchor-h">3 &middot; 几何与单元结构 <span class="tool-count">geometry_authoring &middot; 51 tools</span></h2>
+        <h2 id="d-geometry" class="anchor-h">3 &middot; 几何与单元结构 <span class="tool-count">geometry_authoring &middot; 52 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="geometry_authoring"</span>
           <p>核心绘图面。先读：<code>layout.info</code>、<code>cell.list</code>/<code>cell.tree</code>、<code>layer.list</code>/<code>layer.display_list</code>、<code>shape.query</code>、<code>instance.query</code>、<code>pcell.*</code>、<code>library.list</code>。生成式版图<strong>永远不要</strong>一次 RPC 画一个对象，用批量 RPC。画之前先 <code>layer.ensure</code>。编辑都包在事务里，<code>edit.undo</code>/<code>redo</code>/<code>status</code> 操作它们。本域除基础绘图外还带：<code>geometry.boolean</code>/<code>cell_xor</code>/<code>density</code>（几何差异与覆盖率检查）、<code>cell.fill_region</code>（dummy fill/测试结构平铺）、<code>cell.flatten</code>、<code>layer.load_lyp</code>/<code>save_lyp</code>/<code>set_style</code>/<code>set_visible</code>（视图样式）、<code>library.list</code>/<code>refresh</code>/<code>register_file</code>、<code>pcell.convert_to_static</code>、<code>shape.change_layer</code>/<code>transform</code>、<code>instance.transform</code>。破坏性的 <code>layout.clear</code>、<code>cell.delete</code> 只对一次性测试 cell 用，除非用户明确要求，别碰用户的工作 tab。</p>
@@ -719,15 +721,16 @@ photonics.connect recent_sends=4 cell="MZI" radius_um=10 separation_um=5</code><
           </tbody>
         </table>
 
-        <h2 id="d-escape" class="anchor-h">15 &middot; Escape hatch（pya exec、事件、recorder） <span class="tool-count">escape_hatch &middot; 9 tools</span></h2>
+        <h2 id="d-escape" class="anchor-h">15 &middot; Escape hatch（pya exec、事件、recorder） <span class="tool-count">escape_hatch &middot; 10 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="escape_hatch"</span>
-          <p><strong>优先用 typed RPC。</strong> <code>exec.python</code> 跑原始 pya，仅用于没有 typed RPC 覆盖的操作 / 调试 / 紧凑一次性（<code>exec.reset</code> 清空其命名空间）——它仍会触发 recorder + layout-diff 检测。<code>events.*</code>（<code>channels</code>/<code>status</code>/<code>subscribe</code>/<code>unsubscribe</code>）是桥为 SEND 记忆订阅的 live 事件流（通常你改读 <code>interaction.*</code>）。<code>recorder.*</code>（<code>start</code>/<code>stop</code>/<code>status</code>）生成回放<strong>脚本</strong>（不是字面 RPC 日志）；测试前先看 <code>recorder.status</code>，别覆盖用户正在录的东西。</p>
+          <p><strong>优先用 typed RPC。</strong> <code>exec.python</code> 跑原始 pya，仅用于没有 typed RPC 覆盖的操作 / 调试 / 紧凑一次性（<code>exec.reset</code> 清空其命名空间）——它仍会触发 recorder + layout-diff 检测。<code>events.*</code>（<code>channels</code>/<code>flush</code>/<code>status</code>/<code>subscribe</code>/<code>unsubscribe</code>）是桥为 SEND 记忆订阅的 live 事件流（通常你改读 <code>interaction.*</code>）。<code>recorder.*</code>（<code>start</code>/<code>stop</code>/<code>status</code>）生成回放<strong>脚本</strong>（不是字面 RPC 日志）；测试前先看 <code>recorder.status</code>，别覆盖用户正在录的东西。</p>
         </div>
         <table class="data-table reftable">
           <thead><tr><th>工具</th><th>类型</th><th>参数</th><th>功能</th></tr></thead>
           <tbody>
             <tr><td><code>events.channels</code></td><td><span class="badge kind-rpc">rpc</span></td><td></td><td>列出 server 可以推送的事件通道。通过 <code>events.subscribe</code> 订阅其中的子集。事件以 NDJSON 帧的形式投递，格式为 <code>{&quot;event&quot;: &quot;&lt;name&gt;&quot;, &quot;data&quot;: {...}}</code>。</td></tr>
+            <tr><td><code>events.flush</code></td><td><span class="badge kind-rpc">rpc</span></td><td></td><td>在外部的编辑前检查点（pre-edit checkpoint）之前，排空尚未处理的编辑器变更通知。不会修改几何。</td></tr>
             <tr><td><code>events.status</code></td><td><span class="badge kind-rpc">rpc</span></td><td></td><td>返回调用连接的事件订阅情况和 SignalHub 诊断信息。用它来调试 <code>selection_changed</code> 等交互事件是否已绑定并订阅。</td></tr>
             <tr><td><code>events.subscribe</code></td><td><span class="badge kind-rpc">rpc</span></td><td>channels*</td><td>让调用连接订阅一个或多个事件通道。未知通道会被静默忽略（检查响应中的 <code>accepted</code>）。调用 <code>events.channels</code> 获取完整列表。</td></tr>
             <tr><td><code>events.unsubscribe</code></td><td><span class="badge kind-rpc">rpc</span></td><td>channels</td><td>让调用连接退订一个或多个通道。传空列表或省略则状态不变；传 <code>*</code> 退订全部。</td></tr>
@@ -747,6 +750,22 @@ recorder.stop                   # 产出 &lt;name&gt;.py 和可独立跑的 &lt;
 # 没有 typed RPC 覆盖时才用逃生舱
 exec.python code="print(layout.top_cell().name); print(len(list(layout.each_cell())))"</code></pre>
         <p>recorder 产出两个文件：<code>&lt;name&gt;.py</code>（基于 <code>KLinkClient</code> 的回放）和 <code>&lt;name&gt;_pya.py</code>（可在 KLayout 内独立运行的 pya 版）。</p>
+
+        <h2 id="d-tools" class="anchor-h">16 &middot; 工具栏按钮与确定性工具 <span class="tool-count">tools &middot; 5 tools</span></h2>
+        <div class="domain-intro">
+          <span class="token">klink.find_tools domain="tools"</span>
+          <p>自定义工具栏按钮是注册表目录下的 JSON 清单（用 <code>klink button</code> 编写）；确定性工具是一个 <code>tool.json</code> + <code>run.py</code> 文件夹，由插件在 KLayout 内以<strong>一个撤销步骤</strong>运行，失败即回滚。agent 调用的是 <code>tool.run</code>（<code>tool.list</code> / <code>tool.get</code> 查看已装工具，<code>buttons.reload</code> 让工具栏与磁盘上的清单同步）；安装与编写<strong>不是 RPC</strong>，走 CLI：<code>klink tool new</code> / <code>check</code> / <code>install</code> / <code>log</code>，配方见 <code>klink init</code> 项目里的 <code>recipes/tools.md</code> 与公开文档 <code>toolbar-tools.md</code>。</p>
+        </div>
+        <table class="data-table reftable">
+          <thead><tr><th>工具</th><th>类型</th><th>参数</th><th>功能</th></tr></thead>
+          <tbody>
+            <tr><td><code>tool.run</code></td><td><span class="badge kind-rpc">rpc</span></td><td>_reason, id*, interactive, params, preset</td><td>在 KLayout 内对当前视图的选中内容运行一个已安装的确定性工具（&lt;registry_root&gt;/tools/&lt;id&gt;/：tool.json + run.py），整个运行是<strong>一个</strong>撤销步骤。参数解析顺序：工具默认值 &lt;- preset &lt;- <code>params</code>。interactive=false（默认）时什么都不询问：带 <code>from</code> 列表且只有一个候选的图层参数会被自动填入（结果中标为 <code>auto</code>）；除此之外，任何没有值的参数都返回 ERR_TOOL_PARAMS（图层候选在 data.candidates 中）。interactive=true 时 KLayout 打开<strong>一个</strong>表单，所有参数均已预填（图层从选中内容/layout 中列出，外加 <code>new layer...</code>）；表单打开期间该调用会阻塞；取消则返回 status <code>cancelled</code>。错误：ERR_TOOL_NOT_FOUND、ERR_TOOL_INPUT（例如选中的图形太少）、ERR_TOOL_PARAMS、ERR_TOOL_RUN（run.py 抛出异常；本次编辑已回滚）。用 <code>klink tool install &lt;dir|zip&gt;</code> 安装工具。</td></tr>
+            <tr><td><code>tool.list</code></td><td><span class="badge kind-rpc">rpc</span></td><td></td><td>列出安装在 &lt;registry_root&gt;/tools/ 下的确定性工具（id、title、label、presets；工具不可用时附 problem）。</td></tr>
+            <tr><td><code>tool.get</code></td><td><span class="badge kind-rpc">rpc</span></td><td>id*</td><td>返回某个已安装工具规范化后的 tool.json（带默认值的 params、presets、prompt 策略、min_shapes、min_selected），以及该工具的目录和 run.py 路径。</td></tr>
+            <tr><td><code>buttons.list</code></td><td><span class="badge kind-rpc">rpc</span></td><td></td><td>列出当前已安装的自定义工具栏按钮，以及按钮清单（manifest）所在目录。</td></tr>
+            <tr><td><code>buttons.reload</code></td><td><span class="badge kind-rpc">rpc</span></td><td></td><td>重新读取 &lt;registry_root&gt;/buttons/*.json 下的按钮清单，并让 KLayout 工具栏与之同步：添加新按钮、原地更新文字有变化的按钮、删除清单已不存在的按钮。返回 installed/updated/removed/skipped 各类 id 以及当前按钮列表。请先用 <code>klink button add</code> 写好清单。</td></tr>
+          </tbody>
+        </table>
 
         <div class="note" style="margin-top:36px">
           想看这些工具在真实流程里怎么配合？去 <a href="tutorials.html">教程</a> 看可跑 demo 的逐个详解。

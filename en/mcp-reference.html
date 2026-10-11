@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>MCP Tool Reference - klink</title>
-  <meta name="description" content="Complete klink MCP / RPC tool reference: 15 domains, 195 tools, each with its function, parameters, and a call example.">
+  <meta name="description" content="Complete klink MCP / RPC tool reference: 16 domains, 201 tools, each with its function, parameters, and a call example.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1f1a'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-size='42' font-weight='800' fill='%233ddbb4' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="../assets/styles.css">
 </head>
@@ -92,7 +92,7 @@
       <div class="container">
         <div class="eyebrow">MCP / RPC reference</div>
         <h1>Complete MCP tool reference</h1>
-        <p>klink's control plane is one tool catalogue with two faces: a typed Python client (<code>KLinkClient</code>) and the same methods exposed as MCP tools. Both are generated from the live plugin's method registry — there is no hand-maintained list that can drift. This page lists all <strong>127 plugin RPCs</strong> + <strong>68 MCP local tools</strong> (195 total) across 15 domains: function, parameters, examples.</p>
+        <p>klink's control plane is one tool catalogue with two faces: a typed Python client (<code>KLinkClient</code>) and the same methods exposed as MCP tools. Both are generated from the live plugin's method registry — there is no hand-maintained list that can drift. This page lists all <strong>133 plugin RPCs</strong> + <strong>68 MCP local tools</strong> (201 total) across 16 domains: function, parameters, examples.</p>
       </div>
     </section>
 
@@ -117,6 +117,7 @@
           <a href="#d-photonics">13 &middot; Photonics</a>
           <a href="#d-ledit">14 &middot; L-Edit Bridge</a>
           <a href="#d-escape">15 &middot; Escape hatch</a>
+          <a href="#d-tools">16 &middot; Toolbar buttons &amp; tools</a>
         </nav>
       </aside>
 
@@ -139,6 +140,7 @@
           <a href="#d-photonics">device_photonics</a>
           <a href="#d-ledit">bridge_ledit</a>
           <a href="#d-escape">escape_hatch</a>
+          <a href="#d-tools">tools</a>
         </div>
         <h3>Reading conventions</h3>
         <ul>
@@ -174,7 +176,7 @@ klink.find_tools query="lvs route"          # ranked matches across all tools</c
         <pre><code>python -m klink.mcp --profile read,write,verify,escape   # default
 python -m klink.mcp --profile read,device_photonics      # mix both axes
 python -m klink.mcp --profile routing_backends           # one domain only</code></pre>
-        <p>All local tools are always included under any intent profile; <code>klink.find_tools</code> / <code>klink.status</code> / <code>klink.reconnect</code> are always on. Legacy aliases: <code>basic&rarr;read</code>, <code>draw&rarr;write</code>, <code>advanced&rarr;escape</code>, <code>drc&rarr;verify</code>.
+        <p>All local tools are always included under any intent profile; <code>klink.find_tools</code> / <code>klink.status</code> / <code>klink.reconnect</code> are always on. Legacy aliases: <code>basic&rarr;read</code>, <code>draw&rarr;write</code>, <code>advanced&rarr;escape</code>, <code>drc&rarr;verify</code>.</p>
 
         <h2 id="d-connection" class="anchor-h">1 &middot; Connection, self-check, discovery & view <span class="tool-count">connection_and_view &middot; 30 tools</span></h2>
         <div class="domain-intro">
@@ -253,7 +255,7 @@ klink.transfer_commit package_id="pkg_0001"</code></pre>
           </tbody>
         </table>
 
-        <h2 id="d-geometry" class="anchor-h">3 &middot; Geometry & cell-structure authoring <span class="tool-count">geometry_authoring &middot; 51 tools</span></h2>
+        <h2 id="d-geometry" class="anchor-h">3 &middot; Geometry & cell-structure authoring <span class="tool-count">geometry_authoring &middot; 52 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="geometry_authoring"</span>
           <p>The core drawing surface. Read first: <code>layout.info</code>, <code>cell.list</code>/<code>cell.tree</code>, <code>layer.list</code>/<code>layer.display_list</code>, <code>shape.query</code>, <code>instance.query</code>, <code>pcell.*</code>, <code>library.list</code>. Author with BATCH RPCs for anything generated &mdash; never one RPC per object. <code>layer.ensure</code> before drawing. <code>edit.undo</code>/<code>redo</code>/<code>status</code> wrap edits in transactions. Beyond basic authoring this domain also carries: <code>geometry.boolean</code>/<code>cell_xor</code>/<code>density</code> (diff and coverage checks), <code>cell.fill_region</code> (dummy fill / test-structure tiling), <code>cell.flatten</code>, <code>layer.load_lyp</code>/<code>save_lyp</code>/<code>set_style</code>/<code>set_visible</code> (view styling), <code>library.list</code>/<code>refresh</code>/<code>register_file</code>, <code>pcell.convert_to_static</code>, <code>shape.change_layer</code>/<code>transform</code>, <code>instance.transform</code>. Destructive: <code>layout.clear</code>, <code>cell.delete</code> &mdash; disposable/test cells only; do NOT touch the user's working tab/layout UNLESS the user explicitly instructs it.</p>
@@ -703,15 +705,16 @@ photonics.connect recent_sends=4 cell="MZI" radius_um=10 separation_um=5</code><
           </tbody>
         </table>
 
-        <h2 id="d-escape" class="anchor-h">15 &middot; Escape hatch (pya exec, events, recorder) <span class="tool-count">escape_hatch &middot; 9 tools</span></h2>
+        <h2 id="d-escape" class="anchor-h">15 &middot; Escape hatch (pya exec, events, recorder) <span class="tool-count">escape_hatch &middot; 10 tools</span></h2>
         <div class="domain-intro">
           <span class="token">klink.find_tools domain="escape_hatch"</span>
-          <p><strong>Prefer typed RPCs.</strong> <code>exec.python</code> runs raw pya for operations no typed RPC covers / debugging / compact one-offs (<code>exec.reset</code> clears its namespace); it still schedules recorder + layout-diff detection. <code>events.*</code> (<code>channels</code>/<code>status</code>/<code>subscribe</code>/<code>unsubscribe</code>) is the live event stream the bridge subscribes to for SEND memory &mdash; usually you read <code>interaction.*</code> instead. <code>recorder.*</code> (<code>start</code>/<code>stop</code>/<code>status</code>) generates a replay SCRIPT (not a literal RPC log); a bulk RPC may expand into replay actions. Check <code>recorder.status</code> before tests so you never clobber a user recording.</p>
+          <p><strong>Prefer typed RPCs.</strong> <code>exec.python</code> runs raw pya for operations no typed RPC covers / debugging / compact one-offs (<code>exec.reset</code> clears its namespace); it still schedules recorder + layout-diff detection. <code>events.*</code> (<code>channels</code>/<code>flush</code>/<code>status</code>/<code>subscribe</code>/<code>unsubscribe</code>) is the live event stream the bridge subscribes to for SEND memory &mdash; usually you read <code>interaction.*</code> instead. <code>recorder.*</code> (<code>start</code>/<code>stop</code>/<code>status</code>) generates a replay SCRIPT (not a literal RPC log); a bulk RPC may expand into replay actions. Check <code>recorder.status</code> before tests so you never clobber a user recording.</p>
         </div>
         <table class="data-table reftable">
           <thead><tr><th>Tool</th><th>Kind</th><th>Params</th><th>Function</th></tr></thead>
           <tbody>
             <tr><td><code>events.channels</code></td><td><span class="badge kind-rpc">rpc</span></td><td></td><td>List event channels the server can push. Subscribe to a subset via events.subscribe. Events are delivered as NDJSON frames with {&quot;event&quot;: &quot;&lt;name&gt;&quot;, &quot;data&quot;: {...}}.</td></tr>
+            <tr><td><code>events.flush</code></td><td><span class="badge kind-rpc">rpc</span></td><td></td><td>Drain pending editor change notifications before an external pre-edit checkpoint. Does not modify geometry.</td></tr>
             <tr><td><code>events.status</code></td><td><span class="badge kind-rpc">rpc</span></td><td></td><td>Return event subscription and SignalHub diagnostics for the calling connection. Use this to debug whether selection_changed and other interaction events are bound and subscribed.</td></tr>
             <tr><td><code>events.subscribe</code></td><td><span class="badge kind-rpc">rpc</span></td><td>channels*</td><td>Subscribe the calling connection to one or more event channels. Unknown channels are silently ignored (check &#x27;accepted&#x27; in the response). Call events.channels for the full list.</td></tr>
             <tr><td><code>events.unsubscribe</code></td><td><span class="badge kind-rpc">rpc</span></td><td>channels</td><td>Unsubscribe the calling connection from one or more channels. Pass an empty list or omit to keep state unchanged; pass &#x27;*&#x27; to drop all subscriptions.</td></tr>
@@ -731,6 +734,22 @@ recorder.stop                   # produces &lt;name&gt;.py and standalone &lt;na
 # only use the escape hatch when no typed RPC covers it
 exec.python code="print(layout.top_cell().name); print(len(list(layout.each_cell())))"</code></pre>
         <p>recorder produces two files: <code>&lt;name&gt;.py</code> (<code>KLinkClient</code>-based replay) and <code>&lt;name&gt;_pya.py</code> (a standalone pya version runnable inside KLayout).</p>
+
+        <h2 id="d-tools" class="anchor-h">16 &middot; Toolbar buttons and deterministic tools <span class="tool-count">tools &middot; 5 tools</span></h2>
+        <div class="domain-intro">
+          <span class="token">klink.find_tools domain="tools"</span>
+          <p>Custom toolbar buttons are JSON manifests under the registry root (written with <code>klink button</code>); a deterministic tool is a <code>tool.json</code> + <code>run.py</code> folder that the plugin runs inside KLayout as <strong>one undo step</strong>, rolled back if it raises. Agents call <code>tool.run</code> (<code>tool.list</code> / <code>tool.get</code> inspect what is installed, <code>buttons.reload</code> resyncs the toolbar to the manifests on disk); installing and authoring is <strong>not an RPC</strong> but the CLI: <code>klink tool new</code> / <code>check</code> / <code>install</code> / <code>log</code>, with the recipe in a <code>klink init</code> project&rsquo;s <code>recipes/tools.md</code> and the public doc <code>toolbar-tools.md</code>.</p>
+        </div>
+        <table class="data-table reftable">
+          <thead><tr><th>Tool</th><th>Kind</th><th>Params</th><th>Function</th></tr></thead>
+          <tbody>
+            <tr><td><code>tool.run</code></td><td><span class="badge kind-rpc">rpc</span></td><td>_reason, id*, interactive, params, preset</td><td>Run an installed deterministic tool (&lt;registry_root&gt;/tools/&lt;id&gt;/: tool.json + run.py) inside KLayout on the current view&#x27;s selection, as ONE undo step. Params resolve as tool defaults &lt;- preset &lt;- <code>params</code>. With interactive=false (default) nothing is asked: a layer param with a <code>from</code> list and one candidate is filled in (result <code>auto</code>); otherwise a param without a value is ERR_TOOL_PARAMS (layer choices in data.candidates). With interactive=true KLayout opens ONE form with every param pre-filled (layers listed from the selection/layout, plus <code>new layer...</code>); the call blocks while it is open; cancel returns status &#x27;cancelled&#x27;. Errors: ERR_TOOL_NOT_FOUND, ERR_TOOL_INPUT (e.g. too few shapes selected), ERR_TOOL_PARAMS, ERR_TOOL_RUN (run.py raised; the edit was rolled back). Install tools with <code>klink tool install &lt;dir|zip&gt;</code>.</td></tr>
+            <tr><td><code>tool.list</code></td><td><span class="badge kind-rpc">rpc</span></td><td></td><td>List the deterministic tools installed under &lt;registry_root&gt;/tools/ (id, title, label, presets, problem when unusable).</td></tr>
+            <tr><td><code>tool.get</code></td><td><span class="badge kind-rpc">rpc</span></td><td>id*</td><td>Return one installed tool&#x27;s normalized tool.json (params with defaults, presets, prompt policy, min_shapes, min_selected) plus its directory and run.py path.</td></tr>
+            <tr><td><code>buttons.list</code></td><td><span class="badge kind-rpc">rpc</span></td><td></td><td>List the custom toolbar buttons currently installed, plus the manifest directory.</td></tr>
+            <tr><td><code>buttons.reload</code></td><td><span class="badge kind-rpc">rpc</span></td><td></td><td>Re-read the button manifests under &lt;registry_root&gt;/buttons/*.json and sync the KLayout toolbar to them: add new buttons, update changed texts in place, delete buttons whose manifest is gone. Returns installed/updated/removed/skipped ids and the current button list. Write manifests with <code>klink button add</code> first.</td></tr>
+          </tbody>
+        </table>
 
         <div class="note" style="margin-top:36px">
           See these tools composed into real loops and runnable demos in the <a href="tutorials.html">Tutorials</a>.
